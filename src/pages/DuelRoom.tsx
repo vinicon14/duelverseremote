@@ -47,25 +47,30 @@ const DuelRoom = () => {
 
   const startCallTimer = () => {
     callStartTime.current = Date.now();
+    const MAX_DURATION = 3600; // 60 minutos em segundos
     
     timerInterval.current = setInterval(() => {
       const elapsed = Math.floor((Date.now() - (callStartTime.current || Date.now())) / 1000);
-      setCallDuration(elapsed);
+      const remaining = Math.max(0, MAX_DURATION - elapsed);
+      setCallDuration(remaining);
 
-      // Aviso aos 55 minutos (3300 segundos)
-      if (elapsed === 3300 && !showTimeWarning) {
+      // Aviso quando restar 5 minutos (300 segundos)
+      if (remaining === 300 && !showTimeWarning) {
         setShowTimeWarning(true);
         toast({
-          title: "⏰ Tempo de chamada",
-          description: "Restam 5 minutos. A chamada será encerrada em breve.",
+          title: "⏰ Atenção: Tempo de chamada",
+          description: "Restam apenas 5 minutos. A chamada será encerrada automaticamente em 0:00.",
           duration: 10000,
         });
       }
 
-      // Finalizar automaticamente aos 60 minutos (3600 segundos)
-      if (elapsed >= 3600) {
+      // Finalizar automaticamente quando chegar a 0:00
+      if (remaining === 0) {
+        if (timerInterval.current) {
+          clearInterval(timerInterval.current);
+        }
         toast({
-          title: "Tempo esgotado",
+          title: "⏱️ Tempo esgotado",
           description: "A chamada atingiu o limite de 60 minutos e será encerrada.",
           variant: "destructive",
         });
@@ -294,11 +299,13 @@ const DuelRoom = () => {
 
           {/* Botão de Sair e Timer - Fixo no canto superior direito */}
           <div className="absolute top-4 right-4 z-50 flex gap-2 items-center">
-            {/* Timer Display */}
-            <div className={`px-4 py-2 rounded-lg backdrop-blur-sm font-mono text-sm ${
-              callDuration >= 3300 ? 'bg-destructive/95 text-destructive-foreground animate-pulse' : 'bg-card/95'
+            {/* Timer Display - Contagem Regressiva */}
+            <div className={`px-4 py-2 rounded-lg backdrop-blur-sm font-mono text-sm font-bold ${
+              callDuration <= 300 ? 'bg-destructive/95 text-destructive-foreground animate-pulse' : 
+              callDuration <= 600 ? 'bg-yellow-500/95 text-black' : 
+              'bg-card/95'
             }`}>
-              ⏱️ {formatTime(callDuration)} / 60:00
+              ⏱️ {formatTime(callDuration)}
             </div>
             
             {canControlLP && (
