@@ -166,44 +166,51 @@ export const AdminUsers = () => {
     try {
       const newAccountType = isCurrentlyPro ? 'free' : 'pro';
       
-      console.log('👑 Chamando Edge Function para alterar conta...');
+      console.log('👑 Alterando tipo de conta...');
 
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast({ title: "Erro", description: "Sessão expirada", variant: "destructive" });
-        setActionLoading(null);
-        return;
-      }
-
-      const response = await supabase.functions.invoke('admin-toggle-pro', {
-        body: { userId, accountType: newAccountType }
+      const { data, error } = await supabase.functions.invoke('admin-toggle-pro', {
+        body: JSON.stringify({ userId, accountType: newAccountType }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
 
-      console.log('📥 Resposta da Edge Function:', response);
+      console.log('📥 Resposta:', { data, error });
 
-      if (response.error) {
-        console.error('❌ Erro na Edge Function:', response.error);
+      if (error) {
+        console.error('❌ Erro ao invocar função:', error);
         toast({
           title: "Erro ao atualizar conta",
-          description: response.error.message || "Falha ao comunicar com o servidor",
+          description: error.message || "Falha ao comunicar com o servidor",
           variant: "destructive"
         });
         setActionLoading(null);
         return;
       }
 
-      if (!response.data?.success) {
-        console.error('❌ Edge Function retornou erro:', response.data);
+      if (data?.error) {
+        console.error('❌ Erro retornado pela função:', data);
         toast({
           title: "Erro ao atualizar conta",
-          description: response.data?.error || "Erro desconhecido",
+          description: data.error || "Erro desconhecido",
           variant: "destructive"
         });
         setActionLoading(null);
         return;
       }
 
-      console.log('✅ Conta atualizada com sucesso:', response.data);
+      if (!data?.success) {
+        console.error('❌ Função não retornou sucesso:', data);
+        toast({
+          title: "Erro ao atualizar conta",
+          description: "A operação não foi concluída com sucesso",
+          variant: "destructive"
+        });
+        setActionLoading(null);
+        return;
+      }
+
+      console.log('✅ Conta atualizada:', data);
 
       await logAdminAction(userId, 'change_account_type', isCurrentlyPro ? 'pro' : 'free', newAccountType);
 
@@ -241,44 +248,51 @@ export const AdminUsers = () => {
         return;
       }
 
-      console.log('🗑️ Chamando Edge Function para deletar usuário...');
+      console.log('🗑️ Deletando usuário...');
 
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast({ title: "Erro", description: "Sessão expirada", variant: "destructive" });
-        setActionLoading(null);
-        return;
-      }
-
-      const response = await supabase.functions.invoke('admin-delete-user', {
-        body: { userId }
+      const { data, error } = await supabase.functions.invoke('admin-delete-user', {
+        body: JSON.stringify({ userId }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
 
-      console.log('📥 Resposta da Edge Function:', response);
+      console.log('📥 Resposta:', { data, error });
 
-      if (response.error) {
-        console.error('❌ Erro na Edge Function:', response.error);
+      if (error) {
+        console.error('❌ Erro ao invocar função:', error);
         toast({
           title: "Erro ao deletar usuário",
-          description: response.error.message || "Falha ao comunicar com o servidor",
+          description: error.message || "Falha ao comunicar com o servidor",
           variant: "destructive"
         });
         setActionLoading(null);
         return;
       }
 
-      if (!response.data?.success) {
-        console.error('❌ Edge Function retornou erro:', response.data);
+      if (data?.error) {
+        console.error('❌ Erro retornado pela função:', data);
         toast({
           title: "Erro ao deletar usuário",
-          description: response.data?.error || "Erro desconhecido",
+          description: data.error || "Erro desconhecido",
           variant: "destructive"
         });
         setActionLoading(null);
         return;
       }
 
-      console.log('✅ Usuário deletado com sucesso:', response.data);
+      if (!data?.success) {
+        console.error('❌ Função não retornou sucesso:', data);
+        toast({
+          title: "Erro ao deletar usuário",
+          description: "A operação não foi concluída com sucesso",
+          variant: "destructive"
+        });
+        setActionLoading(null);
+        return;
+      }
+
+      console.log('✅ Usuário deletado:', data);
 
       await logAdminAction(userId, 'delete_user', 'active', 'deleted');
 
