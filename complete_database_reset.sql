@@ -369,13 +369,26 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
+DECLARE
+  user_count integer;
 BEGIN
+  -- Criar perfil do usuário
   INSERT INTO public.profiles (user_id, username, avatar_url)
   VALUES (
     new.id,
     COALESCE(new.raw_user_meta_data->>'username', split_part(new.email, '@', 1)),
     COALESCE(new.raw_user_meta_data->>'avatar_url', '')
   );
+  
+  -- Verificar se é o primeiro usuário
+  SELECT COUNT(*) INTO user_count FROM public.profiles;
+  
+  -- Se for o primeiro usuário, torná-lo administrador
+  IF user_count = 1 THEN
+    INSERT INTO public.user_roles (user_id, role)
+    VALUES (new.id, 'admin');
+  END IF;
+  
   RETURN new;
 END;
 $$;
