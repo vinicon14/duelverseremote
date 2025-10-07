@@ -25,11 +25,32 @@ export const useAccountType = () => {
 
     checkAccountType();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+    // Listener para mudanças de autenticação
+    const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(() => {
       checkAccountType();
     });
 
-    return () => subscription.unsubscribe();
+    // Listener para mudanças em tempo real no perfil do usuário
+    const channel = supabase
+      .channel('account_type_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles'
+        },
+        (payload) => {
+          console.log('Account type changed:', payload);
+          checkAccountType();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      authSubscription.unsubscribe();
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   return { accountType, isPro: accountType === 'pro', loading };

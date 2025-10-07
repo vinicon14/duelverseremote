@@ -164,28 +164,61 @@ export const AdminUsers = () => {
   const togglePro = async (userId: string, isCurrentlyPro: boolean) => {
     setActionLoading(`pro-${userId}`);
     try {
+      console.log('Toggling PRO status for user:', userId, 'Current:', isCurrentlyPro);
+      
       const newAccountType = isCurrentlyPro ? 'free' : 'pro';
-      const { error } = await supabase
+      
+      // Atualizar o tipo de conta
+      const { data: updateData, error: updateError } = await supabase
         .from('profiles')
         .update({ account_type: newAccountType })
-        .eq('user_id', userId);
+        .eq('user_id', userId)
+        .select();
       
-      if (error) {
-        console.error('Error updating account:', error);
+      console.log('Update result:', { updateData, updateError });
+      
+      if (updateError) {
+        console.error('Error updating account:', updateError);
         toast({ 
           title: "Erro ao atualizar conta", 
-          description: error.message,
+          description: updateError.message,
           variant: "destructive" 
         });
-      } else {
+        return;
+      }
+      
+      // Verificar se a atualização foi bem-sucedida
+      const { data: verifyData } = await supabase
+        .from('profiles')
+        .select('account_type')
+        .eq('user_id', userId)
+        .single();
+      
+      console.log('Verification after update:', verifyData);
+      
+      if (verifyData?.account_type === newAccountType) {
         await logAdminAction(userId, 'change_account_type', isCurrentlyPro ? 'pro' : 'free', newAccountType);
         toast({ 
           title: `✅ Conta ${isCurrentlyPro ? 'rebaixada' : 'promovida'}`,
-          description: `Agora é uma conta ${newAccountType.toUpperCase()}`
+          description: `Agora é uma conta ${newAccountType.toUpperCase()}. As mudanças serão visíveis em toda a plataforma.`
+        });
+        
+        // Forçar recarga completa dos usuários
+        await fetchUsers();
+      } else {
+        toast({ 
+          title: "Aviso", 
+          description: "A conta foi atualizada, mas pode demorar um pouco para refletir em todos os lugares.",
+          variant: "default"
         });
       }
-      
-      await fetchUsers();
+    } catch (error: any) {
+      console.error('Error in togglePro:', error);
+      toast({ 
+        title: "Erro ao atualizar conta", 
+        description: error.message || "Ocorreu um erro inesperado",
+        variant: "destructive" 
+      });
     } finally {
       setActionLoading(null);
     }
