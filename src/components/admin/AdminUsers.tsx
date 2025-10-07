@@ -164,54 +164,50 @@ export const AdminUsers = () => {
   const togglePro = async (userId: string, isCurrentlyPro: boolean) => {
     setActionLoading(`pro-${userId}`);
     try {
-      console.log('Toggling PRO status for user:', userId, 'Current:', isCurrentlyPro);
+      console.log('Chamando Edge Function admin-toggle-pro para userId:', userId, 'Current:', isCurrentlyPro);
       
       const newAccountType = isCurrentlyPro ? 'free' : 'pro';
       
-      // Atualizar o tipo de conta
-      const { data: updateData, error: updateError } = await supabase
-        .from('profiles')
-        .update({ account_type: newAccountType })
-        .eq('user_id', userId)
-        .select();
-      
-      console.log('Update result:', { updateData, updateError });
-      
-      if (updateError) {
-        console.error('Error updating account:', updateError);
+      // Chamar Edge Function com permissões de service_role
+      const { data, error } = await supabase.functions.invoke('admin-toggle-pro', {
+        body: { userId, accountType: newAccountType }
+      });
+
+      console.log('Resposta da alteração de conta:', { data, error });
+
+      if (error) {
+        console.error('Erro ao chamar função de alteração:', error);
         toast({ 
           title: "Erro ao atualizar conta", 
-          description: updateError.message,
+          description: error.message || 'Falha ao chamar função de alteração',
           variant: "destructive" 
         });
         return;
       }
-      
-      // Verificar se a atualização foi bem-sucedida
-      const { data: verifyData } = await supabase
-        .from('profiles')
-        .select('account_type')
-        .eq('user_id', userId)
-        .single();
-      
-      console.log('Verification after update:', verifyData);
-      
-      if (verifyData?.account_type === newAccountType) {
-        await logAdminAction(userId, 'change_account_type', isCurrentlyPro ? 'pro' : 'free', newAccountType);
+
+      if (!data?.success) {
+        console.error('Alteração falhou:', data);
         toast({ 
-          title: `✅ Conta ${isCurrentlyPro ? 'rebaixada' : 'promovida'}`,
-          description: `Agora é uma conta ${newAccountType.toUpperCase()}. As mudanças serão visíveis em toda a plataforma.`
+          title: "Erro ao atualizar conta", 
+          description: data?.error || 'Falha ao alterar tipo de conta',
+          variant: "destructive" 
         });
-        
-        // Forçar recarga completa dos usuários
-        await fetchUsers();
-      } else {
-        toast({ 
-          title: "Aviso", 
-          description: "A conta foi atualizada, mas pode demorar um pouco para refletir em todos os lugares.",
-          variant: "default"
-        });
+        return;
       }
+
+      // Log da ação
+      await logAdminAction(userId, 'change_account_type', isCurrentlyPro ? 'pro' : 'free', newAccountType);
+      
+      toast({ 
+        title: `✅ Conta ${isCurrentlyPro ? 'rebaixada' : 'promovida'}`,
+        description: `Agora é uma conta ${newAccountType.toUpperCase()}. Atualizando lista...`
+      });
+      
+      // Aguardar um pouco antes de recarregar para garantir que a alteração foi completada
+      setTimeout(async () => {
+        await fetchUsers();
+      }, 1000);
+      
     } catch (error: any) {
       console.error('Error in togglePro:', error);
       toast({ 
