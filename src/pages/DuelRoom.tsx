@@ -7,6 +7,7 @@ import { PhoneOff } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { DuelChat } from "@/components/DuelChat";
 import { FloatingCalculator } from "@/components/FloatingCalculator";
+import { useBanCheck } from "@/hooks/useBanCheck";
 
 declare global {
   interface Window {
@@ -15,6 +16,7 @@ declare global {
 }
 
 const DuelRoom = () => {
+  useBanCheck(); // Proteger contra usuários banidos
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();

@@ -6,8 +6,10 @@ import { Card } from "@/components/ui/card";
 import { Navbar } from "@/components/Navbar";
 import { Loader2, Swords, Users, Clock } from "lucide-react";
 import { toast } from "sonner";
+import { useBanCheck } from "@/hooks/useBanCheck";
 
 export default function Matchmaking() {
+  useBanCheck(); // Proteger contra usuários banidos
   const navigate = useNavigate();
   const [searching, setSearching] = useState(false);
   const [queueId, setQueueId] = useState<string | null>(null);

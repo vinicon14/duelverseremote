@@ -16,8 +16,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useBanCheck } from "@/hooks/useBanCheck";
 
 const Tournaments = () => {
+  useBanCheck(); // Proteger contra usuários banidos
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isAdmin } = useAdmin();

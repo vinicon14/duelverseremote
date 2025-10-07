@@ -9,8 +9,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Swords, Plus, Users, Clock } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useBanCheck } from "@/hooks/useBanCheck";
 
 const Duels = () => {
+  useBanCheck(); // Proteger contra usuários banidos
   const navigate = useNavigate();
   const { toast } = useToast();
   const [duels, setDuels] = useState<any[]>([]);

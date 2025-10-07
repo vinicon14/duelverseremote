@@ -70,9 +70,32 @@ const Auth = () => {
 
       if (error) throw error;
 
-      // Update online status
+      // Verificar se o usuário está banido
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('is_banned')
+          .eq('user_id', session.user.id)
+          .maybeSingle();
+
+        if (profileError) {
+          console.error("Error checking ban status:", profileError);
+        }
+
+        if (profile?.is_banned) {
+          // Usuário está banido - deslogar imediatamente
+          await supabase.auth.signOut();
+          toast({
+            title: "❌ Conta suspensa",
+            description: "Sua conta foi suspensa. Entre em contato com o suporte para mais informações.",
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
+        }
+
+        // Update online status apenas se não estiver banido
         await supabase
           .from('profiles')
           .update({ is_online: true, last_seen: new Date().toISOString() })
