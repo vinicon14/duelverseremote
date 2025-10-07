@@ -164,52 +164,82 @@ export const AdminUsers = () => {
   const togglePro = async (userId: string, isCurrentlyPro: boolean) => {
     setActionLoading(`pro-${userId}`);
     try {
-      console.log('Chamando Edge Function admin-toggle-pro para userId:', userId, 'Current:', isCurrentlyPro);
+      console.log('Alterando status PRO do usuário:', userId, 'Atual:', isCurrentlyPro);
       
       const newAccountType = isCurrentlyPro ? 'free' : 'pro';
       
-      // Chamar Edge Function com permissões de service_role
-      const { data, error } = await supabase.functions.invoke('admin-toggle-pro', {
-        body: { userId, accountType: newAccountType }
-      });
-
-      console.log('Resposta da alteração de conta:', { data, error });
-
-      if (error) {
-        console.error('Erro ao chamar função de alteração:', error);
+      // Atualizar o tipo de conta diretamente
+      const { data: updateData, error: updateError } = await supabase
+        .from('profiles')
+        .update({ account_type: newAccountType })
+        .eq('user_id', userId)
+        .select();
+      
+      console.log('Resultado da atualização:', { updateData, updateError });
+      
+      if (updateError) {
+        console.error('Erro ao atualizar conta:', updateError);
         toast({ 
           title: "Erro ao atualizar conta", 
-          description: error.message || 'Falha ao chamar função de alteração',
+          description: updateError.message,
           variant: "destructive" 
         });
         return;
       }
 
-      if (!data?.success) {
-        console.error('Alteração falhou:', data);
+      // Verificar se a atualização foi bem-sucedida
+      const { data: verifyData, error: verifyError } = await supabase
+        .from('profiles')
+        .select('account_type, username, display_name')
+        .eq('user_id', userId)
+        .single();
+      
+      console.log('Verificação após atualização:', { verifyData, verifyError });
+      
+      if (verifyError) {
+        console.error('Erro ao verificar atualização:', verifyError);
         toast({ 
-          title: "Erro ao atualizar conta", 
-          description: data?.error || 'Falha ao alterar tipo de conta',
-          variant: "destructive" 
+          title: "Aviso", 
+          description: "Conta atualizada, mas houve erro na verificação",
+          variant: "default" 
         });
-        return;
-      }
-
-      // Log da ação
-      await logAdminAction(userId, 'change_account_type', isCurrentlyPro ? 'pro' : 'free', newAccountType);
-      
-      toast({ 
-        title: `✅ Conta ${isCurrentlyPro ? 'rebaixada' : 'promovida'}`,
-        description: `Agora é uma conta ${newAccountType.toUpperCase()}. Atualizando lista...`
-      });
-      
-      // Aguardar um pouco antes de recarregar para garantir que a alteração foi completada
-      setTimeout(async () => {
         await fetchUsers();
-      }, 1000);
+        return;
+      }
+
+      if (verifyData?.account_type === newAccountType) {
+        // Log da ação
+        await logAdminAction(userId, 'change_account_type', isCurrentlyPro ? 'pro' : 'free', newAccountType);
+        
+        toast({ 
+          title: `✅ Conta ${isCurrentlyPro ? 'rebaixada' : 'promovida'}`,
+          description: `${verifyData.display_name || verifyData.username} agora é ${newAccountType.toUpperCase()}`
+        });
+        
+        // Atualizar o usuário na lista imediatamente no frontend
+        setUsers(prevUsers => 
+          prevUsers.map(u => 
+            u.user_id === userId 
+              ? { ...u, account_type: newAccountType }
+              : u
+          )
+        );
+        
+        // Atualizar a lista completa do servidor
+        setTimeout(() => {
+          fetchUsers();
+        }, 500);
+      } else {
+        toast({ 
+          title: "Erro", 
+          description: "A atualização não foi aplicada corretamente",
+          variant: "destructive" 
+        });
+        await fetchUsers();
+      }
       
     } catch (error: any) {
-      console.error('Error in togglePro:', error);
+      console.error('Erro ao alterar status PRO:', error);
       toast({ 
         title: "Erro ao atualizar conta", 
         description: error.message || "Ocorreu um erro inesperado",
@@ -234,53 +264,127 @@ export const AdminUsers = () => {
         return;
       }
 
-      console.log('Chamando Edge Function admin-delete-user para userId:', userId);
+      console.log('Iniciando exclusão completa do usuário:', userId);
 
-      // Chamar Edge Function com permissões de service_role
-      const { data, error } = await supabase.functions.invoke('admin-delete-user', {
-        body: { userId }
-      });
+      // Deletar em ordem inversa das dependências para evitar erros de chave estrangeira
+      
+      // 1. Chat messages - deletar todas as mensagens do usuário
+      console.log('Deletando chat_messages...');
+      const { error: chatError } = await supabase
+        .from('chat_messages')
+        .delete()
+        .eq('sender_id', userId);
+      
+      if (chatError) {
+        console.error('Erro ao deletar chat_messages:', chatError);
+        toast({ 
+          title: "Aviso", 
+          description: `Erro ao deletar mensagens: ${chatError.message}`,
+          variant: "default" 
+        });
+      }
 
-      console.log('Resposta da exclusão:', { data, error });
+      // 2. Friendships - deletar todas as amizades
+      console.log('Deletando friendships...');
+      const { error: friendshipsError } = await supabase
+        .from('friendships')
+        .delete()
+        .or(`user_id.eq.${userId},friend_id.eq.${userId}`);
+      
+      if (friendshipsError) {
+        console.error('Erro ao deletar friendships:', friendshipsError);
+      }
 
-      if (error) {
-        console.error('Erro ao chamar função de exclusão:', error);
+      // 3. Friend requests - deletar todos os pedidos de amizade
+      console.log('Deletando friend_requests...');
+      const { error: friendRequestsError } = await supabase
+        .from('friend_requests')
+        .delete()
+        .or(`requester_id.eq.${userId},addressee_id.eq.${userId}`);
+      
+      if (friendRequestsError) {
+        console.error('Erro ao deletar friend_requests:', friendRequestsError);
+      }
+
+      // 4. Live duels - deletar todos os duelos
+      console.log('Deletando live_duels...');
+      const { error: duelsError } = await supabase
+        .from('live_duels')
+        .delete()
+        .or(`player1_id.eq.${userId},player2_id.eq.${userId}`);
+      
+      if (duelsError) {
+        console.error('Erro ao deletar live_duels:', duelsError);
+      }
+
+      // 5. Match history - deletar histórico de partidas
+      console.log('Deletando match_history...');
+      const { error: matchHistoryError } = await supabase
+        .from('match_history')
+        .delete()
+        .or(`player1_id.eq.${userId},player2_id.eq.${userId}`);
+      
+      if (matchHistoryError) {
+        console.error('Erro ao deletar match_history:', matchHistoryError);
+      }
+
+      // 6. User roles - deletar roles do usuário
+      console.log('Deletando user_roles...');
+      const { error: rolesError } = await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', userId);
+      
+      if (rolesError) {
+        console.error('Erro ao deletar user_roles:', rolesError);
+      }
+
+      // 7. Deletar o perfil por último
+      console.log('Deletando profile...');
+      const { error: profileError, data: profileData } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('user_id', userId)
+        .select();
+
+      console.log('Resultado da exclusão do perfil:', { profileError, profileData });
+
+      if (profileError) {
+        console.error('Erro crítico ao deletar profile:', profileError);
         toast({ 
           title: "Erro ao deletar usuário", 
-          description: error.message || 'Falha ao chamar função de exclusão',
+          description: `Não foi possível deletar o perfil: ${profileError.message}. O usuário pode ter sido parcialmente excluído.`,
           variant: "destructive" 
         });
+        
+        // Mesmo com erro, atualizar a lista para mostrar o estado atual
+        await fetchUsers();
         return;
       }
 
-      if (!data?.success) {
-        console.error('Exclusão falhou:', data);
-        toast({ 
-          title: "Erro ao deletar usuário", 
-          description: data?.error || 'Falha ao excluir usuário',
-          variant: "destructive" 
-        });
-        return;
-      }
-
-      // Log da ação
+      // Log da ação de exclusão
       await logAdminAction(userId, 'delete_user', 'active', 'deleted');
       
+      console.log('Usuário excluído com sucesso:', userId);
+      
       toast({ 
-        title: "✅ Usuário excluído permanentemente",
-        description: 'Todos os dados foram removidos da plataforma. Atualizando lista...'
+        title: "✅ Usuário excluído com sucesso",
+        description: 'Todos os dados do usuário foram removidos da plataforma.'
       });
       
-      // Aguardar um pouco antes de recarregar para garantir que a exclusão foi completada
-      setTimeout(async () => {
-        await fetchUsers();
-      }, 1000);
+      // Remover o usuário da lista imediatamente no frontend
+      setUsers(prevUsers => prevUsers.filter(u => u.user_id !== userId));
+      
+      // Atualizar a lista completa do servidor
+      setTimeout(() => {
+        fetchUsers();
+      }, 500);
       
     } catch (error: any) {
-      console.error('Error deleting user:', error);
+      console.error('Erro inesperado ao deletar usuário:', error);
       toast({ 
         title: "Erro ao deletar usuário", 
-        description: error.message || "Ocorreu um erro inesperado",
+        description: error.message || "Ocorreu um erro inesperado durante a exclusão",
         variant: "destructive" 
       });
     } finally {
