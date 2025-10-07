@@ -238,62 +238,30 @@ export const AdminUsers = () => {
         return;
       }
 
-      console.log('Deleting user directly via Supabase client:', userId);
+      console.log('Chamando Edge Function admin-delete-user para userId:', userId);
 
-      // Deletar dados relacionados diretamente
-      // Chat messages
-      const { error: chatError } = await supabase
-        .from('chat_messages')
-        .delete()
-        .eq('sender_id', userId);
-      if (chatError) console.error('Error deleting chat_messages:', chatError);
+      // Chamar Edge Function com permissões de service_role
+      const { data, error } = await supabase.functions.invoke('admin-delete-user', {
+        body: { userId }
+      });
 
-      // Friendships
-      const { error: friendshipsError } = await supabase
-        .from('friendships')
-        .delete()
-        .or(`user_id.eq.${userId},friend_id.eq.${userId}`);
-      if (friendshipsError) console.error('Error deleting friendships:', friendshipsError);
+      console.log('Resposta da exclusão:', { data, error });
 
-      // Friend requests
-      const { error: friendRequestsError } = await supabase
-        .from('friend_requests')
-        .delete()
-        .or(`requester_id.eq.${userId},addressee_id.eq.${userId}`);
-      if (friendRequestsError) console.error('Error deleting friend_requests:', friendRequestsError);
-
-      // Live duels
-      const { error: duelsError } = await supabase
-        .from('live_duels')
-        .delete()
-        .or(`player1_id.eq.${userId},player2_id.eq.${userId}`);
-      if (duelsError) console.error('Error deleting live_duels:', duelsError);
-
-      // Match history
-      const { error: matchHistoryError } = await supabase
-        .from('match_history')
-        .delete()
-        .or(`player1_id.eq.${userId},player2_id.eq.${userId}`);
-      if (matchHistoryError) console.error('Error deleting match_history:', matchHistoryError);
-
-      // User roles
-      const { error: rolesError } = await supabase
-        .from('user_roles')
-        .delete()
-        .eq('user_id', userId);
-      if (rolesError) console.error('Error deleting user_roles:', rolesError);
-
-      // Deletar perfil (isso deve deletar o usuário do auth também via trigger)
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('user_id', userId);
-
-      if (profileError) {
-        console.error('Error deleting profile:', profileError);
+      if (error) {
+        console.error('Erro ao chamar função de exclusão:', error);
         toast({ 
           title: "Erro ao deletar usuário", 
-          description: profileError.message,
+          description: error.message || 'Falha ao chamar função de exclusão',
+          variant: "destructive" 
+        });
+        return;
+      }
+
+      if (!data?.success) {
+        console.error('Exclusão falhou:', data);
+        toast({ 
+          title: "Erro ao deletar usuário", 
+          description: data?.error || 'Falha ao excluir usuário',
           variant: "destructive" 
         });
         return;
@@ -304,10 +272,14 @@ export const AdminUsers = () => {
       
       toast({ 
         title: "✅ Usuário excluído permanentemente",
-        description: 'Todos os dados foram removidos da plataforma'
+        description: 'Todos os dados foram removidos da plataforma. Atualizando lista...'
       });
       
-      await fetchUsers();
+      // Aguardar um pouco antes de recarregar para garantir que a exclusão foi completada
+      setTimeout(async () => {
+        await fetchUsers();
+      }, 1000);
+      
     } catch (error: any) {
       console.error('Error deleting user:', error);
       toast({ 
