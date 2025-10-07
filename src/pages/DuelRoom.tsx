@@ -144,6 +144,35 @@ const DuelRoom = () => {
     };
   }, [id]);
 
+  // Listener realtime para sincronizar LP entre usuários
+  useEffect(() => {
+    if (!id) return;
+
+    const channel = supabase
+      .channel(`duel-${id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'live_duels',
+          filter: `id=eq.${id}`,
+        },
+        (payload) => {
+          console.log('LP atualizado via realtime:', payload);
+          if (payload.new) {
+            setPlayer1LP(payload.new.player1_lp || 8000);
+            setPlayer2LP(payload.new.player2_lp || 8000);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [id]);
+
   const startCallTimer = () => {
     callStartTime.current = Date.now();
     const MAX_DURATION = 3600; // 60 minutos em segundos
@@ -388,8 +417,8 @@ const DuelRoom = () => {
         </div>
       </main>
 
-      {/* Calculadora Flutuante */}
-      {canControlLP && duel && (
+      {/* Calculadora Flutuante - Visível para todos */}
+      {duel && (
         <FloatingCalculator
           player1Name={duel.player1?.username || 'Jogador 1'}
           player2Name={duel.player2?.username || 'Aguardando...'}
@@ -397,6 +426,7 @@ const DuelRoom = () => {
           player2LP={player2LP}
           onUpdateLP={updateLP}
           onSetLP={setLP}
+          readOnly={!canControlLP}
         />
       )}
 

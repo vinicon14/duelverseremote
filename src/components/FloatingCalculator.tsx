@@ -11,6 +11,7 @@ interface FloatingCalculatorProps {
   player2LP: number;
   onUpdateLP: (player: 'player1' | 'player2', amount: number) => void;
   onSetLP: (player: 'player1' | 'player2', value: number) => void;
+  readOnly?: boolean;
 }
 
 export const FloatingCalculator = ({
@@ -20,6 +21,7 @@ export const FloatingCalculator = ({
   player2LP,
   onUpdateLP,
   onSetLP,
+  readOnly = false,
 }: FloatingCalculatorProps) => {
   const [position, setPosition] = useState({ x: 20, y: 100 });
   const [isDragging, setIsDragging] = useState(false);
@@ -186,76 +188,80 @@ export const FloatingCalculator = ({
                       className="w-24 h-8 text-right text-lg font-bold"
                       autoFocus
                     />
-                  ) : (
+                   ) : (
                     <span
-                      className="text-xl font-bold text-gradient-mystic cursor-pointer hover:opacity-80"
-                      onClick={() => setEditingPlayer1(true)}
+                      className={`text-xl font-bold text-gradient-mystic ${!readOnly ? 'cursor-pointer hover:opacity-80' : ''}`}
+                      onClick={() => !readOnly && setEditingPlayer1(true)}
                     >
                       {player1LP}
                     </span>
-                  )}
+                   )}
                 </div>
               </div>
               
-              <div className="grid grid-cols-4 gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => onUpdateLP('player1', -1000)}
-                  className="text-xs"
-                >
-                  <Minus className="w-3 h-3 mr-1" />
-                  1k
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => onUpdateLP('player1', -500)}
-                  className="text-xs"
-                >
-                  <Minus className="w-3 h-3 mr-1" />
-                  500
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => onUpdateLP('player1', 500)}
-                  className="text-xs"
-                >
-                  <Plus className="w-3 h-3 mr-1" />
-                  500
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => onUpdateLP('player1', 1000)}
-                  className="text-xs"
-                >
-                  <Plus className="w-3 h-3 mr-1" />
-                  1k
-                </Button>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => onUpdateLP('player1', -100)}
-                  className="text-xs"
-                >
-                  <Minus className="w-3 h-3 mr-1" />
-                  100
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => onUpdateLP('player1', 100)}
-                  className="text-xs"
-                >
-                  <Plus className="w-3 h-3 mr-1" />
-                  100
-                </Button>
-              </div>
+              {!readOnly && (
+                <>
+                  <div className="grid grid-cols-4 gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onUpdateLP('player1', -1000)}
+                      className="text-xs"
+                    >
+                      <Minus className="w-3 h-3 mr-1" />
+                      1k
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onUpdateLP('player1', -500)}
+                      className="text-xs"
+                    >
+                      <Minus className="w-3 h-3 mr-1" />
+                      500
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onUpdateLP('player1', 500)}
+                      className="text-xs"
+                    >
+                      <Plus className="w-3 h-3 mr-1" />
+                      500
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onUpdateLP('player1', 1000)}
+                      className="text-xs"
+                    >
+                      <Plus className="w-3 h-3 mr-1" />
+                      1k
+                    </Button>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onUpdateLP('player1', -100)}
+                      className="text-xs"
+                    >
+                      <Minus className="w-3 h-3 mr-1" />
+                      100
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onUpdateLP('player1', 100)}
+                      className="text-xs"
+                    >
+                      <Plus className="w-3 h-3 mr-1" />
+                      100
+                    </Button>
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="border-t border-primary/20" />
@@ -285,76 +291,80 @@ export const FloatingCalculator = ({
                       className="w-24 h-8 text-right text-lg font-bold"
                       autoFocus
                     />
-                  ) : (
+                   ) : (
                     <span
-                      className="text-xl font-bold text-gradient-mystic cursor-pointer hover:opacity-80"
-                      onClick={() => setEditingPlayer2(true)}
+                      className={`text-xl font-bold text-gradient-mystic ${!readOnly ? 'cursor-pointer hover:opacity-80' : ''}`}
+                      onClick={() => !readOnly && setEditingPlayer2(true)}
                     >
                       {player2LP}
                     </span>
-                  )}
+                   )}
                 </div>
               </div>
               
-              <div className="grid grid-cols-4 gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => onUpdateLP('player2', -1000)}
-                  className="text-xs"
-                >
-                  <Minus className="w-3 h-3 mr-1" />
-                  1k
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => onUpdateLP('player2', -500)}
-                  className="text-xs"
-                >
-                  <Minus className="w-3 h-3 mr-1" />
-                  500
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => onUpdateLP('player2', 500)}
-                  className="text-xs"
-                >
-                  <Plus className="w-3 h-3 mr-1" />
-                  500
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => onUpdateLP('player2', 1000)}
-                  className="text-xs"
-                >
-                  <Plus className="w-3 h-3 mr-1" />
-                  1k
-                </Button>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => onUpdateLP('player2', -100)}
-                  className="text-xs"
-                >
-                  <Minus className="w-3 h-3 mr-1" />
-                  100
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => onUpdateLP('player2', 100)}
-                  className="text-xs"
-                >
-                  <Plus className="w-3 h-3 mr-1" />
-                  100
-                </Button>
-              </div>
+              {!readOnly && (
+                <>
+                  <div className="grid grid-cols-4 gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onUpdateLP('player2', -1000)}
+                      className="text-xs"
+                    >
+                      <Minus className="w-3 h-3 mr-1" />
+                      1k
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onUpdateLP('player2', -500)}
+                      className="text-xs"
+                    >
+                      <Minus className="w-3 h-3 mr-1" />
+                      500
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onUpdateLP('player2', 500)}
+                      className="text-xs"
+                    >
+                      <Plus className="w-3 h-3 mr-1" />
+                      500
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onUpdateLP('player2', 1000)}
+                      className="text-xs"
+                    >
+                      <Plus className="w-3 h-3 mr-1" />
+                      1k
+                    </Button>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onUpdateLP('player2', -100)}
+                      className="text-xs"
+                    >
+                      <Minus className="w-3 h-3 mr-1" />
+                      100
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onUpdateLP('player2', 100)}
+                      className="text-xs"
+                    >
+                      <Plus className="w-3 h-3 mr-1" />
+                      100
+                    </Button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
