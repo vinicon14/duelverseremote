@@ -363,13 +363,8 @@ export const AdminUsers = () => {
         description: 'Todos os dados do usuário foram removidos da plataforma.'
       });
       
-      // Remover o usuário da lista imediatamente no frontend
-      setUsers(prevUsers => prevUsers.filter(u => u.user_id !== userId));
-      
-      // Atualizar a lista completa do servidor
-      setTimeout(() => {
-        fetchUsers();
-      }, 500);
+      // Atualizar a lista completa do servidor imediatamente
+      await fetchUsers();
       
     } catch (error: any) {
       console.error('Erro inesperado ao deletar usuário:', error);
