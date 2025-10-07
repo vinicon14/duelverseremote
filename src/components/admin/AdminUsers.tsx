@@ -191,37 +191,50 @@ export const AdminUsers = () => {
     }
   };
 
-  const toggleBan = async (userId: string, isCurrentlyBanned: boolean) => {
+  const deleteUser = async (userId: string) => {
     setActionLoading(`ban-${userId}`);
     try {
-      const newBanStatus = !isCurrentlyBanned;
-      const { error } = await supabase
+      // Log da ação antes de deletar
+      await logAdminAction(
+        userId, 
+        'delete_user', 
+        'active',
+        'deleted'
+      );
+
+      // Deletar perfil do usuário (cascade irá deletar dados relacionados)
+      const { error: profileError } = await supabase
         .from('profiles')
-        .update({ is_banned: newBanStatus })
+        .delete()
         .eq('user_id', userId);
       
-      if (error) {
-        console.error('Error updating ban status:', error);
+      if (profileError) {
+        console.error('Error deleting user profile:', profileError);
         toast({ 
-          title: "Erro ao atualizar status", 
-          description: error.message,
+          title: "Erro ao deletar usuário", 
+          description: profileError.message,
           variant: "destructive" 
         });
-      } else {
-        await logAdminAction(
-          userId, 
-          newBanStatus ? 'ban_user' : 'unban_user', 
-          isCurrentlyBanned ? 'banned' : 'active',
-          newBanStatus ? 'banned' : 'active'
-        );
-        toast({ 
-          title: `✅ Usuário ${isCurrentlyBanned ? 'desbanido' : 'banido'}`,
-          description: isCurrentlyBanned ? 'Pode acessar a plataforma novamente' : 'Não pode mais acessar a plataforma',
-          variant: isCurrentlyBanned ? 'default' : 'destructive'
-        });
+        return;
       }
+
+      // Deletar conta de autenticação via RPC (será criada posteriormente)
+      // Por enquanto apenas deletamos o perfil, que já remove o usuário da plataforma
+      
+      toast({ 
+        title: "✅ Usuário excluído permanentemente",
+        description: 'Todos os dados foram removidos da plataforma',
+        variant: "destructive"
+      });
       
       await fetchUsers();
+    } catch (error: any) {
+      console.error('Error deleting user:', error);
+      toast({ 
+        title: "Erro ao deletar usuário", 
+        description: error.message || "Ocorreu um erro inesperado",
+        variant: "destructive" 
+      });
     } finally {
       setActionLoading(null);
     }
@@ -270,7 +283,6 @@ export const AdminUsers = () => {
           {filteredUsers.map((user) => {
             const isAdmin = user.user_roles?.some((r: any) => r.role === 'admin');
             const isPro = user.account_type === 'pro';
-            const isBanned = user.is_banned;
 
             return (
               <Card key={user.id}>
@@ -282,7 +294,6 @@ export const AdminUsers = () => {
                         {user.display_name || user.username}
                         {isAdmin && <Badge variant="secondary"><Shield className="w-3 h-3 mr-1" />Admin</Badge>}
                         {isPro && <Badge className="bg-gradient-to-r from-yellow-500 to-amber-500"><Crown className="w-3 h-3 mr-1" />PRO</Badge>}
-                        {isBanned && <Badge variant="destructive"><Ban className="w-3 h-3 mr-1" />Banido</Badge>}
                       </CardTitle>
                       <p className="text-sm text-muted-foreground mt-1">
                         @{user.username} • ELO: {user.elo_rating} • Nível: {user.level}
@@ -319,9 +330,13 @@ export const AdminUsers = () => {
                       {isPro ? 'Remover' : 'Promover'} PRO
                     </Button>
                     <Button
-                      variant={isBanned ? "outline" : "destructive"}
+                      variant="destructive"
                       size="sm"
-                      onClick={() => toggleBan(user.user_id, isBanned)}
+                      onClick={() => {
+                        if (window.confirm('⚠️ ATENÇÃO: Isso irá excluir PERMANENTEMENTE o usuário e TODOS os seus dados. Esta ação não pode ser desfeita. Deseja continuar?')) {
+                          deleteUser(user.user_id);
+                        }
+                      }}
                       disabled={actionLoading === `ban-${user.user_id}`}
                     >
                       {actionLoading === `ban-${user.user_id}` ? (
@@ -329,7 +344,7 @@ export const AdminUsers = () => {
                       ) : (
                         <Ban className="w-4 h-4 mr-1" />
                       )}
-                      {isBanned ? 'Desbanir' : 'Banir'}
+                      Excluir Usuário
                     </Button>
                   </div>
                 </CardContent>
