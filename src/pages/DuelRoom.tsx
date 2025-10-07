@@ -64,45 +64,68 @@ const DuelRoom = () => {
 
   // Inicializa o Jitsi quando script estiver carregado e container montado
   useEffect(() => {
-    if (!isJitsiLoaded || !jitsiContainer.current || !id || jitsiApi) return;
+    if (!isJitsiLoaded || !jitsiContainer.current || !id) return;
 
-    console.log('Initializing Jitsi Meet...');
-    
-    try {
-      const api = new window.JitsiMeetExternalAPI('meet.jit.si', {
-        roomName: `duelverse_${id}`,
-        parentNode: jitsiContainer.current,
-        width: '100%',
-        height: '100%',
-        configOverwrite: {
-          startWithAudioMuted: false,
-          startWithVideoMuted: false,
-          prejoinPageEnabled: false,
-        },
-        interfaceConfigOverwrite: {
-          TOOLBAR_BUTTONS: [
-            'microphone',
-            'camera',
-            'desktop',
-            'fullscreen',
-            'hangup',
-            'chat',
-          ],
-          SHOW_JITSI_WATERMARK: false,
-          SHOW_WATERMARK_FOR_GUESTS: false,
-        },
-      });
+    const initJitsi = () => {
+      console.log('Initializing Jitsi Meet...');
+      
+      try {
+        const api = new window.JitsiMeetExternalAPI('meet.jit.si', {
+          roomName: `duelverse_${id}`,
+          parentNode: jitsiContainer.current,
+          width: '100%',
+          height: '100%',
+          configOverwrite: {
+            startWithAudioMuted: false,
+            startWithVideoMuted: false,
+            prejoinPageEnabled: false,
+          },
+          interfaceConfigOverwrite: {
+            TOOLBAR_BUTTONS: [
+              'microphone',
+              'camera',
+              'desktop',
+              'fullscreen',
+              'hangup',
+              'chat',
+            ],
+            SHOW_JITSI_WATERMARK: false,
+            SHOW_WATERMARK_FOR_GUESTS: false,
+          },
+        });
 
-      console.log('Jitsi initialized successfully');
-      setJitsiApi(api);
-    } catch (error) {
-      console.error('Error initializing Jitsi:', error);
-      toast({
-        title: "Erro ao inicializar vídeo",
-        description: "Não foi possível iniciar a chamada de vídeo.",
-        variant: "destructive",
-      });
-    }
+        console.log('Jitsi initialized successfully');
+        
+        // Reinicializar automaticamente quando a conferência terminar (a cada 5 min)
+        api.addEventListener('videoConferenceLeft', () => {
+          console.log('Jitsi conference left, reinitializing if time remaining...');
+          
+          // Verificar se ainda há tempo restante
+          if (callDuration > 0) {
+            console.log('Time remaining, reinitializing Jitsi in 2 seconds...');
+            setTimeout(() => {
+              if (jitsiContainer.current) {
+                api.dispose();
+                initJitsi();
+              }
+            }, 2000);
+          } else {
+            console.log('No time remaining, not reinitializing');
+          }
+        });
+
+        setJitsiApi(api);
+      } catch (error) {
+        console.error('Error initializing Jitsi:', error);
+        toast({
+          title: "Erro ao inicializar vídeo",
+          description: "Não foi possível iniciar a chamada de vídeo.",
+          variant: "destructive",
+        });
+      }
+    };
+
+    initJitsi();
   }, [isJitsiLoaded, id]);
 
   // Carrega dados do duelo e inicia timer
