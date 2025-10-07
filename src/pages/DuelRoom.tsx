@@ -28,11 +28,85 @@ const DuelRoom = () => {
   const [player2LP, setPlayer2LP] = useState(8000);
   const [callDuration, setCallDuration] = useState(0); // em segundos
   const [showTimeWarning, setShowTimeWarning] = useState(false);
+  const [isJitsiLoaded, setIsJitsiLoaded] = useState(false);
   const callStartTime = useRef<number | null>(null);
   const timerInterval = useRef<NodeJS.Timeout | null>(null);
 
+  // Carrega o script do Jitsi primeiro
   useEffect(() => {
-    loadJitsi();
+    const script = document.getElementById('jitsi-script') as HTMLScriptElement;
+    
+    if (script) {
+      if (window.JitsiMeetExternalAPI) {
+        setIsJitsiLoaded(true);
+      }
+      return;
+    }
+
+    const newScript = document.createElement('script');
+    newScript.id = 'jitsi-script';
+    newScript.src = 'https://meet.jit.si/external_api.js';
+    newScript.async = true;
+    newScript.onload = () => {
+      console.log('Jitsi script loaded successfully');
+      setIsJitsiLoaded(true);
+    };
+    newScript.onerror = () => {
+      console.error('Failed to load Jitsi script');
+      toast({
+        title: "Erro ao carregar vídeo",
+        description: "Não foi possível carregar a chamada de vídeo. Recarregue a página.",
+        variant: "destructive",
+      });
+    };
+    document.body.appendChild(newScript);
+  }, []);
+
+  // Inicializa o Jitsi quando script estiver carregado e container montado
+  useEffect(() => {
+    if (!isJitsiLoaded || !jitsiContainer.current || !id || jitsiApi) return;
+
+    console.log('Initializing Jitsi Meet...');
+    
+    try {
+      const api = new window.JitsiMeetExternalAPI('meet.jit.si', {
+        roomName: `duelverse_${id}`,
+        parentNode: jitsiContainer.current,
+        width: '100%',
+        height: '100%',
+        configOverwrite: {
+          startWithAudioMuted: false,
+          startWithVideoMuted: false,
+          prejoinPageEnabled: false,
+        },
+        interfaceConfigOverwrite: {
+          TOOLBAR_BUTTONS: [
+            'microphone',
+            'camera',
+            'desktop',
+            'fullscreen',
+            'hangup',
+            'chat',
+          ],
+          SHOW_JITSI_WATERMARK: false,
+          SHOW_WATERMARK_FOR_GUESTS: false,
+        },
+      });
+
+      console.log('Jitsi initialized successfully');
+      setJitsiApi(api);
+    } catch (error) {
+      console.error('Error initializing Jitsi:', error);
+      toast({
+        title: "Erro ao inicializar vídeo",
+        description: "Não foi possível iniciar a chamada de vídeo.",
+        variant: "destructive",
+      });
+    }
+  }, [isJitsiLoaded, id]);
+
+  // Carrega dados do duelo e inicia timer
+  useEffect(() => {
     checkAuth();
     fetchDuel();
     startCallTimer();
@@ -87,46 +161,6 @@ const DuelRoom = () => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const loadJitsi = () => {
-    if (document.getElementById('jitsi-script')) return;
-
-    const script = document.createElement('script');
-    script.id = 'jitsi-script';
-    script.src = 'https://meet.jit.si/external_api.js';
-    script.async = true;
-    script.onload = () => initializeJitsi();
-    document.body.appendChild(script);
-  };
-
-  const initializeJitsi = () => {
-    if (!jitsiContainer.current || !id) return;
-
-    const api = new window.JitsiMeetExternalAPI('meet.jit.si', {
-      roomName: `duelverse_${id}`,
-      parentNode: jitsiContainer.current,
-      width: '100%',
-      height: '100%',
-      configOverwrite: {
-        startWithAudioMuted: false,
-        startWithVideoMuted: false,
-        prejoinPageEnabled: false,
-      },
-      interfaceConfigOverwrite: {
-        TOOLBAR_BUTTONS: [
-          'microphone',
-          'camera',
-          'desktop',
-          'fullscreen',
-          'hangup',
-          'chat',
-        ],
-        SHOW_JITSI_WATERMARK: false,
-        SHOW_WATERMARK_FOR_GUESTS: false,
-      },
-    });
-
-    setJitsiApi(api);
-  };
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
