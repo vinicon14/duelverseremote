@@ -202,24 +202,29 @@ export const AdminUsers = () => {
         'deleted'
       );
 
-      // Deletar perfil do usuário (cascade irá deletar dados relacionados)
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('user_id', userId);
-      
-      if (profileError) {
-        console.error('Error deleting user profile:', profileError);
+      // Chamar edge function para deletar usuário completamente
+      const { data, error } = await supabase.functions.invoke('delete-user', {
+        body: { userId }
+      });
+
+      if (error) {
+        console.error('Error deleting user:', error);
         toast({ 
           title: "Erro ao deletar usuário", 
-          description: profileError.message,
+          description: error.message || 'Falha ao excluir usuário',
           variant: "destructive" 
         });
         return;
       }
 
-      // Deletar conta de autenticação via RPC (será criada posteriormente)
-      // Por enquanto apenas deletamos o perfil, que já remove o usuário da plataforma
+      if (!data?.success) {
+        toast({ 
+          title: "Erro ao deletar usuário", 
+          description: data?.error || 'Falha ao excluir usuário',
+          variant: "destructive" 
+        });
+        return;
+      }
       
       toast({ 
         title: "✅ Usuário excluído permanentemente",
