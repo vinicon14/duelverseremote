@@ -194,6 +194,17 @@ export const AdminUsers = () => {
   const deleteUser = async (userId: string) => {
     setActionLoading(`ban-${userId}`);
     try {
+      // Verificar se não está tentando deletar a si mesmo
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (currentUser?.id === userId) {
+        toast({ 
+          title: "Erro", 
+          description: "Você não pode deletar sua própria conta",
+          variant: "destructive" 
+        });
+        return;
+      }
+
       // Log da ação antes de deletar
       await logAdminAction(
         userId, 
@@ -202,25 +213,36 @@ export const AdminUsers = () => {
         'deleted'
       );
 
-      // Chamar edge function para deletar usuário completamente
-      const { data, error } = await supabase.functions.invoke('delete-user', {
-        body: { userId }
-      });
+      // Deletar dados relacionados primeiro
+      // Chat messages
+      await supabase.from('chat_messages').delete().eq('sender_id', userId);
+      
+      // Friendships
+      await supabase.from('friendships').delete().or(`user_id.eq.${userId},friend_id.eq.${userId}`);
+      
+      // Friend requests
+      await supabase.from('friend_requests').delete().or(`requester_id.eq.${userId},addressee_id.eq.${userId}`);
+      
+      // Live duels
+      await supabase.from('live_duels').delete().or(`player1_id.eq.${userId},player2_id.eq.${userId}`);
+      
+      // Match history
+      await supabase.from('match_history').delete().or(`player1_id.eq.${userId},player2_id.eq.${userId}`);
+      
+      // User roles
+      await supabase.from('user_roles').delete().eq('user_id', userId);
+      
+      // Finalmente, deletar o perfil (isso pode falhar se houver outras referências)
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('user_id', userId);
 
-      if (error) {
-        console.error('Error deleting user:', error);
+      if (profileError) {
+        console.error('Error deleting user profile:', profileError);
         toast({ 
           title: "Erro ao deletar usuário", 
-          description: error.message || 'Falha ao excluir usuário',
-          variant: "destructive" 
-        });
-        return;
-      }
-
-      if (!data?.success) {
-        toast({ 
-          title: "Erro ao deletar usuário", 
-          description: data?.error || 'Falha ao excluir usuário',
+          description: profileError.message,
           variant: "destructive" 
         });
         return;
