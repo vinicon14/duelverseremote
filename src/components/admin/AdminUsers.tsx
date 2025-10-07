@@ -4,20 +4,53 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, Ban, Crown, User } from "lucide-react";
+import { Shield, Ban, Crown, User, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
 export const AdminUsers = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     fetchUsers();
+    
+    // Listener de tempo real para mudanças em user_roles e profiles
+    const rolesChannel = supabase
+      .channel('admin_changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'user_roles' },
+        () => fetchUsers()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'profiles' },
+        () => fetchUsers()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(rolesChannel);
+    };
   }, []);
+
+  const logAdminAction = async (targetUserId: string, actionType: string, oldValue: string, newValue: string) => {
+    // Log para console por enquanto - a tabela admin_action_logs será criada posteriormente
+    console.log('Admin Action:', {
+      targetUserId,
+      actionType,
+      oldValue,
+      newValue,
+      timestamp: new Date().toISOString()
+    });
+  };
 
   const fetchUsers = async () => {
     try {
+      setLoading(true);
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -25,7 +58,11 @@ export const AdminUsers = () => {
       
       if (error) {
         console.error('Error fetching users:', error);
-        toast({ title: "Erro ao carregar usuários", variant: "destructive" });
+        toast({ 
+          title: "Erro ao carregar usuários", 
+          description: error.message,
+          variant: "destructive" 
+        });
         return;
       }
 
@@ -33,10 +70,14 @@ export const AdminUsers = () => {
         // Buscar roles separadamente para cada usuário
         const usersWithRoles = await Promise.all(
           data.map(async (user) => {
-            const { data: rolesData } = await supabase
+            const { data: rolesData, error: rolesError } = await supabase
               .from('user_roles')
               .select('role')
               .eq('user_id', user.user_id);
+            
+            if (rolesError) {
+              console.error('Error fetching roles for user:', user.user_id, rolesError);
+            }
             
             return {
               ...user,
@@ -49,73 +90,141 @@ export const AdminUsers = () => {
       }
     } catch (error) {
       console.error('Error:', error);
-      toast({ title: "Erro ao carregar usuários", variant: "destructive" });
+      toast({ 
+        title: "Erro ao carregar usuários", 
+        description: "Ocorreu um erro inesperado",
+        variant: "destructive" 
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
   const toggleAdmin = async (userId: string, isCurrentlyAdmin: boolean) => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
+    setActionLoading(`admin-${userId}`);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({ title: "Sessão expirada", description: "Faça login novamente", variant: "destructive" });
+        return;
+      }
 
-    if (isCurrentlyAdmin) {
-      const { error } = await supabase
-        .from('user_roles')
-        .delete()
-        .eq('user_id', userId)
-        .eq('role', 'admin');
-      
-      if (error) {
-        toast({ title: "Erro ao remover admin", variant: "destructive" });
+      if (isCurrentlyAdmin) {
+        const { error } = await supabase
+          .from('user_roles')
+          .delete()
+          .eq('user_id', userId)
+          .eq('role', 'admin');
+        
+        if (error) {
+          console.error('Error removing admin:', error);
+          toast({ 
+            title: "Erro ao remover admin", 
+            description: error.message,
+            variant: "destructive" 
+          });
+        } else {
+          await logAdminAction(userId, 'remove_admin', 'admin', 'user');
+          toast({ 
+            title: "✅ Admin removido", 
+            description: "Permissões atualizadas com sucesso" 
+          });
+        }
       } else {
-        toast({ title: "Admin removido com sucesso!" });
+        const { error } = await supabase
+          .from('user_roles')
+          .insert({ 
+            user_id: userId, 
+            role: 'admin',
+            granted_by: session.user.id
+          });
+        
+        if (error) {
+          console.error('Error promoting admin:', error);
+          toast({ 
+            title: "Erro ao promover admin", 
+            description: error.message,
+            variant: "destructive" 
+          });
+        } else {
+          await logAdminAction(userId, 'promote_admin', 'user', 'admin');
+          toast({ 
+            title: "✅ Usuário promovido", 
+            description: "Agora tem permissões de administrador" 
+          });
+        }
       }
-    } else {
-      const { error } = await supabase
-        .from('user_roles')
-        .insert({ 
-          user_id: userId, 
-          role: 'admin',
-          granted_by: session.user.id
-        });
       
-      if (error) {
-        toast({ title: "Erro ao promover admin", variant: "destructive" });
-      } else {
-        toast({ title: "Usuário promovido a admin!" });
-      }
+      await fetchUsers();
+    } finally {
+      setActionLoading(null);
     }
-    
-    fetchUsers();
   };
 
   const togglePro = async (userId: string, isCurrentlyPro: boolean) => {
-    const { error } = await supabase
-      .from('profiles')
-      .update({ account_type: isCurrentlyPro ? 'free' : 'pro' })
-      .eq('user_id', userId);
-    
-    if (error) {
-      toast({ title: "Erro ao atualizar conta", variant: "destructive" });
-    } else {
-      toast({ title: `Conta ${isCurrentlyPro ? 'rebaixada para Free' : 'promovida para PRO'}!` });
+    setActionLoading(`pro-${userId}`);
+    try {
+      const newAccountType = isCurrentlyPro ? 'free' : 'pro';
+      const { error } = await supabase
+        .from('profiles')
+        .update({ account_type: newAccountType })
+        .eq('user_id', userId);
+      
+      if (error) {
+        console.error('Error updating account:', error);
+        toast({ 
+          title: "Erro ao atualizar conta", 
+          description: error.message,
+          variant: "destructive" 
+        });
+      } else {
+        await logAdminAction(userId, 'change_account_type', isCurrentlyPro ? 'pro' : 'free', newAccountType);
+        toast({ 
+          title: `✅ Conta ${isCurrentlyPro ? 'rebaixada' : 'promovida'}`,
+          description: `Agora é uma conta ${newAccountType.toUpperCase()}`
+        });
+      }
+      
+      await fetchUsers();
+    } finally {
+      setActionLoading(null);
     }
-    
-    fetchUsers();
   };
 
   const toggleBan = async (userId: string, isCurrentlyBanned: boolean) => {
-    const { error } = await supabase
-      .from('profiles')
-      .update({ is_banned: !isCurrentlyBanned })
-      .eq('user_id', userId);
-    
-    if (error) {
-      toast({ title: "Erro ao atualizar status", variant: "destructive" });
-    } else {
-      toast({ title: `Usuário ${isCurrentlyBanned ? 'desbanido' : 'banido'}!` });
+    setActionLoading(`ban-${userId}`);
+    try {
+      const newBanStatus = !isCurrentlyBanned;
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_banned: newBanStatus })
+        .eq('user_id', userId);
+      
+      if (error) {
+        console.error('Error updating ban status:', error);
+        toast({ 
+          title: "Erro ao atualizar status", 
+          description: error.message,
+          variant: "destructive" 
+        });
+      } else {
+        await logAdminAction(
+          userId, 
+          newBanStatus ? 'ban_user' : 'unban_user', 
+          isCurrentlyBanned ? 'banned' : 'active',
+          newBanStatus ? 'banned' : 'active'
+        );
+        toast({ 
+          title: `✅ Usuário ${isCurrentlyBanned ? 'desbanido' : 'banido'}`,
+          description: isCurrentlyBanned ? 'Pode acessar a plataforma novamente' : 'Não pode mais acessar a plataforma',
+          variant: isCurrentlyBanned ? 'default' : 'destructive'
+        });
+      }
+      
+      await fetchUsers();
+    } finally {
+      setActionLoading(null);
     }
-    
-    fetchUsers();
   };
 
   const filteredUsers = users.filter(user => 
@@ -123,10 +232,24 @@ export const AdminUsers = () => {
     user.display_name?.toLowerCase().includes(search.toLowerCase())
   );
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <span className="ml-3 text-muted-foreground">Carregando usuários...</span>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Gerenciar Usuários</h2>
+        <div>
+          <h2 className="text-2xl font-bold">Gerenciar Usuários</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Total: {users.length} usuários • Exibindo: {filteredUsers.length}
+          </p>
+        </div>
         <Input 
           placeholder="Buscar usuário..."
           value={search}
@@ -135,62 +258,86 @@ export const AdminUsers = () => {
         />
       </div>
 
-      <div className="grid gap-4">
-        {filteredUsers.map((user) => {
-          const isAdmin = user.user_roles?.some((r: any) => r.role === 'admin');
-          const isPro = user.account_type === 'pro';
-          const isBanned = user.is_banned;
+      {filteredUsers.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <User className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+            <p className="text-muted-foreground">Nenhum usuário encontrado</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4">
+          {filteredUsers.map((user) => {
+            const isAdmin = user.user_roles?.some((r: any) => r.role === 'admin');
+            const isPro = user.account_type === 'pro';
+            const isBanned = user.is_banned;
 
-          return (
-            <Card key={user.id}>
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <User className="w-5 h-5" />
-                      {user.display_name || user.username}
-                      {isAdmin && <Badge variant="secondary"><Shield className="w-3 h-3 mr-1" />Admin</Badge>}
-                      {isPro && <Badge className="bg-gradient-to-r from-yellow-500 to-amber-500"><Crown className="w-3 h-3 mr-1" />PRO</Badge>}
-                      {isBanned && <Badge variant="destructive"><Ban className="w-3 h-3 mr-1" />Banido</Badge>}
-                    </CardTitle>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      @{user.username} • ELO: {user.elo_rating} • Nível: {user.level}
-                    </p>
+            return (
+              <Card key={user.id}>
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <User className="w-5 h-5" />
+                        {user.display_name || user.username}
+                        {isAdmin && <Badge variant="secondary"><Shield className="w-3 h-3 mr-1" />Admin</Badge>}
+                        {isPro && <Badge className="bg-gradient-to-r from-yellow-500 to-amber-500"><Crown className="w-3 h-3 mr-1" />PRO</Badge>}
+                        {isBanned && <Badge variant="destructive"><Ban className="w-3 h-3 mr-1" />Banido</Badge>}
+                      </CardTitle>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        @{user.username} • ELO: {user.elo_rating} • Nível: {user.level}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex gap-2">
-                  <Button
-                    variant={isAdmin ? "destructive" : "default"}
-                    size="sm"
-                    onClick={() => toggleAdmin(user.user_id, isAdmin)}
-                  >
-                    <Shield className="w-4 h-4 mr-1" />
-                    {isAdmin ? 'Remover' : 'Promover'} Admin
-                  </Button>
-                  <Button
-                    variant={isPro ? "outline" : "default"}
-                    size="sm"
-                    onClick={() => togglePro(user.user_id, isPro)}
-                  >
-                    <Crown className="w-4 h-4 mr-1" />
-                    {isPro ? 'Remover' : 'Promover'} PRO
-                  </Button>
-                  <Button
-                    variant={isBanned ? "outline" : "destructive"}
-                    size="sm"
-                    onClick={() => toggleBan(user.user_id, isBanned)}
-                  >
-                    <Ban className="w-4 h-4 mr-1" />
-                    {isBanned ? 'Desbanir' : 'Banir'}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex gap-2">
+                    <Button
+                      variant={isAdmin ? "destructive" : "default"}
+                      size="sm"
+                      onClick={() => toggleAdmin(user.user_id, isAdmin)}
+                      disabled={actionLoading === `admin-${user.user_id}`}
+                    >
+                      {actionLoading === `admin-${user.user_id}` ? (
+                        <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                      ) : (
+                        <Shield className="w-4 h-4 mr-1" />
+                      )}
+                      {isAdmin ? 'Remover' : 'Promover'} Admin
+                    </Button>
+                    <Button
+                      variant={isPro ? "outline" : "default"}
+                      size="sm"
+                      onClick={() => togglePro(user.user_id, isPro)}
+                      disabled={actionLoading === `pro-${user.user_id}`}
+                    >
+                      {actionLoading === `pro-${user.user_id}` ? (
+                        <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                      ) : (
+                        <Crown className="w-4 h-4 mr-1" />
+                      )}
+                      {isPro ? 'Remover' : 'Promover'} PRO
+                    </Button>
+                    <Button
+                      variant={isBanned ? "outline" : "destructive"}
+                      size="sm"
+                      onClick={() => toggleBan(user.user_id, isBanned)}
+                      disabled={actionLoading === `ban-${user.user_id}`}
+                    >
+                      {actionLoading === `ban-${user.user_id}` ? (
+                        <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                      ) : (
+                        <Ban className="w-4 h-4 mr-1" />
+                      )}
+                      {isBanned ? 'Desbanir' : 'Banir'}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };
