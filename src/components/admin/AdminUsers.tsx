@@ -213,36 +213,30 @@ export const AdminUsers = () => {
         'deleted'
       );
 
-      // Deletar dados relacionados primeiro
-      // Chat messages
-      await supabase.from('chat_messages').delete().eq('sender_id', userId);
-      
-      // Friendships
-      await supabase.from('friendships').delete().or(`user_id.eq.${userId},friend_id.eq.${userId}`);
-      
-      // Friend requests
-      await supabase.from('friend_requests').delete().or(`requester_id.eq.${userId},addressee_id.eq.${userId}`);
-      
-      // Live duels
-      await supabase.from('live_duels').delete().or(`player1_id.eq.${userId},player2_id.eq.${userId}`);
-      
-      // Match history
-      await supabase.from('match_history').delete().or(`player1_id.eq.${userId},player2_id.eq.${userId}`);
-      
-      // User roles
-      await supabase.from('user_roles').delete().eq('user_id', userId);
-      
-      // Finalmente, deletar o perfil (isso pode falhar se houver outras referências)
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('user_id', userId);
+      console.log('Calling admin-delete-user function for userId:', userId);
 
-      if (profileError) {
-        console.error('Error deleting user profile:', profileError);
+      // Chamar edge function com permissões de admin
+      const { data, error } = await supabase.functions.invoke('admin-delete-user', {
+        body: { userId }
+      });
+
+      console.log('Delete response:', { data, error });
+
+      if (error) {
+        console.error('Error calling delete function:', error);
         toast({ 
           title: "Erro ao deletar usuário", 
-          description: profileError.message,
+          description: error.message || 'Falha ao chamar função de exclusão',
+          variant: "destructive" 
+        });
+        return;
+      }
+
+      if (!data?.success) {
+        console.error('Delete failed:', data);
+        toast({ 
+          title: "Erro ao deletar usuário", 
+          description: data?.error || 'Falha ao excluir usuário',
           variant: "destructive" 
         });
         return;
@@ -250,8 +244,7 @@ export const AdminUsers = () => {
       
       toast({ 
         title: "✅ Usuário excluído permanentemente",
-        description: 'Todos os dados foram removidos da plataforma',
-        variant: "destructive"
+        description: 'Todos os dados foram removidos da plataforma'
       });
       
       await fetchUsers();
