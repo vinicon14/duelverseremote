@@ -291,8 +291,11 @@ CREATE POLICY "Public profiles viewable" ON public.profiles FOR SELECT TO authen
 -- POLÍTICAS RLS - USER_ROLES
 -- ============================================================================
 
-CREATE POLICY "Admins manage user_roles" ON public.user_roles FOR ALL TO authenticated USING (public.has_role(auth.uid(), 'admin')) WITH CHECK (public.has_role(auth.uid(), 'admin'));
+-- Usuários podem ver suas próprias roles (sem recursão)
 CREATE POLICY "Users view own roles" ON public.user_roles FOR SELECT TO authenticated USING (auth.uid() = user_id);
+
+-- Admins podem gerenciar todas as roles
+CREATE POLICY "Admins manage user_roles" ON public.user_roles FOR ALL TO authenticated USING (public.has_role(auth.uid(), 'admin')) WITH CHECK (public.has_role(auth.uid(), 'admin'));
 
 -- ============================================================================
 -- POLÍTICAS RLS - FRIEND_REQUESTS
