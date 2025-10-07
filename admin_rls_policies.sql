@@ -5,6 +5,9 @@
 -- ============================================================================
 
 -- PASSO 1: Remover TODAS as políticas existentes da tabela profiles
+DROP POLICY IF EXISTS "Admins can delete profiles" ON public.profiles;
+DROP POLICY IF EXISTS "Admins can update profiles" ON public.profiles;
+DROP POLICY IF EXISTS "Admins can view all profiles" ON public.profiles;
 DROP POLICY IF EXISTS "Admins can delete any profile" ON public.profiles;
 DROP POLICY IF EXISTS "Admins can update any profile" ON public.profiles;
 DROP POLICY IF EXISTS "Admins can read all profiles" ON public.profiles;
