@@ -261,113 +261,174 @@ export const AdminUsers = () => {
           description: "Você não pode deletar sua própria conta",
           variant: "destructive" 
         });
+        setActionLoading(null);
         return;
       }
 
-      console.log('Iniciando exclusão completa do usuário:', userId);
+      console.log('🗑️ INICIANDO EXCLUSÃO TOTAL DO USUÁRIO:', userId);
 
-      // Deletar em ordem inversa das dependências para evitar erros de chave estrangeira
-      
-      // 1. Chat messages - deletar todas as mensagens do usuário
-      console.log('Deletando chat_messages...');
-      const { error: chatError } = await supabase
-        .from('chat_messages')
-        .delete()
-        .eq('sender_id', userId);
-      
-      if (chatError) {
-        console.error('Erro ao deletar chat_messages:', chatError);
-        toast({ 
-          title: "Aviso", 
-          description: `Erro ao deletar mensagens: ${chatError.message}`,
-          variant: "default" 
-        });
-      }
-
-      // 2. Friendships - tabela não existe ou tem estrutura diferente, pulando...
-
-      // 3. Friend requests - deletar todos os pedidos de amizade
-      console.log('Deletando friend_requests...');
-      const { error: friendRequestsError } = await supabase
-        .from('friend_requests')
-        .delete()
-        .or(`requester_id.eq.${userId},addressee_id.eq.${userId}`);
-      
-      if (friendRequestsError) {
-        console.error('Erro ao deletar friend_requests:', friendRequestsError);
-      }
-
-      // 4. Live duels - deletar todos os duelos
-      console.log('Deletando live_duels...');
-      const { error: duelsError } = await supabase
-        .from('live_duels')
-        .delete()
-        .or(`player1_id.eq.${userId},player2_id.eq.${userId}`);
-      
-      if (duelsError) {
-        console.error('Erro ao deletar live_duels:', duelsError);
-      }
-
-      // 5. Match history - deletar histórico de partidas
-      console.log('Deletando match_history...');
-      const { error: matchHistoryError } = await supabase
-        .from('match_history')
-        .delete()
-        .or(`player1_id.eq.${userId},player2_id.eq.${userId}`);
-      
-      if (matchHistoryError) {
-        console.error('Erro ao deletar match_history:', matchHistoryError);
-      }
-
-      // 6. User roles - deletar roles do usuário
-      console.log('Deletando user_roles...');
-      const { error: rolesError } = await supabase
+      // 1. Deletar user_roles primeiro (sem dependências)
+      console.log('📋 Deletando user_roles...');
+      const { error: rolesError, count: rolesCount } = await supabase
         .from('user_roles')
-        .delete()
+        .delete({ count: 'exact' })
         .eq('user_id', userId);
       
       if (rolesError) {
-        console.error('Erro ao deletar user_roles:', rolesError);
+        console.error('❌ Erro ao deletar user_roles:', rolesError);
+      } else {
+        console.log(`✅ ${rolesCount || 0} roles deletadas`);
       }
 
-      // 7. Deletar o perfil por último
-      console.log('Deletando profile...');
-      const { error: profileError, data: profileData } = await supabase
+      // 2. Deletar chat_messages
+      console.log('💬 Deletando chat_messages...');
+      const { error: chatError, count: chatCount } = await supabase
+        .from('chat_messages')
+        .delete({ count: 'exact' })
+        .eq('sender_id', userId);
+      
+      if (chatError) {
+        console.error('❌ Erro ao deletar chat_messages:', chatError);
+      } else {
+        console.log(`✅ ${chatCount || 0} mensagens deletadas`);
+      }
+
+      // 3. Deletar friend_requests
+      console.log('👥 Deletando friend_requests...');
+      const { error: friendRequestsError, count: friendReqCount } = await supabase
+        .from('friend_requests')
+        .delete({ count: 'exact' })
+        .or(`requester_id.eq.${userId},addressee_id.eq.${userId}`);
+      
+      if (friendRequestsError) {
+        console.error('❌ Erro ao deletar friend_requests:', friendRequestsError);
+      } else {
+        console.log(`✅ ${friendReqCount || 0} friend requests deletados`);
+      }
+
+      // 4. Deletar live_duels
+      console.log('⚔️ Deletando live_duels...');
+      const { error: duelsError, count: duelsCount } = await supabase
+        .from('live_duels')
+        .delete({ count: 'exact' })
+        .or(`player1_id.eq.${userId},player2_id.eq.${userId}`);
+      
+      if (duelsError) {
+        console.error('❌ Erro ao deletar live_duels:', duelsError);
+      } else {
+        console.log(`✅ ${duelsCount || 0} duelos deletados`);
+      }
+
+      // 5. Deletar match_history
+      console.log('📊 Deletando match_history...');
+      const { error: matchHistoryError, count: matchCount } = await supabase
+        .from('match_history')
+        .delete({ count: 'exact' })
+        .or(`player1_id.eq.${userId},player2_id.eq.${userId}`);
+      
+      if (matchHistoryError) {
+        console.error('❌ Erro ao deletar match_history:', matchHistoryError);
+      } else {
+        console.log(`✅ ${matchCount || 0} históricos deletados`);
+      }
+
+      // 6. CRITICAL: Deletar o perfil por último
+      console.log('👤 Deletando profile do usuário...');
+      
+      // Primeiro, verificar se o perfil existe
+      const { data: existingProfile, error: checkError } = await supabase
         .from('profiles')
-        .delete()
+        .select('id, username, display_name, user_id')
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      console.log('🔍 Perfil encontrado antes da exclusão:', existingProfile);
+      
+      if (checkError) {
+        console.error('❌ Erro ao verificar perfil:', checkError);
+        toast({ 
+          title: "Erro ao verificar usuário", 
+          description: checkError.message,
+          variant: "destructive" 
+        });
+        setActionLoading(null);
+        return;
+      }
+
+      if (!existingProfile) {
+        console.log('⚠️ Perfil já não existe no banco de dados!');
+        toast({ 
+          title: "Usuário já foi excluído", 
+          description: "Este perfil não existe mais no banco de dados",
+          variant: "default" 
+        });
+        await fetchUsers();
+        setActionLoading(null);
+        return;
+      }
+
+      // Agora deletar o perfil
+      const { error: profileError, data: deletedProfiles, count: profileCount } = await supabase
+        .from('profiles')
+        .delete({ count: 'exact' })
         .eq('user_id', userId)
         .select();
 
-      console.log('Resultado da exclusão do perfil:', { profileError, profileData });
+      console.log('🗑️ Resultado da exclusão do perfil:', { 
+        error: profileError, 
+        deletedProfiles, 
+        count: profileCount 
+      });
 
       if (profileError) {
-        console.error('Erro crítico ao deletar profile:', profileError);
+        console.error('❌ ERRO CRÍTICO ao deletar profile:', profileError);
         toast({ 
           title: "Erro ao deletar usuário", 
-          description: `Não foi possível deletar o perfil: ${profileError.message}. O usuário pode ter sido parcialmente excluído.`,
+          description: `Falha ao excluir o perfil: ${profileError.message}`,
           variant: "destructive" 
         });
-        
-        // Mesmo com erro, atualizar a lista para mostrar o estado atual
         await fetchUsers();
+        setActionLoading(null);
+        return;
+      }
+
+      // Verificar se o perfil foi realmente deletado
+      const { data: verifyProfile, error: verifyError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      console.log('🔍 Verificação pós-exclusão:', { verifyProfile, verifyError });
+      
+      if (verifyProfile) {
+        console.error('❌ ERRO: O perfil AINDA EXISTE após a exclusão!');
+        toast({ 
+          title: "Erro na exclusão", 
+          description: "O perfil não foi removido do banco de dados. Pode ser um problema de permissões RLS.",
+          variant: "destructive" 
+        });
+        await fetchUsers();
+        setActionLoading(null);
         return;
       }
 
       // Log da ação de exclusão
       await logAdminAction(userId, 'delete_user', 'active', 'deleted');
       
-      console.log('Usuário excluído com sucesso:', userId);
+      console.log('✅ USUÁRIO EXCLUÍDO COM SUCESSO:', userId);
+      console.log('📝 Perfil deletado:', existingProfile.username);
       
       toast({ 
         title: "✅ Usuário excluído com sucesso",
-        description: 'Todos os dados do usuário foram removidos da plataforma.'
+        description: `${existingProfile.display_name || existingProfile.username} foi removido da plataforma.`
       });
       
-      // Atualizar a lista completa do servidor imediatamente
+      // Atualizar a lista imediatamente
       await fetchUsers();
       
     } catch (error: any) {
-      console.error('Erro inesperado ao deletar usuário:', error);
+      console.error('❌ ERRO INESPERADO:', error);
       toast({ 
         title: "Erro ao deletar usuário", 
         description: error.message || "Ocorreu um erro inesperado durante a exclusão",
