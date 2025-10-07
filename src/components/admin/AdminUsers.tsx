@@ -166,67 +166,60 @@ export const AdminUsers = () => {
     try {
       const newAccountType = isCurrentlyPro ? 'free' : 'pro';
       
-      console.log('👑 Alterando tipo de conta...');
-
-      const { data, error } = await supabase.functions.invoke('admin-toggle-pro', {
-        body: JSON.stringify({ userId, accountType: newAccountType }),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      console.log('👑 ALTERANDO TIPO DE CONTA:', {
+        userId,
+        de: isCurrentlyPro ? 'PRO' : 'FREE',
+        para: newAccountType.toUpperCase()
       });
 
-      console.log('📥 Resposta:', { data, error });
-
-      if (error) {
-        console.error('❌ Erro ao invocar função:', error);
-        toast({
-          title: "Erro ao atualizar conta",
-          description: error.message || "Falha ao comunicar com o servidor",
-          variant: "destructive"
+      // Atualizar diretamente com Supabase client
+      const { data: updateData, error: updateError } = await supabase
+        .from('profiles')
+        .update({ account_type: newAccountType })
+        .eq('user_id', userId)
+        .select('id, username, display_name, account_type');
+      
+      console.log('📊 Resultado da atualização:', { updateData, updateError });
+      
+      if (updateError) {
+        console.error('❌ Erro ao atualizar:', updateError);
+        toast({ 
+          title: "Erro ao atualizar conta", 
+          description: `${updateError.message}. Verifique se as políticas RLS foram aplicadas.`,
+          variant: "destructive" 
         });
         setActionLoading(null);
         return;
       }
 
-      if (data?.error) {
-        console.error('❌ Erro retornado pela função:', data);
-        toast({
-          title: "Erro ao atualizar conta",
-          description: data.error || "Erro desconhecido",
-          variant: "destructive"
+      if (!updateData || updateData.length === 0) {
+        console.error('❌ Nenhum registro atualizado!');
+        toast({ 
+          title: "Erro", 
+          description: "Nenhum registro foi atualizado. Verifique as permissões RLS.",
+          variant: "destructive" 
         });
         setActionLoading(null);
         return;
       }
 
-      if (!data?.success) {
-        console.error('❌ Função não retornou sucesso:', data);
-        toast({
-          title: "Erro ao atualizar conta",
-          description: "A operação não foi concluída com sucesso",
-          variant: "destructive"
-        });
-        setActionLoading(null);
-        return;
-      }
-
-      console.log('✅ Conta atualizada:', data);
+      console.log('✅ SUCESSO! Conta atualizada:', updateData[0]);
 
       await logAdminAction(userId, 'change_account_type', isCurrentlyPro ? 'pro' : 'free', newAccountType);
-
-      toast({
+      
+      toast({ 
         title: `✅ Conta ${isCurrentlyPro ? 'rebaixada' : 'promovida'}`,
-        description: `Usuário agora é ${newAccountType.toUpperCase()}`
+        description: `${updateData[0].display_name || updateData[0].username} agora é ${newAccountType.toUpperCase()}`
       });
-
+      
       await fetchUsers();
-
+      
     } catch (error: any) {
       console.error('❌ ERRO INESPERADO:', error);
-      toast({
-        title: "Erro ao atualizar conta",
+      toast({ 
+        title: "Erro ao atualizar conta", 
         description: error.message || "Ocorreu um erro inesperado",
-        variant: "destructive"
+        variant: "destructive" 
       });
     } finally {
       setActionLoading(null);
@@ -236,79 +229,115 @@ export const AdminUsers = () => {
   const deleteUser = async (userId: string) => {
     setActionLoading(`ban-${userId}`);
     try {
-      // Verificar se não está tentando deletar a si mesmo
       const { data: { user: currentUser } } = await supabase.auth.getUser();
       if (currentUser?.id === userId) {
-        toast({
-          title: "Erro",
+        toast({ 
+          title: "Erro", 
           description: "Você não pode deletar sua própria conta",
-          variant: "destructive"
+          variant: "destructive" 
         });
         setActionLoading(null);
         return;
       }
 
-      console.log('🗑️ Deletando usuário...');
+      console.log('🗑️ INICIANDO EXCLUSÃO COMPLETA:', userId);
 
-      const { data, error } = await supabase.functions.invoke('admin-delete-user', {
-        body: JSON.stringify({ userId }),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      // 1. user_roles
+      console.log('📋 Deletando user_roles...');
+      const { error: rolesError } = await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', userId);
+      
+      if (rolesError) console.error('⚠️ Erro em user_roles:', rolesError);
 
-      console.log('📥 Resposta:', { data, error });
+      // 2. chat_messages
+      console.log('💬 Deletando chat_messages...');
+      const { error: chatError } = await supabase
+        .from('chat_messages')
+        .delete()
+        .eq('sender_id', userId);
+      
+      if (chatError) console.error('⚠️ Erro em chat_messages:', chatError);
 
-      if (error) {
-        console.error('❌ Erro ao invocar função:', error);
-        toast({
-          title: "Erro ao deletar usuário",
-          description: error.message || "Falha ao comunicar com o servidor",
-          variant: "destructive"
+      // 3. friend_requests
+      console.log('👥 Deletando friend_requests...');
+      const { error: friendReqError } = await supabase
+        .from('friend_requests')
+        .delete()
+        .or(`requester_id.eq.${userId},addressee_id.eq.${userId}`);
+      
+      if (friendReqError) console.error('⚠️ Erro em friend_requests:', friendReqError);
+
+      // 4. live_duels
+      console.log('⚔️ Deletando live_duels...');
+      const { error: duelsError } = await supabase
+        .from('live_duels')
+        .delete()
+        .or(`player1_id.eq.${userId},player2_id.eq.${userId}`);
+      
+      if (duelsError) console.error('⚠️ Erro em live_duels:', duelsError);
+
+      // 5. match_history
+      console.log('📊 Deletando match_history...');
+      const { error: matchError } = await supabase
+        .from('match_history')
+        .delete()
+        .or(`player1_id.eq.${userId},player2_id.eq.${userId}`);
+      
+      if (matchError) console.error('⚠️ Erro em match_history:', matchError);
+
+      // 6. PERFIL (CRÍTICO)
+      console.log('👤 Deletando profile...');
+      const { data: deletedProfile, error: profileError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('user_id', userId)
+        .select('id, username, display_name');
+
+      console.log('📋 Resultado:', { deletedProfile, profileError });
+
+      if (profileError) {
+        console.error('❌ ERRO CRÍTICO ao deletar perfil:', profileError);
+        toast({ 
+          title: "Erro ao deletar usuário", 
+          description: `${profileError.message}. Verifique se as políticas RLS foram aplicadas.`,
+          variant: "destructive" 
         });
+        await fetchUsers();
         setActionLoading(null);
         return;
       }
 
-      if (data?.error) {
-        console.error('❌ Erro retornado pela função:', data);
-        toast({
-          title: "Erro ao deletar usuário",
-          description: data.error || "Erro desconhecido",
-          variant: "destructive"
+      if (!deletedProfile || deletedProfile.length === 0) {
+        console.error('❌ Nenhum perfil foi deletado!');
+        toast({ 
+          title: "Erro", 
+          description: "O perfil não foi removido. Verifique as permissões RLS.",
+          variant: "destructive" 
         });
+        await fetchUsers();
         setActionLoading(null);
         return;
       }
 
-      if (!data?.success) {
-        console.error('❌ Função não retornou sucesso:', data);
-        toast({
-          title: "Erro ao deletar usuário",
-          description: "A operação não foi concluída com sucesso",
-          variant: "destructive"
-        });
-        setActionLoading(null);
-        return;
-      }
-
-      console.log('✅ Usuário deletado:', data);
+      console.log('✅ SUCESSO! Perfil deletado:', deletedProfile[0]);
 
       await logAdminAction(userId, 'delete_user', 'active', 'deleted');
-
-      toast({
+      
+      toast({ 
         title: "✅ Usuário excluído com sucesso",
-        description: 'Todos os dados do usuário foram removidos da plataforma.'
+        description: `${deletedProfile[0].display_name || deletedProfile[0].username} foi removido da plataforma.`
       });
-
+      
       await fetchUsers();
-
+      
     } catch (error: any) {
       console.error('❌ ERRO INESPERADO:', error);
-      toast({
-        title: "Erro ao deletar usuário",
-        description: error.message || "Ocorreu um erro inesperado durante a exclusão",
-        variant: "destructive"
+      toast({ 
+        title: "Erro ao deletar usuário", 
+        description: error.message || "Ocorreu um erro inesperado",
+        variant: "destructive" 
       });
     } finally {
       setActionLoading(null);
