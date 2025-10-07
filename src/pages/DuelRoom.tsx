@@ -98,11 +98,18 @@ const DuelRoom = () => {
         
         // Reinicializar automaticamente quando a conferência terminar (a cada 5 min)
         api.addEventListener('videoConferenceLeft', () => {
-          console.log('Jitsi conference left, reinitializing if time remaining...');
+          console.log('Jitsi conference left, checking time remaining...');
+          
+          // Calcular tempo restante usando o ref ao invés do estado
+          const MAX_DURATION = 3600; // 60 minutos em segundos
+          const elapsed = callStartTime.current 
+            ? Math.floor((Date.now() - callStartTime.current) / 1000)
+            : 0;
+          const remaining = Math.max(0, MAX_DURATION - elapsed);
           
           // Verificar se ainda há tempo restante
-          if (callDuration > 0) {
-            console.log('Time remaining, reinitializing Jitsi in 2 seconds...');
+          if (remaining > 0) {
+            console.log(`Time remaining: ${remaining}s, reinitializing Jitsi in 2 seconds...`);
             setTimeout(() => {
               if (jitsiContainer.current) {
                 api.dispose();
