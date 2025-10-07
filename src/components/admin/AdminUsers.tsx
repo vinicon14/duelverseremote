@@ -166,154 +166,60 @@ export const AdminUsers = () => {
     try {
       const newAccountType = isCurrentlyPro ? 'free' : 'pro';
       
-      console.log('👑 INICIANDO ALTERAÇÃO DE CONTA:', {
-        userId,
-        statusAtual: isCurrentlyPro ? 'PRO' : 'FREE',
-        novoStatus: newAccountType.toUpperCase()
+      console.log('👑 Chamando Edge Function para alterar conta...');
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({ title: "Erro", description: "Sessão expirada", variant: "destructive" });
+        setActionLoading(null);
+        return;
+      }
+
+      const response = await supabase.functions.invoke('admin-toggle-pro', {
+        body: { userId, accountType: newAccountType }
       });
 
-      // 1. Verificar o estado atual do usuário
-      console.log('🔍 Verificando estado atual...');
-      const { data: currentProfile, error: checkError } = await supabase
-        .from('profiles')
-        .select('id, username, display_name, account_type, user_id')
-        .eq('user_id', userId)
-        .maybeSingle();
-      
-      console.log('📋 Perfil atual:', currentProfile);
-      
-      if (checkError) {
-        console.error('❌ Erro ao verificar perfil:', checkError);
-        toast({ 
-          title: "Erro ao verificar usuário", 
-          description: checkError.message,
-          variant: "destructive" 
+      console.log('📥 Resposta da Edge Function:', response);
+
+      if (response.error) {
+        console.error('❌ Erro na Edge Function:', response.error);
+        toast({
+          title: "Erro ao atualizar conta",
+          description: response.error.message || "Falha ao comunicar com o servidor",
+          variant: "destructive"
         });
         setActionLoading(null);
         return;
       }
 
-      if (!currentProfile) {
-        console.error('❌ Perfil não encontrado!');
-        toast({ 
-          title: "Erro", 
-          description: "Usuário não encontrado no banco de dados",
-          variant: "destructive" 
-        });
-        await fetchUsers();
-        setActionLoading(null);
-        return;
-      }
-
-      console.log(`📝 Tipo de conta atual no banco: ${currentProfile.account_type}`);
-
-      // 2. Atualizar o tipo de conta
-      console.log(`🔄 Atualizando account_type de "${currentProfile.account_type}" para "${newAccountType}"...`);
-      
-      const { data: updateData, error: updateError, count: updateCount } = await supabase
-        .from('profiles')
-        .update({ account_type: newAccountType })
-        .eq('user_id', userId)
-        .select('id, username, display_name, account_type');
-      
-      console.log('📊 Resultado da atualização:', { 
-        updateData, 
-        updateError, 
-        updateCount 
-      });
-      
-      if (updateError) {
-        console.error('❌ Erro ao atualizar conta:', updateError);
-        toast({ 
-          title: "Erro ao atualizar conta", 
-          description: updateError.message,
-          variant: "destructive" 
+      if (!response.data?.success) {
+        console.error('❌ Edge Function retornou erro:', response.data);
+        toast({
+          title: "Erro ao atualizar conta",
+          description: response.data?.error || "Erro desconhecido",
+          variant: "destructive"
         });
         setActionLoading(null);
         return;
       }
 
-      if (!updateData || updateData.length === 0) {
-        console.error('❌ Nenhum registro foi atualizado!');
-        toast({ 
-          title: "Erro na atualização", 
-          description: "Nenhum registro foi modificado. Pode ser um problema de permissões RLS.",
-          variant: "destructive" 
-        });
-        await fetchUsers();
-        setActionLoading(null);
-        return;
-      }
+      console.log('✅ Conta atualizada com sucesso:', response.data);
 
-      // 3. Verificar se a atualização foi aplicada
-      console.log('🔍 Verificando se a atualização foi aplicada...');
-      const { data: verifyData, error: verifyError } = await supabase
-        .from('profiles')
-        .select('account_type, username, display_name')
-        .eq('user_id', userId)
-        .single();
-      
-      console.log('✔️ Verificação pós-atualização:', { 
-        verifyData, 
-        verifyError 
-      });
-      
-      if (verifyError) {
-        console.error('❌ Erro ao verificar atualização:', verifyError);
-        toast({ 
-          title: "Aviso", 
-          description: "Conta atualizada, mas houve erro na verificação",
-          variant: "default" 
-        });
-        await fetchUsers();
-        setActionLoading(null);
-        return;
-      }
+      await logAdminAction(userId, 'change_account_type', isCurrentlyPro ? 'pro' : 'free', newAccountType);
 
-      if (verifyData?.account_type !== newAccountType) {
-        console.error('❌ ERRO: A conta NÃO foi atualizada!', {
-          esperado: newAccountType,
-          encontrado: verifyData?.account_type
-        });
-        toast({ 
-          title: "Erro na atualização", 
-          description: `A conta ainda está como ${verifyData?.account_type.toUpperCase()}. Pode ser um problema de permissões RLS.`,
-          variant: "destructive" 
-        });
-        await fetchUsers();
-        setActionLoading(null);
-        return;
-      }
-
-      // 4. Sucesso!
-      console.log('✅ CONTA ATUALIZADA COM SUCESSO!', {
-        usuario: verifyData.display_name || verifyData.username,
-        antigoTipo: isCurrentlyPro ? 'PRO' : 'FREE',
-        novoTipo: newAccountType.toUpperCase()
-      });
-
-      // Log da ação
-      await logAdminAction(
-        userId, 
-        'change_account_type', 
-        isCurrentlyPro ? 'pro' : 'free', 
-        newAccountType
-      );
-      
-      toast({ 
+      toast({
         title: `✅ Conta ${isCurrentlyPro ? 'rebaixada' : 'promovida'}`,
-        description: `${verifyData.display_name || verifyData.username} agora é ${newAccountType.toUpperCase()}`
+        description: `Usuário agora é ${newAccountType.toUpperCase()}`
       });
-      
-      // Atualizar a lista
+
       await fetchUsers();
-      
+
     } catch (error: any) {
       console.error('❌ ERRO INESPERADO:', error);
-      toast({ 
-        title: "Erro ao atualizar conta", 
+      toast({
+        title: "Erro ao atualizar conta",
         description: error.message || "Ocorreu um erro inesperado",
-        variant: "destructive" 
+        variant: "destructive"
       });
     } finally {
       setActionLoading(null);
@@ -326,183 +232,69 @@ export const AdminUsers = () => {
       // Verificar se não está tentando deletar a si mesmo
       const { data: { user: currentUser } } = await supabase.auth.getUser();
       if (currentUser?.id === userId) {
-        toast({ 
-          title: "Erro", 
+        toast({
+          title: "Erro",
           description: "Você não pode deletar sua própria conta",
-          variant: "destructive" 
+          variant: "destructive"
         });
         setActionLoading(null);
         return;
       }
 
-      console.log('🗑️ INICIANDO EXCLUSÃO TOTAL DO USUÁRIO:', userId);
+      console.log('🗑️ Chamando Edge Function para deletar usuário...');
 
-      // 1. Deletar user_roles primeiro (sem dependências)
-      console.log('📋 Deletando user_roles...');
-      const { error: rolesError, count: rolesCount } = await supabase
-        .from('user_roles')
-        .delete({ count: 'exact' })
-        .eq('user_id', userId);
-      
-      if (rolesError) {
-        console.error('❌ Erro ao deletar user_roles:', rolesError);
-      } else {
-        console.log(`✅ ${rolesCount || 0} roles deletadas`);
-      }
-
-      // 2. Deletar chat_messages
-      console.log('💬 Deletando chat_messages...');
-      const { error: chatError, count: chatCount } = await supabase
-        .from('chat_messages')
-        .delete({ count: 'exact' })
-        .eq('sender_id', userId);
-      
-      if (chatError) {
-        console.error('❌ Erro ao deletar chat_messages:', chatError);
-      } else {
-        console.log(`✅ ${chatCount || 0} mensagens deletadas`);
-      }
-
-      // 3. Deletar friend_requests
-      console.log('👥 Deletando friend_requests...');
-      const { error: friendRequestsError, count: friendReqCount } = await supabase
-        .from('friend_requests')
-        .delete({ count: 'exact' })
-        .or(`requester_id.eq.${userId},addressee_id.eq.${userId}`);
-      
-      if (friendRequestsError) {
-        console.error('❌ Erro ao deletar friend_requests:', friendRequestsError);
-      } else {
-        console.log(`✅ ${friendReqCount || 0} friend requests deletados`);
-      }
-
-      // 4. Deletar live_duels
-      console.log('⚔️ Deletando live_duels...');
-      const { error: duelsError, count: duelsCount } = await supabase
-        .from('live_duels')
-        .delete({ count: 'exact' })
-        .or(`player1_id.eq.${userId},player2_id.eq.${userId}`);
-      
-      if (duelsError) {
-        console.error('❌ Erro ao deletar live_duels:', duelsError);
-      } else {
-        console.log(`✅ ${duelsCount || 0} duelos deletados`);
-      }
-
-      // 5. Deletar match_history
-      console.log('📊 Deletando match_history...');
-      const { error: matchHistoryError, count: matchCount } = await supabase
-        .from('match_history')
-        .delete({ count: 'exact' })
-        .or(`player1_id.eq.${userId},player2_id.eq.${userId}`);
-      
-      if (matchHistoryError) {
-        console.error('❌ Erro ao deletar match_history:', matchHistoryError);
-      } else {
-        console.log(`✅ ${matchCount || 0} históricos deletados`);
-      }
-
-      // 6. CRITICAL: Deletar o perfil por último
-      console.log('👤 Deletando profile do usuário...');
-      
-      // Primeiro, verificar se o perfil existe
-      const { data: existingProfile, error: checkError } = await supabase
-        .from('profiles')
-        .select('id, username, display_name, user_id')
-        .eq('user_id', userId)
-        .maybeSingle();
-      
-      console.log('🔍 Perfil encontrado antes da exclusão:', existingProfile);
-      
-      if (checkError) {
-        console.error('❌ Erro ao verificar perfil:', checkError);
-        toast({ 
-          title: "Erro ao verificar usuário", 
-          description: checkError.message,
-          variant: "destructive" 
-        });
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({ title: "Erro", description: "Sessão expirada", variant: "destructive" });
         setActionLoading(null);
         return;
       }
 
-      if (!existingProfile) {
-        console.log('⚠️ Perfil já não existe no banco de dados!');
-        toast({ 
-          title: "Usuário já foi excluído", 
-          description: "Este perfil não existe mais no banco de dados",
-          variant: "default" 
-        });
-        await fetchUsers();
-        setActionLoading(null);
-        return;
-      }
-
-      // Agora deletar o perfil
-      const { error: profileError, data: deletedProfiles, count: profileCount } = await supabase
-        .from('profiles')
-        .delete({ count: 'exact' })
-        .eq('user_id', userId)
-        .select();
-
-      console.log('🗑️ Resultado da exclusão do perfil:', { 
-        error: profileError, 
-        deletedProfiles, 
-        count: profileCount 
+      const response = await supabase.functions.invoke('admin-delete-user', {
+        body: { userId }
       });
 
-      if (profileError) {
-        console.error('❌ ERRO CRÍTICO ao deletar profile:', profileError);
-        toast({ 
-          title: "Erro ao deletar usuário", 
-          description: `Falha ao excluir o perfil: ${profileError.message}`,
-          variant: "destructive" 
+      console.log('📥 Resposta da Edge Function:', response);
+
+      if (response.error) {
+        console.error('❌ Erro na Edge Function:', response.error);
+        toast({
+          title: "Erro ao deletar usuário",
+          description: response.error.message || "Falha ao comunicar com o servidor",
+          variant: "destructive"
         });
-        await fetchUsers();
         setActionLoading(null);
         return;
       }
 
-      // Verificar se o perfil foi realmente deletado
-      const { data: verifyProfile, error: verifyError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('user_id', userId)
-        .maybeSingle();
-      
-      console.log('🔍 Verificação pós-exclusão:', { verifyProfile, verifyError });
-      
-      if (verifyProfile) {
-        console.error('❌ ERRO: O perfil AINDA EXISTE após a exclusão!');
-        toast({ 
-          title: "Erro na exclusão", 
-          description: "O perfil não foi removido do banco de dados. Pode ser um problema de permissões RLS.",
-          variant: "destructive" 
+      if (!response.data?.success) {
+        console.error('❌ Edge Function retornou erro:', response.data);
+        toast({
+          title: "Erro ao deletar usuário",
+          description: response.data?.error || "Erro desconhecido",
+          variant: "destructive"
         });
-        await fetchUsers();
         setActionLoading(null);
         return;
       }
 
-      // Log da ação de exclusão
+      console.log('✅ Usuário deletado com sucesso:', response.data);
+
       await logAdminAction(userId, 'delete_user', 'active', 'deleted');
-      
-      console.log('✅ USUÁRIO EXCLUÍDO COM SUCESSO:', userId);
-      console.log('📝 Perfil deletado:', existingProfile.username);
-      
-      toast({ 
+
+      toast({
         title: "✅ Usuário excluído com sucesso",
-        description: `${existingProfile.display_name || existingProfile.username} foi removido da plataforma.`
+        description: 'Todos os dados do usuário foram removidos da plataforma.'
       });
-      
-      // Atualizar a lista imediatamente
+
       await fetchUsers();
-      
+
     } catch (error: any) {
       console.error('❌ ERRO INESPERADO:', error);
-      toast({ 
-        title: "Erro ao deletar usuário", 
+      toast({
+        title: "Erro ao deletar usuário",
         description: error.message || "Ocorreu um erro inesperado durante a exclusão",
-        variant: "destructive" 
+        variant: "destructive"
       });
     } finally {
       setActionLoading(null);
