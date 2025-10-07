@@ -24,18 +24,61 @@ const DuelRoom = () => {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [player1LP, setPlayer1LP] = useState(8000);
   const [player2LP, setPlayer2LP] = useState(8000);
+  const [callDuration, setCallDuration] = useState(0); // em segundos
+  const [showTimeWarning, setShowTimeWarning] = useState(false);
+  const callStartTime = useRef<number | null>(null);
+  const timerInterval = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     loadJitsi();
     checkAuth();
     fetchDuel();
+    startCallTimer();
 
     return () => {
       if (jitsiApi) {
         jitsiApi.dispose();
       }
+      if (timerInterval.current) {
+        clearInterval(timerInterval.current);
+      }
     };
   }, [id]);
+
+  const startCallTimer = () => {
+    callStartTime.current = Date.now();
+    
+    timerInterval.current = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - (callStartTime.current || Date.now())) / 1000);
+      setCallDuration(elapsed);
+
+      // Aviso aos 55 minutos (3300 segundos)
+      if (elapsed === 3300 && !showTimeWarning) {
+        setShowTimeWarning(true);
+        toast({
+          title: "⏰ Tempo de chamada",
+          description: "Restam 5 minutos. A chamada será encerrada em breve.",
+          duration: 10000,
+        });
+      }
+
+      // Finalizar automaticamente aos 60 minutos (3600 segundos)
+      if (elapsed >= 3600) {
+        toast({
+          title: "Tempo esgotado",
+          description: "A chamada atingiu o limite de 60 minutos e será encerrada.",
+          variant: "destructive",
+        });
+        endDuel();
+      }
+    }, 1000);
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const loadJitsi = () => {
     if (document.getElementById('jitsi-script')) return;
@@ -185,6 +228,10 @@ const DuelRoom = () => {
 
   const endDuel = async (winnerId?: string) => {
     try {
+      const durationMinutes = callStartTime.current 
+        ? Math.floor((Date.now() - callStartTime.current) / 60000) 
+        : 0;
+
       await supabase
         .from('live_duels')
         .update({
@@ -200,6 +247,7 @@ const DuelRoom = () => {
           player1_id: duel?.player1_id,
           player2_id: duel?.player2_id,
           winner_id: winnerId,
+          duration_minutes: durationMinutes,
           player1_elo_before: 1500,
           player1_elo_after: winnerId === duel?.player1_id ? 1532 : 1468,
           player2_elo_before: 1500,
@@ -244,8 +292,15 @@ const DuelRoom = () => {
             <div ref={jitsiContainer} className="w-full h-full" />
           </div>
 
-          {/* Botão de Sair - Fixo no canto superior direito */}
-          <div className="absolute top-4 right-4 z-50 flex gap-2">
+          {/* Botão de Sair e Timer - Fixo no canto superior direito */}
+          <div className="absolute top-4 right-4 z-50 flex gap-2 items-center">
+            {/* Timer Display */}
+            <div className={`px-4 py-2 rounded-lg backdrop-blur-sm font-mono text-sm ${
+              callDuration >= 3300 ? 'bg-destructive/95 text-destructive-foreground animate-pulse' : 'bg-card/95'
+            }`}>
+              ⏱️ {formatTime(callDuration)} / 60:00
+            </div>
+            
             {canControlLP && (
               <Button
                 onClick={() => endDuel()}
