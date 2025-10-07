@@ -164,82 +164,152 @@ export const AdminUsers = () => {
   const togglePro = async (userId: string, isCurrentlyPro: boolean) => {
     setActionLoading(`pro-${userId}`);
     try {
-      console.log('Alterando status PRO do usuário:', userId, 'Atual:', isCurrentlyPro);
-      
       const newAccountType = isCurrentlyPro ? 'free' : 'pro';
       
-      // Atualizar o tipo de conta diretamente
-      const { data: updateData, error: updateError } = await supabase
+      console.log('👑 INICIANDO ALTERAÇÃO DE CONTA:', {
+        userId,
+        statusAtual: isCurrentlyPro ? 'PRO' : 'FREE',
+        novoStatus: newAccountType.toUpperCase()
+      });
+
+      // 1. Verificar o estado atual do usuário
+      console.log('🔍 Verificando estado atual...');
+      const { data: currentProfile, error: checkError } = await supabase
+        .from('profiles')
+        .select('id, username, display_name, account_type, user_id')
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      console.log('📋 Perfil atual:', currentProfile);
+      
+      if (checkError) {
+        console.error('❌ Erro ao verificar perfil:', checkError);
+        toast({ 
+          title: "Erro ao verificar usuário", 
+          description: checkError.message,
+          variant: "destructive" 
+        });
+        setActionLoading(null);
+        return;
+      }
+
+      if (!currentProfile) {
+        console.error('❌ Perfil não encontrado!');
+        toast({ 
+          title: "Erro", 
+          description: "Usuário não encontrado no banco de dados",
+          variant: "destructive" 
+        });
+        await fetchUsers();
+        setActionLoading(null);
+        return;
+      }
+
+      console.log(`📝 Tipo de conta atual no banco: ${currentProfile.account_type}`);
+
+      // 2. Atualizar o tipo de conta
+      console.log(`🔄 Atualizando account_type de "${currentProfile.account_type}" para "${newAccountType}"...`);
+      
+      const { data: updateData, error: updateError, count: updateCount } = await supabase
         .from('profiles')
         .update({ account_type: newAccountType })
         .eq('user_id', userId)
-        .select();
+        .select('id, username, display_name, account_type');
       
-      console.log('Resultado da atualização:', { updateData, updateError });
+      console.log('📊 Resultado da atualização:', { 
+        updateData, 
+        updateError, 
+        updateCount 
+      });
       
       if (updateError) {
-        console.error('Erro ao atualizar conta:', updateError);
+        console.error('❌ Erro ao atualizar conta:', updateError);
         toast({ 
           title: "Erro ao atualizar conta", 
           description: updateError.message,
           variant: "destructive" 
         });
+        setActionLoading(null);
         return;
       }
 
-      // Verificar se a atualização foi bem-sucedida
+      if (!updateData || updateData.length === 0) {
+        console.error('❌ Nenhum registro foi atualizado!');
+        toast({ 
+          title: "Erro na atualização", 
+          description: "Nenhum registro foi modificado. Pode ser um problema de permissões RLS.",
+          variant: "destructive" 
+        });
+        await fetchUsers();
+        setActionLoading(null);
+        return;
+      }
+
+      // 3. Verificar se a atualização foi aplicada
+      console.log('🔍 Verificando se a atualização foi aplicada...');
       const { data: verifyData, error: verifyError } = await supabase
         .from('profiles')
         .select('account_type, username, display_name')
         .eq('user_id', userId)
         .single();
       
-      console.log('Verificação após atualização:', { verifyData, verifyError });
+      console.log('✔️ Verificação pós-atualização:', { 
+        verifyData, 
+        verifyError 
+      });
       
       if (verifyError) {
-        console.error('Erro ao verificar atualização:', verifyError);
+        console.error('❌ Erro ao verificar atualização:', verifyError);
         toast({ 
           title: "Aviso", 
           description: "Conta atualizada, mas houve erro na verificação",
           variant: "default" 
         });
         await fetchUsers();
+        setActionLoading(null);
         return;
       }
 
-      if (verifyData?.account_type === newAccountType) {
-        // Log da ação
-        await logAdminAction(userId, 'change_account_type', isCurrentlyPro ? 'pro' : 'free', newAccountType);
-        
-        toast({ 
-          title: `✅ Conta ${isCurrentlyPro ? 'rebaixada' : 'promovida'}`,
-          description: `${verifyData.display_name || verifyData.username} agora é ${newAccountType.toUpperCase()}`
+      if (verifyData?.account_type !== newAccountType) {
+        console.error('❌ ERRO: A conta NÃO foi atualizada!', {
+          esperado: newAccountType,
+          encontrado: verifyData?.account_type
         });
-        
-        // Atualizar o usuário na lista imediatamente no frontend
-        setUsers(prevUsers => 
-          prevUsers.map(u => 
-            u.user_id === userId 
-              ? { ...u, account_type: newAccountType }
-              : u
-          )
-        );
-        
-        // Atualizar a lista completa do servidor
-        setTimeout(() => {
-          fetchUsers();
-        }, 500);
-      } else {
         toast({ 
-          title: "Erro", 
-          description: "A atualização não foi aplicada corretamente",
+          title: "Erro na atualização", 
+          description: `A conta ainda está como ${verifyData?.account_type.toUpperCase()}. Pode ser um problema de permissões RLS.`,
           variant: "destructive" 
         });
         await fetchUsers();
+        setActionLoading(null);
+        return;
       }
+
+      // 4. Sucesso!
+      console.log('✅ CONTA ATUALIZADA COM SUCESSO!', {
+        usuario: verifyData.display_name || verifyData.username,
+        antigoTipo: isCurrentlyPro ? 'PRO' : 'FREE',
+        novoTipo: newAccountType.toUpperCase()
+      });
+
+      // Log da ação
+      await logAdminAction(
+        userId, 
+        'change_account_type', 
+        isCurrentlyPro ? 'pro' : 'free', 
+        newAccountType
+      );
+      
+      toast({ 
+        title: `✅ Conta ${isCurrentlyPro ? 'rebaixada' : 'promovida'}`,
+        description: `${verifyData.display_name || verifyData.username} agora é ${newAccountType.toUpperCase()}`
+      });
+      
+      // Atualizar a lista
+      await fetchUsers();
       
     } catch (error: any) {
-      console.error('Erro ao alterar status PRO:', error);
+      console.error('❌ ERRO INESPERADO:', error);
       toast({ 
         title: "Erro ao atualizar conta", 
         description: error.message || "Ocorreu um erro inesperado",
