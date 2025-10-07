@@ -284,16 +284,7 @@ export const AdminUsers = () => {
         });
       }
 
-      // 2. Friendships - deletar todas as amizades
-      console.log('Deletando friendships...');
-      const { error: friendshipsError } = await supabase
-        .from('friendships')
-        .delete()
-        .or(`user_id.eq.${userId},friend_id.eq.${userId}`);
-      
-      if (friendshipsError) {
-        console.error('Erro ao deletar friendships:', friendshipsError);
-      }
+      // 2. Friendships - tabela não existe ou tem estrutura diferente, pulando...
 
       // 3. Friend requests - deletar todos os pedidos de amizade
       console.log('Deletando friend_requests...');
