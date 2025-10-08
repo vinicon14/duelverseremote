@@ -236,8 +236,8 @@ const DuelRoom = () => {
         .from('live_duels')
         .select(`
           *,
-          player1:profiles!live_duels_player1_id_fkey(username, avatar_url),
-          player2:profiles!live_duels_player2_id_fkey(username, avatar_url)
+          creator:profiles!live_duels_creator_id_fkey(username, avatar_url),
+          opponent:profiles!live_duels_opponent_id_fkey(username, avatar_url)
         `)
         .eq('id', id)
         .maybeSingle();
@@ -286,7 +286,7 @@ const DuelRoom = () => {
         .eq('id', id);
 
       if (newLP === 0) {
-        await endDuel(player === 'player1' ? duel?.player2_id : duel?.player1_id);
+        await endDuel(player === 'player1' ? duel?.opponent_id : duel?.creator_id);
       }
     } catch (error: any) {
       toast({
@@ -315,7 +315,7 @@ const DuelRoom = () => {
         .eq('id', id);
 
       if (newLP === 0) {
-        await endDuel(player === 'player1' ? duel?.player2_id : duel?.player1_id);
+        await endDuel(player === 'player1' ? duel?.opponent_id : duel?.creator_id);
       }
     } catch (error: any) {
       toast({
@@ -343,15 +343,12 @@ const DuelRoom = () => {
 
       if (winnerId) {
         await supabase.from('match_history').insert({
-          duel_id: id,
-          player1_id: duel?.player1_id,
-          player2_id: duel?.player2_id,
+          player1_id: duel?.creator_id,
+          player2_id: duel?.opponent_id,
           winner_id: winnerId,
-          duration_minutes: durationMinutes,
-          player1_elo_before: 1500,
-          player1_elo_after: winnerId === duel?.player1_id ? 1532 : 1468,
-          player2_elo_before: 1500,
-          player2_elo_after: winnerId === duel?.player2_id ? 1532 : 1468,
+          bet_amount: duel?.bet_amount || 0,
+          player1_score: winnerId === duel?.opponent_id ? 0 : player1LP,
+          player2_score: winnerId === duel?.creator_id ? 0 : player2LP,
         });
       }
 
@@ -377,8 +374,8 @@ const DuelRoom = () => {
     navigate('/duels');
   };
 
-  const isPlayer1 = currentUser?.id === duel?.player1_id;
-  const isPlayer2 = currentUser?.id === duel?.player2_id;
+  const isPlayer1 = currentUser?.id === duel?.creator_id;
+  const isPlayer2 = currentUser?.id === duel?.opponent_id;
   const canControlLP = isPlayer1 || isPlayer2;
 
   return (
@@ -427,8 +424,8 @@ const DuelRoom = () => {
       {/* Calculadora Flutuante - Visível para todos */}
       {duel && (
         <FloatingCalculator
-          player1Name={duel.player1?.username || 'Jogador 1'}
-          player2Name={duel.player2?.username || 'Aguardando...'}
+          player1Name={duel.creator?.username || 'Jogador 1'}
+          player2Name={duel.opponent?.username || 'Aguardando...'}
           player1LP={player1LP}
           player2LP={player2LP}
           onUpdateLP={updateLP}
