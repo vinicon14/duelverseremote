@@ -507,7 +507,7 @@ const DuelRoom = () => {
           player2LP={player2LP}
           onUpdateLP={updateLP}
           onSetLP={setLP}
-          readOnly={!canControlLP}
+          currentUserPlayer={isPlayer1 ? 'player1' : isPlayer2 ? 'player2' : null}
         />
       )}
 

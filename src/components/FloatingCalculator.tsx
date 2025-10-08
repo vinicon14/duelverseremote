@@ -11,7 +11,7 @@ interface FloatingCalculatorProps {
   player2LP: number;
   onUpdateLP: (player: 'player1' | 'player2', amount: number) => void;
   onSetLP: (player: 'player1' | 'player2', value: number) => void;
-  readOnly?: boolean;
+  currentUserPlayer?: 'player1' | 'player2' | null;
 }
 
 export const FloatingCalculator = ({
@@ -21,7 +21,7 @@ export const FloatingCalculator = ({
   player2LP,
   onUpdateLP,
   onSetLP,
-  readOnly = false,
+  currentUserPlayer = null,
 }: FloatingCalculatorProps) => {
   const [position, setPosition] = useState({ x: 20, y: 100 });
   const [isDragging, setIsDragging] = useState(false);
@@ -172,7 +172,7 @@ export const FloatingCalculator = ({
                 </div>
                 <div className="flex items-center gap-2">
                   <Heart className="w-4 h-4 text-destructive" />
-                  {editingPlayer1 ? (
+                  {editingPlayer1 && currentUserPlayer === 'player1' ? (
                     <Input
                       type="number"
                       value={tempLP1}
@@ -190,8 +190,8 @@ export const FloatingCalculator = ({
                     />
                    ) : (
                     <span
-                      className={`text-xl font-bold text-gradient-mystic ${!readOnly ? 'cursor-pointer hover:opacity-80' : ''}`}
-                      onClick={() => !readOnly && setEditingPlayer1(true)}
+                      className={`text-xl font-bold text-gradient-mystic ${currentUserPlayer === 'player1' ? 'cursor-pointer hover:opacity-80' : ''}`}
+                      onClick={() => currentUserPlayer === 'player1' && setEditingPlayer1(true)}
                     >
                       {player1LP}
                     </span>
@@ -199,7 +199,7 @@ export const FloatingCalculator = ({
                 </div>
               </div>
               
-              {!readOnly && (
+              {currentUserPlayer === 'player1' && (
                 <>
                   <div className="grid grid-cols-4 gap-2">
                     <Button
@@ -275,7 +275,7 @@ export const FloatingCalculator = ({
                 </div>
                 <div className="flex items-center gap-2">
                   <Heart className="w-4 h-4 text-destructive" />
-                  {editingPlayer2 ? (
+                  {editingPlayer2 && currentUserPlayer === 'player2' ? (
                     <Input
                       type="number"
                       value={tempLP2}
@@ -293,8 +293,8 @@ export const FloatingCalculator = ({
                     />
                    ) : (
                     <span
-                      className={`text-xl font-bold text-gradient-mystic ${!readOnly ? 'cursor-pointer hover:opacity-80' : ''}`}
-                      onClick={() => !readOnly && setEditingPlayer2(true)}
+                      className={`text-xl font-bold text-gradient-mystic ${currentUserPlayer === 'player2' ? 'cursor-pointer hover:opacity-80' : ''}`}
+                      onClick={() => currentUserPlayer === 'player2' && setEditingPlayer2(true)}
                     >
                       {player2LP}
                     </span>
@@ -302,7 +302,7 @@ export const FloatingCalculator = ({
                 </div>
               </div>
               
-              {!readOnly && (
+              {currentUserPlayer === 'player2' && (
                 <>
                   <div className="grid grid-cols-4 gap-2">
                     <Button
