@@ -20,7 +20,8 @@ const Ranking = () => {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .order('elo_rating', { ascending: false })
+        .order('points', { ascending: false })
+        .order('wins', { ascending: false })
         .limit(50);
 
       if (error) throw error;
@@ -113,10 +114,8 @@ const Ranking = () => {
                           {player.username}
                         </h3>
                         <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-                          <span>Nível {player.level || 1}</span>
-                          <span>•</span>
-                          <span>{player.total_games || 0} jogos</span>
-                          {player.total_games > 0 && (
+                          <span>{(player.wins || 0) + (player.losses || 0)} jogos</span>
+                          {((player.wins || 0) + (player.losses || 0)) > 0 && (
                             <>
                               <span>•</span>
                               <span>{player.wins || 0}V - {player.losses || 0}D</span>
@@ -125,12 +124,12 @@ const Ranking = () => {
                         </div>
                       </div>
 
-                      {/* ELO */}
+                      {/* Pontos */}
                       <div className="text-right">
                         <div className="text-2xl font-bold text-primary">
-                          {player.elo_rating || 1500}
+                          {player.points || 0}
                         </div>
-                        <div className="text-xs text-muted-foreground">ELO</div>
+                        <div className="text-xs text-muted-foreground">Pontos</div>
                       </div>
                     </div>
                   </CardContent>
