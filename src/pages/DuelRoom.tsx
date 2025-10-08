@@ -255,8 +255,8 @@ const DuelRoom = () => {
       }
       
       setDuel(data);
-      setPlayer1LP(8000);
-      setPlayer2LP(8000);
+      setPlayer1LP(data.player1_lp || 8000);
+      setPlayer2LP(data.player2_lp || 8000);
     } catch (error: any) {
       toast({
         title: "Erro ao carregar duelo",

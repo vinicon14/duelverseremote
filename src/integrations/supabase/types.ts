@@ -133,6 +133,8 @@ export type Database = {
           finished_at: string | null
           id: string
           opponent_id: string | null
+          player1_lp: number
+          player2_lp: number
           started_at: string | null
           status: Database["public"]["Enums"]["game_status"]
           winner_id: string | null
@@ -144,6 +146,8 @@ export type Database = {
           finished_at?: string | null
           id?: string
           opponent_id?: string | null
+          player1_lp?: number
+          player2_lp?: number
           started_at?: string | null
           status?: Database["public"]["Enums"]["game_status"]
           winner_id?: string | null
@@ -155,6 +159,8 @@ export type Database = {
           finished_at?: string | null
           id?: string
           opponent_id?: string | null
+          player1_lp?: number
+          player2_lp?: number
           started_at?: string | null
           status?: Database["public"]["Enums"]["game_status"]
           winner_id?: string | null
