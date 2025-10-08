@@ -177,7 +177,7 @@ export const AdminUsers = () => {
         .from('profiles')
         .update({ account_type: newAccountType })
         .eq('user_id', userId)
-        .select('id, username, display_name, account_type');
+        .select('user_id, username, account_type');
       
       console.log('📊 Resultado da atualização:', { updateData, updateError });
       
@@ -256,7 +256,7 @@ export const AdminUsers = () => {
       const { error: chatError } = await supabase
         .from('chat_messages')
         .delete()
-        .eq('sender_id', userId);
+        .eq('user_id', userId);
       
       if (chatError) console.error('⚠️ Erro em chat_messages:', chatError);
 
@@ -265,7 +265,7 @@ export const AdminUsers = () => {
       const { error: friendReqError } = await supabase
         .from('friend_requests')
         .delete()
-        .or(`requester_id.eq.${userId},addressee_id.eq.${userId}`);
+        .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`);
       
       if (friendReqError) console.error('⚠️ Erro em friend_requests:', friendReqError);
 
@@ -293,7 +293,7 @@ export const AdminUsers = () => {
         .from('profiles')
         .delete()
         .eq('user_id', userId)
-        .select('id, username, display_name');
+        .select('user_id, username');
 
       console.log('📋 Resultado:', { deletedProfile, profileError });
 

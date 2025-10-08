@@ -45,34 +45,11 @@ const TournamentDetail = () => {
       if (tournamentError) throw tournamentError;
       setTournament(tournamentData);
 
-      // Fetch participants
-      const { data: participantsData, error: participantsError } = await supabase
-        .from('tournament_participants')
-        .select(`
-          *,
-          player:profiles!tournament_participants_player_id_fkey(*)
-        `)
-        .eq('tournament_id', id)
-        .order('joined_at', { ascending: true });
+      // Fetch participants - feature not yet implemented
+      setParticipants([]);
 
-      if (participantsError) throw participantsError;
-      setParticipants(participantsData || []);
-
-      // Fetch matches
-      const { data: matchesData, error: matchesError } = await supabase
-        .from('tournament_matches')
-        .select(`
-          *,
-          player1:profiles!tournament_matches_player1_id_fkey(username, avatar_url),
-          player2:profiles!tournament_matches_player2_id_fkey(username, avatar_url),
-          winner:profiles!tournament_matches_winner_id_fkey(username)
-        `)
-        .eq('tournament_id', id)
-        .order('round', { ascending: true })
-        .order('match_number', { ascending: true });
-
-      if (matchesError) throw matchesError;
-      setMatches(matchesData || []);
+      // Fetch matches - feature not yet implemented  
+      setMatches([]);
     } catch (error: any) {
       toast({
         title: "Erro ao carregar torneio",
@@ -138,7 +115,12 @@ const TournamentDetail = () => {
       }
     }
 
-    await supabase.from('tournament_matches').insert(matchesToCreate);
+    // Tournament matches feature not yet implemented
+    toast({
+      title: "Em desenvolvimento",
+      description: "A geração de chaves ainda não está disponível",
+      variant: "destructive",
+    });
   };
 
   const getStatusColor = (status: string) => {

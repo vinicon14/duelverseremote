@@ -18,72 +18,19 @@ export const AdminSettings = () => {
   }, []);
 
   const fetchSettings = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('system_settings')
-        .select('*')
-        .in('key', ['support_email', 'pix_key']);
-      
-      if (error) {
-        console.error('Error fetching settings:', error);
-        return;
-      }
-
-      if (data) {
-        data.forEach((setting) => {
-          if (setting.key === 'support_email') {
-            setSupportEmail(setting.value);
-          } else if (setting.key === 'pix_key') {
-            setPixKey(setting.value);
-          }
-        });
-      }
-    } catch (error) {
-      console.error('Error:', error);
-    }
+    // Table doesn't exist yet - using default values
+    setSupportEmail('suporte@exemplo.com');
+    setPixKey('');
   };
 
   const saveSettings = async () => {
     setLoading(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
-      // Atualizar email de suporte
-      const { error: emailError } = await supabase
-        .from('system_settings')
-        .update({ 
-          value: supportEmail,
-          updated_by: session.user.id,
-          updated_at: new Date().toISOString()
-        })
-        .eq('key', 'support_email');
-
-      // Atualizar chave PIX
-      const { error: pixError } = await supabase
-        .from('system_settings')
-        .update({ 
-          value: pixKey,
-          updated_by: session.user.id,
-          updated_at: new Date().toISOString()
-        })
-        .eq('key', 'pix_key');
-
-      if (emailError || pixError) {
-        toast({ 
-          title: "Erro ao salvar configurações", 
-          variant: "destructive" 
-        });
-      } else {
-        toast({ 
-          title: "Configurações salvas com sucesso!" 
-        });
-      }
-    } catch (error) {
-      console.error('Error:', error);
+      // System settings table not yet implemented
       toast({ 
-        title: "Erro ao salvar configurações", 
-        variant: "destructive" 
+        title: "Funcionalidade em desenvolvimento",
+        description: "As configurações do sistema ainda não estão disponíveis",
+        variant: "destructive"
       });
     } finally {
       setLoading(false);

@@ -48,17 +48,14 @@ const Tournaments = () => {
     try {
       const { data, error } = await supabase
         .from('tournaments')
-        .select(`
-          *,
-          participants:tournament_participants(count)
-        `)
-        .order('start_time', { ascending: true });
+        .select('*')
+        .order('start_date', { ascending: true });
 
       if (error) throw error;
 
       const tournamentsWithCount = data?.map(t => ({
         ...t,
-        participants: t.participants?.[0]?.count || 0,
+        participants: 0, // Count not implemented yet
       })) || [];
 
       setTournaments(tournamentsWithCount);
@@ -74,31 +71,12 @@ const Tournaments = () => {
   };
 
   const joinTournament = async (tournamentId: string) => {
-    if (!currentUser) return;
-
-    try {
-      const { error } = await supabase
-        .from('tournament_participants')
-        .insert({
-          tournament_id: tournamentId,
-          player_id: currentUser.id,
-        });
-
-      if (error) throw error;
-
-      toast({
-        title: "Inscrição realizada!",
-        description: "Você está participando do torneio.",
-      });
-
-      await fetchTournaments();
-    } catch (error: any) {
-      toast({
-        title: "Erro ao participar",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
+    // Tournament participants feature not yet implemented
+    toast({
+      title: "Em desenvolvimento",
+      description: "A inscrição em torneios ainda não está disponível",
+      variant: "destructive",
+    });
   };
 
   const upcomingTournaments = tournaments.filter(t => t.status === 'upcoming');

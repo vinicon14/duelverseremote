@@ -48,49 +48,10 @@ export default function Matchmaking() {
 
   const setupRealtimeListeners = () => {
     // Listener para mudanças na fila (novo match criado)
-    queueChannel.current = supabase
-      .channel('matchmaking_updates')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'matchmaking_queues'
-        },
-        () => {
-          fetchQueueStats();
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'live_duels'
-        },
-        async (payload) => {
-          // Verificar se sou um dos jogadores deste novo duelo
-          if (currentUserId.current && 
-              (payload.new.player1_id === currentUserId.current || 
-               payload.new.player2_id === currentUserId.current)) {
-            toast.success("🎮 Partida encontrada!");
-            setSearching(false);
-            navigate(`/duel/${payload.new.id}`);
-          }
-        }
-      )
-      .subscribe();
+    // Realtime listeners disabled for now (matchmaking not fully implemented)
   };
 
   const cleanup = async () => {
-    // Remover da fila ao sair
-    if (queueId) {
-      await supabase
-        .from("matchmaking_queues")
-        .delete()
-        .eq("id", queueId);
-    }
-
     // Limpar listeners
     if (queueChannel.current) {
       await supabase.removeChannel(queueChannel.current);
@@ -112,20 +73,8 @@ export default function Matchmaking() {
   };
 
   const fetchQueueStats = async () => {
-    try {
-      const { count, error } = await supabase
-        .from("matchmaking_queues")
-        .select("*", { count: "exact", head: true })
-        .eq("queue_status", "searching");
-      
-      if (error) {
-        console.error("Error fetching queue stats:", error);
-      } else {
-        setPlayersInQueue(count || 0);
-      }
-    } catch (error) {
-      console.error("Error:", error);
-    }
+    // Matchmaking queue not yet implemented
+    setPlayersInQueue(0);
   };
 
   const joinQueue = async () => {
@@ -141,8 +90,8 @@ export default function Matchmaking() {
       const { data: existingDuels, error: duelsError } = await supabase
         .from("live_duels")
         .select("id, status")
-        .or(`player1_id.eq.${session.user.id},player2_id.eq.${session.user.id}`)
-        .in("status", ["waiting", "active"]);
+        .or(`creator_id.eq.${session.user.id},opponent_id.eq.${session.user.id}`)
+        .in("status", ["waiting", "in_progress"]);
 
       if (duelsError) {
         console.error("Error checking existing duels:", duelsError);
@@ -154,68 +103,9 @@ export default function Matchmaking() {
         return;
       }
 
-      // Verificar se o usuário já está na fila
-      const { data: queueCheck, error: queueCheckError } = await supabase
-        .from("matchmaking_queues")
-        .select("id")
-        .eq("player_id", session.user.id)
-        .eq("queue_status", "searching");
-
-      if (queueCheckError) {
-        console.error("Error checking queue:", queueCheckError);
-      }
-
-      if (queueCheck && queueCheck.length > 0) {
-        toast.error("Você já está na fila de matchmaking");
-        return;
-      }
-
-      // Get user's ELO
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("elo_rating")
-        .eq("user_id", session.user.id)
-        .maybeSingle();
-
-      if (profileError) {
-        toast.error("Erro ao carregar perfil: " + profileError.message);
-        return;
-      }
-
-      if (!profile) {
-        toast.error("Perfil não encontrado");
-        return;
-      }
-
-      // Add to queue
-      const { data: queueEntry, error } = await supabase
-        .from("matchmaking_queues")
-        .insert({
-          player_id: session.user.id,
-          elo_rating: profile.elo_rating || 1500,
-          queue_status: "searching",
-        })
-        .select()
-        .maybeSingle();
-
-      if (error) {
-        toast.error("Erro ao entrar na fila: " + error.message);
-        console.error("Queue error:", error);
-        return;
-      }
-
-      if (!queueEntry) {
-        toast.error("Erro ao criar entrada na fila");
-        return;
-      }
-
-      setQueueId(queueEntry.id);
-      setSearching(true);
-      setElapsedTime(0);
-      toast.success("🔍 Procurando oponente...");
-      
-      // Try to find a match immediately
-      await findMatch(session.user.id, profile.elo_rating || 1500);
+      // Matchmaking system not yet fully implemented
+      toast.error("Matchmaking em desenvolvimento. Use 'Duelos' para criar uma partida manual.");
+      navigate('/duels');
     } catch (error: any) {
       console.error("Unexpected error in joinQueue:", error);
       toast.error("Erro inesperado: " + error.message);
@@ -223,99 +113,14 @@ export default function Matchmaking() {
   };
 
   const findMatch = async (playerId: string, playerElo: number) => {
-    try {
-      // Expandir gradualmente o range de ELO conforme o tempo passa
-      const eloRange = 200 + (elapsedTime * 10); // Aumenta 10 pontos por segundo
-      
-      // Look for opponents in queue with similar ELO
-      const { data: opponents, error: opponentsError } = await supabase
-        .from("matchmaking_queues")
-        .select("*")
-        .eq("queue_status", "searching")
-        .neq("player_id", playerId)
-        .gte("elo_rating", playerElo - eloRange)
-        .lte("elo_rating", playerElo + eloRange)
-        .order("queue_time", { ascending: true })
-        .limit(1);
-
-      if (opponentsError) {
-        console.error("Error finding opponents:", opponentsError);
-        return;
-      }
-
-      if (opponents && opponents.length > 0) {
-        const opponent = opponents[0];
-        
-        // Tentar criar duelo atomicamente
-        // Primeiro marcar ambos como "matched" para evitar race conditions
-        const { error: updateError } = await supabase
-          .from("matchmaking_queues")
-          .update({ queue_status: "matched" })
-          .in("id", [queueId!, opponent.id]);
-
-        if (updateError) {
-          console.error("Error updating queue status:", updateError);
-          return;
-        }
-
-        // Create duel
-        const { data: duel, error: duelError } = await supabase
-          .from("live_duels")
-          .insert({
-            player1_id: playerId,
-            player2_id: opponent.player_id,
-            status: "active",
-            room_name: `Ranked Match ${Date.now()}`,
-            started_at: new Date().toISOString(),
-          })
-          .select()
-          .maybeSingle();
-
-        if (duelError) {
-          console.error("Error creating duel:", duelError);
-          // Reverter status se falhar
-          await supabase
-            .from("matchmaking_queues")
-            .update({ queue_status: "searching" })
-            .in("id", [queueId!, opponent.id]);
-          return;
-        }
-
-        if (!duel) {
-          console.error("No duel created");
-          return;
-        }
-
-        // Remove both players from queue
-        await supabase
-          .from("matchmaking_queues")
-          .delete()
-          .in("id", [queueId!, opponent.id]);
-
-        // A navegação será feita pelo listener realtime
-        console.log("Match created successfully:", duel.id);
-      }
-    } catch (error) {
-      console.error("Unexpected error in findMatch:", error);
-    }
+    // Not implemented yet
   };
 
   const cancelSearch = async () => {
-    if (!queueId) return;
-
-    try {
-      await supabase
-        .from("matchmaking_queues")
-        .delete()
-        .eq("id", queueId);
-
-      setSearching(false);
-      setQueueId(null);
-      setElapsedTime(0);
-      toast.info("Busca cancelada");
-    } catch (error) {
-      console.error("Error canceling search:", error);
-    }
+    setSearching(false);
+    setQueueId(null);
+    setElapsedTime(0);
+    toast.info("Busca cancelada");
   };
 
   const formatTime = (seconds: number) => {

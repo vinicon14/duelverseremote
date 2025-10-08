@@ -16,24 +16,9 @@ export default function GetPro() {
   }, []);
 
   const fetchSettings = async () => {
-    try {
-      const { data } = await supabase
-        .from('system_settings')
-        .select('*')
-        .in('key', ['support_email', 'pix_key']);
-      
-      if (data) {
-        data.forEach((setting) => {
-          if (setting.key === 'support_email') {
-            setSupportEmail(setting.value);
-          } else if (setting.key === 'pix_key') {
-            setPixKey(setting.value);
-          }
-        });
-      }
-    } catch (error) {
-      console.error('Error:', error);
-    }
+    // System settings table not yet implemented - using defaults
+    setSupportEmail('suporte@exemplo.com');
+    setPixKey('00020126580014br.gov.bcb.pix...');
   };
 
   const copyToClipboard = (text: string, label: string) => {

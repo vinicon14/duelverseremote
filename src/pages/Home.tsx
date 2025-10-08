@@ -26,11 +26,7 @@ export default function Home() {
   const fetchNews = async () => {
     const { data, error } = await supabase
       .from('news')
-      .select(`
-        *,
-        author:profiles!news_author_id_fkey(username, display_name)
-      `)
-      .eq('published', true)
+      .select('*, author:profiles!news_author_id_fkey(username)')
       .order('created_at', { ascending: false })
       .limit(10);
 
@@ -44,7 +40,7 @@ export default function Home() {
     const { data, error } = await supabase
       .from('advertisements')
       .select('*')
-      .eq('active', true)
+      .eq('is_active', true)
       .or('expires_at.is.null,expires_at.gt.' + new Date().toISOString())
       .limit(3);
 

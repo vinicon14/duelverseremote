@@ -30,7 +30,7 @@ export const NotificationBell = ({ userId }: { userId: string }) => {
           event: 'INSERT',
           schema: 'public',
           table: 'friend_requests',
-          filter: `addressee_id=eq.${userId}`
+          filter: `receiver_id=eq.${userId}`
         },
         () => {
           fetchNotifications();
@@ -42,7 +42,7 @@ export const NotificationBell = ({ userId }: { userId: string }) => {
           event: 'INSERT',
           schema: 'public',
           table: 'live_duels',
-          filter: `player2_id=eq.${userId}`
+          filter: `opponent_id=eq.${userId}`
         },
         () => {
           fetchNotifications();
@@ -60,34 +60,28 @@ export const NotificationBell = ({ userId }: { userId: string }) => {
       // Buscar pedidos de amizade pendentes
       const { data: friendRequests } = await supabase
         .from('friend_requests')
-        .select(`
-          *,
-          requester:profiles!friend_requests_requester_id_fkey(username)
-        `)
-        .eq('addressee_id', userId)
+        .select('*, sender:profiles!friend_requests_sender_id_fkey(username)')
+        .eq('receiver_id', userId)
         .eq('status', 'pending');
 
       // Buscar duelos onde o usuário foi convidado
       const { data: duelInvites } = await supabase
         .from('live_duels')
-        .select(`
-          *,
-          player1:profiles!live_duels_player1_id_fkey(username)
-        `)
-        .eq('player2_id', userId)
+        .select('*, creator:profiles!live_duels_creator_id_fkey(username)')
+        .eq('opponent_id', userId)
         .eq('status', 'waiting');
 
       const allNotifications = [
         ...(friendRequests?.map(req => ({
           id: req.id,
           type: 'friend_request',
-          message: `${req.requester?.username} quer ser seu amigo`,
+          message: `${(req.sender as any)?.username || 'Alguém'} quer ser seu amigo`,
           data: req,
         })) || []),
         ...(duelInvites?.map(duel => ({
           id: duel.id,
           type: 'duel_invite',
-          message: `${duel.player1?.username} te desafiou para um duelo`,
+          message: `${(duel.creator as any)?.username || 'Alguém'} te desafiou para um duelo`,
           data: duel,
         })) || []),
       ];
