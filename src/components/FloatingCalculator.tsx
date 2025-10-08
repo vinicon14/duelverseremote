@@ -23,7 +23,14 @@ export const FloatingCalculator = ({
   onSetLP,
   currentUserPlayer = null,
 }: FloatingCalculatorProps) => {
-  const [position, setPosition] = useState({ x: 20, y: 100 });
+  // Posição inicial adaptada ao tamanho da tela
+  const [position, setPosition] = useState(() => {
+    const isMobile = window.innerWidth < 768;
+    return { 
+      x: isMobile ? 10 : 20, 
+      y: isMobile ? 80 : 100 
+    };
+  });
   const [isDragging, setIsDragging] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
@@ -162,16 +169,16 @@ export const FloatingCalculator = ({
 
         {/* Content */}
         {!isMinimized && (
-          <div className="p-4 space-y-4 w-80">
+          <div className="p-3 sm:p-4 space-y-3 sm:space-y-4 w-72 sm:w-80">
             {/* Player 1 */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Shield className="w-4 h-4 text-primary" />
-                  <span className="text-sm font-semibold">{player1Name}</span>
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <Shield className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
+                  <span className="text-xs sm:text-sm font-semibold truncate max-w-[80px] sm:max-w-none">{player1Name}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Heart className="w-4 h-4 text-destructive" />
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <Heart className="w-3 h-3 sm:w-4 sm:h-4 text-destructive" />
                   {editingPlayer1 && currentUserPlayer === 'player1' ? (
                     <Input
                       type="number"
@@ -189,12 +196,12 @@ export const FloatingCalculator = ({
                       autoFocus
                     />
                    ) : (
-                    <span
-                      className={`text-xl font-bold text-gradient-mystic ${currentUserPlayer === 'player1' ? 'cursor-pointer hover:opacity-80' : ''}`}
-                      onClick={() => currentUserPlayer === 'player1' && setEditingPlayer1(true)}
-                    >
-                      {player1LP}
-                    </span>
+                     <span
+                       className={`text-lg sm:text-xl font-bold text-gradient-mystic ${currentUserPlayer === 'player1' ? 'cursor-pointer hover:opacity-80' : ''}`}
+                       onClick={() => currentUserPlayer === 'player1' && setEditingPlayer1(true)}
+                     >
+                       {player1LP}
+                     </span>
                    )}
                 </div>
               </div>
@@ -269,12 +276,12 @@ export const FloatingCalculator = ({
             {/* Player 2 */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Shield className="w-4 h-4 text-accent" />
-                  <span className="text-sm font-semibold">{player2Name}</span>
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <Shield className="w-3 h-3 sm:w-4 sm:h-4 text-accent" />
+                  <span className="text-xs sm:text-sm font-semibold truncate max-w-[80px] sm:max-w-none">{player2Name}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Heart className="w-4 h-4 text-destructive" />
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <Heart className="w-3 h-3 sm:w-4 sm:h-4 text-destructive" />
                   {editingPlayer2 && currentUserPlayer === 'player2' ? (
                     <Input
                       type="number"
@@ -292,12 +299,12 @@ export const FloatingCalculator = ({
                       autoFocus
                     />
                    ) : (
-                    <span
-                      className={`text-xl font-bold text-gradient-mystic ${currentUserPlayer === 'player2' ? 'cursor-pointer hover:opacity-80' : ''}`}
-                      onClick={() => currentUserPlayer === 'player2' && setEditingPlayer2(true)}
-                    >
-                      {player2LP}
-                    </span>
+                     <span
+                       className={`text-lg sm:text-xl font-bold text-gradient-mystic ${currentUserPlayer === 'player2' ? 'cursor-pointer hover:opacity-80' : ''}`}
+                       onClick={() => currentUserPlayer === 'player2' && setEditingPlayer2(true)}
+                     >
+                       {player2LP}
+                     </span>
                    )}
                 </div>
               </div>

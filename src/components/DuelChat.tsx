@@ -99,15 +99,15 @@ export const DuelChat = ({ duelId, currentUserId }: DuelChatProps) => {
     return (
       <Button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-4 right-4 rounded-full w-14 h-14 btn-mystic text-white shadow-lg z-50"
+        className="fixed bottom-4 right-4 rounded-full w-12 h-12 sm:w-14 sm:h-14 btn-mystic text-white shadow-lg z-50"
       >
-        <MessageCircle className="w-6 h-6" />
+        <MessageCircle className="w-5 h-5 sm:w-6 sm:h-6" />
       </Button>
     );
   }
 
   return (
-    <Card className="fixed bottom-4 right-4 w-80 card-mystic shadow-lg z-50 animate-slide-up">
+    <Card className="fixed bottom-4 right-4 w-[calc(100vw-2rem)] max-w-[320px] sm:w-80 card-mystic shadow-lg z-50 animate-slide-up">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
         <CardTitle className="text-sm font-semibold text-gradient-mystic">
           Chat do Duelo

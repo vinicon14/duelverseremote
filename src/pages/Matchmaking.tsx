@@ -179,14 +179,14 @@ export default function Matchmaking() {
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-primary/5">
       <Navbar />
       
-      <main className="container mx-auto px-4 pt-24 pb-12">
-        <div className="max-w-2xl mx-auto space-y-6">
+      <main className="container mx-auto px-4 pt-20 sm:pt-24 pb-12">
+        <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6">
           <div className="text-center space-y-2">
-            <h1 className="text-4xl font-bold gradient-text">Matchmaking</h1>
-            <p className="text-muted-foreground">Find your next opponent</p>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold gradient-text">Matchmaking</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">Find your next opponent</p>
           </div>
 
-          <Card className="card-mystic p-8">
+          <Card className="card-mystic p-4 sm:p-8">
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -199,10 +199,10 @@ export default function Matchmaking() {
 
               {!searching ? (
                 <div className="space-y-4">
-                  <div className="text-center py-8">
-                    <Swords className="h-16 w-16 mx-auto mb-4 text-primary animate-pulse" />
-                    <h3 className="text-xl font-semibold mb-2">Ready to Duel?</h3>
-                    <p className="text-muted-foreground mb-6">
+                  <div className="text-center py-6 sm:py-8">
+                    <Swords className="h-12 w-12 sm:h-16 sm:w-16 mx-auto mb-4 text-primary animate-pulse" />
+                    <h3 className="text-lg sm:text-xl font-semibold mb-2">Ready to Duel?</h3>
+                    <p className="text-sm sm:text-base text-muted-foreground mb-6">
                       We'll match you with an opponent of similar skill level
                     </p>
                   </div>
@@ -212,17 +212,17 @@ export default function Matchmaking() {
                     className="w-full btn-mystic"
                     size="lg"
                   >
-                    <Swords className="mr-2 h-5 w-5" />
+                    <Swords className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                     Find Match
                   </Button>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="text-center py-8">
-                    <Loader2 className="h-16 w-16 mx-auto mb-4 text-primary animate-spin" />
-                    <h3 className="text-xl font-semibold mb-2">Procurando Oponente...</h3>
-                    <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                      <Clock className="h-4 w-4" />
+                  <div className="text-center py-6 sm:py-8">
+                    <Loader2 className="h-12 w-12 sm:h-16 sm:w-16 mx-auto mb-4 text-primary animate-spin" />
+                    <h3 className="text-lg sm:text-xl font-semibold mb-2">Procurando Oponente...</h3>
+                    <div className="flex items-center justify-center gap-2 text-sm sm:text-base text-muted-foreground">
+                      <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
                       <span>Tempo decorrido: {formatTime(elapsedTime)}</span>
                     </div>
                   </div>

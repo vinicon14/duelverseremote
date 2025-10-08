@@ -206,20 +206,20 @@ const Duels = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       
-      <main className="container mx-auto px-4 pt-24 pb-12">
-        <div className="flex justify-between items-center mb-8">
+      <main className="container mx-auto px-4 pt-20 sm:pt-24 pb-12">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
           <div>
-            <h1 className="text-4xl font-bold text-gradient-mystic mb-2">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gradient-mystic mb-2">
               Arena de Duelos
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-sm sm:text-base text-muted-foreground">
               Crie ou entre em um duelo ao vivo
             </p>
           </div>
 
           <Dialog>
             <DialogTrigger asChild>
-              <Button className="btn-mystic text-white">
+              <Button className="btn-mystic text-white w-full sm:w-auto">
                 <Plus className="mr-2 h-4 w-4" />
                 Criar Duelo
               </Button>

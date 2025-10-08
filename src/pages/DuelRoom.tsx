@@ -467,17 +467,17 @@ const DuelRoom = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       
-      <main className="px-4 pt-20 pb-4">
-        <div className="h-[calc(100vh-100px)] relative">
+      <main className="px-2 sm:px-4 pt-16 sm:pt-20 pb-2 sm:pb-4">
+        <div className="h-[calc(100vh-80px)] sm:h-[calc(100vh-100px)] relative">
           {/* Video Call - Quase tela inteira */}
           <div className="h-full w-full rounded-lg overflow-hidden bg-card shadow-2xl border border-primary/20">
             <div ref={jitsiContainer} className="w-full h-full" />
           </div>
 
           {/* Botão de Sair e Timer - Fixo no canto superior direito */}
-          <div className="absolute top-4 right-4 z-50 flex gap-2 items-center">
+          <div className="absolute top-2 sm:top-4 right-2 sm:right-4 z-50 flex flex-col sm:flex-row gap-2 items-end sm:items-center">
             {/* Timer Display - Contagem Regressiva */}
-            <div className={`px-4 py-2 rounded-lg backdrop-blur-sm font-mono text-sm font-bold ${
+            <div className={`px-2 sm:px-4 py-1 sm:py-2 rounded-lg backdrop-blur-sm font-mono text-xs sm:text-sm font-bold ${
               callDuration <= 300 ? 'bg-destructive/95 text-destructive-foreground animate-pulse' : 
               callDuration <= 600 ? 'bg-yellow-500/95 text-black' : 
               'bg-card/95'
@@ -485,23 +485,27 @@ const DuelRoom = () => {
               ⏱️ {formatTime(callDuration)}
             </div>
             
-            {canControlLP && (
+            <div className="flex gap-2">
+              {canControlLP && (
+                <Button
+                  onClick={() => endDuel()}
+                  variant="outline"
+                  size="sm"
+                  className="bg-card/95 backdrop-blur-sm text-xs sm:text-sm"
+                >
+                  Finalizar
+                </Button>
+              )}
               <Button
-                onClick={() => endDuel()}
-                variant="outline"
-                className="bg-card/95 backdrop-blur-sm"
+                onClick={handleLeave}
+                variant="destructive"
+                size="sm"
+                className="bg-destructive/95 backdrop-blur-sm text-xs sm:text-sm"
               >
-                Finalizar Duelo
+                <PhoneOff className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Sair</span>
               </Button>
-            )}
-            <Button
-              onClick={handleLeave}
-              variant="destructive"
-              className="bg-destructive/95 backdrop-blur-sm"
-            >
-              <PhoneOff className="w-4 h-4 mr-2" />
-              Sair
-            </Button>
+            </div>
           </div>
         </div>
       </main>

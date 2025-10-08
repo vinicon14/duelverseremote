@@ -133,11 +133,11 @@ const Profile = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       
-      <main className="container mx-auto px-4 pt-24 pb-12">
+      <main className="container mx-auto px-4 pt-20 sm:pt-24 pb-12">
         {/* Profile Header */}
-        <Card className="card-mystic mb-8">
-          <CardContent className="pt-6">
-            <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
+        <Card className="card-mystic mb-6 sm:mb-8">
+          <CardContent className="pt-4 sm:pt-6">
+            <div className="flex flex-col md:flex-row items-center md:items-start gap-4 sm:gap-6">
               <AvatarUpload
                 userId={profile?.user_id}
                 currentAvatarUrl={profile?.avatar_url}
@@ -146,26 +146,26 @@ const Profile = () => {
               />
 
               <div className="flex-1 text-center md:text-left">
-                <h1 className="text-3xl font-bold text-gradient-mystic mb-2">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gradient-mystic mb-2">
                   {profile?.username || 'Usuário'}
                 </h1>
-                <p className="text-muted-foreground mb-4">
+                <p className="text-sm sm:text-base text-muted-foreground mb-4">
                   {profile?.bio || 'Duelista do Duelverse'}
                 </p>
                 
-                <div className="flex flex-wrap gap-4 justify-center md:justify-start">
-                  <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10">
-                    <Trophy className="w-5 h-5 text-secondary" />
-                    <span className="font-semibold">Nível {profile?.level || 1}</span>
+                <div className="flex flex-wrap gap-2 sm:gap-4 justify-center md:justify-start">
+                  <div className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg bg-primary/10">
+                    <Trophy className="w-4 h-4 sm:w-5 sm:h-5 text-secondary" />
+                    <span className="text-sm sm:text-base font-semibold">Nível {profile?.level || 1}</span>
                   </div>
-                  <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10">
-                    <TrendingUp className="w-5 h-5 text-primary" />
-                    <span className="font-semibold">ELO: {profile?.elo_rating || 1500}</span>
+                  <div className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg bg-primary/10">
+                    <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+                    <span className="text-sm sm:text-base font-semibold">ELO: {profile?.elo_rating || 1500}</span>
                   </div>
                 </div>
               </div>
 
-              <Button onClick={() => navigate('/duels')} className="btn-mystic text-white">
+              <Button onClick={() => navigate('/duels')} className="btn-mystic text-white w-full md:w-auto">
                 <Swords className="mr-2 h-4 w-4" />
                 Novo Duelo
               </Button>
@@ -174,46 +174,46 @@ const Profile = () => {
         </Card>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
           <Card className="card-mystic">
-            <CardHeader>
-              <CardTitle className="text-sm text-muted-foreground">Total de Jogos</CardTitle>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs sm:text-sm text-muted-foreground">Total de Jogos</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-gradient-mystic">
+              <div className="text-2xl sm:text-3xl font-bold text-gradient-mystic">
                 {stats?.totalGames || 0}
               </div>
             </CardContent>
           </Card>
 
           <Card className="card-mystic">
-            <CardHeader>
-              <CardTitle className="text-sm text-muted-foreground">Vitórias</CardTitle>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs sm:text-sm text-muted-foreground">Vitórias</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-gradient-gold">
+              <div className="text-2xl sm:text-3xl font-bold text-gradient-gold">
                 {stats?.wins || 0}
               </div>
             </CardContent>
           </Card>
 
           <Card className="card-mystic">
-            <CardHeader>
-              <CardTitle className="text-sm text-muted-foreground">Derrotas</CardTitle>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs sm:text-sm text-muted-foreground">Derrotas</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-destructive">
+              <div className="text-2xl sm:text-3xl font-bold text-destructive">
                 {stats?.losses || 0}
               </div>
             </CardContent>
           </Card>
 
           <Card className="card-mystic">
-            <CardHeader>
-              <CardTitle className="text-sm text-muted-foreground">Taxa de Vitória</CardTitle>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs sm:text-sm text-muted-foreground">Taxa de Vitória</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-primary">
+              <div className="text-2xl sm:text-3xl font-bold text-primary">
                 {stats?.winRate || 0}%
               </div>
             </CardContent>

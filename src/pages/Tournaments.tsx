@@ -87,30 +87,32 @@ const Tournaments = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       
-      <main className="container mx-auto px-4 pt-24 pb-12">
-        <div className="flex justify-between items-center mb-8">
+      <main className="container mx-auto px-4 pt-20 sm:pt-24 pb-12">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
           <div>
-            <h1 className="text-4xl font-bold text-gradient-mystic mb-2">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gradient-mystic mb-2">
               Torneios
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-sm sm:text-base text-muted-foreground">
               Participe de torneios e ganhe recompensas
             </p>
           </div>
 
           {canCreateTournament ? (
-            <Button className="btn-mystic text-white" disabled>
+            <Button className="btn-mystic text-white w-full sm:w-auto" disabled>
               <Plus className="mr-2 h-4 w-4" />
-              Criar Torneio (Em breve)
+              <span className="hidden sm:inline">Criar Torneio (Em breve)</span>
+              <span className="sm:hidden">Criar (Em breve)</span>
             </Button>
           ) : (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span>
-                    <Button disabled className="opacity-50">
+                  <span className="w-full sm:w-auto">
+                    <Button disabled className="opacity-50 w-full sm:w-auto">
                       <Crown className="mr-2 h-4 w-4" />
-                      Criar Torneio (PRO)
+                      <span className="hidden sm:inline">Criar Torneio (PRO)</span>
+                      <span className="sm:hidden">Criar (PRO)</span>
                     </Button>
                   </span>
                 </TooltipTrigger>
@@ -122,15 +124,15 @@ const Tournaments = () => {
           )}
         </div>
 
-        <Tabs defaultValue="upcoming" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="upcoming">
+        <Tabs defaultValue="upcoming" className="space-y-4 sm:space-y-6">
+          <TabsList className="w-full sm:w-auto grid grid-cols-3 sm:inline-flex">
+            <TabsTrigger value="upcoming" className="text-xs sm:text-sm">
               Em Breve ({upcomingTournaments.length})
             </TabsTrigger>
-            <TabsTrigger value="active">
+            <TabsTrigger value="active" className="text-xs sm:text-sm">
               Ativos ({activeTournaments.length})
             </TabsTrigger>
-            <TabsTrigger value="completed">
+            <TabsTrigger value="completed" className="text-xs sm:text-sm">
               Finalizados ({completedTournaments.length})
             </TabsTrigger>
           </TabsList>

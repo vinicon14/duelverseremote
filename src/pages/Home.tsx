@@ -53,13 +53,13 @@ export default function Home() {
     <div className="min-h-screen bg-background">
       <Navbar />
       
-      <main className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <Newspaper className="w-8 h-8 text-primary" />
-            <h1 className="text-4xl font-bold text-gradient-mystic">Notícias</h1>
+      <main className="container mx-auto px-4 pt-20 sm:pt-24 pb-8">
+        <div className="mb-6 sm:mb-8">
+          <div className="flex items-center gap-2 sm:gap-3 mb-2">
+            <Newspaper className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gradient-mystic">Notícias</h1>
           </div>
-          <p className="text-muted-foreground">
+          <p className="text-sm sm:text-base text-muted-foreground">
             Fique por dentro das últimas novidades da plataforma
           </p>
         </div>
