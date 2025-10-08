@@ -30,7 +30,7 @@ export const DuelChat = ({ duelId, currentUserId }: DuelChatProps) => {
           event: 'INSERT',
           schema: 'public',
           table: 'chat_messages',
-          filter: `game_session_id=eq.${duelId}`
+          filter: `duel_id=eq.${duelId}`
         },
         (payload) => {
           setMessages(prev => [...prev, payload.new]);
@@ -50,9 +50,9 @@ export const DuelChat = ({ duelId, currentUserId }: DuelChatProps) => {
         .from('chat_messages')
         .select(`
           *,
-          sender:profiles!chat_messages_sender_id_fkey(username, avatar_url)
+          profiles!chat_messages_user_id_fkey(username, avatar_url)
         `)
-        .eq('game_session_id', duelId)
+        .eq('duel_id', duelId)
         .order('created_at', { ascending: true });
 
       if (error) throw error;
@@ -70,8 +70,8 @@ export const DuelChat = ({ duelId, currentUserId }: DuelChatProps) => {
       const { error } = await supabase
         .from('chat_messages')
         .insert({
-          sender_id: currentUserId,
-          game_session_id: duelId,
+          user_id: currentUserId,
+          duel_id: duelId,
           message: newMessage.trim(),
         });
 
@@ -125,7 +125,7 @@ export const DuelChat = ({ duelId, currentUserId }: DuelChatProps) => {
         <ScrollArea ref={scrollRef} className="h-64 pr-4">
           <div className="space-y-3">
             {messages.map((msg) => {
-              const isOwn = msg.sender_id === currentUserId;
+              const isOwn = msg.user_id === currentUserId;
               return (
                 <div
                   key={msg.id}
@@ -140,7 +140,7 @@ export const DuelChat = ({ duelId, currentUserId }: DuelChatProps) => {
                   >
                     {!isOwn && (
                       <p className="text-xs font-semibold mb-1">
-                        {msg.sender?.username || 'Anônimo'}
+                        {msg.profiles?.username || 'Anônimo'}
                       </p>
                     )}
                     <p className="text-sm break-words">{msg.message}</p>

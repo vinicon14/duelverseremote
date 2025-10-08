@@ -56,10 +56,10 @@ const Duels = () => {
         .from('live_duels')
         .select(`
           *,
-          player1:profiles!live_duels_player1_id_fkey(username, avatar_url, elo_rating),
-          player2:profiles!live_duels_player2_id_fkey(username, avatar_url, elo_rating)
+          creator:profiles!live_duels_creator_id_fkey(username, avatar_url),
+          opponent:profiles!live_duels_opponent_id_fkey(username, avatar_url)
         `)
-        .in('status', ['waiting', 'active'])
+        .in('status', ['waiting', 'in_progress'])
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -93,8 +93,8 @@ const Duels = () => {
       const { data: existingDuels } = await supabase
         .from('live_duels')
         .select('id, status')
-        .or(`player1_id.eq.${user.id},player2_id.eq.${user.id}`)
-        .in('status', ['waiting', 'active']);
+        .or(`creator_id.eq.${user.id},opponent_id.eq.${user.id}`)
+        .in('status', ['waiting', 'in_progress']);
 
       if (existingDuels && existingDuels.length > 0) {
         toast({
@@ -109,8 +109,7 @@ const Duels = () => {
       const { data, error } = await supabase
         .from('live_duels')
         .insert({
-          player1_id: user.id,
-          room_name: roomName,
+          creator_id: user.id,
           status: 'waiting',
         })
         .select()
@@ -141,7 +140,7 @@ const Duels = () => {
       // Verificar se o duelo existe e pegar seus dados
       const { data: duelData } = await supabase
         .from('live_duels')
-        .select('player1_id, player2_id, status')
+        .select('creator_id, opponent_id, status')
         .eq('id', duelId)
         .maybeSingle();
 
@@ -155,7 +154,7 @@ const Duels = () => {
       }
 
       // Verificar se o usuário já é um dos jogadores deste duelo
-      if (duelData.player1_id === user.id || duelData.player2_id === user.id) {
+      if (duelData.creator_id === user.id || duelData.opponent_id === user.id) {
         toast({
           title: "Você já está neste duelo",
           description: "Redirecionando...",
@@ -168,8 +167,8 @@ const Duels = () => {
       const { data: otherDuels } = await supabase
         .from('live_duels')
         .select('id')
-        .or(`player1_id.eq.${user.id},player2_id.eq.${user.id}`)
-        .in('status', ['waiting', 'active'])
+        .or(`creator_id.eq.${user.id},opponent_id.eq.${user.id}`)
+        .in('status', ['waiting', 'in_progress'])
         .neq('id', duelId);
 
       if (otherDuels && otherDuels.length > 0) {
@@ -185,8 +184,8 @@ const Duels = () => {
       const { error } = await supabase
         .from('live_duels')
         .update({
-          player2_id: user.id,
-          status: 'active',
+          opponent_id: user.id,
+          status: 'in_progress',
           started_at: new Date().toISOString(),
         })
         .eq('id', duelId);

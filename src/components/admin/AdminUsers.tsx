@@ -209,7 +209,7 @@ export const AdminUsers = () => {
       
       toast({ 
         title: `✅ Conta ${isCurrentlyPro ? 'rebaixada' : 'promovida'}`,
-        description: `${updateData[0].display_name || updateData[0].username} agora é ${newAccountType.toUpperCase()}`
+        description: `${updateData[0].username} agora é ${newAccountType.toUpperCase()}`
       });
       
       await fetchUsers();
@@ -327,7 +327,7 @@ export const AdminUsers = () => {
       
       toast({ 
         title: "✅ Usuário excluído com sucesso",
-        description: `${deletedProfile[0].display_name || deletedProfile[0].username} foi removido da plataforma.`
+        description: `${deletedProfile[0].username} foi removido da plataforma.`
       });
       
       await fetchUsers();

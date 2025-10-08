@@ -46,16 +46,16 @@ const Friends = () => {
         .from('friend_requests')
         .select(`
           *,
-          requester:profiles!friend_requests_requester_id_fkey(user_id, username, avatar_url, elo_rating),
-          addressee:profiles!friend_requests_addressee_id_fkey(user_id, username, avatar_url, elo_rating)
+          requester:profiles!friend_requests_sender_id_fkey(user_id, username, avatar_url),
+          addressee:profiles!friend_requests_receiver_id_fkey(user_id, username, avatar_url)
         `)
         .eq('status', 'accepted')
-        .or(`requester_id.eq.${userId},addressee_id.eq.${userId}`);
+        .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`);
 
       if (error) throw error;
 
       const friendsList = data?.map(req => {
-        const friend = req.requester_id === userId ? req.addressee : req.requester;
+        const friend = req.sender_id === userId ? req.addressee : req.requester;
         return { ...friend, friendshipId: req.id };
       }) || [];
 
@@ -71,9 +71,9 @@ const Friends = () => {
         .from('friend_requests')
         .select(`
           *,
-          requester:profiles!friend_requests_requester_id_fkey(user_id, username, avatar_url, elo_rating)
+          requester:profiles!friend_requests_sender_id_fkey(user_id, username, avatar_url)
         `)
-        .eq('addressee_id', userId)
+        .eq('receiver_id', userId)
         .eq('status', 'pending');
 
       if (error) throw error;
@@ -89,9 +89,9 @@ const Friends = () => {
         .from('friend_requests')
         .select(`
           *,
-          addressee:profiles!friend_requests_addressee_id_fkey(user_id, username, avatar_url, elo_rating)
+          addressee:profiles!friend_requests_receiver_id_fkey(user_id, username, avatar_url)
         `)
-        .eq('requester_id', userId)
+        .eq('sender_id', userId)
         .eq('status', 'pending');
 
       if (error) throw error;
@@ -131,8 +131,8 @@ const Friends = () => {
       const { error } = await supabase
         .from('friend_requests')
         .insert({
-          requester_id: currentUser.id,
-          addressee_id: addresseeId,
+          sender_id: currentUser.id,
+          receiver_id: addresseeId,
           status: 'pending',
         });
 
@@ -188,8 +188,8 @@ const Friends = () => {
       const { data: existingDuels } = await supabase
         .from('live_duels')
         .select('id, status')
-        .or(`player1_id.eq.${currentUser.id},player2_id.eq.${currentUser.id}`)
-        .in('status', ['waiting', 'active']);
+        .or(`creator_id.eq.${currentUser.id},opponent_id.eq.${currentUser.id}`)
+        .in('status', ['waiting', 'in_progress']);
 
       if (existingDuels && existingDuels.length > 0) {
         toast({
@@ -205,8 +205,8 @@ const Friends = () => {
       const { data: friendDuels } = await supabase
         .from('live_duels')
         .select('id, status')
-        .or(`player1_id.eq.${friendUserId},player2_id.eq.${friendUserId}`)
-        .in('status', ['waiting', 'active']);
+        .or(`creator_id.eq.${friendUserId},opponent_id.eq.${friendUserId}`)
+        .in('status', ['waiting', 'in_progress']);
 
       if (friendDuels && friendDuels.length > 0) {
         toast({
@@ -220,9 +220,8 @@ const Friends = () => {
       const { data, error } = await supabase
         .from('live_duels')
         .insert({
-          player1_id: currentUser.id,
-          player2_id: friendUserId,
-          room_name: `Duelo vs Amigo`,
+          creator_id: currentUser.id,
+          opponent_id: friendUserId,
           status: 'waiting',
         })
         .select()
