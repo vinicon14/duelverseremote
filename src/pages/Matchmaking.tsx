@@ -103,12 +103,58 @@ export default function Matchmaking() {
         return;
       }
 
-      // Matchmaking system not yet fully implemented
-      toast.error("Matchmaking em desenvolvimento. Use 'Duelos' para criar uma partida manual.");
-      navigate('/duels');
+      setSearching(true);
+
+      // Buscar uma sala aleatória com apenas 1 pessoa (status waiting)
+      const { data: waitingDuels, error: searchError } = await supabase
+        .from("live_duels")
+        .select("id, creator_id")
+        .eq("status", "waiting")
+        .is("opponent_id", null)
+        .neq("creator_id", session.user.id)
+        .limit(10);
+
+      if (searchError) {
+        console.error("Error searching for duels:", searchError);
+        toast.error("Erro ao buscar salas disponíveis");
+        setSearching(false);
+        return;
+      }
+
+      if (!waitingDuels || waitingDuels.length === 0) {
+        toast.error("Nenhuma sala disponível no momento. Tente novamente ou crie sua própria sala.");
+        setSearching(false);
+        navigate('/duels');
+        return;
+      }
+
+      // Selecionar uma sala aleatória
+      const randomDuel = waitingDuels[Math.floor(Math.random() * waitingDuels.length)];
+
+      // Entrar na sala como opponent
+      const { error: updateError } = await supabase
+        .from("live_duels")
+        .update({ 
+          opponent_id: session.user.id,
+          status: "in_progress",
+          started_at: new Date().toISOString()
+        })
+        .eq("id", randomDuel.id)
+        .is("opponent_id", null); // Garantir que ninguém entrou enquanto isso
+
+      if (updateError) {
+        console.error("Error joining duel:", updateError);
+        toast.error("Erro ao entrar na sala. Tente novamente.");
+        setSearching(false);
+        return;
+      }
+
+      toast.success("Sala encontrada! Redirecionando...");
+      navigate(`/duel/${randomDuel.id}`);
     } catch (error: any) {
       console.error("Unexpected error in joinQueue:", error);
       toast.error("Erro inesperado: " + error.message);
+      setSearching(false);
     }
   };
 
