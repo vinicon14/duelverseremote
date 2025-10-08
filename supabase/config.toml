@@ -1,7 +1,1 @@
-project_id = "kyhbipferhspuqnyepll"
-
-[functions.admin-delete-user]
-verify_jwt = false
-
-[functions.admin-toggle-pro]
-verify_jwt = false
+project_id = "xxttwzewtqxvpgefggah"
