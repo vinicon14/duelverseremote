@@ -145,7 +145,6 @@ const DuelRoom = () => {
   useEffect(() => {
     checkAuth();
     fetchDuel();
-    startCallTimer();
 
     return () => {
       if (jitsiApi) {
@@ -263,6 +262,31 @@ const DuelRoom = () => {
       setDuel(data);
       setPlayer1LP(data.player1_lp || 8000);
       setPlayer2LP(data.player2_lp || 8000);
+
+      // Iniciar duelo se ainda não foi iniciado
+      if (!data.started_at) {
+        const now = new Date().toISOString();
+        await supabase
+          .from('live_duels')
+          .update({ 
+            started_at: now,
+            status: 'in_progress'
+          })
+          .eq('id', id);
+        
+        callStartTime.current = new Date(now).getTime();
+      } else {
+        callStartTime.current = new Date(data.started_at).getTime();
+      }
+
+      // Iniciar timer
+      startCallTimer();
+
+      // Verificar se já passou 60 minutos
+      const elapsed = Math.floor((Date.now() - callStartTime.current) / 1000);
+      if (elapsed >= 3600) {
+        await endDuel();
+      }
     } catch (error: any) {
       toast({
         title: "Erro ao carregar duelo",
@@ -338,15 +362,17 @@ const DuelRoom = () => {
         ? Math.floor((Date.now() - callStartTime.current) / 60000) 
         : 0;
 
+      // Atualizar status do duelo
       await supabase
         .from('live_duels')
         .update({
           status: 'finished',
-          ended_at: new Date().toISOString(),
+          finished_at: new Date().toISOString(),
           winner_id: winnerId,
         })
         .eq('id', id);
 
+      // Registrar histórico se houver vencedor
       if (winnerId) {
         await supabase.from('match_history').insert({
           player1_id: duel?.creator_id,
@@ -356,7 +382,52 @@ const DuelRoom = () => {
           player1_score: winnerId === duel?.opponent_id ? 0 : player1LP,
           player2_score: winnerId === duel?.creator_id ? 0 : player2LP,
         });
+
+        // Atualizar vitórias e derrotas dos perfis
+        const loserId = winnerId === duel?.creator_id ? duel?.opponent_id : duel?.creator_id;
+        
+        // Buscar perfis atuais
+        const { data: winnerProfile } = await supabase
+          .from('profiles')
+          .select('wins, points')
+          .eq('user_id', winnerId)
+          .single();
+
+        const { data: loserProfile } = await supabase
+          .from('profiles')
+          .select('losses, points')
+          .eq('user_id', loserId)
+          .single();
+
+        // Atualizar vencedor
+        if (winnerProfile) {
+          await supabase
+            .from('profiles')
+            .update({ 
+              wins: (winnerProfile.wins || 0) + 1,
+              points: (winnerProfile.points || 0) + 100
+            })
+            .eq('user_id', winnerId);
+        }
+        
+        // Atualizar perdedor
+        if (loserProfile) {
+          await supabase
+            .from('profiles')
+            .update({ 
+              losses: (loserProfile.losses || 0) + 1
+            })
+            .eq('user_id', loserId);
+        }
       }
+
+      // Deletar o duelo após 60 minutos
+      setTimeout(async () => {
+        await supabase
+          .from('live_duels')
+          .delete()
+          .eq('id', id);
+      }, 60000); // 1 minuto após finalizar
 
       toast({
         title: "Duelo finalizado!",
