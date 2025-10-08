@@ -79,6 +79,8 @@ const DuelRoom = () => {
             startWithAudioMuted: false,
             startWithVideoMuted: false,
             prejoinPageEnabled: false,
+            enableWelcomePage: false,
+            requireDisplayName: false,
           },
           interfaceConfigOverwrite: {
             TOOLBAR_BUTTONS: [
@@ -91,6 +93,10 @@ const DuelRoom = () => {
             ],
             SHOW_JITSI_WATERMARK: false,
             SHOW_WATERMARK_FOR_GUESTS: false,
+            DISABLE_JOIN_LEAVE_NOTIFICATIONS: true,
+          },
+          userInfo: {
+            displayName: currentUser?.email?.split('@')[0] || 'Jogador',
           },
         });
 
