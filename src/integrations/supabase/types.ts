@@ -439,6 +439,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cleanup_empty_duels: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
