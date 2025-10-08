@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/Navbar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Trophy, Swords, TrendingUp, Calendar } from "lucide-react";
+import { AvatarUpload } from "@/components/AvatarUpload";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -138,12 +138,12 @@ const Profile = () => {
         <Card className="card-mystic mb-8">
           <CardContent className="pt-6">
             <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
-              <Avatar className="w-32 h-32 border-4 border-primary/30">
-                <AvatarImage src={profile?.avatar_url || ""} />
-                <AvatarFallback className="bg-primary/20 text-4xl">
-                  {profile?.username?.charAt(0).toUpperCase() || "U"}
-                </AvatarFallback>
-              </Avatar>
+              <AvatarUpload
+                userId={profile?.user_id}
+                currentAvatarUrl={profile?.avatar_url}
+                username={profile?.username}
+                onAvatarUpdated={(newUrl) => setProfile({ ...profile, avatar_url: newUrl })}
+              />
 
               <div className="flex-1 text-center md:text-left">
                 <h1 className="text-3xl font-bold text-gradient-mystic mb-2">
