@@ -14,16 +14,442 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      advertisements: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          id: string
+          image_url: string
+          is_active: boolean
+          link_url: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          image_url: string
+          is_active?: boolean
+          link_url: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          image_url?: string
+          is_active?: boolean
+          link_url?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      chat_messages: {
+        Row: {
+          created_at: string
+          duel_id: string
+          id: string
+          message: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          duel_id: string
+          id?: string
+          message: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          duel_id?: string
+          id?: string
+          message?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_duel_id_fkey"
+            columns: ["duel_id"]
+            isOneToOne: false
+            referencedRelation: "live_duels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_messages_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      friend_requests: {
+        Row: {
+          created_at: string
+          id: string
+          receiver_id: string
+          sender_id: string
+          status: Database["public"]["Enums"]["friend_request_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          receiver_id: string
+          sender_id: string
+          status?: Database["public"]["Enums"]["friend_request_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          receiver_id?: string
+          sender_id?: string
+          status?: Database["public"]["Enums"]["friend_request_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "friend_requests_receiver_id_fkey"
+            columns: ["receiver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "friend_requests_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      live_duels: {
+        Row: {
+          bet_amount: number
+          created_at: string
+          creator_id: string
+          finished_at: string | null
+          id: string
+          opponent_id: string | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["game_status"]
+          winner_id: string | null
+        }
+        Insert: {
+          bet_amount?: number
+          created_at?: string
+          creator_id: string
+          finished_at?: string | null
+          id?: string
+          opponent_id?: string | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["game_status"]
+          winner_id?: string | null
+        }
+        Update: {
+          bet_amount?: number
+          created_at?: string
+          creator_id?: string
+          finished_at?: string | null
+          id?: string
+          opponent_id?: string | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["game_status"]
+          winner_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_duels_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "live_duels_opponent_id_fkey"
+            columns: ["opponent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "live_duels_winner_id_fkey"
+            columns: ["winner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      match_history: {
+        Row: {
+          bet_amount: number
+          id: string
+          played_at: string
+          player1_id: string
+          player1_score: number
+          player2_id: string
+          player2_score: number
+          winner_id: string
+        }
+        Insert: {
+          bet_amount?: number
+          id?: string
+          played_at?: string
+          player1_id: string
+          player1_score?: number
+          player2_id: string
+          player2_score?: number
+          winner_id: string
+        }
+        Update: {
+          bet_amount?: number
+          id?: string
+          played_at?: string
+          player1_id?: string
+          player1_score?: number
+          player2_id?: string
+          player2_score?: number
+          winner_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_history_player1_id_fkey"
+            columns: ["player1_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "match_history_player2_id_fkey"
+            columns: ["player2_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "match_history_winner_id_fkey"
+            columns: ["winner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      news: {
+        Row: {
+          author_id: string | null
+          content: string
+          created_at: string
+          id: string
+          image_url: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          author_id?: string | null
+          content: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string | null
+          content?: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "news_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      players: {
+        Row: {
+          duel_id: string
+          id: string
+          is_ready: boolean
+          joined_at: string
+          score: number
+          user_id: string
+        }
+        Insert: {
+          duel_id: string
+          id?: string
+          is_ready?: boolean
+          joined_at?: string
+          score?: number
+          user_id: string
+        }
+        Update: {
+          duel_id?: string
+          id?: string
+          is_ready?: boolean
+          joined_at?: string
+          score?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "players_duel_id_fkey"
+            columns: ["duel_id"]
+            isOneToOne: false
+            referencedRelation: "live_duels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "players_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          account_type: Database["public"]["Enums"]["account_type"]
+          avatar_url: string | null
+          created_at: string
+          is_banned: boolean
+          is_online: boolean
+          last_seen: string
+          losses: number
+          points: number
+          updated_at: string
+          user_id: string
+          username: string
+          wins: number
+        }
+        Insert: {
+          account_type?: Database["public"]["Enums"]["account_type"]
+          avatar_url?: string | null
+          created_at?: string
+          is_banned?: boolean
+          is_online?: boolean
+          last_seen?: string
+          losses?: number
+          points?: number
+          updated_at?: string
+          user_id: string
+          username: string
+          wins?: number
+        }
+        Update: {
+          account_type?: Database["public"]["Enums"]["account_type"]
+          avatar_url?: string | null
+          created_at?: string
+          is_banned?: boolean
+          is_online?: boolean
+          last_seen?: string
+          losses?: number
+          points?: number
+          updated_at?: string
+          user_id?: string
+          username?: string
+          wins?: number
+        }
+        Relationships: []
+      }
+      tournaments: {
+        Row: {
+          created_at: string
+          description: string | null
+          end_date: string
+          id: string
+          max_participants: number
+          name: string
+          prize_pool: number
+          start_date: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          end_date: string
+          id?: string
+          max_participants: number
+          name: string
+          prize_pool?: number
+          start_date: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          end_date?: string
+          id?: string
+          max_participants?: number
+          name?: string
+          prize_pool?: number
+          start_date?: string
+          status?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_admin: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      account_type: "free" | "pro"
+      app_role: "admin" | "user"
+      friend_request_status: "pending" | "accepted" | "rejected"
+      game_status: "waiting" | "in_progress" | "finished"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +576,11 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      account_type: ["free", "pro"],
+      app_role: ["admin", "user"],
+      friend_request_status: ["pending", "accepted", "rejected"],
+      game_status: ["waiting", "in_progress", "finished"],
+    },
   },
 } as const
