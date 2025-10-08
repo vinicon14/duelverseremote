@@ -81,6 +81,12 @@ const DuelRoom = () => {
             prejoinPageEnabled: false,
             enableWelcomePage: false,
             requireDisplayName: false,
+            disableModeratorIndicator: true,
+            enableLobbyChat: false,
+            enableClosePage: false,
+            hideConferenceSubject: true,
+            subject: '',
+            disableSimulcast: false,
           },
           interfaceConfigOverwrite: {
             TOOLBAR_BUTTONS: [
@@ -94,6 +100,8 @@ const DuelRoom = () => {
             SHOW_JITSI_WATERMARK: false,
             SHOW_WATERMARK_FOR_GUESTS: false,
             DISABLE_JOIN_LEAVE_NOTIFICATIONS: true,
+            DISABLE_PRESENCE_STATUS: true,
+            DISABLE_FOCUS_INDICATOR: true,
           },
           userInfo: {
             displayName: currentUser?.email?.split('@')[0] || 'Jogador',
