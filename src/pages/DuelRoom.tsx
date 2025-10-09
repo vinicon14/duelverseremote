@@ -9,162 +9,21 @@ import { DuelChat } from "@/components/DuelChat";
 import { FloatingCalculator } from "@/components/FloatingCalculator";
 import { useBanCheck } from "@/hooks/useBanCheck";
 
-declare global {
-  interface Window {
-    JitsiMeetExternalAPI: any;
-  }
-}
-
 const DuelRoom = () => {
   useBanCheck(); // Proteger contra usuários banidos
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const jitsiContainer = useRef<HTMLDivElement>(null);
-  const [jitsiApi, setJitsiApi] = useState<any>(null);
   const [duel, setDuel] = useState<any>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [player1LP, setPlayer1LP] = useState(8000);
   const [player2LP, setPlayer2LP] = useState(8000);
-  const [callDuration, setCallDuration] = useState(0); // em segundos
+  const [callDuration, setCallDuration] = useState(0);
   const [showTimeWarning, setShowTimeWarning] = useState(false);
-  const [isJitsiLoaded, setIsJitsiLoaded] = useState(false);
   const callStartTime = useRef<number | null>(null);
   const timerInterval = useRef<NodeJS.Timeout | null>(null);
 
-  // Carrega o script do Jitsi primeiro
-  useEffect(() => {
-    const script = document.getElementById('jitsi-script') as HTMLScriptElement;
-    
-    if (script) {
-      if (window.JitsiMeetExternalAPI) {
-        setIsJitsiLoaded(true);
-      }
-      return;
-    }
-
-    const newScript = document.createElement('script');
-    newScript.id = 'jitsi-script';
-    newScript.src = 'https://meet.jit.si/external_api.js';
-    newScript.async = true;
-    newScript.onload = () => {
-      console.log('Jitsi script loaded successfully');
-      setIsJitsiLoaded(true);
-    };
-    newScript.onerror = () => {
-      console.error('Failed to load Jitsi script');
-      toast({
-        title: "Erro ao carregar vídeo",
-        description: "Não foi possível carregar a chamada de vídeo. Recarregue a página.",
-        variant: "destructive",
-      });
-    };
-    document.body.appendChild(newScript);
-  }, []);
-
-  // Inicializa o Jitsi quando script estiver carregado e container montado
-  useEffect(() => {
-    if (!isJitsiLoaded || !jitsiContainer.current || !id) return;
-
-    const initJitsi = () => {
-      console.log('Initializing Jitsi Meet...');
-      
-      try {
-        const api = new window.JitsiMeetExternalAPI('meet.jit.si', {
-          roomName: `duelverse_${id}`,
-          parentNode: jitsiContainer.current,
-          width: '100%',
-          height: '100%',
-          configOverwrite: {
-            startWithAudioMuted: false,
-            startWithVideoMuted: false,
-            prejoinPageEnabled: false,
-            enableWelcomePage: false,
-            requireDisplayName: false,
-            disableModeratorIndicator: true,
-            enableLobbyChat: false,
-            enableClosePage: false,
-            hideConferenceSubject: true,
-            subject: '',
-            disableSimulcast: false,
-            // Configurações críticas para remover lobby/moderador
-            enableInsecureRoomNameWarning: false,
-            enableNoisyMicDetection: false,
-            enableNoAudioDetection: false,
-            startAudioOnly: false,
-            // Desabilitar completamente o sistema de lobby
-            lobby: {
-              enabled: false,
-            },
-            // Remover qualquer autenticação/moderação
-            authentication: {
-              enabled: false,
-            },
-            // Permitir todos os participantes sem restrições
-            disableInviteFunctions: true,
-            doNotStoreRoom: true,
-          },
-          interfaceConfigOverwrite: {
-            TOOLBAR_BUTTONS: [
-              'microphone',
-              'camera',
-              'desktop',
-              'fullscreen',
-              'hangup',
-              'chat',
-            ],
-            SHOW_JITSI_WATERMARK: false,
-            SHOW_WATERMARK_FOR_GUESTS: false,
-            DISABLE_JOIN_LEAVE_NOTIFICATIONS: true,
-            DISABLE_PRESENCE_STATUS: true,
-            DISABLE_FOCUS_INDICATOR: true,
-            HIDE_INVITE_MORE_HEADER: true,
-          },
-          userInfo: {
-            displayName: currentUser?.email?.split('@')[0] || 'Jogador',
-          },
-        });
-
-        console.log('Jitsi initialized successfully');
-        
-        // Reinicializar automaticamente quando a conferência terminar (a cada 5 min)
-        api.addEventListener('videoConferenceLeft', () => {
-          console.log('Jitsi conference left, checking time remaining...');
-          
-          // Calcular tempo restante usando o ref ao invés do estado
-          const MAX_DURATION = 3600; // 60 minutos em segundos
-          const elapsed = callStartTime.current 
-            ? Math.floor((Date.now() - callStartTime.current) / 1000)
-            : 0;
-          const remaining = Math.max(0, MAX_DURATION - elapsed);
-          
-          // Verificar se ainda há tempo restante
-          if (remaining > 0) {
-            console.log(`Time remaining: ${remaining}s, reinitializing Jitsi in 2 seconds...`);
-            setTimeout(() => {
-              if (jitsiContainer.current) {
-                api.dispose();
-                initJitsi();
-              }
-            }, 2000);
-          } else {
-            console.log('No time remaining, not reinitializing');
-          }
-        });
-
-        setJitsiApi(api);
-      } catch (error) {
-        console.error('Error initializing Jitsi:', error);
-        toast({
-          title: "Erro ao inicializar vídeo",
-          description: "Não foi possível iniciar a chamada de vídeo.",
-          variant: "destructive",
-        });
-      }
-    };
-
-    initJitsi();
-  }, [isJitsiLoaded, id]);
+  // Nenhuma inicialização necessária para Whereby - usa iframe direto
 
   // Carrega dados do duelo e inicia timer
   useEffect(() => {
@@ -172,9 +31,6 @@ const DuelRoom = () => {
     fetchDuel();
 
     return () => {
-      if (jitsiApi) {
-        jitsiApi.dispose();
-      }
       if (timerInterval.current) {
         clearInterval(timerInterval.current);
       }
@@ -470,9 +326,6 @@ const DuelRoom = () => {
   };
 
   const handleLeave = () => {
-    if (jitsiApi) {
-      jitsiApi.dispose();
-    }
     navigate('/duels');
   };
 
@@ -486,9 +339,13 @@ const DuelRoom = () => {
       
       <main className="px-2 sm:px-4 pt-16 sm:pt-20 pb-2 sm:pb-4">
         <div className="h-[calc(100vh-80px)] sm:h-[calc(100vh-100px)] relative">
-          {/* Video Call - Quase tela inteira */}
+          {/* Video Call - Whereby Embed */}
           <div className="h-full w-full rounded-lg overflow-hidden bg-card shadow-2xl border border-primary/20">
-            <div ref={jitsiContainer} className="w-full h-full" />
+            <iframe
+              src={`https://whereby.com/duelverse-${id}?minimal&embed`}
+              allow="camera; microphone; fullscreen; speaker; display-capture; autoplay"
+              className="w-full h-full"
+            />
           </div>
 
           {/* Botão de Sair e Timer - Fixo no canto superior direito */}
