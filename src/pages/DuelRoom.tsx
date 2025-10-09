@@ -87,6 +87,22 @@ const DuelRoom = () => {
             hideConferenceSubject: true,
             subject: '',
             disableSimulcast: false,
+            // Configurações críticas para remover lobby/moderador
+            enableInsecureRoomNameWarning: false,
+            enableNoisyMicDetection: false,
+            enableNoAudioDetection: false,
+            startAudioOnly: false,
+            // Desabilitar completamente o sistema de lobby
+            lobby: {
+              enabled: false,
+            },
+            // Remover qualquer autenticação/moderação
+            authentication: {
+              enabled: false,
+            },
+            // Permitir todos os participantes sem restrições
+            disableInviteFunctions: true,
+            doNotStoreRoom: true,
           },
           interfaceConfigOverwrite: {
             TOOLBAR_BUTTONS: [
@@ -102,6 +118,7 @@ const DuelRoom = () => {
             DISABLE_JOIN_LEAVE_NOTIFICATIONS: true,
             DISABLE_PRESENCE_STATUS: true,
             DISABLE_FOCUS_INDICATOR: true,
+            HIDE_INVITE_MORE_HEADER: true,
           },
           userInfo: {
             displayName: currentUser?.email?.split('@')[0] || 'Jogador',
