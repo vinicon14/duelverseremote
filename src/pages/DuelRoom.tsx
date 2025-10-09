@@ -339,10 +339,10 @@ const DuelRoom = () => {
       
       <main className="px-2 sm:px-4 pt-16 sm:pt-20 pb-2 sm:pb-4">
         <div className="h-[calc(100vh-80px)] sm:h-[calc(100vh-100px)] relative">
-          {/* Video Call - Jitsi 8x8.vc */}
+          {/* Video Call - Metered.ca */}
           <div className="h-full w-full rounded-lg overflow-hidden bg-card shadow-2xl border border-primary/20">
             <iframe
-              src={`https://8x8.vc/vpaas-magic-cookie-90cfbf82d3124ba192c4a2a0dc3e2849/duelverse_${id}#config.prejoinPageEnabled=false`}
+              src={`https://duelverse.metered.live/${id}`}
               allow="camera; microphone; fullscreen; speaker; display-capture"
               className="w-full h-full"
             />
