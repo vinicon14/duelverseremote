@@ -89,6 +89,12 @@ const DuelRoom = () => {
               if (updatedDuel) {
                 console.log('[DuelRoom] Duelo atualizado com opponent');
                 setDuel(updatedDuel);
+                
+                // Iniciar timer se started_at existe e timer não está rodando
+                if (updatedDuel.started_at && !timerInterval.current) {
+                  console.log('[DuelRoom] Iniciando timer após opponent entrar');
+                  startCallTimer(updatedDuel.started_at);
+                }
               }
             }
           }
@@ -528,8 +534,8 @@ const DuelRoom = () => {
       {/* Calculadora Flutuante - Cada participante controla apenas seu LP */}
       {duel && currentUser && (
         <FloatingCalculator
-          player1Name="Player 1"
-          player2Name="Player 2"
+          player1Name={duel.creator?.username || 'Player 1'}
+          player2Name={duel.opponent?.username || 'Player 2'}
           player1LP={player1LP}
           player2LP={player2LP}
           onUpdateLP={updateLP}

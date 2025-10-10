@@ -36,8 +36,8 @@ export const QueueWaiting = ({ duelId, onCancel }: QueueWaitingProps) => {
         (payload) => {
           console.log('[QueueWaiting] Update recebido:', payload.new);
           
-          // Se opponent_id foi preenchido, redirecionar para a sala
-          if (payload.new.opponent_id) {
+          // Se opponent_id foi preenchido OU status mudou para in_progress, redirecionar
+          if (payload.new.opponent_id || payload.new.status === 'in_progress') {
             console.log('[QueueWaiting] Oponente encontrado! Redirecionando...');
             navigate(`/duel/${duelId}`);
           }
