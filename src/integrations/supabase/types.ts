@@ -171,6 +171,7 @@ export type Database = {
           bet_amount: number
           created_at: string
           creator_id: string
+          duration_minutes: number
           finished_at: string | null
           id: string
           is_ranked: boolean
@@ -185,6 +186,7 @@ export type Database = {
           bet_amount?: number
           created_at?: string
           creator_id: string
+          duration_minutes?: number
           finished_at?: string | null
           id?: string
           is_ranked?: boolean
@@ -199,6 +201,7 @@ export type Database = {
           bet_amount?: number
           created_at?: string
           creator_id?: string
+          duration_minutes?: number
           finished_at?: string | null
           id?: string
           is_ranked?: boolean

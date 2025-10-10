@@ -20,6 +20,7 @@ const Duels = () => {
   const [loading, setLoading] = useState(true);
   const [roomName, setRoomName] = useState("");
   const [isRanked, setIsRanked] = useState(true);
+  const [durationMinutes, setDurationMinutes] = useState(60);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showAdPopup, setShowAdPopup] = useState(false);
   const [pendingAction, setPendingAction] = useState<{ type: 'create' | 'join', duelId?: string } | null>(null);
@@ -124,6 +125,7 @@ const Duels = () => {
           creator_id: user.id,
           status: 'waiting',
           is_ranked: isRanked,
+          duration_minutes: durationMinutes,
         })
         .select()
         .single();
@@ -325,6 +327,26 @@ const Duels = () => {
                     {isRanked 
                       ? "✅ Vale pontos no ranking" 
                       : "❌ Não vale pontos no ranking"}
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="duration">Duração da Partida (minutos)</Label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {[30, 60, 90, 120].map((mins) => (
+                      <Button
+                        key={mins}
+                        type="button"
+                        variant={durationMinutes === mins ? "default" : "outline"}
+                        onClick={() => setDurationMinutes(mins)}
+                        className={durationMinutes === mins ? "btn-mystic text-white" : ""}
+                      >
+                        {mins}m
+                      </Button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    ⏱️ A partida durará {durationMinutes} minutos
                   </p>
                 </div>
                 

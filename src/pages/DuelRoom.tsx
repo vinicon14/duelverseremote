@@ -130,11 +130,11 @@ const DuelRoom = () => {
     };
   }, [id, duel?.opponent_id, currentUser]);
 
-  const startCallTimer = (startedAt: string) => {
+  const startCallTimer = (startedAt: string, durationMinutes: number = 60) => {
     console.log('[TIMER] 🕐 Iniciando timer com started_at:', startedAt);
     const startTime = new Date(startedAt).getTime();
     callStartTime.current = startTime;
-    const MAX_DURATION = 3600; // 60 minutos em segundos
+    const MAX_DURATION = durationMinutes * 60; // Converter minutos para segundos
     
     console.log('[TIMER] 📊 Timer configurado:', {
       startTime: new Date(startTime).toISOString(),
@@ -394,15 +394,18 @@ const DuelRoom = () => {
         console.log('[DuelRoom] ▶️ INICIANDO TIMER AGORA - started_at:', startedAt);
         console.log('[DuelRoom] 📍 Tempo atual:', new Date().toISOString());
         const elapsed = Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000);
+        const durationMins = data.duration_minutes || 60;
+        const maxDurationSeconds = durationMins * 60;
         console.log('[DuelRoom] ⏱️ Tempo já decorrido:', elapsed, 'segundos');
+        console.log('[DuelRoom] ⏱️ Duração total:', durationMins, 'minutos');
         
-        // Verificar se já passou 60 minutos
-        if (elapsed >= 3600) {
-          console.log('[DuelRoom] ⏰ TEMPO JÁ ESGOTADO (60 minutos) - Finalizando');
+        // Verificar se já passou o tempo
+        if (elapsed >= maxDurationSeconds) {
+          console.log('[DuelRoom] ⏰ TEMPO JÁ ESGOTADO - Finalizando');
           await endDuel();
         } else {
           console.log('[DuelRoom] ✅ Chamando startCallTimer...');
-          startCallTimer(startedAt);
+          startCallTimer(startedAt, durationMins);
           console.log('[DuelRoom] ✅ startCallTimer executado');
         }
       } else {
