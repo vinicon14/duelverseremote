@@ -36,7 +36,7 @@ const DuelRoom = () => {
     };
   }, [id]);
 
-  // Listener realtime para sincronizar LP entre usuários
+  // Listener realtime para sincronizar LP entre usuários e atualização de opponent
   useEffect(() => {
     if (!id) return;
 
@@ -50,11 +50,16 @@ const DuelRoom = () => {
           table: 'live_duels',
           filter: `id=eq.${id}`,
         },
-        (payload) => {
-          console.log('LP atualizado via realtime:', payload);
+        async (payload) => {
+          console.log('Duelo atualizado via realtime:', payload);
           if (payload.new) {
             setPlayer1LP(payload.new.player1_lp || 8000);
             setPlayer2LP(payload.new.player2_lp || 8000);
+            
+            // Atualizar dados do duelo se opponent entrou
+            if (payload.new.opponent_id && !duel?.opponent_id) {
+              fetchDuel();
+            }
           }
         }
       )
@@ -63,7 +68,7 @@ const DuelRoom = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [id]);
+  }, [id, duel?.opponent_id]);
 
   const startCallTimer = () => {
     callStartTime.current = Date.now();
@@ -121,8 +126,8 @@ const DuelRoom = () => {
         .from('live_duels')
         .select(`
           *,
-          creator:profiles!live_duels_creator_id_fkey(username, avatar_url),
-          opponent:profiles!live_duels_opponent_id_fkey(username, avatar_url)
+          creator:profiles!live_duels_creator_id_fkey(username, avatar_url, user_id),
+          opponent:profiles!live_duels_opponent_id_fkey(username, avatar_url, user_id)
         `)
         .eq('id', id)
         .maybeSingle();
@@ -401,7 +406,7 @@ const DuelRoom = () => {
       {duel && (
         <FloatingCalculator
           player1Name={duel.creator?.username || 'Jogador 1'}
-          player2Name={duel.opponent?.username || 'Aguardando...'}
+          player2Name={duel.opponent?.username || (duel.opponent_id ? 'Carregando...' : 'Aguardando...')}
           player1LP={player1LP}
           player2LP={player2LP}
           onUpdateLP={updateLP}
