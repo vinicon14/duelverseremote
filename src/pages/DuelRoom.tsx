@@ -131,12 +131,28 @@ const DuelRoom = () => {
   }, [id, duel?.opponent_id, currentUser]);
 
   const startCallTimer = (startedAt: string) => {
-    callStartTime.current = new Date(startedAt).getTime();
+    console.log('[TIMER] 🕐 Iniciando timer com started_at:', startedAt);
+    const startTime = new Date(startedAt).getTime();
+    callStartTime.current = startTime;
     const MAX_DURATION = 3600; // 60 minutos em segundos
     
+    console.log('[TIMER] 📊 Timer configurado:', {
+      startTime: new Date(startTime).toISOString(),
+      maxDuration: MAX_DURATION,
+      now: new Date().toISOString()
+    });
+    
     timerInterval.current = setInterval(() => {
-      const elapsed = Math.floor((Date.now() - (callStartTime.current || Date.now())) / 1000);
+      const now = Date.now();
+      const elapsed = Math.floor((now - startTime) / 1000);
       const remaining = Math.max(0, MAX_DURATION - elapsed);
+      
+      console.log('[TIMER] ⏱️ Timer tick:', {
+        elapsed,
+        remaining,
+        maxDuration: MAX_DURATION
+      });
+      
       setCallDuration(remaining);
 
       // Aviso quando restar 5 minutos (300 segundos)
@@ -151,6 +167,7 @@ const DuelRoom = () => {
 
       // Finalizar automaticamente quando chegar a 0:00
       if (remaining === 0) {
+        console.log('[TIMER] ⏰ TEMPO ESGOTADO - Finalizando duelo');
         if (timerInterval.current) {
           clearInterval(timerInterval.current);
         }
@@ -162,6 +179,8 @@ const DuelRoom = () => {
         endDuel();
       }
     }, 1000);
+    
+    console.log('[TIMER] ✅ Timer interval criado');
   };
 
   const formatTime = (seconds: number) => {
@@ -363,17 +382,22 @@ const DuelRoom = () => {
 
       // Iniciar timer SEMPRE que houver started_at (não precisa esperar opponent)
       if (startedAt) {
-        console.log('[DuelRoom] ▶️ Iniciando timer (timer conta desde a criação)');
-        startCallTimer(startedAt);
-
-        // Verificar se já passou 60 minutos
+        console.log('[DuelRoom] ▶️ INICIANDO TIMER AGORA - started_at:', startedAt);
+        console.log('[DuelRoom] 📍 Tempo atual:', new Date().toISOString());
         const elapsed = Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000);
+        console.log('[DuelRoom] ⏱️ Tempo já decorrido:', elapsed, 'segundos');
+        
+        // Verificar se já passou 60 minutos
         if (elapsed >= 3600) {
-          console.log('[DuelRoom] ⏱️ Tempo esgotado (60 minutos)');
+          console.log('[DuelRoom] ⏰ TEMPO JÁ ESGOTADO (60 minutos) - Finalizando');
           await endDuel();
+        } else {
+          console.log('[DuelRoom] ✅ Chamando startCallTimer...');
+          startCallTimer(startedAt);
+          console.log('[DuelRoom] ✅ startCallTimer executado');
         }
       } else {
-        console.log('[DuelRoom] ⚠️ Timer não iniciado - started_at não existe');
+        console.log('[DuelRoom] ❌ Timer NÃO iniciado - started_at é null/undefined');
       }
     } catch (error: any) {
       console.error('[DuelRoom] Erro em fetchDuel:', error);
@@ -543,21 +567,29 @@ const DuelRoom = () => {
     isPlayer1, 
     isPlayer2,
     isParticipant,
-    currentUserPlayer
+    currentUserPlayer,
+    '>>> PLAYER 1 CONTROLA': 'player1_lp',
+    '>>> PLAYER 2 CONTROLA': 'player2_lp'
   });
 
   // Log adicional quando duel muda
   useEffect(() => {
     if (duel && currentUser) {
+      const calculatedPlayer1 = currentUser.id === duel.creator_id;
+      const calculatedPlayer2 = currentUser.id === duel.opponent_id;
+      const calculatedCurrentUserPlayer = calculatedPlayer1 ? 'player1' : calculatedPlayer2 ? 'player2' : null;
+      
       console.log('🔄 Duelo atualizado - Verificando controles:', {
         duel_id: duel.id,
         currentUserId: currentUser.id,
         creator_id: duel.creator_id,
         opponent_id: duel.opponent_id,
-        isPlayer1: currentUser.id === duel.creator_id,
-        isPlayer2: currentUser.id === duel.opponent_id,
+        isPlayer1: calculatedPlayer1,
+        isPlayer2: calculatedPlayer2,
         has_opponent: !!duel.opponent_id,
-        currentUserPlayer: currentUser.id === duel.creator_id ? 'player1' : currentUser.id === duel.opponent_id ? 'player2' : null
+        currentUserPlayer: calculatedCurrentUserPlayer,
+        '>>> EU SOU': calculatedCurrentUserPlayer === 'player1' ? 'PLAYER 1 (Creator)' : calculatedCurrentUserPlayer === 'player2' ? 'PLAYER 2 (Opponent)' : 'ESPECTADOR',
+        '>>> EU CONTROLO': calculatedCurrentUserPlayer === 'player1' ? 'player1_lp' : calculatedCurrentUserPlayer === 'player2' ? 'player2_lp' : 'NADA'
       });
     }
   }, [duel, currentUser]);
