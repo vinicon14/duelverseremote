@@ -40,10 +40,7 @@ export default function Home() {
   const fetchNews = async () => {
     const { data, error } = await supabase
       .from('news')
-      .select(`
-        *,
-        author:profiles(username, display_name, user_id)
-      `)
+      .select('*, author:profiles!news_author_id_fkey(username)')
       .order('created_at', { ascending: false })
       .limit(10);
 
