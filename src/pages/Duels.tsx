@@ -10,7 +10,6 @@ import { useToast } from "@/components/ui/use-toast";
 import { Swords, Plus, Users, Clock } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useBanCheck } from "@/hooks/useBanCheck";
-import { QueueWaiting } from "@/components/QueueWaiting";
 import { AdPopup } from "@/components/AdPopup";
 
 const Duels = () => {
@@ -21,7 +20,6 @@ const Duels = () => {
   const [loading, setLoading] = useState(true);
   const [roomName, setRoomName] = useState("");
   const [isRanked, setIsRanked] = useState(true);
-  const [waitingDuelId, setWaitingDuelId] = useState<string | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showAdPopup, setShowAdPopup] = useState(false);
   const [pendingAction, setPendingAction] = useState<{ type: 'create' | 'join', duelId?: string } | null>(null);
@@ -134,11 +132,11 @@ const Duels = () => {
 
       toast({
         title: "Sala criada!",
-        description: "Aguardando oponente entrar na fila...",
+        description: "Redirecionando para a sala...",
       });
 
-      // NÃO redirecionar, apenas mostrar popup de espera
-      setWaitingDuelId(data.id);
+      // Redirecionar diretamente para a sala
+      navigate(`/duel/${data.id}`);
     } catch (error: any) {
       toast({
         title: "Erro ao criar duelo",
@@ -441,14 +439,6 @@ const Duels = () => {
       {/* Popup de anúncio */}
       {showAdPopup && (
         <AdPopup onClose={handleAdClose} />
-      )}
-
-      {/* Popup de espera na fila */}
-      {waitingDuelId && (
-        <QueueWaiting
-          duelId={waitingDuelId}
-          onCancel={() => setWaitingDuelId(null)}
-        />
       )}
     </div>
   );
