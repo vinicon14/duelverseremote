@@ -7,9 +7,13 @@ import { useAccountType } from "@/hooks/useAccountType";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Newspaper } from "lucide-react";
+import { Newspaper, Zap, Swords, Trophy } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 
 export default function Home() {
+  const navigate = useNavigate();
   const [news, setNews] = useState<any[]>([]);
   const [ads, setAds] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,6 +66,57 @@ export default function Home() {
       <Navbar />
       
       <main className="container mx-auto px-4 pt-20 sm:pt-24 pb-8">
+        {/* Cards de Acesso Rápido */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+          <Card className="card-mystic hover:border-primary/60 transition-all cursor-pointer" onClick={() => navigate('/matchmaking')}>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Zap className="w-5 h-5 text-primary" />
+                Fila Rápida
+              </CardTitle>
+              <CardDescription>Encontre um oponente agora</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button className="w-full btn-mystic">
+                <Zap className="w-4 h-4 mr-2" />
+                Buscar Partida
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="card-mystic hover:border-primary/60 transition-all cursor-pointer" onClick={() => navigate('/duels')}>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Swords className="w-5 h-5 text-primary" />
+                Duelos
+              </CardTitle>
+              <CardDescription>Crie ou entre em salas</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button variant="outline" className="w-full">
+                <Swords className="w-4 h-4 mr-2" />
+                Ver Salas
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="card-mystic hover:border-primary/60 transition-all cursor-pointer" onClick={() => navigate('/tournaments')}>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Trophy className="w-5 h-5 text-primary" />
+                Torneios
+              </CardTitle>
+              <CardDescription>Competições oficiais</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button variant="outline" className="w-full">
+                <Trophy className="w-4 h-4 mr-2" />
+                Ver Torneios
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+
         <div className="mb-6 sm:mb-8">
           <div className="flex items-center gap-2 sm:gap-3 mb-2">
             <Newspaper className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
