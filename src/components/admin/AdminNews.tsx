@@ -6,9 +6,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, Edit, Eye, EyeOff } from "lucide-react";
+import { Plus, Trash2, Edit, Upload, X } from "lucide-react";
 
 export const AdminNews = () => {
   const [news, setNews] = useState<any[]>([]);
@@ -19,6 +18,9 @@ export const AdminNews = () => {
     content: '',
     image_url: ''
   });
+  const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [mediaPreview, setMediaPreview] = useState<string>('');
+  const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -34,16 +36,72 @@ export const AdminNews = () => {
     if (data) setNews(data);
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setMediaFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setMediaPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const uploadMedia = async (): Promise<string | null> => {
+    if (!mediaFile) return formData.image_url;
+
+    setUploading(true);
+    try {
+      const fileExt = mediaFile.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError, data } = await supabase.storage
+        .from('news-media')
+        .upload(filePath, mediaFile, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('news-media')
+        .getPublicUrl(filePath);
+
+      return publicUrl;
+    } catch (error: any) {
+      toast({ 
+        title: "Erro ao fazer upload", 
+        description: error.message,
+        variant: "destructive" 
+      });
+      return null;
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
+    // Upload da mídia se houver arquivo novo
+    const mediaUrl = await uploadMedia();
+    if (mediaFile && !mediaUrl) return; // Se tinha arquivo mas falhou upload, cancela
+
+    const newsData = {
+      ...formData,
+      image_url: mediaUrl || formData.image_url
+    };
+
     if (editingNews) {
       const { error } = await supabase
         .from('news')
-        .update(formData)
+        .update(newsData)
         .eq('id', editingNews.id);
       
       if (error) {
@@ -54,7 +112,7 @@ export const AdminNews = () => {
     } else {
       const { error } = await supabase
         .from('news')
-        .insert({ ...formData, author_id: session.user.id });
+        .insert({ ...newsData, author_id: session.user.id });
       
       if (error) {
         toast({ title: "Erro ao criar notícia", variant: "destructive" });
@@ -66,6 +124,8 @@ export const AdminNews = () => {
     setOpen(false);
     setEditingNews(null);
     setFormData({ title: '', content: '', image_url: '' });
+    setMediaFile(null);
+    setMediaPreview('');
     fetchNews();
   };
 
@@ -89,6 +149,8 @@ export const AdminNews = () => {
       content: item.content,
       image_url: item.image_url || ''
     });
+    setMediaPreview(item.image_url || '');
+    setMediaFile(null);
     setOpen(true);
   };
 
@@ -101,6 +163,8 @@ export const AdminNews = () => {
           if (!isOpen) {
             setEditingNews(null);
             setFormData({ title: '', content: '', image_url: '' });
+            setMediaFile(null);
+            setMediaPreview('');
           }
         }}>
           <DialogTrigger asChild>
@@ -135,15 +199,50 @@ export const AdminNews = () => {
                 />
               </div>
               <div>
-                <Label>URL da Imagem (opcional)</Label>
-                <Input 
-                  type="url"
-                  value={formData.image_url}
-                  onChange={(e) => setFormData({...formData, image_url: e.target.value})}
-                />
+                <Label>Imagem ou Vídeo</Label>
+                <div className="space-y-3">
+                  <Input 
+                    type="file"
+                    accept="image/*,video/*"
+                    onChange={handleFileChange}
+                    className="cursor-pointer"
+                  />
+                  {mediaPreview && (
+                    <div className="relative rounded-lg overflow-hidden border">
+                      {mediaPreview.startsWith('data:video') || formData.image_url?.includes('.mp4') || formData.image_url?.includes('.webm') ? (
+                        <video src={mediaPreview || formData.image_url} controls className="w-full h-48 object-cover" />
+                      ) : (
+                        <img src={mediaPreview || formData.image_url} alt="Preview" className="w-full h-48 object-cover" />
+                      )}
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute top-2 right-2"
+                        onClick={() => {
+                          setMediaFile(null);
+                          setMediaPreview('');
+                          setFormData({...formData, image_url: ''});
+                        }}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Formatos aceitos: JPG, PNG, WEBP, GIF, MP4, WEBM (máx. 50MB)
+                  </p>
+                </div>
               </div>
-              <Button type="submit" className="w-full btn-mystic text-white">
-                {editingNews ? 'Atualizar' : 'Criar'} Notícia
+              <Button type="submit" className="w-full btn-mystic text-white" disabled={uploading}>
+                {uploading ? (
+                  <>
+                    <Upload className="w-4 h-4 mr-2 animate-spin" />
+                    Enviando...
+                  </>
+                ) : (
+                  <>{editingNews ? 'Atualizar' : 'Criar'} Notícia</>
+                )}
               </Button>
             </form>
           </DialogContent>
@@ -172,6 +271,15 @@ export const AdminNews = () => {
               </div>
             </CardHeader>
             <CardContent>
+              {item.image_url && (
+                <div className="mb-3 rounded-lg overflow-hidden">
+                  {item.image_url.includes('.mp4') || item.image_url.includes('.webm') ? (
+                    <video src={item.image_url} controls className="w-full h-32 object-cover" />
+                  ) : (
+                    <img src={item.image_url} alt={item.title} className="w-full h-32 object-cover" />
+                  )}
+                </div>
+              )}
               <p className="text-sm text-muted-foreground line-clamp-2">
                 {item.content}
               </p>

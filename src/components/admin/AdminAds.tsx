@@ -5,11 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, Edit, Eye, EyeOff } from "lucide-react";
+import { Plus, Trash2, Edit, Eye, EyeOff, Upload, X } from "lucide-react";
 
 export const AdminAds = () => {
   const [ads, setAds] = useState<any[]>([]);
@@ -22,6 +20,9 @@ export const AdminAds = () => {
     is_active: true,
     expires_at: ''
   });
+  const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [mediaPreview, setMediaPreview] = useState<string>('');
+  const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -37,11 +38,63 @@ export const AdminAds = () => {
     if (data) setAds(data);
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setMediaFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setMediaPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const uploadMedia = async (): Promise<string | null> => {
+    if (!mediaFile) return formData.image_url;
+
+    setUploading(true);
+    try {
+      const fileExt = mediaFile.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError, data } = await supabase.storage
+        .from('ads-media')
+        .upload(filePath, mediaFile, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('ads-media')
+        .getPublicUrl(filePath);
+
+      return publicUrl;
+    } catch (error: any) {
+      toast({ 
+        title: "Erro ao fazer upload", 
+        description: error.message,
+        variant: "destructive" 
+      });
+      return null;
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Upload da mídia se houver arquivo novo
+    const mediaUrl = await uploadMedia();
+    if (mediaFile && !mediaUrl) return; // Se tinha arquivo mas falhou upload, cancela
+
     const adData = {
       ...formData,
+      image_url: mediaUrl || formData.image_url,
       expires_at: formData.expires_at || null
     };
 
@@ -71,6 +124,8 @@ export const AdminAds = () => {
     setOpen(false);
     setEditingAd(null);
     setFormData({ title: '', image_url: '', link_url: '', is_active: true, expires_at: '' });
+    setMediaFile(null);
+    setMediaPreview('');
     fetchAds();
   };
 
@@ -96,6 +151,8 @@ export const AdminAds = () => {
       is_active: item.is_active,
       expires_at: item.expires_at ? item.expires_at.split('T')[0] : ''
     });
+    setMediaPreview(item.image_url || '');
+    setMediaFile(null);
     setOpen(true);
   };
 
@@ -108,6 +165,8 @@ export const AdminAds = () => {
           if (!isOpen) {
             setEditingAd(null);
             setFormData({ title: '', image_url: '', link_url: '', is_active: true, expires_at: '' });
+            setMediaFile(null);
+            setMediaPreview('');
           }
         }}>
           <DialogTrigger asChild>
@@ -133,13 +192,40 @@ export const AdminAds = () => {
                 />
               </div>
               <div>
-                <Label>URL da Imagem</Label>
-                <Input 
-                  type="url"
-                  value={formData.image_url}
-                  onChange={(e) => setFormData({...formData, image_url: e.target.value})}
-                  required
-                />
+                <Label>Imagem ou Vídeo</Label>
+                <div className="space-y-3">
+                  <Input 
+                    type="file"
+                    accept="image/*,video/*"
+                    onChange={handleFileChange}
+                    className="cursor-pointer"
+                  />
+                  {mediaPreview && (
+                    <div className="relative rounded-lg overflow-hidden border">
+                      {mediaPreview.startsWith('data:video') || formData.image_url?.includes('.mp4') || formData.image_url?.includes('.webm') ? (
+                        <video src={mediaPreview || formData.image_url} controls className="w-full h-48 object-cover" />
+                      ) : (
+                        <img src={mediaPreview || formData.image_url} alt="Preview" className="w-full h-48 object-cover" />
+                      )}
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute top-2 right-2"
+                        onClick={() => {
+                          setMediaFile(null);
+                          setMediaPreview('');
+                          setFormData({...formData, image_url: ''});
+                        }}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Formatos aceitos: JPG, PNG, WEBP, GIF, MP4, WEBM (máx. 50MB)
+                  </p>
+                </div>
               </div>
               <div>
                 <Label>URL do Link</Label>
@@ -165,8 +251,15 @@ export const AdminAds = () => {
                 />
                 <Label>Ativo</Label>
               </div>
-              <Button type="submit" className="w-full btn-mystic text-white">
-                {editingAd ? 'Atualizar' : 'Criar'} Anúncio
+              <Button type="submit" className="w-full btn-mystic text-white" disabled={uploading}>
+                {uploading ? (
+                  <>
+                    <Upload className="w-4 h-4 mr-2 animate-spin" />
+                    Enviando...
+                  </>
+                ) : (
+                  <>{editingAd ? 'Atualizar' : 'Criar'} Anúncio</>
+                )}
               </Button>
             </form>
           </DialogContent>
@@ -200,6 +293,15 @@ export const AdminAds = () => {
               </div>
             </CardHeader>
             <CardContent>
+              {item.image_url && (
+                <div className="mb-3 rounded-lg overflow-hidden">
+                  {item.image_url.includes('.mp4') || item.image_url.includes('.webm') ? (
+                    <video src={item.image_url} controls className="w-full h-32 object-cover" />
+                  ) : (
+                    <img src={item.image_url} alt={item.title} className="w-full h-32 object-cover" />
+                  )}
+                </div>
+              )}
               <p className="text-sm text-muted-foreground">
                 Link: {item.link_url}
               </p>
