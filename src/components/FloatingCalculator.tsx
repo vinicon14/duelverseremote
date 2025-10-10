@@ -12,6 +12,7 @@ interface FloatingCalculatorProps {
   onUpdateLP: (player: 'player1' | 'player2', amount: number) => void;
   onSetLP: (player: 'player1' | 'player2', value: number) => void;
   currentUserPlayer?: 'player1' | 'player2' | null;
+  canControlBoth?: boolean; // Permite que ambos jogadores controlem ambos LPs
 }
 
 export const FloatingCalculator = ({
@@ -22,6 +23,7 @@ export const FloatingCalculator = ({
   onUpdateLP,
   onSetLP,
   currentUserPlayer = null,
+  canControlBoth = false,
 }: FloatingCalculatorProps) => {
   // Posição inicial adaptada ao tamanho da tela
   const [position, setPosition] = useState(() => {
@@ -179,7 +181,7 @@ export const FloatingCalculator = ({
                 </div>
                 <div className="flex items-center gap-1 sm:gap-2">
                   <Heart className="w-3 h-3 sm:w-4 sm:h-4 text-destructive" />
-                  {editingPlayer1 && currentUserPlayer === 'player1' ? (
+                  {editingPlayer1 && (currentUserPlayer === 'player1' || canControlBoth) ? (
                     <Input
                       type="number"
                       value={tempLP1}
@@ -197,16 +199,16 @@ export const FloatingCalculator = ({
                     />
                    ) : (
                      <span
-                       className={`text-lg sm:text-xl font-bold text-gradient-mystic ${currentUserPlayer === 'player1' ? 'cursor-pointer hover:opacity-80' : ''}`}
-                       onClick={() => currentUserPlayer === 'player1' && setEditingPlayer1(true)}
-                     >
-                       {player1LP}
-                     </span>
+                        className={`text-lg sm:text-xl font-bold text-gradient-mystic ${(currentUserPlayer === 'player1' || canControlBoth) ? 'cursor-pointer hover:opacity-80' : ''}`}
+                        onClick={() => (currentUserPlayer === 'player1' || canControlBoth) && setEditingPlayer1(true)}
+                      >
+                        {player1LP}
+                      </span>
                    )}
                 </div>
               </div>
               
-              {currentUserPlayer === 'player1' && (
+              {(currentUserPlayer === 'player1' || canControlBoth) && (
                 <>
                   <div className="grid grid-cols-4 gap-2">
                     <Button
@@ -282,7 +284,7 @@ export const FloatingCalculator = ({
                 </div>
                 <div className="flex items-center gap-1 sm:gap-2">
                   <Heart className="w-3 h-3 sm:w-4 sm:h-4 text-destructive" />
-                  {editingPlayer2 && currentUserPlayer === 'player2' ? (
+                  {editingPlayer2 && (currentUserPlayer === 'player2' || canControlBoth) ? (
                     <Input
                       type="number"
                       value={tempLP2}
@@ -300,16 +302,16 @@ export const FloatingCalculator = ({
                     />
                    ) : (
                      <span
-                       className={`text-lg sm:text-xl font-bold text-gradient-mystic ${currentUserPlayer === 'player2' ? 'cursor-pointer hover:opacity-80' : ''}`}
-                       onClick={() => currentUserPlayer === 'player2' && setEditingPlayer2(true)}
-                     >
-                       {player2LP}
-                     </span>
+                        className={`text-lg sm:text-xl font-bold text-gradient-mystic ${(currentUserPlayer === 'player2' || canControlBoth) ? 'cursor-pointer hover:opacity-80' : ''}`}
+                        onClick={() => (currentUserPlayer === 'player2' || canControlBoth) && setEditingPlayer2(true)}
+                      >
+                        {player2LP}
+                      </span>
                    )}
                 </div>
               </div>
               
-              {currentUserPlayer === 'player2' && (
+              {(currentUserPlayer === 'player2' || canControlBoth) && (
                 <>
                   <div className="grid grid-cols-4 gap-2">
                     <Button

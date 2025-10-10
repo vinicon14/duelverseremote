@@ -57,10 +57,23 @@ const DuelRoom = () => {
             setPlayer1LP(payload.new.player1_lp || 8000);
             setPlayer2LP(payload.new.player2_lp || 8000);
             
-            // Se opponent_id foi adicionado, buscar dados completos
-            if (payload.new.opponent_id && !duel?.opponent_id) {
-              console.log('Opponent detectado, buscando dados completos');
-              await fetchDuel();
+            // Se opponent_id mudou, buscar dados completos com profiles
+            if (payload.new.opponent_id && payload.new.opponent_id !== duel?.opponent_id) {
+              console.log('Opponent mudou, buscando dados atualizados');
+              const { data: updatedDuel } = await supabase
+                .from('live_duels')
+                .select(`
+                  *,
+                  creator:profiles!live_duels_creator_id_fkey(username, avatar_url, user_id),
+                  opponent:profiles!live_duels_opponent_id_fkey(username, avatar_url, user_id)
+                `)
+                .eq('id', id)
+                .maybeSingle();
+              
+              if (updatedDuel) {
+                console.log('Dados atualizados do duelo:', updatedDuel);
+                setDuel(updatedDuel);
+              }
             }
           }
         }
@@ -124,22 +137,30 @@ const DuelRoom = () => {
 
   // Registrar usuário como opponent se não for o criador
   const registerAsOpponent = async (userId: string, duelData: any) => {
-    if (!duelData.opponent_id && userId !== duelData.creator_id) {
-      console.log('Registrando como opponent:', userId);
-      const { error } = await supabase
-        .from('live_duels')
-        .update({ opponent_id: userId })
-        .eq('id', id);
-      
-      if (error) {
-        console.error('Erro ao registrar opponent:', error);
-        return false;
-      } else {
-        console.log('Opponent registrado com sucesso');
-        return true;
-      }
+    // Se já tem opponent_id, não fazer nada
+    if (duelData.opponent_id) {
+      return false;
     }
-    return false;
+    
+    // Se o usuário é o criador, não registrar como opponent
+    if (userId === duelData.creator_id) {
+      return false;
+    }
+    
+    console.log('Registrando como opponent:', userId);
+    const { error } = await supabase
+      .from('live_duels')
+      .update({ opponent_id: userId })
+      .eq('id', id)
+      .eq('opponent_id', null); // Garantir que não sobrescreva se já tem opponent
+    
+    if (error) {
+      console.error('Erro ao registrar opponent:', error);
+      return false;
+    }
+    
+    console.log('Opponent registrado com sucesso');
+    return true;
   };
 
   const fetchDuel = async () => {
@@ -175,10 +196,13 @@ const DuelRoom = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         console.log('Usuario atual:', session.user.id, 'Creator:', data.creator_id, 'Opponent:', data.opponent_id);
-        const registered = await registerAsOpponent(session.user.id, data);
+        const wasRegistered = await registerAsOpponent(session.user.id, data);
         
-        // Se registrou como opponent, buscar dados atualizados
-        if (registered) {
+        // Se registrou como opponent, aguardar um pouco e buscar dados atualizados
+        if (wasRegistered) {
+          console.log('Aguardando realtime propagar...');
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
           const { data: updatedData } = await supabase
             .from('live_duels')
             .select(`
@@ -380,17 +404,20 @@ const DuelRoom = () => {
     navigate('/duels');
   };
 
+  // Ambos participantes têm controle total
+  const isParticipant = currentUser?.id === duel?.creator_id || currentUser?.id === duel?.opponent_id;
   const isPlayer1 = currentUser?.id === duel?.creator_id;
   const isPlayer2 = currentUser?.id === duel?.opponent_id;
-  const canControlLP = isPlayer1 || isPlayer2;
 
   console.log('Control Status:', { 
     currentUserId: currentUser?.id, 
     creatorId: duel?.creator_id, 
     opponentId: duel?.opponent_id,
+    creatorName: duel?.creator?.username,
+    opponentName: duel?.opponent?.username,
     isPlayer1, 
     isPlayer2,
-    canControlLP 
+    isParticipant
   });
 
   return (
@@ -443,7 +470,7 @@ const DuelRoom = () => {
             </div>
             
             <div className="flex gap-2">
-              {canControlLP && (
+              {isParticipant && (
                 <Button
                   onClick={() => endDuel()}
                   variant="outline"
@@ -467,8 +494,8 @@ const DuelRoom = () => {
         </div>
       </main>
 
-      {/* Calculadora Flutuante - Visível para todos */}
-      {duel && (
+      {/* Calculadora Flutuante - Ambos participantes podem controlar */}
+      {duel && currentUser && (
         <FloatingCalculator
           player1Name={duel.creator?.username || 'Jogador 1'}
           player2Name={duel.opponent?.username || (duel.opponent_id ? 'Carregando...' : 'Aguardando...')}
@@ -477,6 +504,7 @@ const DuelRoom = () => {
           onUpdateLP={updateLP}
           onSetLP={setLP}
           currentUserPlayer={isPlayer1 ? 'player1' : isPlayer2 ? 'player2' : null}
+          canControlBoth={isParticipant}
         />
       )}
 
