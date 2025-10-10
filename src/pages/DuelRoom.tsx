@@ -206,71 +206,83 @@ const DuelRoom = () => {
       const isCreator = data.creator_id === userId;
       const isOpponent = data.opponent_id === userId;
       
-      console.log('[DuelRoom] Verificação de participação:', { isCreator, isOpponent });
+      console.log('[DuelRoom] Verificação de participação:', { 
+        isCreator, 
+        isOpponent, 
+        userId, 
+        creatorId: data.creator_id,
+        opponentId: data.opponent_id 
+      });
 
-      // Se a sala está esperando (sem opponent), permitir que qualquer um entre
-      if (!data.opponent_id && !isCreator) {
-        console.log('[DuelRoom] Sala aberta sem opponent, adicionando usuário automaticamente');
-        
-        try {
-          // Adicionar o usuário como opponent
-          const { error: updateError } = await supabase
-            .from('live_duels')
-            .update({
-              opponent_id: userId,
-              status: 'in_progress',
-              started_at: new Date().toISOString(),
-            })
-            .eq('id', id)
-            .is('opponent_id', null); // Garantir que ainda não tem opponent
+      // Se a sala não tem opponent ainda
+      if (!data.opponent_id) {
+        // Se o usuário NÃO é o criador, adicionar como opponent
+        if (!isCreator) {
+          console.log('[DuelRoom] Sala aberta sem opponent, adicionando usuário como opponent');
+          
+          try {
+            const { error: updateError } = await supabase
+              .from('live_duels')
+              .update({
+                opponent_id: userId,
+                status: 'in_progress',
+                started_at: new Date().toISOString(),
+              })
+              .eq('id', id)
+              .is('opponent_id', null);
 
-          if (updateError) {
-            console.error('[DuelRoom] Erro ao entrar na sala:', updateError);
+            if (updateError) {
+              console.error('[DuelRoom] Erro ao entrar na sala:', updateError);
+              toast({
+                title: "Erro ao entrar",
+                description: "Não foi possível entrar nesta sala.",
+                variant: "destructive",
+              });
+              navigate('/duels');
+              return;
+            }
+
+            console.log('[DuelRoom] Usuário adicionado como opponent, recarregando dados...');
+            
+            const { data: updatedData } = await supabase
+              .from('live_duels')
+              .select(`
+                *,
+                creator:profiles!live_duels_creator_id_fkey(username, avatar_url, user_id),
+                opponent:profiles!live_duels_opponent_id_fkey(username, avatar_url, user_id)
+              `)
+              .eq('id', id)
+              .maybeSingle();
+
+            if (updatedData) {
+              data = updatedData;
+            }
+          } catch (error) {
+            console.error('[DuelRoom] Exceção ao entrar na sala:', error);
             toast({
               title: "Erro ao entrar",
-              description: "Não foi possível entrar nesta sala.",
+              description: "Ocorreu um erro ao tentar entrar na sala.",
               variant: "destructive",
             });
             navigate('/duels');
             return;
           }
-
-          console.log('[DuelRoom] Usuário adicionado como opponent, recarregando dados...');
-          
-          // Recarregar dados atualizados
-          const { data: updatedData } = await supabase
-            .from('live_duels')
-            .select(`
-              *,
-              creator:profiles!live_duels_creator_id_fkey(username, avatar_url, user_id),
-              opponent:profiles!live_duels_opponent_id_fkey(username, avatar_url, user_id)
-            `)
-            .eq('id', id)
-            .maybeSingle();
-
-          if (updatedData) {
-            data = updatedData;
-          }
-        } catch (error) {
-          console.error('[DuelRoom] Exceção ao entrar na sala:', error);
+        } else {
+          // É o criador esperando o opponent - permitir acesso
+          console.log('[DuelRoom] Criador acessando sua própria sala (aguardando opponent)');
+        }
+      } else {
+        // Sala já tem opponent - verificar se o usuário é um dos participantes
+        if (!isCreator && !isOpponent) {
+          console.log('[DuelRoom] Acesso negado - sala completa e usuário não é participante');
           toast({
-            title: "Erro ao entrar",
-            description: "Ocorreu um erro ao tentar entrar na sala.",
+            title: "Acesso negado",
+            description: "Esta sala já está completa.",
             variant: "destructive",
           });
           navigate('/duels');
           return;
         }
-      } else if (!isCreator && !isOpponent) {
-        // Sala já tem 2 participantes e o usuário não é nenhum deles
-        console.log('[DuelRoom] Acesso negado - usuário não é participante');
-        toast({
-          title: "Acesso negado",
-          description: "Esta sala já está completa.",
-          variant: "destructive",
-        });
-        navigate('/duels');
-        return;
       }
 
       console.log('[DuelRoom] Acesso permitido, configurando sala');
