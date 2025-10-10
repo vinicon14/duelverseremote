@@ -310,13 +310,13 @@ const Duels = () => {
                       </Button>
                     )}
 
-                    {duel.status === 'active' && (
+                    {duel.status === 'in_progress' && (
                       <Button
-                        variant="secondary"
                         onClick={() => navigate(`/duel/${duel.id}`)}
-                        className="w-full"
+                        className="w-full btn-mystic text-white"
                       >
-                        Assistir Duelo
+                        <Users className="mr-2 h-4 w-4" />
+                        Entrar na Sala
                       </Button>
                     )}
                   </div>
