@@ -80,8 +80,11 @@ export default function Matchmaking() {
 
   const joinQueue = async () => {
     try {
+      console.log('[Matchmaking] Iniciando busca de sala...');
+      
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
+        console.log('[Matchmaking] Usuário não autenticado');
         toast.error("Você precisa estar logado");
         navigate("/auth");
         return;
@@ -95,16 +98,19 @@ export default function Matchmaking() {
         .in("status", ["waiting", "in_progress"]);
 
       if (duelsError) {
-        console.error("Error checking existing duels:", duelsError);
+        console.error("[Matchmaking] Erro ao verificar duelos existentes:", duelsError);
       }
 
       if (existingDuels && existingDuels.length > 0) {
+        console.log('[Matchmaking] Usuário já está em duelo, redirecionando...');
         toast.error("Você já está em um duelo ativo");
         navigate(`/duel/${existingDuels[0].id}`);
         return;
       }
 
       setSearching(true);
+
+      console.log('[Matchmaking] Buscando salas disponíveis (is_ranked:', isRanked, ')');
 
       // Buscar uma sala aleatória com apenas 1 pessoa (status waiting) do tipo escolhido
       const { data: waitingDuels, error: searchError } = await supabase
@@ -117,13 +123,16 @@ export default function Matchmaking() {
         .limit(10);
 
       if (searchError) {
-        console.error("Error searching for duels:", searchError);
+        console.error("[Matchmaking] Erro ao buscar salas:", searchError);
         toast.error("Erro ao buscar salas disponíveis");
         setSearching(false);
         return;
       }
 
+      console.log('[Matchmaking] Salas encontradas:', waitingDuels?.length || 0);
+
       if (!waitingDuels || waitingDuels.length === 0) {
+        console.log('[Matchmaking] Nenhuma sala disponível');
         toast.error(`Nenhuma sala ${isRanked ? 'ranqueada' : 'casual'} disponível. Tente outro tipo ou crie sua própria sala.`);
         setSearching(false);
         navigate('/duels');
@@ -132,6 +141,7 @@ export default function Matchmaking() {
 
       // Selecionar uma sala aleatória
       const randomDuel = waitingDuels[Math.floor(Math.random() * waitingDuels.length)];
+      console.log('[Matchmaking] Sala selecionada:', randomDuel.id);
 
       // Entrar na sala como opponent
       const { error: updateError } = await supabase
@@ -145,16 +155,18 @@ export default function Matchmaking() {
         .is("opponent_id", null);
 
       if (updateError) {
-        console.error("Error joining duel:", updateError);
+        console.error("[Matchmaking] Erro ao entrar na sala:", updateError);
         toast.error("Erro ao entrar na sala. Tente novamente.");
         setSearching(false);
         return;
       }
 
+      console.log('[Matchmaking] Entrada na sala bem-sucedida, redirecionando...');
+
       toast.success("Sala encontrada! Carregando chamada...");
       
       // Aguardar para o banco processar
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 800));
       
       navigate(`/duel/${randomDuel.id}`);
     } catch (error: any) {

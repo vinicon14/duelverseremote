@@ -15,6 +15,8 @@ export const QueueWaiting = ({ duelId, onCancel }: QueueWaitingProps) => {
   const [elapsedTime, setElapsedTime] = useState(0);
 
   useEffect(() => {
+    console.log('[QueueWaiting] Iniciando espera para duelo:', duelId);
+    
     // Timer para mostrar tempo de espera
     const timer = setInterval(() => {
       setElapsedTime(prev => prev + 1);
@@ -32,16 +34,21 @@ export const QueueWaiting = ({ duelId, onCancel }: QueueWaitingProps) => {
           filter: `id=eq.${duelId}`,
         },
         (payload) => {
-          // Se opponent_id foi preenchido e status é in_progress, redirecionar
-          if (payload.new.opponent_id && payload.new.status === 'in_progress') {
-            console.log('Oponente encontrado! Redirecionando para chamada...');
+          console.log('[QueueWaiting] Update recebido:', payload.new);
+          
+          // Se opponent_id foi preenchido, redirecionar para a sala
+          if (payload.new.opponent_id) {
+            console.log('[QueueWaiting] Oponente encontrado! Redirecionando...');
             navigate(`/duel/${duelId}`);
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('[QueueWaiting] Status do canal:', status);
+      });
 
     return () => {
+      console.log('[QueueWaiting] Limpando recursos');
       clearInterval(timer);
       supabase.removeChannel(channel);
     };
@@ -54,15 +61,19 @@ export const QueueWaiting = ({ duelId, onCancel }: QueueWaitingProps) => {
   };
 
   const handleCancel = async () => {
-    // Deletar a sala se o criador cancelar
+    console.log('[QueueWaiting] Cancelando sala:', duelId);
+    
     try {
       await supabase
         .from('live_duels')
         .delete()
         .eq('id', duelId);
+      
+      console.log('[QueueWaiting] Sala deletada com sucesso');
     } catch (error) {
-      console.error('Erro ao cancelar sala:', error);
+      console.error('[QueueWaiting] Erro ao cancelar sala:', error);
     }
+    
     onCancel();
   };
 

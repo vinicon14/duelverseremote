@@ -27,8 +27,10 @@ const DuelRoom = () => {
   // Carrega dados do duelo e inicia timer
   useEffect(() => {
     const init = async () => {
-      await checkAuth();
-      await fetchDuel();
+      const user = await checkAuth();
+      if (user) {
+        await fetchDuel(user.id);
+      }
     };
     
     init();
@@ -44,6 +46,8 @@ const DuelRoom = () => {
   useEffect(() => {
     if (!id || !currentUser) return;
 
+    console.log('[DuelRoom] Configurando listener realtime para duelo:', id);
+
     const channel = supabase
       .channel(`duel-${id}`)
       .on(
@@ -55,15 +59,20 @@ const DuelRoom = () => {
           filter: `id=eq.${id}`,
         },
         async (payload) => {
-          console.log('Realtime update recebido:', payload.new);
+          console.log('[DuelRoom] Realtime update recebido:', payload.new);
+          
           if (payload.new) {
-            // Sempre atualizar LP quando receber update
-            setPlayer1LP(payload.new.player1_lp || 8000);
-            setPlayer2LP(payload.new.player2_lp || 8000);
+            // Sempre atualizar LP
+            const newPlayer1LP = payload.new.player1_lp || 8000;
+            const newPlayer2LP = payload.new.player2_lp || 8000;
             
-            // Se opponent_id mudou (alguém entrou), buscar dados completos e criar sala
+            console.log('[DuelRoom] Atualizando LP via realtime:', { newPlayer1LP, newPlayer2LP });
+            setPlayer1LP(newPlayer1LP);
+            setPlayer2LP(newPlayer2LP);
+            
+            // Se opponent_id mudou (alguém entrou), recarregar tudo
             if (payload.new.opponent_id && payload.new.opponent_id !== duel?.opponent_id) {
-              console.log('Opponent entrou! Buscando dados completos e criando sala...');
+              console.log('[DuelRoom] Opponent entrou! Recarregando dados...');
               
               const { data: updatedDuel } = await supabase
                 .from('live_duels')
@@ -76,26 +85,38 @@ const DuelRoom = () => {
                 .maybeSingle();
               
               if (updatedDuel) {
-                console.log('Dados atualizados do duelo:', updatedDuel);
+                console.log('[DuelRoom] Duelo atualizado:', {
+                  creator_username: updatedDuel.creator?.username,
+                  opponent_username: updatedDuel.opponent?.username,
+                  opponent_id: updatedDuel.opponent_id
+                });
+                
                 setDuel(updatedDuel);
                 
-                // Criar sala Daily.co se ainda não existe
+                // Criar sala Daily.co se ainda não existe e ambos players estão presentes
                 if (!roomUrl && updatedDuel.opponent_id && updatedDuel.creator_id) {
-                  console.log('Criando sala Daily.co após opponent entrar...');
-                  const { data: roomData, error: roomError } = await supabase.functions.invoke('create-daily-room', {
-                    body: { roomName: `duelverse-${id}` }
-                  });
+                  console.log('[DuelRoom] Criando sala Daily.co após opponent entrar...');
                   
-                  if (roomError || !roomData?.url) {
-                    console.error('Erro ao criar sala:', roomError);
-                    toast({
-                      title: "Erro ao iniciar videochamada",
-                      description: "Não foi possível criar a sala de vídeo.",
-                      variant: "destructive",
+                  try {
+                    const { data: roomData, error: roomError } = await supabase.functions.invoke('create-daily-room', {
+                      body: { roomName: `duelverse-${id}` }
                     });
-                  } else {
-                    console.log('Sala Daily.co criada:', roomData.url);
-                    setRoomUrl(roomData.url);
+                    
+                    console.log('[DuelRoom] Resposta da sala:', { roomData, roomError });
+                    
+                    if (roomError || !roomData?.url) {
+                      console.error('[DuelRoom] Erro ao criar sala:', roomError);
+                      toast({
+                        title: "Erro ao iniciar videochamada",
+                        description: "Não foi possível criar a sala de vídeo.",
+                        variant: "destructive",
+                      });
+                    } else {
+                      console.log('[DuelRoom] Sala criada via realtime:', roomData.url);
+                      setRoomUrl(roomData.url);
+                    }
+                  } catch (error) {
+                    console.error('[DuelRoom] Exceção ao criar sala via realtime:', error);
                   }
                 }
               }
@@ -103,9 +124,12 @@ const DuelRoom = () => {
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('[DuelRoom] Status do canal realtime:', status);
+      });
 
     return () => {
+      console.log('[DuelRoom] Removendo canal realtime');
       supabase.removeChannel(channel);
     };
   }, [id, duel?.opponent_id, roomUrl, currentUser]);
@@ -155,13 +179,16 @@ const DuelRoom = () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       navigate('/auth');
-      return;
+      return null;
     }
     setCurrentUser(session.user);
+    return session.user;
   };
 
-  const fetchDuel = async () => {
+  const fetchDuel = async (userId: string) => {
     try {
+      console.log('[DuelRoom] Buscando duelo:', id, 'para usuário:', userId);
+      
       const { data, error } = await supabase
         .from('live_duels')
         .select(`
@@ -189,59 +216,84 @@ const DuelRoom = () => {
         id: data.id,
         creator_id: data.creator_id,
         opponent_id: data.opponent_id,
-        status: data.status
+        status: data.status,
+        creator_username: data.creator?.username,
+        opponent_username: data.opponent?.username
       });
 
-      const { data: { session } } = await supabase.auth.getSession();
-      console.log('[DuelRoom] Current user:', session?.user?.id);
+      // Verificar se o usuário é participante
+      const isCreator = data.creator_id === userId;
+      const isOpponent = data.opponent_id === userId;
       
-      // Se a sala já tem 2 jogadores completos e o usuário atual não é participante, bloquear
-      if (session?.user && data.opponent_id && 
-          data.creator_id !== session.user.id && 
-          data.opponent_id !== session.user.id) {
-        console.log('[DuelRoom] Acesso negado - sala completa e usuário não é participante');
+      console.log('[DuelRoom] Verificação de participação:', { isCreator, isOpponent });
+
+      // Se não é nenhum dos dois, bloquear
+      if (!isCreator && !isOpponent) {
+        console.log('[DuelRoom] Acesso negado - usuário não é participante');
         toast({
           title: "Acesso negado",
-          description: "Esta sala já está completa com 2 jogadores.",
+          description: "Você não é um participante deste duelo.",
           variant: "destructive",
         });
         navigate('/duels');
         return;
       }
 
-      console.log('[DuelRoom] Acesso permitido, carregando sala');
+      // Se a sala já tem 2 jogadores e não é participante, bloquear
+      if (data.opponent_id && !isCreator && !isOpponent) {
+        console.log('[DuelRoom] Acesso negado - sala completa');
+        toast({
+          title: "Acesso negado",
+          description: "Esta sala já está completa.",
+          variant: "destructive",
+        });
+        navigate('/duels');
+        return;
+      }
+
+      console.log('[DuelRoom] Acesso permitido, configurando sala');
       setDuel(data);
       setPlayer1LP(data.player1_lp || 8000);
       setPlayer2LP(data.player2_lp || 8000);
 
       // Criar sala Daily.co somente se ambos players estiverem presentes
       if (data.opponent_id && data.creator_id) {
-        console.log('[DuelRoom] Ambos jogadores presentes, criando sala Daily.co');
-        const { data: roomData, error: roomError } = await supabase.functions.invoke('create-daily-room', {
-          body: { roomName: `duelverse-${id}` }
-        });
+        console.log('[DuelRoom] Ambos jogadores presentes, criando/obtendo sala Daily.co');
+        
+        try {
+          const { data: roomData, error: roomError } = await supabase.functions.invoke('create-daily-room', {
+            body: { roomName: `duelverse-${id}` }
+          });
 
-        console.log('Daily.co response:', { roomData, roomError });
+          console.log('[DuelRoom] Resposta da sala Daily.co:', { roomData, roomError });
 
-        if (roomError || !roomData?.url) {
-          console.error('Erro ao criar sala:', roomError);
+          if (roomError || !roomData?.url) {
+            console.error('[DuelRoom] Erro ao criar sala:', roomError);
+            toast({
+              title: "Erro ao iniciar videochamada",
+              description: "Não foi possível criar a sala de vídeo. Tente recarregar a página.",
+              variant: "destructive",
+            });
+          } else {
+            console.log('[DuelRoom] Sala Daily.co pronta:', roomData.url);
+            setRoomUrl(roomData.url);
+          }
+        } catch (error) {
+          console.error('[DuelRoom] Exceção ao criar sala:', error);
           toast({
             title: "Erro ao iniciar videochamada",
-            description: "Não foi possível criar a sala de vídeo.",
+            description: "Erro ao conectar com o servidor de vídeo.",
             variant: "destructive",
           });
-        } else {
-          console.log('Setting room URL:', roomData.url);
-          setRoomUrl(roomData.url);
         }
       } else {
-        console.log('[DuelRoom] Aguardando segundo jogador para criar sala Daily.co');
+        console.log('[DuelRoom] Aguardando segundo jogador (opponent_id:', data.opponent_id, ')');
       }
 
-      // Garantir que started_at existe (criar se não existir)
+      // Garantir que started_at existe
       let startedAt = data.started_at;
       if (!startedAt && data.opponent_id) {
-        console.log('[DuelRoom] Definindo started_at');
+        console.log('[DuelRoom] Definindo started_at no banco');
         const now = new Date().toISOString();
         await supabase
           .from('live_duels')
@@ -253,7 +305,7 @@ const DuelRoom = () => {
         startedAt = now;
       }
 
-      // Iniciar timer baseado no started_at do banco
+      // Iniciar timer
       if (startedAt) {
         startCallTimer(startedAt);
 
@@ -265,12 +317,13 @@ const DuelRoom = () => {
         }
       }
     } catch (error: any) {
-      console.error('[DuelRoom] Error in fetchDuel:', error);
+      console.error('[DuelRoom] Erro em fetchDuel:', error);
       toast({
         title: "Erro ao carregar duelo",
         description: error.message,
         variant: "destructive",
       });
+      navigate('/duels');
     }
   };
 

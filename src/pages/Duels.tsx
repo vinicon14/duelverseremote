@@ -141,8 +141,13 @@ const Duels = () => {
 
   const joinDuel = async (duelId: string) => {
     try {
+      console.log('[Duels] Tentando entrar no duelo:', duelId);
+      
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        console.log('[Duels] Usuário não autenticado');
+        return;
+      }
 
       // Verificar se o duelo existe e pegar seus dados
       const { data: duelData } = await supabase
@@ -160,8 +165,11 @@ const Duels = () => {
         return;
       }
 
+      console.log('[Duels] Dados do duelo:', duelData);
+
       // Verificar se o usuário já é um dos jogadores deste duelo
       if (duelData.creator_id === user.id || duelData.opponent_id === user.id) {
+        console.log('[Duels] Usuário já participa deste duelo, redirecionando...');
         toast({
           title: "Você já está neste duelo",
           description: "Redirecionando...",
@@ -179,6 +187,7 @@ const Duels = () => {
         .neq('id', duelId);
 
       if (otherDuels && otherDuels.length > 0) {
+        console.log('[Duels] Usuário já está em outro duelo');
         toast({
           title: "Você já está em outro duelo",
           description: "Termine ou saia do duelo atual antes de entrar em outro.",
@@ -188,6 +197,9 @@ const Duels = () => {
         return;
       }
 
+      console.log('[Duels] Atualizando duelo com opponent...');
+
+      // Atualizar o duelo adicionando o opponent
       const { error } = await supabase
         .from('live_duels')
         .update({
@@ -199,20 +211,23 @@ const Duels = () => {
         .is('opponent_id', null);
 
       if (error) {
-        console.error('Erro ao entrar no duelo:', error);
+        console.error('[Duels] Erro ao entrar no duelo:', error);
         throw error;
       }
 
+      console.log('[Duels] Opponent adicionado com sucesso, redirecionando...');
+
       toast({
         title: "Entrando na partida!",
-        description: "Aguarde enquanto carregamos a chamada...",
+        description: "Carregando chamada de vídeo...",
       });
 
       // Aguardar um pouco para o banco processar
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 800));
       
       navigate(`/duel/${duelId}`);
     } catch (error: any) {
+      console.error('[Duels] Erro em joinDuel:', error);
       toast({
         title: "Erro ao entrar no duelo",
         description: error.message,
