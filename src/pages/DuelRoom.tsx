@@ -58,6 +58,7 @@ const DuelRoom = () => {
             
             // Atualizar dados do duelo se opponent entrou
             if (payload.new.opponent_id && !duel?.opponent_id) {
+              console.log('Opponent detectado no realtime, refazendo fetch');
               fetchDuel();
             }
           }
@@ -123,10 +124,19 @@ const DuelRoom = () => {
   // Registrar usuário como opponent se não for o criador
   const registerAsOpponent = async (userId: string, duelData: any) => {
     if (!duelData.opponent_id && userId !== duelData.creator_id) {
-      await supabase
+      console.log('Registrando como opponent:', userId);
+      const { error } = await supabase
         .from('live_duels')
         .update({ opponent_id: userId })
         .eq('id', id);
+      
+      if (error) {
+        console.error('Erro ao registrar opponent:', error);
+      } else {
+        console.log('Opponent registrado com sucesso');
+        // Atualizar o state local com o opponent_id
+        setDuel({ ...duelData, opponent_id: userId });
+      }
     }
   };
 
@@ -154,6 +164,7 @@ const DuelRoom = () => {
         return;
       }
       
+      console.log('Duelo carregado:', data);
       setDuel(data);
       setPlayer1LP(data.player1_lp || 8000);
       setPlayer2LP(data.player2_lp || 8000);
@@ -161,6 +172,7 @@ const DuelRoom = () => {
       // Registrar como opponent se necessário
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
+        console.log('Usuario atual:', session.user.id, 'Creator:', data.creator_id, 'Opponent:', data.opponent_id);
         await registerAsOpponent(session.user.id, data);
       }
 
@@ -353,6 +365,15 @@ const DuelRoom = () => {
   const isPlayer1 = currentUser?.id === duel?.creator_id;
   const isPlayer2 = currentUser?.id === duel?.opponent_id;
   const canControlLP = isPlayer1 || isPlayer2;
+
+  console.log('Control Status:', { 
+    currentUserId: currentUser?.id, 
+    creatorId: duel?.creator_id, 
+    opponentId: duel?.opponent_id,
+    isPlayer1, 
+    isPlayer2,
+    canControlLP 
+  });
 
   return (
     <div className="min-h-screen bg-background">
