@@ -17,11 +17,9 @@ export const AdminAds = () => {
   const [editingAd, setEditingAd] = useState<any>(null);
   const [formData, setFormData] = useState({
     title: '',
-    content: '',
     image_url: '',
     link_url: '',
-    position: 'sidebar',
-    active: true,
+    is_active: true,
     expires_at: ''
   });
   const { toast } = useToast();
@@ -72,7 +70,7 @@ export const AdminAds = () => {
 
     setOpen(false);
     setEditingAd(null);
-    setFormData({ title: '', content: '', image_url: '', link_url: '', position: 'sidebar', active: true, expires_at: '' });
+    setFormData({ title: '', image_url: '', link_url: '', is_active: true, expires_at: '' });
     fetchAds();
   };
 
@@ -93,11 +91,9 @@ export const AdminAds = () => {
     setEditingAd(item);
     setFormData({
       title: item.title,
-      content: item.content,
       image_url: item.image_url || '',
       link_url: item.link_url || '',
-      position: item.position,
-      active: item.active,
+      is_active: item.is_active,
       expires_at: item.expires_at ? item.expires_at.split('T')[0] : ''
     });
     setOpen(true);
@@ -111,7 +107,7 @@ export const AdminAds = () => {
           setOpen(isOpen);
           if (!isOpen) {
             setEditingAd(null);
-            setFormData({ title: '', content: '', image_url: '', link_url: '', position: 'sidebar', active: true, expires_at: '' });
+            setFormData({ title: '', image_url: '', link_url: '', is_active: true, expires_at: '' });
           }
         }}>
           <DialogTrigger asChild>
@@ -137,20 +133,12 @@ export const AdminAds = () => {
                 />
               </div>
               <div>
-                <Label>Conteúdo</Label>
-                <Textarea 
-                  value={formData.content}
-                  onChange={(e) => setFormData({...formData, content: e.target.value})}
-                  rows={3}
-                  required
-                />
-              </div>
-              <div>
                 <Label>URL da Imagem</Label>
                 <Input 
                   type="url"
                   value={formData.image_url}
                   onChange={(e) => setFormData({...formData, image_url: e.target.value})}
+                  required
                 />
               </div>
               <div>
@@ -159,20 +147,8 @@ export const AdminAds = () => {
                   type="url"
                   value={formData.link_url}
                   onChange={(e) => setFormData({...formData, link_url: e.target.value})}
+                  required
                 />
-              </div>
-              <div>
-                <Label>Posição</Label>
-                <Select value={formData.position} onValueChange={(value) => setFormData({...formData, position: value})}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="sidebar">Barra Lateral</SelectItem>
-                    <SelectItem value="banner">Banner</SelectItem>
-                    <SelectItem value="footer">Rodapé</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
               <div>
                 <Label>Data de Expiração (opcional)</Label>
@@ -184,8 +160,8 @@ export const AdminAds = () => {
               </div>
               <div className="flex items-center space-x-2">
                 <Switch 
-                  checked={formData.active}
-                  onCheckedChange={(checked) => setFormData({...formData, active: checked})}
+                  checked={formData.is_active}
+                  onCheckedChange={(checked) => setFormData({...formData, is_active: checked})}
                 />
                 <Label>Ativo</Label>
               </div>
@@ -209,7 +185,7 @@ export const AdminAds = () => {
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  {item.active ? (
+                  {item.is_active ? (
                     <Eye className="w-5 h-5 text-green-500" />
                   ) : (
                     <EyeOff className="w-5 h-5 text-muted-foreground" />
@@ -224,7 +200,9 @@ export const AdminAds = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">{item.content}</p>
+              <p className="text-sm text-muted-foreground">
+                Link: {item.link_url}
+              </p>
             </CardContent>
           </Card>
         ))}

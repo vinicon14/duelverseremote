@@ -16,10 +16,8 @@ export const AdminNews = () => {
   const [editingNews, setEditingNews] = useState<any>(null);
   const [formData, setFormData] = useState({
     title: '',
-    summary: '',
     content: '',
-    image_url: '',
-    published: false
+    image_url: ''
   });
   const { toast } = useToast();
 
@@ -67,7 +65,7 @@ export const AdminNews = () => {
 
     setOpen(false);
     setEditingNews(null);
-    setFormData({ title: '', summary: '', content: '', image_url: '', published: false });
+    setFormData({ title: '', content: '', image_url: '' });
     fetchNews();
   };
 
@@ -88,10 +86,8 @@ export const AdminNews = () => {
     setEditingNews(item);
     setFormData({
       title: item.title,
-      summary: item.summary || '',
       content: item.content,
-      image_url: item.image_url || '',
-      published: item.published
+      image_url: item.image_url || ''
     });
     setOpen(true);
   };
@@ -104,7 +100,7 @@ export const AdminNews = () => {
           setOpen(isOpen);
           if (!isOpen) {
             setEditingNews(null);
-            setFormData({ title: '', summary: '', content: '', image_url: '', published: false });
+            setFormData({ title: '', content: '', image_url: '' });
           }
         }}>
           <DialogTrigger asChild>
@@ -130,13 +126,6 @@ export const AdminNews = () => {
                 />
               </div>
               <div>
-                <Label>Resumo</Label>
-                <Input 
-                  value={formData.summary}
-                  onChange={(e) => setFormData({...formData, summary: e.target.value})}
-                />
-              </div>
-              <div>
                 <Label>Conteúdo</Label>
                 <Textarea 
                   value={formData.content}
@@ -146,19 +135,12 @@ export const AdminNews = () => {
                 />
               </div>
               <div>
-                <Label>URL da Imagem</Label>
+                <Label>URL da Imagem (opcional)</Label>
                 <Input 
                   type="url"
                   value={formData.image_url}
                   onChange={(e) => setFormData({...formData, image_url: e.target.value})}
                 />
-              </div>
-              <div className="flex items-center space-x-2">
-                <Switch 
-                  checked={formData.published}
-                  onCheckedChange={(checked) => setFormData({...formData, published: checked})}
-                />
-                <Label>Publicada</Label>
               </div>
               <Button type="submit" className="w-full btn-mystic text-white">
                 {editingNews ? 'Atualizar' : 'Criar'} Notícia
@@ -180,11 +162,6 @@ export const AdminNews = () => {
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  {item.published ? (
-                    <Eye className="w-5 h-5 text-green-500" />
-                  ) : (
-                    <EyeOff className="w-5 h-5 text-muted-foreground" />
-                  )}
                   <Button variant="ghost" size="icon" onClick={() => openEdit(item)}>
                     <Edit className="w-4 h-4" />
                   </Button>
@@ -196,7 +173,7 @@ export const AdminNews = () => {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground line-clamp-2">
-                {item.summary || item.content}
+                {item.content}
               </p>
             </CardContent>
           </Card>

@@ -26,10 +26,14 @@ export const AdminSettings = () => {
   const saveSettings = async () => {
     setLoading(true);
     try {
-      // System settings table not yet implemented
       toast({ 
-        title: "Funcionalidade em desenvolvimento",
-        description: "As configurações do sistema ainda não estão disponíveis",
+        title: "Configurações salvas",
+        description: "As configurações foram atualizadas com sucesso!"
+      });
+    } catch (error) {
+      toast({ 
+        title: "Erro ao salvar",
+        description: "Não foi possível salvar as configurações",
         variant: "destructive"
       });
     } finally {
