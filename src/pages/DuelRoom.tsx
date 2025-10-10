@@ -7,6 +7,7 @@ import { PhoneOff, Loader2 } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { DuelChat } from "@/components/DuelChat";
 import { FloatingCalculator } from "@/components/FloatingCalculator";
+import { AdPopup } from "@/components/AdPopup";
 import { useBanCheck } from "@/hooks/useBanCheck";
 
 const DuelRoom = () => {
@@ -21,6 +22,7 @@ const DuelRoom = () => {
   const [callDuration, setCallDuration] = useState(0);
   const [showTimeWarning, setShowTimeWarning] = useState(false);
   const [roomUrl, setRoomUrl] = useState<string>('');
+  const [showAdPopup, setShowAdPopup] = useState(true);
   const callStartTime = useRef<number | null>(null);
   const timerInterval = useRef<NodeJS.Timeout | null>(null);
 
@@ -444,6 +446,11 @@ const DuelRoom = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
+      
+      {/* Pop-up de anúncio antes do duelo */}
+      {showAdPopup && (
+        <AdPopup onClose={() => setShowAdPopup(false)} />
+      )}
       
       <main className="px-2 sm:px-4 pt-16 sm:pt-20 pb-2 sm:pb-4">
         <div className="h-[calc(100vh-80px)] sm:h-[calc(100vh-100px)] relative">
