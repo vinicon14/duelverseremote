@@ -195,7 +195,8 @@ const Duels = () => {
           status: 'in_progress',
           started_at: new Date().toISOString(),
         })
-        .eq('id', duelId);
+        .eq('id', duelId)
+        .is('opponent_id', null);
 
       if (error) throw error;
 
@@ -204,25 +205,7 @@ const Duels = () => {
         description: "Aguarde enquanto carregamos a chamada...",
       });
 
-      // Aguardar para garantir que o banco foi atualizado
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Verificar se foi realmente atualizado antes de redirecionar
-      const { data: updatedDuel } = await supabase
-        .from('live_duels')
-        .select('opponent_id')
-        .eq('id', duelId)
-        .single();
-      
-      if (updatedDuel?.opponent_id === user.id) {
-        navigate(`/duel/${duelId}`);
-      } else {
-        toast({
-          title: "Erro ao entrar",
-          description: "Não foi possível confirmar sua entrada. Tente novamente.",
-          variant: "destructive",
-        });
-      }
+      navigate(`/duel/${duelId}`);
     } catch (error: any) {
       toast({
         title: "Erro ao entrar no duelo",
