@@ -3,11 +3,12 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { PhoneOff } from "lucide-react";
+import { PhoneOff, Loader2 } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { DuelChat } from "@/components/DuelChat";
 import { FloatingCalculator } from "@/components/FloatingCalculator";
 import { useBanCheck } from "@/hooks/useBanCheck";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 const DuelRoom = () => {
   useBanCheck(); // Proteger contra usuários banidos
@@ -21,6 +22,7 @@ const DuelRoom = () => {
   const [callDuration, setCallDuration] = useState(0);
   const [showTimeWarning, setShowTimeWarning] = useState(false);
   const [roomUrl, setRoomUrl] = useState<string>('');
+  const [waitingForOpponent, setWaitingForOpponent] = useState(false);
   const callStartTime = useRef<number | null>(null);
   const timerInterval = useRef<NodeJS.Timeout | null>(null);
 
@@ -73,6 +75,7 @@ const DuelRoom = () => {
               if (updatedDuel) {
                 console.log('Dados atualizados do duelo:', updatedDuel);
                 setDuel(updatedDuel);
+                setWaitingForOpponent(false); // Fechar loading quando opponent entrar
               }
             }
           }
@@ -192,8 +195,13 @@ const DuelRoom = () => {
       setPlayer1LP(data.player1_lp || 8000);
       setPlayer2LP(data.player2_lp || 8000);
 
-      // Registrar como opponent se necessário
+      // Verificar se é o criador e se está aguardando opponent
       const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user && session.user.id === data.creator_id && !data.opponent_id) {
+        setWaitingForOpponent(true);
+      }
+
+      // Registrar como opponent se necessário
       if (session?.user) {
         console.log('Usuario atual:', session.user.id, 'Creator:', data.creator_id, 'Opponent:', data.opponent_id);
         const wasRegistered = await registerAsOpponent(session.user.id, data);
@@ -423,6 +431,39 @@ const DuelRoom = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
+
+      {/* Dialog de Loading aguardando opponent */}
+      <Dialog open={waitingForOpponent} onOpenChange={(open) => {
+        if (!open) {
+          navigate('/duels');
+        }
+      }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Aguardando adversário...</DialogTitle>
+            <DialogDescription>
+              A sala foi criada com sucesso. Aguardando outro jogador entrar.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center justify-center py-8 space-y-4">
+            <Loader2 className="w-12 h-12 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground text-center">
+              Você pode continuar navegando na plataforma.<br />
+              A partida iniciará automaticamente quando o adversário entrar.
+            </p>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setWaitingForOpponent(false);
+                navigate('/duels');
+              }}
+              className="mt-4"
+            >
+              Voltar para Duelos
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       
       <main className="px-2 sm:px-4 pt-16 sm:pt-20 pb-2 sm:pb-4">
         <div className="h-[calc(100vh-80px)] sm:h-[calc(100vh-100px)] relative">
@@ -504,7 +545,6 @@ const DuelRoom = () => {
           onUpdateLP={updateLP}
           onSetLP={setLP}
           currentUserPlayer={isPlayer1 ? 'player1' : isPlayer2 ? 'player2' : null}
-          canControlBoth={isParticipant}
         />
       )}
 
