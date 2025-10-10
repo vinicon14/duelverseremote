@@ -72,9 +72,9 @@ export default function Home() {
 
   return (
     <SidebarProvider defaultOpen>
+      <Navbar />
+      
       <div className="min-h-screen bg-background flex w-full">
-        <Navbar />
-        
         <main className="flex-1 container mx-auto px-4 pt-20 sm:pt-24 pb-8">
         {/* Cards de Acesso Rápido */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
