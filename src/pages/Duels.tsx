@@ -11,6 +11,7 @@ import { Swords, Plus, Users, Clock } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useBanCheck } from "@/hooks/useBanCheck";
 import { QueueWaiting } from "@/components/QueueWaiting";
+import { AdPopup } from "@/components/AdPopup";
 
 const Duels = () => {
   useBanCheck(); // Proteger contra usuários banidos
@@ -22,6 +23,8 @@ const Duels = () => {
   const [isRanked, setIsRanked] = useState(true);
   const [waitingDuelId, setWaitingDuelId] = useState<string | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showAdPopup, setShowAdPopup] = useState(false);
+  const [pendingAction, setPendingAction] = useState<{ type: 'create' | 'join', duelId?: string } | null>(null);
 
   useEffect(() => {
     checkAuth();
@@ -79,7 +82,7 @@ const Duels = () => {
     }
   };
 
-  const createDuel = async () => {
+  const handleCreateDuel = () => {
     if (!roomName.trim()) {
       toast({
         title: "Nome obrigatório",
@@ -88,7 +91,14 @@ const Duels = () => {
       });
       return;
     }
+    
+    // Mostrar anúncio antes de criar
+    setPendingAction({ type: 'create' });
+    setShowCreateDialog(false);
+    setShowAdPopup(true);
+  };
 
+  const createDuel = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -129,13 +139,32 @@ const Duels = () => {
 
       // NÃO redirecionar, apenas mostrar popup de espera
       setWaitingDuelId(data.id);
-      setShowCreateDialog(false);
     } catch (error: any) {
       toast({
         title: "Erro ao criar duelo",
         description: error.message,
         variant: "destructive",
       });
+    }
+  };
+
+  const handleJoinDuel = (duelId: string) => {
+    // Mostrar anúncio antes de entrar
+    setPendingAction({ type: 'join', duelId });
+    setShowAdPopup(true);
+  };
+
+  const handleAdClose = () => {
+    setShowAdPopup(false);
+    
+    // Executar ação pendente após fechar o anúncio
+    if (pendingAction) {
+      if (pendingAction.type === 'create') {
+        createDuel();
+      } else if (pendingAction.type === 'join' && pendingAction.duelId) {
+        joinDuel(pendingAction.duelId);
+      }
+      setPendingAction(null);
     }
   };
 
@@ -301,7 +330,7 @@ const Duels = () => {
                   </p>
                 </div>
                 
-                <Button onClick={createDuel} className="w-full btn-mystic text-white">
+                <Button onClick={handleCreateDuel} className="w-full btn-mystic text-white">
                   Criar e Entrar
                 </Button>
               </div>
@@ -373,7 +402,7 @@ const Duels = () => {
 
                     {duel.status === 'waiting' && !duel.opponent_id && (
                       <Button
-                        onClick={() => joinDuel(duel.id)}
+                        onClick={() => handleJoinDuel(duel.id)}
                         className="w-full btn-mystic text-white"
                       >
                         <Swords className="mr-2 h-4 w-4" />
@@ -383,7 +412,7 @@ const Duels = () => {
 
                     {duel.status === 'in_progress' && !duel.opponent_id && (
                       <Button
-                        onClick={() => joinDuel(duel.id)}
+                        onClick={() => handleJoinDuel(duel.id)}
                         className="w-full btn-mystic text-white"
                       >
                         <Users className="mr-2 h-4 w-4" />
@@ -408,6 +437,11 @@ const Duels = () => {
           </div>
         )}
       </main>
+
+      {/* Popup de anúncio */}
+      {showAdPopup && (
+        <AdPopup onClose={handleAdClose} />
+      )}
 
       {/* Popup de espera na fila */}
       {waitingDuelId && (
