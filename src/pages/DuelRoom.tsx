@@ -70,7 +70,7 @@ const DuelRoom = () => {
             setPlayer1LP(newPlayer1LP);
             setPlayer2LP(newPlayer2LP);
             
-            // Se opponent_id mudou (alguém entrou), recarregar tudo
+            // Se opponent_id mudou (alguém entrou), recarregar dados do duelo
             if (payload.new.opponent_id && payload.new.opponent_id !== duel?.opponent_id) {
               console.log('[DuelRoom] Opponent entrou! Recarregando dados...');
               
@@ -85,40 +85,8 @@ const DuelRoom = () => {
                 .maybeSingle();
               
               if (updatedDuel) {
-                console.log('[DuelRoom] Duelo atualizado:', {
-                  creator_username: updatedDuel.creator?.username,
-                  opponent_username: updatedDuel.opponent?.username,
-                  opponent_id: updatedDuel.opponent_id
-                });
-                
+                console.log('[DuelRoom] Duelo atualizado com opponent');
                 setDuel(updatedDuel);
-                
-                // Criar sala Daily.co se ainda não existe e ambos players estão presentes
-                if (!roomUrl && updatedDuel.opponent_id && updatedDuel.creator_id) {
-                  console.log('[DuelRoom] Criando sala Daily.co após opponent entrar...');
-                  
-                  try {
-                    const { data: roomData, error: roomError } = await supabase.functions.invoke('create-daily-room', {
-                      body: { roomName: `duelverse-${id}` }
-                    });
-                    
-                    console.log('[DuelRoom] Resposta da sala:', { roomData, roomError });
-                    
-                    if (roomError || !roomData?.url) {
-                      console.error('[DuelRoom] Erro ao criar sala:', roomError);
-                      toast({
-                        title: "Erro ao iniciar videochamada",
-                        description: "Não foi possível criar a sala de vídeo.",
-                        variant: "destructive",
-                      });
-                    } else {
-                      console.log('[DuelRoom] Sala criada via realtime:', roomData.url);
-                      setRoomUrl(roomData.url);
-                    }
-                  } catch (error) {
-                    console.error('[DuelRoom] Exceção ao criar sala via realtime:', error);
-                  }
-                }
               }
             }
           }
@@ -216,9 +184,14 @@ const DuelRoom = () => {
         id: data.id,
         creator_id: data.creator_id,
         opponent_id: data.opponent_id,
-        status: data.status,
-        creator_username: data.creator?.username,
-        opponent_username: data.opponent?.username
+        status: data.status
+      });
+      
+      console.log('[DuelRoom] Duelo carregado:', {
+        id: data.id,
+        creator_id: data.creator_id,
+        opponent_id: data.opponent_id,
+        status: data.status
       });
 
       // Verificar se o usuário é participante
@@ -239,55 +212,38 @@ const DuelRoom = () => {
         return;
       }
 
-      // Se a sala já tem 2 jogadores e não é participante, bloquear
-      if (data.opponent_id && !isCreator && !isOpponent) {
-        console.log('[DuelRoom] Acesso negado - sala completa');
-        toast({
-          title: "Acesso negado",
-          description: "Esta sala já está completa.",
-          variant: "destructive",
-        });
-        navigate('/duels');
-        return;
-      }
-
       console.log('[DuelRoom] Acesso permitido, configurando sala');
       setDuel(data);
       setPlayer1LP(data.player1_lp || 8000);
       setPlayer2LP(data.player2_lp || 8000);
 
-      // Criar sala Daily.co somente se ambos players estiverem presentes
-      if (data.opponent_id && data.creator_id) {
-        console.log('[DuelRoom] Ambos jogadores presentes, criando/obtendo sala Daily.co');
-        
-        try {
-          const { data: roomData, error: roomError } = await supabase.functions.invoke('create-daily-room', {
-            body: { roomName: `duelverse-${id}` }
-          });
+      // Criar sala Daily.co IMEDIATAMENTE, sem esperar segundo jogador
+      console.log('[DuelRoom] Criando sala Daily.co...');
+      try {
+        const { data: roomData, error: roomError } = await supabase.functions.invoke('create-daily-room', {
+          body: { roomName: `duelverse-${id}` }
+        });
 
-          console.log('[DuelRoom] Resposta da sala Daily.co:', { roomData, roomError });
+        console.log('[DuelRoom] Resposta da sala Daily.co:', { roomData, roomError });
 
-          if (roomError || !roomData?.url) {
-            console.error('[DuelRoom] Erro ao criar sala:', roomError);
-            toast({
-              title: "Erro ao iniciar videochamada",
-              description: "Não foi possível criar a sala de vídeo. Tente recarregar a página.",
-              variant: "destructive",
-            });
-          } else {
-            console.log('[DuelRoom] Sala Daily.co pronta:', roomData.url);
-            setRoomUrl(roomData.url);
-          }
-        } catch (error) {
-          console.error('[DuelRoom] Exceção ao criar sala:', error);
+        if (roomError || !roomData?.url) {
+          console.error('[DuelRoom] Erro ao criar sala:', roomError);
           toast({
             title: "Erro ao iniciar videochamada",
-            description: "Erro ao conectar com o servidor de vídeo.",
+            description: "Não foi possível criar a sala de vídeo.",
             variant: "destructive",
           });
+        } else {
+          console.log('[DuelRoom] Sala Daily.co pronta:', roomData.url);
+          setRoomUrl(roomData.url);
         }
-      } else {
-        console.log('[DuelRoom] Aguardando segundo jogador (opponent_id:', data.opponent_id, ')');
+      } catch (error) {
+        console.error('[DuelRoom] Exceção ao criar sala:', error);
+        toast({
+          title: "Erro ao iniciar videochamada",
+          description: "Erro ao conectar com o servidor de vídeo.",
+          variant: "destructive",
+        });
       }
 
       // Garantir que started_at existe
@@ -507,9 +463,7 @@ const DuelRoom = () => {
                 <div className="text-center space-y-4">
                   <Loader2 className="w-12 h-12 mx-auto text-primary animate-spin" />
                   <div>
-                    <p className="text-muted-foreground mb-2">
-                      {duel?.opponent_id ? 'Carregando sala de vídeo...' : 'Aguardando oponente entrar...'}
-                    </p>
+                    <p className="text-muted-foreground mb-2">Carregando sala de vídeo...</p>
                     <p className="text-xs text-muted-foreground">ID: {id}</p>
                   </div>
                 </div>
@@ -564,11 +518,11 @@ const DuelRoom = () => {
         </div>
       </main>
 
-      {/* Calculadora Flutuante - Ambos participantes podem controlar */}
+      {/* Calculadora Flutuante - Cada participante controla apenas seu LP */}
       {duel && currentUser && (
         <FloatingCalculator
-          player1Name={duel.creator?.username || 'Jogador 1'}
-          player2Name={duel.opponent?.username || 'Aguardando...'}
+          player1Name="Player 1"
+          player2Name="Player 2"
           player1LP={player1LP}
           player2LP={player2LP}
           onUpdateLP={updateLP}
