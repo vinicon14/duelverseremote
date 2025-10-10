@@ -20,10 +20,9 @@ const DuelRoom = () => {
   const [player2LP, setPlayer2LP] = useState(8000);
   const [callDuration, setCallDuration] = useState(0);
   const [showTimeWarning, setShowTimeWarning] = useState(false);
+  const [roomUrl, setRoomUrl] = useState<string>('');
   const callStartTime = useRef<number | null>(null);
   const timerInterval = useRef<NodeJS.Timeout | null>(null);
-
-  // Nenhuma inicialização necessária para Whereby - usa iframe direto
 
   // Carrega dados do duelo e inicia timer
   useEffect(() => {
@@ -143,6 +142,22 @@ const DuelRoom = () => {
       setDuel(data);
       setPlayer1LP(data.player1_lp || 8000);
       setPlayer2LP(data.player2_lp || 8000);
+
+      // Criar sala Daily.co
+      const { data: roomData, error: roomError } = await supabase.functions.invoke('create-daily-room', {
+        body: { roomName: `duelverse-${id}` }
+      });
+
+      if (roomError || !roomData?.url) {
+        console.error('Erro ao criar sala:', roomError);
+        toast({
+          title: "Erro ao iniciar videochamada",
+          description: "Não foi possível criar a sala de vídeo.",
+          variant: "destructive",
+        });
+      } else {
+        setRoomUrl(roomData.url);
+      }
 
       // Iniciar duelo se ainda não foi iniciado
       if (!data.started_at) {
@@ -339,13 +354,19 @@ const DuelRoom = () => {
       
       <main className="px-2 sm:px-4 pt-16 sm:pt-20 pb-2 sm:pb-4">
         <div className="h-[calc(100vh-80px)] sm:h-[calc(100vh-100px)] relative">
-          {/* Video Call - Metered.ca */}
+          {/* Video Call - Daily.co */}
           <div className="h-full w-full rounded-lg overflow-hidden bg-card shadow-2xl border border-primary/20">
-            <iframe
-              src={`https://duelverse.metered.live/${id}`}
-              allow="camera; microphone; fullscreen; speaker; display-capture"
-              className="w-full h-full"
-            />
+            {roomUrl ? (
+              <iframe
+                src={roomUrl}
+                allow="camera; microphone; fullscreen; speaker; display-capture"
+                className="w-full h-full"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <p className="text-muted-foreground">Carregando sala de vídeo...</p>
+              </div>
+            )}
           </div>
 
           {/* Botão de Sair e Timer - Fixo no canto superior direito */}
