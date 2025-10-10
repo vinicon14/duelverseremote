@@ -46,8 +46,6 @@ const DuelRoom = () => {
   useEffect(() => {
     if (!id || !currentUser) return;
 
-    console.log('[DuelRoom] 🎮 Configurando listener realtime para duelo:', id);
-
     const channel = supabase
       .channel(`duel-${id}`)
       .on(
@@ -59,22 +57,16 @@ const DuelRoom = () => {
           filter: `id=eq.${id}`,
         },
         async (payload) => {
-          console.log('[DuelRoom] 📡 Realtime update recebido:', payload.new);
-          
           if (payload.new) {
             // Sempre atualizar LP
             const newPlayer1LP = payload.new.player1_lp || 8000;
             const newPlayer2LP = payload.new.player2_lp || 8000;
             
-            console.log('[DuelRoom] 💚 Atualizando LP via realtime:', { newPlayer1LP, newPlayer2LP });
             setPlayer1LP(newPlayer1LP);
             setPlayer2LP(newPlayer2LP);
             
             // Se opponent_id mudou (alguém entrou), recarregar dados do duelo
             if (payload.new.opponent_id && (!duel?.opponent_id || payload.new.opponent_id !== duel?.opponent_id)) {
-              console.log('[DuelRoom] 👤 OPPONENT ENTROU! ID:', payload.new.opponent_id);
-              console.log('[DuelRoom] 🔄 Recarregando dados completos do duelo...');
-              
               const { data: updatedDuel, error: reloadError } = await supabase
                 .from('live_duels')
                 .select(`
@@ -85,26 +77,11 @@ const DuelRoom = () => {
                 .eq('id', id)
                 .maybeSingle();
               
-              if (reloadError) {
-                console.error('[DuelRoom] ❌ Erro ao recarregar duelo:', reloadError);
-                return;
-              }
-              
-              if (updatedDuel) {
-                console.log('[DuelRoom] ✅ Duelo atualizado com opponent:', {
-                  creator: updatedDuel.creator?.username,
-                  opponent: updatedDuel.opponent?.username,
-                  creator_id: updatedDuel.creator_id,
-                  opponent_id: updatedDuel.opponent_id
-                });
-                
-                // CRITICAL: Atualizar o estado com os novos dados
+              if (!reloadError && updatedDuel) {
                 setDuel(updatedDuel);
-                console.log('[DuelRoom] ✅ setDuel() chamado - componente deve re-renderizar');
                 
                 // Atualizar status para in_progress quando opponent entrar
                 if (updatedDuel.status !== 'in_progress') {
-                  console.log('[DuelRoom] 🎯 Atualizando status para in_progress');
                   await supabase
                     .from('live_duels')
                     .update({ status: 'in_progress' })
@@ -113,49 +90,30 @@ const DuelRoom = () => {
                 
                 // Timer já deve estar rodando, mas garantir
                 if (!timerInterval.current && updatedDuel.started_at) {
-                  console.log('[DuelRoom] ▶️ Iniciando timer (estava pausado)');
                   const durationMins = updatedDuel.duration_minutes || 60;
                   startCallTimer(updatedDuel.started_at, durationMins);
-                } else {
-                  console.log('[DuelRoom] ⏸️ Timer já está rodando ou started_at não existe');
                 }
               }
             }
           }
         }
       )
-      .subscribe((status) => {
-        console.log('[DuelRoom] 📶 Status do canal realtime:', status);
-      });
+      .subscribe();
 
     return () => {
-      console.log('[DuelRoom] 🔌 Removendo canal realtime');
       supabase.removeChannel(channel);
     };
   }, [id, duel?.opponent_id, currentUser]);
 
   const startCallTimer = (startedAt: string, durationMinutes: number = 60) => {
-    console.log('[TIMER] 🕐 Iniciando timer com started_at:', startedAt);
     const startTime = new Date(startedAt).getTime();
     callStartTime.current = startTime;
     const MAX_DURATION = durationMinutes * 60; // Converter minutos para segundos
-    
-    console.log('[TIMER] 📊 Timer configurado:', {
-      startTime: new Date(startTime).toISOString(),
-      maxDuration: MAX_DURATION,
-      now: new Date().toISOString()
-    });
     
     timerInterval.current = setInterval(() => {
       const now = Date.now();
       const elapsed = Math.floor((now - startTime) / 1000);
       const remaining = Math.max(0, MAX_DURATION - elapsed);
-      
-      console.log('[TIMER] ⏱️ Timer tick:', {
-        elapsed,
-        remaining,
-        maxDuration: MAX_DURATION
-      });
       
       setCallDuration(remaining);
 
@@ -171,7 +129,6 @@ const DuelRoom = () => {
 
       // Finalizar automaticamente quando chegar a 0:00
       if (remaining === 0) {
-        console.log('[TIMER] ⏰ TEMPO ESGOTADO - Finalizando duelo');
         if (timerInterval.current) {
           clearInterval(timerInterval.current);
         }
@@ -183,8 +140,6 @@ const DuelRoom = () => {
         endDuel();
       }
     }, 1000);
-    
-    console.log('[TIMER] ✅ Timer interval criado');
   };
 
   const formatTime = (seconds: number) => {
@@ -206,8 +161,6 @@ const DuelRoom = () => {
 
   const fetchDuel = async (userId: string) => {
     try {
-      console.log('[DuelRoom] Buscando duelo:', id, 'para usuário:', userId);
-      
       let { data, error } = await supabase
         .from('live_duels')
         .select(`
@@ -221,7 +174,6 @@ const DuelRoom = () => {
       if (error) throw error;
       
       if (!data) {
-        console.log('[DuelRoom] Duelo não encontrado');
         toast({
           title: "Duelo não encontrado",
           description: "Este duelo não existe ou foi removido.",
@@ -230,71 +182,15 @@ const DuelRoom = () => {
         navigate('/duels');
         return;
       }
-      
-      console.log('[DuelRoom] Duelo carregado:', {
-        id: data.id,
-        creator_id: data.creator_id,
-        opponent_id: data.opponent_id,
-        status: data.status
-      });
 
-      // Verificar se o usuário é participante (usar let para poder reatribuir)
-      let isCreator = data.creator_id === userId;
-      let isOpponent = data.opponent_id === userId;
-      
-      console.log('[DuelRoom] Verificação de participação:', { 
-        isCreator, 
-        isOpponent, 
-        userId, 
-        creatorId: data.creator_id,
-        opponentId: data.opponent_id 
-      });
-
-      // CRITICAL: Se o usuário NÃO é o criador E NÃO é reconhecido como opponent
-      // Isso pode significar que a atualização ainda não propagou
-      // Vamos forçar uma recarga e aguardar um pouco mais
-      if (!isCreator && !isOpponent) {
-        console.log('[DuelRoom] ⚠️ Usuário não é criador nem opponent - aguardando atualização...');
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Recarregar dados
-        const { data: reloadedData } = await supabase
-          .from('live_duels')
-          .select(`
-            *,
-            creator:profiles!live_duels_creator_id_fkey(username, avatar_url, user_id),
-            opponent:profiles!live_duels_opponent_id_fkey(username, avatar_url, user_id)
-          `)
-          .eq('id', id)
-          .maybeSingle();
-        
-        if (reloadedData) {
-          console.log('[DuelRoom] 🔄 Dados recarregados:', {
-            opponent_id: reloadedData.opponent_id,
-            creator_id: reloadedData.creator_id
-          });
-          data = reloadedData;
-          
-          // Recalcular após recarga
-          isCreator = data.creator_id === userId;
-          isOpponent = data.opponent_id === userId;
-        }
-      }
-      
-      console.log('[DuelRoom] ✅ Estado final de participação:', { 
-        isCreator, 
-        isOpponent, 
-        userId, 
-        creatorId: data.creator_id,
-        opponentId: data.opponent_id 
-      });
+      // Verificar se o usuário é participante
+      const isCreator = data.creator_id === userId;
+      const isOpponent = data.opponent_id === userId;
 
       // Se a sala não tem opponent ainda
       if (!data.opponent_id) {
         // Se o usuário NÃO é o criador, adicionar como opponent (player 2)
         if (!isCreator) {
-          console.log('[DuelRoom] 👤 Sala aberta - adicionando usuário como PLAYER 2 (opponent)');
-          
           try {
             // NÃO sobrescrever started_at, apenas adicionar opponent
             const { error: updateError } = await supabase
@@ -307,7 +203,6 @@ const DuelRoom = () => {
               .is('opponent_id', null);
 
             if (updateError) {
-              console.error('[DuelRoom] ❌ Erro ao entrar na sala:', updateError);
               toast({
                 title: "Erro ao entrar",
                 description: "Não foi possível entrar nesta sala.",
@@ -317,13 +212,7 @@ const DuelRoom = () => {
               return;
             }
 
-            console.log('[DuelRoom] ✅ Usuário adicionado como PLAYER 2, recarregando dados...');
-            console.log('[DuelRoom] User ID sendo usado:', userId);
-            console.log('[DuelRoom] User ID type:', typeof userId);
-            
-            // CRITICAL: Aguardar um pouco para garantir que o banco processou
-            await new Promise(resolve => setTimeout(resolve, 800));
-            
+            // Recarregar dados do duelo
             const { data: updatedData, error: reloadError } = await supabase
               .from('live_duels')
               .select(`
@@ -335,29 +224,13 @@ const DuelRoom = () => {
               .maybeSingle();
 
             if (reloadError) {
-              console.error('[DuelRoom] ❌ Erro ao recarregar:', reloadError);
+              console.error('[DuelRoom] Erro ao recarregar:', reloadError);
             }
 
             if (updatedData) {
               data = updatedData;
-              
-              // CRITICAL: Recalcular isOpponent após recarga
-              isOpponent = updatedData.opponent_id === userId;
-              
-              console.log('[DuelRoom] 🎮 Dados atualizados após entrada:', {
-                player1: updatedData.creator?.username,
-                player2: updatedData.opponent?.username,
-                creator_id: updatedData.creator_id,
-                opponent_id: updatedData.opponent_id,
-                userId: userId,
-                isOpponent: isOpponent,
-                'opponent_id === userId': updatedData.opponent_id === userId
-              });
-            } else {
-              console.error('[DuelRoom] ❌ updatedData está vazio!');
             }
           } catch (error) {
-            console.error('[DuelRoom] ❌ Exceção ao entrar na sala:', error);
             toast({
               title: "Erro ao entrar",
               description: "Ocorreu um erro ao tentar entrar na sala.",
@@ -366,14 +239,10 @@ const DuelRoom = () => {
             navigate('/duels');
             return;
           }
-        } else {
-          // É o criador esperando o opponent - permitir acesso
-          console.log('[DuelRoom] 👑 Criador (Player 1) acessando sua própria sala (aguardando Player 2)');
         }
       } else {
         // Sala já tem opponent - verificar se o usuário é um dos participantes
         if (!isCreator && !isOpponent) {
-          console.log('[DuelRoom] 🚫 Acesso negado - sala completa e usuário não é participante');
           toast({
             title: "Acesso negado",
             description: "Esta sala já está completa.",
@@ -384,49 +253,26 @@ const DuelRoom = () => {
         }
       }
 
-      console.log('[DuelRoom] 📍 Acesso permitido, configurando sala');
-      console.log('[DuelRoom] 🎮 Dados do duelo ANTES de setDuel:', {
-        id: data.id,
-        creator_id: data.creator_id,
-        opponent_id: data.opponent_id,
-        creator_username: data.creator?.username,
-        opponent_username: data.opponent?.username,
-        status: data.status,
-        userId: userId,
-        isPlayer1: isCreator,
-        isPlayer2: isOpponent
-      });
-      
       setDuel(data);
-      
-      // Log após setDuel para confirmar
-      console.log('[DuelRoom] ✅ setDuel executado, estado deve atualizar');
-      
       setPlayer1LP(data.player1_lp || 8000);
       setPlayer2LP(data.player2_lp || 8000);
 
-      // Criar sala Daily.co IMEDIATAMENTE, sem esperar segundo jogador
-      console.log('[DuelRoom] Criando sala Daily.co...');
+      // Criar sala Daily.co
       try {
         const { data: roomData, error: roomError } = await supabase.functions.invoke('create-daily-room', {
           body: { roomName: `duelverse-${id}` }
         });
 
-        console.log('[DuelRoom] Resposta da sala Daily.co:', { roomData, roomError });
-
         if (roomError || !roomData?.url) {
-          console.error('[DuelRoom] Erro ao criar sala:', roomError);
           toast({
             title: "Erro ao iniciar videochamada",
             description: "Não foi possível criar a sala de vídeo.",
             variant: "destructive",
           });
         } else {
-          console.log('[DuelRoom] Sala Daily.co pronta:', roomData.url);
           setRoomUrl(roomData.url);
         }
       } catch (error) {
-        console.error('[DuelRoom] Exceção ao criar sala:', error);
         toast({
           title: "Erro ao iniciar videochamada",
           description: "Erro ao conectar com o servidor de vídeo.",
@@ -437,7 +283,6 @@ const DuelRoom = () => {
       // Garantir que started_at existe SEMPRE (timer inicia na criação)
       let startedAt = data.started_at;
       if (!startedAt) {
-        console.log('[DuelRoom] ⏰ Definindo started_at no banco (timer inicia agora)');
         const now = new Date().toISOString();
         const { error: updateError } = await supabase
           .from('live_duels')
@@ -447,35 +292,23 @@ const DuelRoom = () => {
           })
           .eq('id', id);
         
-        if (updateError) {
-          console.error('[DuelRoom] ❌ Erro ao definir started_at:', updateError);
-        } else {
-          console.log('[DuelRoom] ✅ started_at definido:', now);
+        if (!updateError) {
           startedAt = now;
         }
       }
 
-      // Iniciar timer SEMPRE que houver started_at (não precisa esperar opponent)
+      // Iniciar timer SEMPRE que houver started_at
       if (startedAt) {
-        console.log('[DuelRoom] ▶️ INICIANDO TIMER AGORA - started_at:', startedAt);
-        console.log('[DuelRoom] 📍 Tempo atual:', new Date().toISOString());
         const elapsed = Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000);
         const durationMins = data.duration_minutes || 60;
         const maxDurationSeconds = durationMins * 60;
-        console.log('[DuelRoom] ⏱️ Tempo já decorrido:', elapsed, 'segundos');
-        console.log('[DuelRoom] ⏱️ Duração total:', durationMins, 'minutos');
         
         // Verificar se já passou o tempo
         if (elapsed >= maxDurationSeconds) {
-          console.log('[DuelRoom] ⏰ TEMPO JÁ ESGOTADO - Finalizando');
           await endDuel();
         } else {
-          console.log('[DuelRoom] ✅ Chamando startCallTimer...');
           startCallTimer(startedAt, durationMins);
-          console.log('[DuelRoom] ✅ startCallTimer executado');
         }
-      } else {
-        console.log('[DuelRoom] ❌ Timer NÃO iniciado - started_at é null/undefined');
       }
     } catch (error: any) {
       console.error('[DuelRoom] Erro em fetchDuel:', error);
@@ -492,17 +325,6 @@ const DuelRoom = () => {
     const isPlayer1 = player === 'player1';
     const currentLP = isPlayer1 ? player1LP : player2LP;
     const newLP = Math.max(0, currentLP + amount);
-
-    console.log('💾 ========== UPDATE LP ==========');
-    console.log('💾 Player sendo atualizado:', player);
-    console.log('💾 Current User ID:', currentUser?.id);
-    console.log('💾 Creator ID:', duel?.creator_id);
-    console.log('💾 Opponent ID:', duel?.opponent_id);
-    console.log('💾 É Player 1?', currentUser?.id === duel?.creator_id);
-    console.log('💾 É Player 2?', currentUser?.id === duel?.opponent_id);
-    console.log('💾 Valor atual:', currentLP);
-    console.log('💾 Novo valor:', newLP);
-    console.log('💾 ================================');
 
     try {
       const { error } = await supabase
@@ -655,47 +477,12 @@ const DuelRoom = () => {
     navigate('/duels');
   };
 
-  // Identificar quem é cada player - USAR ESTADO ATUALIZADO DO DUEL
-  const isParticipant = currentUser?.id === duel?.creator_id || currentUser?.id === duel?.opponent_id;
+  // Identificar quem é cada player - LÓGICA OTIMISTA PARA PLAYER 2
   const isPlayer1 = currentUser?.id === duel?.creator_id;
-  const isPlayer2 = currentUser?.id === duel?.opponent_id;
+  // Player 2: É reconhecido como opponent OU não é o criador (assumir que é o segundo jogador)
+  const isPlayer2 = currentUser?.id === duel?.opponent_id || (!isPlayer1 && currentUser?.id);
+  const isParticipant = isPlayer1 || isPlayer2;
   const currentUserPlayer = isPlayer1 ? 'player1' : isPlayer2 ? 'player2' : null;
-
-  console.log('🎮 ========== CONTROLE DE PLAYERS (RENDER) ==========');
-  console.log('🎮 Current User ID:', currentUser?.id);
-  console.log('🎮 Creator ID (Player 1):', duel?.creator_id);
-  console.log('🎮 Opponent ID (Player 2):', duel?.opponent_id);
-  console.log('🎮 Creator Username:', duel?.creator?.username);
-  console.log('🎮 Opponent Username:', duel?.opponent?.username);
-  console.log('🎮 isPlayer1:', isPlayer1);
-  console.log('🎮 isPlayer2:', isPlayer2);
-  console.log('🎮 currentUserPlayer:', currentUserPlayer);
-  console.log('🎮 PASSANDO PARA FloatingCalculator:', {
-    player1Name: duel?.creator?.username || 'Player 1',
-    player2Name: duel?.opponent?.username || 'Player 2',
-    currentUserPlayer: currentUserPlayer
-  });
-  console.log('🎮 ===================================================');
-
-  // Log adicional quando duel muda
-  useEffect(() => {
-    if (duel && currentUser) {
-      const calculatedPlayer1 = currentUser.id === duel.creator_id;
-      const calculatedPlayer2 = currentUser.id === duel.opponent_id;
-      const calculatedCurrentUserPlayer = calculatedPlayer1 ? 'player1' : calculatedPlayer2 ? 'player2' : null;
-      
-      console.log('🔄 ========== DUELO ATUALIZADO ==========');
-      console.log('🔄 Duel ID:', duel.id);
-      console.log('🔄 Current User ID:', currentUser.id);
-      console.log('🔄 Creator ID:', duel.creator_id);
-      console.log('🔄 Opponent ID:', duel.opponent_id);
-      console.log('🔄 Has Opponent?', !!duel.opponent_id);
-      console.log('🔄 isPlayer1?', calculatedPlayer1);
-      console.log('🔄 isPlayer2?', calculatedPlayer2);
-      console.log('🔄 currentUserPlayer:', calculatedCurrentUserPlayer);
-      console.log('🔄 ======================================');
-    }
-  }, [duel, currentUser]);
 
   return (
     <div className="min-h-screen bg-background">
