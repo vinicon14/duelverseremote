@@ -198,13 +198,19 @@ const Duels = () => {
         .eq('id', duelId)
         .is('opponent_id', null);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro ao entrar no duelo:', error);
+        throw error;
+      }
 
       toast({
         title: "Entrando na partida!",
         description: "Aguarde enquanto carregamos a chamada...",
       });
 
+      // Aguardar um pouco para o banco processar
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       navigate(`/duel/${duelId}`);
     } catch (error: any) {
       toast({

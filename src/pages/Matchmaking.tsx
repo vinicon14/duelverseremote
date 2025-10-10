@@ -152,6 +152,10 @@ export default function Matchmaking() {
       }
 
       toast.success("Sala encontrada! Carregando chamada...");
+      
+      // Aguardar para o banco processar
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       navigate(`/duel/${randomDuel.id}`);
     } catch (error: any) {
       console.error("Unexpected error in joinQueue:", error);

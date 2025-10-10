@@ -26,8 +26,12 @@ const DuelRoom = () => {
 
   // Carrega dados do duelo e inicia timer
   useEffect(() => {
-    checkAuth();
-    fetchDuel();
+    const init = async () => {
+      await checkAuth();
+      await fetchDuel();
+    };
+    
+    init();
 
     return () => {
       if (timerInterval.current) {
@@ -265,24 +269,28 @@ const DuelRoom = () => {
     const currentLP = isPlayer1 ? player1LP : player2LP;
     const newLP = Math.max(0, currentLP + amount);
 
-    if (isPlayer1) {
-      setPlayer1LP(newLP);
-    } else {
-      setPlayer2LP(newLP);
-    }
-
     try {
-      await supabase
+      const { error } = await supabase
         .from('live_duels')
         .update({
           [`${player}_lp`]: newLP,
         })
         .eq('id', id);
 
+      if (error) throw error;
+
+      // Atualizar estado local após sucesso no banco
+      if (isPlayer1) {
+        setPlayer1LP(newLP);
+      } else {
+        setPlayer2LP(newLP);
+      }
+
       if (newLP === 0) {
         await endDuel(player === 'player1' ? duel?.opponent_id : duel?.creator_id);
       }
     } catch (error: any) {
+      console.error('Erro ao atualizar LP:', error);
       toast({
         title: "Erro ao atualizar LP",
         description: error.message,
@@ -294,24 +302,28 @@ const DuelRoom = () => {
   const setLP = async (player: 'player1' | 'player2', value: number) => {
     const newLP = Math.max(0, value);
     
-    if (player === 'player1') {
-      setPlayer1LP(newLP);
-    } else {
-      setPlayer2LP(newLP);
-    }
-
     try {
-      await supabase
+      const { error } = await supabase
         .from('live_duels')
         .update({
           [`${player}_lp`]: newLP,
         })
         .eq('id', id);
 
+      if (error) throw error;
+
+      // Atualizar estado local após sucesso no banco
+      if (player === 'player1') {
+        setPlayer1LP(newLP);
+      } else {
+        setPlayer2LP(newLP);
+      }
+
       if (newLP === 0) {
         await endDuel(player === 'player1' ? duel?.opponent_id : duel?.creator_id);
       }
     } catch (error: any) {
+      console.error('Erro ao definir LP:', error);
       toast({
         title: "Erro ao atualizar LP",
         description: error.message,
