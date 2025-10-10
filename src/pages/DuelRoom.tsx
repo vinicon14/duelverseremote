@@ -427,6 +427,17 @@ const DuelRoom = () => {
     const currentLP = isPlayer1 ? player1LP : player2LP;
     const newLP = Math.max(0, currentLP + amount);
 
+    console.log('💾 ========== UPDATE LP ==========');
+    console.log('💾 Player sendo atualizado:', player);
+    console.log('💾 Current User ID:', currentUser?.id);
+    console.log('💾 Creator ID:', duel?.creator_id);
+    console.log('💾 Opponent ID:', duel?.opponent_id);
+    console.log('💾 É Player 1?', currentUser?.id === duel?.creator_id);
+    console.log('💾 É Player 2?', currentUser?.id === duel?.opponent_id);
+    console.log('💾 Valor atual:', currentLP);
+    console.log('💾 Novo valor:', newLP);
+    console.log('💾 ================================');
+
     try {
       const { error } = await supabase
         .from('live_duels')
@@ -447,8 +458,10 @@ const DuelRoom = () => {
       if (newLP === 0) {
         await endDuel(player === 'player1' ? duel?.opponent_id : duel?.creator_id);
       }
+
+      console.log('💾 ✅ LP atualizado com sucesso');
     } catch (error: any) {
-      console.error('Erro ao atualizar LP:', error);
+      console.error('💾 ❌ Erro ao atualizar LP:', error);
       toast({
         title: "Erro ao atualizar LP",
         description: error.message,
@@ -459,6 +472,16 @@ const DuelRoom = () => {
 
   const setLP = async (player: 'player1' | 'player2', value: number) => {
     const newLP = Math.max(0, value);
+    
+    console.log('💾 ========== SET LP DIRETO ==========');
+    console.log('💾 Player sendo atualizado:', player);
+    console.log('💾 Current User ID:', currentUser?.id);
+    console.log('💾 Creator ID:', duel?.creator_id);
+    console.log('💾 Opponent ID:', duel?.opponent_id);
+    console.log('💾 É Player 1?', currentUser?.id === duel?.creator_id);
+    console.log('💾 É Player 2?', currentUser?.id === duel?.opponent_id);
+    console.log('💾 Novo valor:', newLP);
+    console.log('💾 ====================================');
     
     try {
       const { error } = await supabase
@@ -480,8 +503,10 @@ const DuelRoom = () => {
       if (newLP === 0) {
         await endDuel(player === 'player1' ? duel?.opponent_id : duel?.creator_id);
       }
+
+      console.log('💾 ✅ LP definido com sucesso');
     } catch (error: any) {
-      console.error('Erro ao definir LP:', error);
+      console.error('💾 ❌ Erro ao definir LP:', error);
       toast({
         title: "Erro ao atualizar LP",
         description: error.message,

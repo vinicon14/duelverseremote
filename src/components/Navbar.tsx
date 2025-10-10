@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Swords, Trophy, User, LogOut, Menu, Users, Shield, Crown } from "lucide-react";
+import { Swords, Trophy, User, LogOut, Menu, Users, Zap, Shield, Crown } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/hooks/useAdmin";
@@ -75,6 +75,12 @@ export const Navbar = () => {
         <Button variant="ghost" className="text-foreground hover:text-primary">
           <Swords className="mr-2 h-4 w-4" />
           Duelos
+        </Button>
+      </Link>
+      <Link to="/matchmaking">
+        <Button variant="ghost" className="text-foreground hover:text-primary">
+          <Zap className="mr-2 h-4 w-4" />
+          Fila Rápida
         </Button>
       </Link>
       <Link to="/tournaments">
