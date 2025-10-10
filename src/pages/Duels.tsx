@@ -8,9 +8,12 @@ import { Navbar } from "@/components/Navbar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Swords, Plus, Users, Clock } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { useBanCheck } from "@/hooks/useBanCheck";
 import { AdPopup } from "@/components/AdPopup";
+import { NewsSidebar } from "@/components/NewsSidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const Duels = () => {
   useBanCheck(); // Proteger contra usuários banidos
@@ -24,10 +27,13 @@ const Duels = () => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showAdPopup, setShowAdPopup] = useState(false);
   const [pendingAction, setPendingAction] = useState<{ type: 'create' | 'join', duelId?: string } | null>(null);
+  const [news, setNews] = useState<any[]>([]);
+  const [selectedNews, setSelectedNews] = useState<any>(null);
 
   useEffect(() => {
     checkAuth();
     fetchDuels();
+    fetchNews();
 
     const channel = supabase
       .channel('live_duels_changes')
@@ -53,6 +59,25 @@ const Duels = () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       navigate('/auth');
+    }
+  };
+
+  const fetchNews = async () => {
+    const { data, error } = await supabase
+      .from('news')
+      .select(`
+        *,
+        author:profiles!news_author_id_fkey(username, user_id)
+      `)
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    if (error) {
+      console.error('Error fetching news:', error);
+    }
+    
+    if (data) {
+      setNews(data);
     }
   };
 
@@ -272,10 +297,11 @@ const Duels = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <SidebarProvider defaultOpen>
       <Navbar />
       
-      <main className="container mx-auto px-4 pt-20 sm:pt-24 pb-12">
+      <div className="min-h-screen bg-background flex w-full">
+        <main className="flex-1 container mx-auto px-4 pt-20 sm:pt-24 pb-12">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
           <div>
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gradient-mystic mb-2">
@@ -462,13 +488,45 @@ const Duels = () => {
             ))}
           </div>
         )}
+
+        {/* Popup de anúncio */}
+        {showAdPopup && (
+          <AdPopup onClose={handleAdClose} />
+        )}
       </main>
 
-      {/* Popup de anúncio */}
-      {showAdPopup && (
-        <AdPopup onClose={handleAdClose} />
-      )}
-    </div>
+      <NewsSidebar news={news} onNewsSelect={setSelectedNews} />
+
+      <Dialog open={!!selectedNews} onOpenChange={() => setSelectedNews(null)}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl text-gradient-mystic">
+              {selectedNews?.title}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedNews && new Date(selectedNews.created_at).toLocaleDateString('pt-BR', {
+                day: '2-digit',
+                month: 'long',
+                year: 'numeric'
+              })}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedNews?.image_url && (
+            <img 
+              src={selectedNews.image_url} 
+              alt={selectedNews.title}
+              className="w-full h-64 object-cover rounded-lg"
+            />
+          )}
+          <ScrollArea className="max-h-[60vh]">
+            <div className="prose prose-invert max-w-none">
+              <p className="whitespace-pre-wrap">{selectedNews?.content}</p>
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+      </div>
+    </SidebarProvider>
   );
 };
 
