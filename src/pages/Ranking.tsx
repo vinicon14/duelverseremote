@@ -17,9 +17,12 @@ const Ranking = () => {
 
   const fetchRankings = async () => {
     try {
-      // Use secure function to get leaderboard data
       const { data, error } = await supabase
-        .rpc('get_leaderboard', { limit_count: 50 });
+        .from('profiles')
+        .select('*')
+        .order('points', { ascending: false })
+        .order('wins', { ascending: false })
+        .limit(50);
 
       if (error) throw error;
       setRankings(data || []);

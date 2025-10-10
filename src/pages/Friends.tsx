@@ -108,20 +108,15 @@ const Friends = () => {
     }
 
     try {
-      // Use secure function to search users
       const { data, error } = await supabase
-        .rpc('search_users', { 
-          search_term: searchQuery,
-          limit_count: 10 
-        });
+        .from('profiles')
+        .select('*')
+        .ilike('username', `%${searchQuery}%`)
+        .neq('user_id', currentUser?.id)
+        .limit(10);
 
       if (error) throw error;
-      
-      // Filter out current user from results
-      const filteredResults = (data || []).filter(
-        (user: any) => user.user_id !== currentUser?.id
-      );
-      setSearchResults(filteredResults);
+      setSearchResults(data || []);
     } catch (error: any) {
       toast({
         title: "Erro ao buscar usuários",
