@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       advertisements: {
         Row: {
+          content: string
           created_at: string
           expires_at: string | null
           id: string
@@ -25,6 +26,7 @@ export type Database = {
           title: string
         }
         Insert: {
+          content?: string
           created_at?: string
           expires_at?: string | null
           id?: string
@@ -34,6 +36,7 @@ export type Database = {
           title: string
         }
         Update: {
+          content?: string
           created_at?: string
           expires_at?: string | null
           id?: string
