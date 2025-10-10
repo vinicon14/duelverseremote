@@ -422,34 +422,60 @@ const DuelRoom = () => {
         .eq('id', id);
 
       // Registrar histórico se houver vencedor usando função segura
-      if (winnerId && duel?.id) {
+      if (winnerId && duel?.id && duel?.opponent_id) {
         try {
+          // Determinar scores corretos - vencedor mantém LP, perdedor tem 0
+          const player1Score = winnerId === duel.creator_id ? player1LP : 0;
+          const player2Score = winnerId === duel.opponent_id ? player2LP : 0;
+          
+          console.log('📊 Registrando resultado:', {
+            duel_id: duel.id,
+            player1_id: duel.creator_id,
+            player2_id: duel.opponent_id,
+            winner_id: winnerId,
+            player1_score: player1Score,
+            player2_score: player2Score,
+            bet_amount: duel.bet_amount || 0
+          });
+
           const { error: matchError } = await supabase.rpc('record_match_result', {
             p_duel_id: duel.id,
             p_player1_id: duel.creator_id,
             p_player2_id: duel.opponent_id,
             p_winner_id: winnerId,
-            p_player1_score: winnerId === duel.opponent_id ? 0 : player1LP,
-            p_player2_score: winnerId === duel.creator_id ? 0 : player2LP,
+            p_player1_score: player1Score,
+            p_player2_score: player2Score,
             p_bet_amount: duel.bet_amount || 0
           });
 
           if (matchError) {
-            console.error('Erro ao registrar resultado:', matchError);
+            console.error('❌ Erro ao registrar resultado:', matchError);
             toast({
               title: "Erro ao registrar resultado",
               description: matchError.message,
               variant: "destructive",
             });
+          } else {
+            console.log('✅ Resultado registrado com sucesso');
+            toast({
+              title: "Resultado registrado!",
+              description: "Pontos atualizados no ranking",
+            });
           }
         } catch (error: any) {
-          console.error('Erro ao registrar resultado:', error);
+          console.error('❌ Erro ao registrar resultado:', error);
           toast({
             title: "Erro ao registrar resultado",
             description: error.message,
             variant: "destructive",
           });
         }
+      } else if (winnerId && !duel?.opponent_id) {
+        toast({
+          title: "Partida sem oponente",
+          description: "Não é possível registrar resultado sem dois jogadores",
+          variant: "destructive",
+        });
       }
 
       // Deletar o duelo após 60 minutos
