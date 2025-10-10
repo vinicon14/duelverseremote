@@ -23,6 +23,11 @@ export const FloatingCalculator = ({
   onSetLP,
   currentUserPlayer = null,
 }: FloatingCalculatorProps) => {
+  // Debug log para verificar qual player está controlando
+  useEffect(() => {
+    console.log('🎮 [CALCULATOR] currentUserPlayer:', currentUserPlayer);
+  }, [currentUserPlayer]);
+
   // Posição inicial adaptada ao tamanho da tela
   const [position, setPosition] = useState(() => {
     const isMobile = window.innerWidth < 768;
