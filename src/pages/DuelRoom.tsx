@@ -370,30 +370,10 @@ const DuelRoom = () => {
   const setLP = async (player: 'player1' | 'player2', value: number) => {
     if (!id) return;
     
-    console.log('💾 [SET LP] 🔵 INICIANDO:', { 
-      player, 
-      value,
-      currentUserPlayer,
-      currentUserId: currentUser?.id,
-      creatorId: duel?.creator_id,
-      opponentId: duel?.opponent_id
-    });
-    
-    // Validar se o jogador pode atualizar seu próprio LP
-    if ((player === 'player1' && currentUserPlayer !== 'player1') ||
-        (player === 'player2' && currentUserPlayer !== 'player2')) {
-      console.error('💾 [SET LP] ❌ Jogador não autorizado a editar este LP');
-      toast({
-        title: "Não autorizado",
-        description: "Você só pode editar seus próprios Life Points",
-        variant: "destructive",
-      });
-      return;
-    }
-    
     const newLP = Math.max(0, value);
     
-    console.log('💾 [SET LP] Novo valor:', { 
+    console.log('💾 [SET LP] Iniciando:', { 
+      player, 
       newLP,
       estadoAtual: { player1LP, player2LP }
     });
@@ -442,60 +422,34 @@ const DuelRoom = () => {
         .eq('id', id);
 
       // Registrar histórico se houver vencedor usando função segura
-      if (winnerId && duel?.id && duel?.opponent_id) {
+      if (winnerId && duel?.id) {
         try {
-          // Determinar scores corretos - vencedor mantém LP, perdedor tem 0
-          const player1Score = winnerId === duel.creator_id ? player1LP : 0;
-          const player2Score = winnerId === duel.opponent_id ? player2LP : 0;
-          
-          console.log('📊 Registrando resultado:', {
-            duel_id: duel.id,
-            player1_id: duel.creator_id,
-            player2_id: duel.opponent_id,
-            winner_id: winnerId,
-            player1_score: player1Score,
-            player2_score: player2Score,
-            bet_amount: duel.bet_amount || 0
-          });
-
           const { error: matchError } = await supabase.rpc('record_match_result', {
             p_duel_id: duel.id,
             p_player1_id: duel.creator_id,
             p_player2_id: duel.opponent_id,
             p_winner_id: winnerId,
-            p_player1_score: player1Score,
-            p_player2_score: player2Score,
+            p_player1_score: winnerId === duel.opponent_id ? 0 : player1LP,
+            p_player2_score: winnerId === duel.creator_id ? 0 : player2LP,
             p_bet_amount: duel.bet_amount || 0
           });
 
           if (matchError) {
-            console.error('❌ Erro ao registrar resultado:', matchError);
+            console.error('Erro ao registrar resultado:', matchError);
             toast({
               title: "Erro ao registrar resultado",
               description: matchError.message,
               variant: "destructive",
             });
-          } else {
-            console.log('✅ Resultado registrado com sucesso');
-            toast({
-              title: "Resultado registrado!",
-              description: "Pontos atualizados no ranking",
-            });
           }
         } catch (error: any) {
-          console.error('❌ Erro ao registrar resultado:', error);
+          console.error('Erro ao registrar resultado:', error);
           toast({
             title: "Erro ao registrar resultado",
             description: error.message,
             variant: "destructive",
           });
         }
-      } else if (winnerId && !duel?.opponent_id) {
-        toast({
-          title: "Partida sem oponente",
-          description: "Não é possível registrar resultado sem dois jogadores",
-          variant: "destructive",
-        });
       }
 
       // Deletar o duelo após 60 minutos
@@ -525,25 +479,20 @@ const DuelRoom = () => {
     navigate('/duels');
   };
 
-  // Identificar quem é cada player
+  // Identificar quem é cada player - LÓGICA OTIMISTA PARA PLAYER 2
   const isPlayer1 = currentUser?.id === duel?.creator_id;
-  // Player 2: SOMENTE quem é opponent_id registrado no banco
-  const isPlayer2 = currentUser?.id === duel?.opponent_id;
+  // Player 2: É reconhecido como opponent OU qualquer usuário que não seja o criador
+  const isPlayer2 = currentUser?.id === duel?.opponent_id || (currentUser?.id && !isPlayer1);
   const isParticipant = isPlayer1 || isPlayer2;
   const currentUserPlayer: 'player1' | 'player2' | null = isPlayer1 ? 'player1' : (isPlayer2 ? 'player2' : null);
   
   // Debug logs para verificar identificação do player
-  useEffect(() => {
-    console.log('🎮 [PLAYER IDENTIFICATION] ===================');
-    console.log('🎮 Current User ID:', currentUser?.id);
-    console.log('🎮 Creator ID:', duel?.creator_id);
-    console.log('🎮 Opponent ID:', duel?.opponent_id);
-    console.log('🎮 isPlayer1:', isPlayer1);
-    console.log('🎮 isPlayer2:', isPlayer2);
-    console.log('🎮 isParticipant:', isParticipant);
-    console.log('🎮 currentUserPlayer:', currentUserPlayer);
-    console.log('🎮 ==========================================');
-  }, [currentUser?.id, duel?.creator_id, duel?.opponent_id, isPlayer1, isPlayer2, currentUserPlayer]);
+  console.log('🎮 [PLAYER] Current User ID:', currentUser?.id);
+  console.log('🎮 [PLAYER] Creator ID:', duel?.creator_id);
+  console.log('🎮 [PLAYER] Opponent ID:', duel?.opponent_id);
+  console.log('🎮 [PLAYER] isPlayer1:', isPlayer1);
+  console.log('🎮 [PLAYER] isPlayer2:', isPlayer2);
+  console.log('🎮 [PLAYER] currentUserPlayer:', currentUserPlayer);
 
   return (
     <div className="min-h-screen bg-background">
