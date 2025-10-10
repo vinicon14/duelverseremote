@@ -307,55 +307,39 @@ const DuelRoom = () => {
   };
 
   const updateLP = async (player: 'player1' | 'player2', amount: number) => {
+    if (!id) return;
+    
     const isPlayer1 = player === 'player1';
     const currentLP = isPlayer1 ? player1LP : player2LP;
     const newLP = Math.max(0, currentLP + amount);
 
-    console.log('💾 [UPDATE LP]', { player, amount, de: currentLP, para: newLP });
+    console.log('💾 [UPDATE LP] Iniciando:', { 
+      player, 
+      amount, 
+      currentLP, 
+      newLP,
+      estadoAtual: { player1LP, player2LP }
+    });
 
     try {
-      // Buscar valores atuais do banco ANTES de atualizar
-      const { data: currentDuel } = await supabase
-        .from('live_duels')
-        .select('player1_lp, player2_lp')
-        .eq('id', id)
-        .single();
-
-      if (!currentDuel) throw new Error('Duelo não encontrado');
-
-      console.log('💾 [UPDATE LP] Valores no banco:', currentDuel);
-
-      // Atualizar APENAS o campo do jogador atual, preservando o outro
-      const updateData = isPlayer1 
-        ? { player1_lp: newLP, player2_lp: currentDuel.player2_lp }
-        : { player1_lp: currentDuel.player1_lp, player2_lp: newLP };
-
-      console.log('💾 [UPDATE LP] Enviando update:', updateData);
-
+      // Atualizar APENAS o campo específico do jogador
       const { error } = await supabase
         .from('live_duels')
-        .update(updateData)
+        .update({ [player + '_lp']: newLP })
         .eq('id', id);
 
       if (error) {
-        console.error('💾 [UPDATE LP] ❌ Erro:', error);
+        console.error('💾 [UPDATE LP] ❌ Erro no banco:', error);
         throw error;
       }
 
-      console.log('💾 [UPDATE LP] ✅ Sucesso!');
-
-      // Atualizar estado local
-      if (isPlayer1) {
-        setPlayer1LP(newLP);
-      } else {
-        setPlayer2LP(newLP);
-      }
+      console.log('💾 [UPDATE LP] ✅ Atualizado no banco!');
 
       if (newLP === 0) {
         await endDuel(player === 'player1' ? duel?.opponent_id : duel?.creator_id);
       }
     } catch (error: any) {
-      console.error('💾 [UPDATE LP] ❌ Erro geral:', error);
+      console.error('💾 [UPDATE LP] ❌ Erro:', error);
       toast({
         title: "Erro ao atualizar LP",
         description: error.message,
@@ -365,54 +349,35 @@ const DuelRoom = () => {
   };
 
   const setLP = async (player: 'player1' | 'player2', value: number) => {
+    if (!id) return;
+    
     const newLP = Math.max(0, value);
     
-    console.log('💾 [SET LP]', { player, para: newLP });
+    console.log('💾 [SET LP] Iniciando:', { 
+      player, 
+      newLP,
+      estadoAtual: { player1LP, player2LP }
+    });
     
     try {
-      // Buscar valores atuais do banco ANTES de atualizar
-      const { data: currentDuel } = await supabase
-        .from('live_duels')
-        .select('player1_lp, player2_lp')
-        .eq('id', id)
-        .single();
-
-      if (!currentDuel) throw new Error('Duelo não encontrado');
-
-      console.log('💾 [SET LP] Valores no banco:', currentDuel);
-
-      // Atualizar APENAS o campo do jogador atual, preservando o outro
-      const isPlayer1 = player === 'player1';
-      const updateData = isPlayer1 
-        ? { player1_lp: newLP, player2_lp: currentDuel.player2_lp }
-        : { player1_lp: currentDuel.player1_lp, player2_lp: newLP };
-
-      console.log('💾 [SET LP] Enviando update:', updateData);
-
+      // Atualizar APENAS o campo específico do jogador
       const { error } = await supabase
         .from('live_duels')
-        .update(updateData)
+        .update({ [player + '_lp']: newLP })
         .eq('id', id);
 
       if (error) {
-        console.error('💾 [SET LP] ❌ Erro:', error);
+        console.error('💾 [SET LP] ❌ Erro no banco:', error);
         throw error;
       }
 
-      console.log('💾 [SET LP] ✅ Sucesso!');
-
-      // Atualizar estado local
-      if (player === 'player1') {
-        setPlayer1LP(newLP);
-      } else {
-        setPlayer2LP(newLP);
-      }
+      console.log('💾 [SET LP] ✅ Atualizado no banco!');
 
       if (newLP === 0) {
         await endDuel(player === 'player1' ? duel?.opponent_id : duel?.creator_id);
       }
     } catch (error: any) {
-      console.error('💾 [SET LP] ❌ Erro geral:', error);
+      console.error('💾 [SET LP] ❌ Erro:', error);
       toast({
         title: "Erro ao atualizar LP",
         description: error.message,
