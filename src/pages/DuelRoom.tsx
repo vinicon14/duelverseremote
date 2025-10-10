@@ -325,7 +325,16 @@ const DuelRoom = () => {
         }
       }
 
-      console.log('[DuelRoom] Acesso permitido, configurando sala');
+      console.log('[DuelRoom] 📍 Acesso permitido, configurando sala');
+      console.log('[DuelRoom] 🎮 Dados do duelo:', {
+        id: data.id,
+        creator_id: data.creator_id,
+        opponent_id: data.opponent_id,
+        creator_username: data.creator?.username,
+        opponent_username: data.opponent?.username,
+        status: data.status
+      });
+      
       setDuel(data);
       setPlayer1LP(data.player1_lp || 8000);
       setPlayer2LP(data.player2_lp || 8000);
@@ -558,19 +567,16 @@ const DuelRoom = () => {
   const isPlayer2 = currentUser?.id === duel?.opponent_id;
   const currentUserPlayer = isPlayer1 ? 'player1' : isPlayer2 ? 'player2' : null;
 
-  console.log('🎮 Control Status:', { 
-    currentUserId: currentUser?.id, 
-    creatorId: duel?.creator_id, 
-    opponentId: duel?.opponent_id,
-    creatorName: duel?.creator?.username,
-    opponentName: duel?.opponent?.username,
-    isPlayer1, 
-    isPlayer2,
-    isParticipant,
-    currentUserPlayer,
-    '>>> PLAYER 1 CONTROLA': 'player1_lp',
-    '>>> PLAYER 2 CONTROLA': 'player2_lp'
-  });
+  console.log('🎮 ========== CONTROLE DE PLAYERS ==========');
+  console.log('🎮 Current User ID:', currentUser?.id);
+  console.log('🎮 Creator ID (Player 1):', duel?.creator_id);
+  console.log('🎮 Opponent ID (Player 2):', duel?.opponent_id);
+  console.log('🎮 Creator Username:', duel?.creator?.username);
+  console.log('🎮 Opponent Username:', duel?.opponent?.username);
+  console.log('🎮 isPlayer1:', isPlayer1);
+  console.log('🎮 isPlayer2:', isPlayer2);
+  console.log('🎮 currentUserPlayer:', currentUserPlayer);
+  console.log('🎮 ==========================================');
 
   // Log adicional quando duel muda
   useEffect(() => {
@@ -579,18 +585,16 @@ const DuelRoom = () => {
       const calculatedPlayer2 = currentUser.id === duel.opponent_id;
       const calculatedCurrentUserPlayer = calculatedPlayer1 ? 'player1' : calculatedPlayer2 ? 'player2' : null;
       
-      console.log('🔄 Duelo atualizado - Verificando controles:', {
-        duel_id: duel.id,
-        currentUserId: currentUser.id,
-        creator_id: duel.creator_id,
-        opponent_id: duel.opponent_id,
-        isPlayer1: calculatedPlayer1,
-        isPlayer2: calculatedPlayer2,
-        has_opponent: !!duel.opponent_id,
-        currentUserPlayer: calculatedCurrentUserPlayer,
-        '>>> EU SOU': calculatedCurrentUserPlayer === 'player1' ? 'PLAYER 1 (Creator)' : calculatedCurrentUserPlayer === 'player2' ? 'PLAYER 2 (Opponent)' : 'ESPECTADOR',
-        '>>> EU CONTROLO': calculatedCurrentUserPlayer === 'player1' ? 'player1_lp' : calculatedCurrentUserPlayer === 'player2' ? 'player2_lp' : 'NADA'
-      });
+      console.log('🔄 ========== DUELO ATUALIZADO ==========');
+      console.log('🔄 Duel ID:', duel.id);
+      console.log('🔄 Current User ID:', currentUser.id);
+      console.log('🔄 Creator ID:', duel.creator_id);
+      console.log('🔄 Opponent ID:', duel.opponent_id);
+      console.log('🔄 Has Opponent?', !!duel.opponent_id);
+      console.log('🔄 isPlayer1?', calculatedPlayer1);
+      console.log('🔄 isPlayer2?', calculatedPlayer2);
+      console.log('🔄 currentUserPlayer:', calculatedCurrentUserPlayer);
+      console.log('🔄 ======================================');
     }
   }, [duel, currentUser]);
 
