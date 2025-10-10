@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Crown, Check, Copy, Mail } from "lucide-react";
@@ -16,9 +18,27 @@ export default function GetPro() {
   }, []);
 
   const fetchSettings = async () => {
-    // System settings table not yet implemented - using defaults
-    setSupportEmail('suporte@exemplo.com');
-    setPixKey('00020126580014br.gov.bcb.pix...');
+    try {
+      const { data, error } = await supabase
+        .from('system_settings')
+        .select('key, value')
+        .in('key', ['support_email', 'pix_key']);
+      
+      if (error) throw error;
+      
+      if (data) {
+        const emailSetting = data.find(s => s.key === 'support_email');
+        const pixSetting = data.find(s => s.key === 'pix_key');
+        
+        setSupportEmail(emailSetting?.value || 'suporte@exemplo.com');
+        setPixKey(pixSetting?.value || '00020126580014br.gov.bcb.pix...');
+      }
+    } catch (error) {
+      console.error('Error fetching settings:', error);
+      // Usar valores padrão em caso de erro
+      setSupportEmail('suporte@exemplo.com');
+      setPixKey('00020126580014br.gov.bcb.pix...');
+    }
   };
 
   const copyToClipboard = (text: string, label: string) => {
@@ -193,6 +213,3 @@ export default function GetPro() {
     </div>
   );
 }
-
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
