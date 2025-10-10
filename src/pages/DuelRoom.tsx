@@ -51,15 +51,16 @@ const DuelRoom = () => {
           filter: `id=eq.${id}`,
         },
         async (payload) => {
-          console.log('Duelo atualizado via realtime:', payload);
+          console.log('Realtime update recebido:', payload.new);
           if (payload.new) {
+            // Sempre atualizar LP quando receber update
             setPlayer1LP(payload.new.player1_lp || 8000);
             setPlayer2LP(payload.new.player2_lp || 8000);
             
-            // Atualizar dados do duelo se opponent entrou
+            // Se opponent_id foi adicionado, buscar dados completos
             if (payload.new.opponent_id && !duel?.opponent_id) {
-              console.log('Opponent detectado no realtime, refazendo fetch');
-              fetchDuel();
+              console.log('Opponent detectado, buscando dados completos');
+              await fetchDuel();
             }
           }
         }
@@ -71,8 +72,8 @@ const DuelRoom = () => {
     };
   }, [id, duel?.opponent_id]);
 
-  const startCallTimer = () => {
-    callStartTime.current = Date.now();
+  const startCallTimer = (startedAt: string) => {
+    callStartTime.current = new Date(startedAt).getTime();
     const MAX_DURATION = 3600; // 60 minutos em segundos
     
     timerInterval.current = setInterval(() => {
@@ -132,12 +133,13 @@ const DuelRoom = () => {
       
       if (error) {
         console.error('Erro ao registrar opponent:', error);
+        return false;
       } else {
         console.log('Opponent registrado com sucesso');
-        // Atualizar o state local com o opponent_id
-        setDuel({ ...duelData, opponent_id: userId });
+        return true;
       }
     }
+    return false;
   };
 
   const fetchDuel = async () => {
@@ -173,7 +175,25 @@ const DuelRoom = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         console.log('Usuario atual:', session.user.id, 'Creator:', data.creator_id, 'Opponent:', data.opponent_id);
-        await registerAsOpponent(session.user.id, data);
+        const registered = await registerAsOpponent(session.user.id, data);
+        
+        // Se registrou como opponent, buscar dados atualizados
+        if (registered) {
+          const { data: updatedData } = await supabase
+            .from('live_duels')
+            .select(`
+              *,
+              creator:profiles!live_duels_creator_id_fkey(username, avatar_url, user_id),
+              opponent:profiles!live_duels_opponent_id_fkey(username, avatar_url, user_id)
+            `)
+            .eq('id', id)
+            .maybeSingle();
+          
+          if (updatedData) {
+            console.log('Dados atualizados após registro:', updatedData);
+            setDuel(updatedData);
+          }
+        }
       }
 
       // Criar sala Daily.co
@@ -195,8 +215,9 @@ const DuelRoom = () => {
         setRoomUrl(roomData.url);
       }
 
-      // Iniciar duelo se ainda não foi iniciado
-      if (!data.started_at) {
+      // Garantir que started_at existe (criar se não existir)
+      let startedAt = data.started_at;
+      if (!startedAt) {
         const now = new Date().toISOString();
         await supabase
           .from('live_duels')
@@ -205,17 +226,14 @@ const DuelRoom = () => {
             status: 'in_progress'
           })
           .eq('id', id);
-        
-        callStartTime.current = new Date(now).getTime();
-      } else {
-        callStartTime.current = new Date(data.started_at).getTime();
+        startedAt = now;
       }
 
-      // Iniciar timer
-      startCallTimer();
+      // Iniciar timer baseado no started_at do banco
+      startCallTimer(startedAt);
 
       // Verificar se já passou 60 minutos
-      const elapsed = Math.floor((Date.now() - callStartTime.current) / 1000);
+      const elapsed = Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000);
       if (elapsed >= 3600) {
         await endDuel();
       }
