@@ -42,7 +42,7 @@ export default function Home() {
       .from('news')
       .select(`
         *,
-        author:profiles(username, display_name, user_id)
+        author:profiles(username, user_id)
       `)
       .order('created_at', { ascending: false })
       .limit(10);
