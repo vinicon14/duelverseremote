@@ -479,10 +479,19 @@ const DuelRoom = () => {
 
   // Identificar quem é cada player - LÓGICA OTIMISTA PARA PLAYER 2
   const isPlayer1 = currentUser?.id === duel?.creator_id;
-  // Player 2: É reconhecido como opponent OU não é o criador (assumir que é o segundo jogador)
-  const isPlayer2 = currentUser?.id === duel?.opponent_id || (!isPlayer1 && currentUser?.id);
+  // Player 2: É reconhecido como opponent OU qualquer usuário que não seja o criador
+  const isPlayer2 = currentUser?.id === duel?.opponent_id || (currentUser?.id && !isPlayer1);
   const isParticipant = isPlayer1 || isPlayer2;
-  const currentUserPlayer = isPlayer1 ? 'player1' : isPlayer2 ? 'player2' : null;
+  const currentUserPlayer: 'player1' | 'player2' | null = isPlayer1 ? 'player1' : (isPlayer2 ? 'player2' : null);
+  
+  console.log('👤 Identificação de Players:', {
+    currentUserId: currentUser?.id,
+    creatorId: duel?.creator_id,
+    opponentId: duel?.opponent_id,
+    isPlayer1,
+    isPlayer2,
+    currentUserPlayer
+  });
 
   return (
     <div className="min-h-screen bg-background">
