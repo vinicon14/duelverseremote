@@ -42,16 +42,12 @@ export default function Home() {
       .from('news')
       .select(`
         *,
-        author:profiles!news_author_id_fkey(username, user_id)
+        author:profiles(username, display_name, user_id)
       `)
       .order('created_at', { ascending: false })
       .limit(10);
 
-    if (error) {
-      console.error('Error fetching news:', error);
-    }
-    
-    if (data) {
+    if (!error && data) {
       setNews(data);
     }
     setLoading(false);
