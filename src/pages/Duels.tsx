@@ -227,9 +227,13 @@ const Duels = () => {
       }
 
       console.log('[Duels] Atualizando duelo com opponent...');
+      
+      // CRITICAL: Garantir que user.id é um UUID válido
+      console.log('[Duels] User ID type:', typeof user.id);
+      console.log('[Duels] User ID value:', user.id);
 
       // Atualizar o duelo adicionando o opponent
-      const { error } = await supabase
+      const { error, data: updateResult } = await supabase
         .from('live_duels')
         .update({
           opponent_id: user.id,
@@ -237,13 +241,15 @@ const Duels = () => {
           started_at: new Date().toISOString(),
         })
         .eq('id', duelId)
-        .is('opponent_id', null);
+        .is('opponent_id', null)
+        .select();
 
       if (error) {
         console.error('[Duels] Erro ao entrar no duelo:', error);
         throw error;
       }
 
+      console.log('[Duels] Update result:', updateResult);
       console.log('[Duels] Opponent adicionado com sucesso, redirecionando...');
 
       toast({

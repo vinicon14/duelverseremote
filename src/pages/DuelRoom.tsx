@@ -97,7 +97,10 @@ const DuelRoom = () => {
                   creator_id: updatedDuel.creator_id,
                   opponent_id: updatedDuel.opponent_id
                 });
+                
+                // CRITICAL: Atualizar o estado com os novos dados
                 setDuel(updatedDuel);
+                console.log('[DuelRoom] ✅ setDuel() chamado - componente deve re-renderizar');
                 
                 // Atualizar status para in_progress quando opponent entrar
                 if (updatedDuel.status !== 'in_progress') {
@@ -111,7 +114,8 @@ const DuelRoom = () => {
                 // Timer já deve estar rodando, mas garantir
                 if (!timerInterval.current && updatedDuel.started_at) {
                   console.log('[DuelRoom] ▶️ Iniciando timer (estava pausado)');
-                  startCallTimer(updatedDuel.started_at);
+                  const durationMins = updatedDuel.duration_minutes || 60;
+                  startCallTimer(updatedDuel.started_at, durationMins);
                 } else {
                   console.log('[DuelRoom] ⏸️ Timer já está rodando ou started_at não existe');
                 }
@@ -314,8 +318,13 @@ const DuelRoom = () => {
             }
 
             console.log('[DuelRoom] ✅ Usuário adicionado como PLAYER 2, recarregando dados...');
+            console.log('[DuelRoom] User ID sendo usado:', userId);
+            console.log('[DuelRoom] User ID type:', typeof userId);
             
-            const { data: updatedData } = await supabase
+            // CRITICAL: Aguardar um pouco para garantir que o banco processou
+            await new Promise(resolve => setTimeout(resolve, 800));
+            
+            const { data: updatedData, error: reloadError } = await supabase
               .from('live_duels')
               .select(`
                 *,
@@ -325,9 +334,27 @@ const DuelRoom = () => {
               .eq('id', id)
               .maybeSingle();
 
+            if (reloadError) {
+              console.error('[DuelRoom] ❌ Erro ao recarregar:', reloadError);
+            }
+
             if (updatedData) {
               data = updatedData;
-              console.log('[DuelRoom] 🎮 Dados atualizados - Player 1:', data.creator?.username, 'Player 2:', data.opponent?.username);
+              
+              // CRITICAL: Recalcular isOpponent após recarga
+              isOpponent = updatedData.opponent_id === userId;
+              
+              console.log('[DuelRoom] 🎮 Dados atualizados após entrada:', {
+                player1: updatedData.creator?.username,
+                player2: updatedData.opponent?.username,
+                creator_id: updatedData.creator_id,
+                opponent_id: updatedData.opponent_id,
+                userId: userId,
+                isOpponent: isOpponent,
+                'opponent_id === userId': updatedData.opponent_id === userId
+              });
+            } else {
+              console.error('[DuelRoom] ❌ updatedData está vazio!');
             }
           } catch (error) {
             console.error('[DuelRoom] ❌ Exceção ao entrar na sala:', error);
@@ -358,16 +385,23 @@ const DuelRoom = () => {
       }
 
       console.log('[DuelRoom] 📍 Acesso permitido, configurando sala');
-      console.log('[DuelRoom] 🎮 Dados do duelo:', {
+      console.log('[DuelRoom] 🎮 Dados do duelo ANTES de setDuel:', {
         id: data.id,
         creator_id: data.creator_id,
         opponent_id: data.opponent_id,
         creator_username: data.creator?.username,
         opponent_username: data.opponent?.username,
-        status: data.status
+        status: data.status,
+        userId: userId,
+        isPlayer1: isCreator,
+        isPlayer2: isOpponent
       });
       
       setDuel(data);
+      
+      // Log após setDuel para confirmar
+      console.log('[DuelRoom] ✅ setDuel executado, estado deve atualizar');
+      
       setPlayer1LP(data.player1_lp || 8000);
       setPlayer2LP(data.player2_lp || 8000);
 
@@ -621,13 +655,13 @@ const DuelRoom = () => {
     navigate('/duels');
   };
 
-  // Identificar quem é cada player
+  // Identificar quem é cada player - USAR ESTADO ATUALIZADO DO DUEL
   const isParticipant = currentUser?.id === duel?.creator_id || currentUser?.id === duel?.opponent_id;
   const isPlayer1 = currentUser?.id === duel?.creator_id;
   const isPlayer2 = currentUser?.id === duel?.opponent_id;
   const currentUserPlayer = isPlayer1 ? 'player1' : isPlayer2 ? 'player2' : null;
 
-  console.log('🎮 ========== CONTROLE DE PLAYERS ==========');
+  console.log('🎮 ========== CONTROLE DE PLAYERS (RENDER) ==========');
   console.log('🎮 Current User ID:', currentUser?.id);
   console.log('🎮 Creator ID (Player 1):', duel?.creator_id);
   console.log('🎮 Opponent ID (Player 2):', duel?.opponent_id);
@@ -636,7 +670,12 @@ const DuelRoom = () => {
   console.log('🎮 isPlayer1:', isPlayer1);
   console.log('🎮 isPlayer2:', isPlayer2);
   console.log('🎮 currentUserPlayer:', currentUserPlayer);
-  console.log('🎮 ==========================================');
+  console.log('🎮 PASSANDO PARA FloatingCalculator:', {
+    player1Name: duel?.creator?.username || 'Player 1',
+    player2Name: duel?.opponent?.username || 'Player 2',
+    currentUserPlayer: currentUserPlayer
+  });
+  console.log('🎮 ===================================================');
 
   // Log adicional quando duel muda
   useEffect(() => {
