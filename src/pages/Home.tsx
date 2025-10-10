@@ -18,7 +18,15 @@ export default function Home() {
 
   useEffect(() => {
     fetchNews();
-    if (!isPro) {
+    fetchAds();
+  }, []);
+
+  useEffect(() => {
+    if (isPro) {
+      // Limpar anúncios se for PRO
+      setAds([]);
+    } else {
+      // Buscar anúncios se não for PRO
       fetchAds();
     }
   }, [isPro]);

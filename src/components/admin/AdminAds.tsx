@@ -15,6 +15,7 @@ export const AdminAds = () => {
   const [editingAd, setEditingAd] = useState<any>(null);
   const [formData, setFormData] = useState({
     title: '',
+    content: '',
     image_url: '',
     link_url: '',
     is_active: true,
@@ -123,7 +124,7 @@ export const AdminAds = () => {
 
     setOpen(false);
     setEditingAd(null);
-    setFormData({ title: '', image_url: '', link_url: '', is_active: true, expires_at: '' });
+    setFormData({ title: '', content: '', image_url: '', link_url: '', is_active: true, expires_at: '' });
     setMediaFile(null);
     setMediaPreview('');
     fetchAds();
@@ -146,6 +147,7 @@ export const AdminAds = () => {
     setEditingAd(item);
     setFormData({
       title: item.title,
+      content: item.content || '',
       image_url: item.image_url || '',
       link_url: item.link_url || '',
       is_active: item.is_active,
@@ -164,7 +166,7 @@ export const AdminAds = () => {
           setOpen(isOpen);
           if (!isOpen) {
             setEditingAd(null);
-            setFormData({ title: '', image_url: '', link_url: '', is_active: true, expires_at: '' });
+            setFormData({ title: '', content: '', image_url: '', link_url: '', is_active: true, expires_at: '' });
             setMediaFile(null);
             setMediaPreview('');
           }
@@ -189,6 +191,15 @@ export const AdminAds = () => {
                   value={formData.title}
                   onChange={(e) => setFormData({...formData, title: e.target.value})}
                   required
+                />
+              </div>
+              <div>
+                <Label>Descrição</Label>
+                <Input 
+                  value={formData.content}
+                  onChange={(e) => setFormData({...formData, content: e.target.value})}
+                  required
+                  placeholder="Breve descrição do anúncio"
                 />
               </div>
               <div>
@@ -302,7 +313,12 @@ export const AdminAds = () => {
                   )}
                 </div>
               )}
-              <p className="text-sm text-muted-foreground">
+              {item.content && (
+                <p className="text-sm text-muted-foreground mb-2">
+                  {item.content}
+                </p>
+              )}
+              <p className="text-xs text-muted-foreground">
                 Link: {item.link_url}
               </p>
             </CardContent>
