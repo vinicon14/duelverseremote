@@ -120,6 +120,16 @@ const DuelRoom = () => {
     setCurrentUser(session.user);
   };
 
+  // Registrar usuário como opponent se não for o criador
+  const registerAsOpponent = async (userId: string, duelData: any) => {
+    if (!duelData.opponent_id && userId !== duelData.creator_id) {
+      await supabase
+        .from('live_duels')
+        .update({ opponent_id: userId })
+        .eq('id', id);
+    }
+  };
+
   const fetchDuel = async () => {
     try {
       const { data, error } = await supabase
@@ -147,6 +157,12 @@ const DuelRoom = () => {
       setDuel(data);
       setPlayer1LP(data.player1_lp || 8000);
       setPlayer2LP(data.player2_lp || 8000);
+
+      // Registrar como opponent se necessário
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        await registerAsOpponent(session.user.id, data);
+      }
 
       // Criar sala Daily.co
       const { data: roomData, error: roomError } = await supabase.functions.invoke('create-daily-room', {
@@ -335,8 +351,7 @@ const DuelRoom = () => {
   };
 
   const isPlayer1 = currentUser?.id === duel?.creator_id;
-  // Qualquer usuário que não seja o player1 pode controlar o player2
-  const isPlayer2 = currentUser?.id !== duel?.creator_id;
+  const isPlayer2 = currentUser?.id === duel?.opponent_id;
   const canControlLP = isPlayer1 || isPlayer2;
 
   return (
