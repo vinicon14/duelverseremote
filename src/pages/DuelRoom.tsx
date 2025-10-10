@@ -370,10 +370,30 @@ const DuelRoom = () => {
   const setLP = async (player: 'player1' | 'player2', value: number) => {
     if (!id) return;
     
+    console.log('💾 [SET LP] 🔵 INICIANDO:', { 
+      player, 
+      value,
+      currentUserPlayer,
+      currentUserId: currentUser?.id,
+      creatorId: duel?.creator_id,
+      opponentId: duel?.opponent_id
+    });
+    
+    // Validar se o jogador pode atualizar seu próprio LP
+    if ((player === 'player1' && currentUserPlayer !== 'player1') ||
+        (player === 'player2' && currentUserPlayer !== 'player2')) {
+      console.error('💾 [SET LP] ❌ Jogador não autorizado a editar este LP');
+      toast({
+        title: "Não autorizado",
+        description: "Você só pode editar seus próprios Life Points",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     const newLP = Math.max(0, value);
     
-    console.log('💾 [SET LP] Iniciando:', { 
-      player, 
+    console.log('💾 [SET LP] Novo valor:', { 
       newLP,
       estadoAtual: { player1LP, player2LP }
     });
@@ -505,20 +525,25 @@ const DuelRoom = () => {
     navigate('/duels');
   };
 
-  // Identificar quem é cada player - LÓGICA OTIMISTA PARA PLAYER 2
+  // Identificar quem é cada player
   const isPlayer1 = currentUser?.id === duel?.creator_id;
-  // Player 2: É reconhecido como opponent OU qualquer usuário que não seja o criador
-  const isPlayer2 = currentUser?.id === duel?.opponent_id || (currentUser?.id && !isPlayer1);
+  // Player 2: SOMENTE quem é opponent_id registrado no banco
+  const isPlayer2 = currentUser?.id === duel?.opponent_id;
   const isParticipant = isPlayer1 || isPlayer2;
   const currentUserPlayer: 'player1' | 'player2' | null = isPlayer1 ? 'player1' : (isPlayer2 ? 'player2' : null);
   
   // Debug logs para verificar identificação do player
-  console.log('🎮 [PLAYER] Current User ID:', currentUser?.id);
-  console.log('🎮 [PLAYER] Creator ID:', duel?.creator_id);
-  console.log('🎮 [PLAYER] Opponent ID:', duel?.opponent_id);
-  console.log('🎮 [PLAYER] isPlayer1:', isPlayer1);
-  console.log('🎮 [PLAYER] isPlayer2:', isPlayer2);
-  console.log('🎮 [PLAYER] currentUserPlayer:', currentUserPlayer);
+  useEffect(() => {
+    console.log('🎮 [PLAYER IDENTIFICATION] ===================');
+    console.log('🎮 Current User ID:', currentUser?.id);
+    console.log('🎮 Creator ID:', duel?.creator_id);
+    console.log('🎮 Opponent ID:', duel?.opponent_id);
+    console.log('🎮 isPlayer1:', isPlayer1);
+    console.log('🎮 isPlayer2:', isPlayer2);
+    console.log('🎮 isParticipant:', isParticipant);
+    console.log('🎮 currentUserPlayer:', currentUserPlayer);
+    console.log('🎮 ==========================================');
+  }, [currentUser?.id, duel?.creator_id, duel?.opponent_id, isPlayer1, isPlayer2, currentUserPlayer]);
 
   return (
     <div className="min-h-screen bg-background">
