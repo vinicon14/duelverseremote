@@ -443,6 +443,28 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      get_leaderboard: {
+        Args: { limit_count?: number }
+        Returns: {
+          avatar_url: string
+          losses: number
+          points: number
+          user_id: string
+          username: string
+          wins: number
+        }[]
+      }
+      get_user_profile: {
+        Args: { p_user_id: string }
+        Returns: {
+          avatar_url: string
+          losses: number
+          points: number
+          user_id: string
+          username: string
+          wins: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -453,6 +475,27 @@ export type Database = {
       is_admin: {
         Args: { _user_id: string }
         Returns: boolean
+      }
+      record_match_result: {
+        Args: {
+          p_bet_amount: number
+          p_duel_id: string
+          p_player1_id: string
+          p_player1_score: number
+          p_player2_id: string
+          p_player2_score: number
+          p_winner_id: string
+        }
+        Returns: string
+      }
+      search_users: {
+        Args: { limit_count?: number; search_term: string }
+        Returns: {
+          avatar_url: string
+          points: number
+          user_id: string
+          username: string
+        }[]
       }
     }
     Enums: {

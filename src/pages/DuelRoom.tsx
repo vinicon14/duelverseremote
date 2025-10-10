@@ -271,52 +271,34 @@ const DuelRoom = () => {
         })
         .eq('id', id);
 
-      // Registrar histórico se houver vencedor
-      if (winnerId) {
-        await supabase.from('match_history').insert({
-          player1_id: duel?.creator_id,
-          player2_id: duel?.opponent_id,
-          winner_id: winnerId,
-          bet_amount: duel?.bet_amount || 0,
-          player1_score: winnerId === duel?.opponent_id ? 0 : player1LP,
-          player2_score: winnerId === duel?.creator_id ? 0 : player2LP,
-        });
+      // Registrar histórico se houver vencedor usando função segura
+      if (winnerId && duel?.id) {
+        try {
+          const { error: matchError } = await supabase.rpc('record_match_result', {
+            p_duel_id: duel.id,
+            p_player1_id: duel.creator_id,
+            p_player2_id: duel.opponent_id,
+            p_winner_id: winnerId,
+            p_player1_score: winnerId === duel.opponent_id ? 0 : player1LP,
+            p_player2_score: winnerId === duel.creator_id ? 0 : player2LP,
+            p_bet_amount: duel.bet_amount || 0
+          });
 
-        // Atualizar vitórias e derrotas dos perfis
-        const loserId = winnerId === duel?.creator_id ? duel?.opponent_id : duel?.creator_id;
-        
-        // Buscar perfis atuais
-        const { data: winnerProfile } = await supabase
-          .from('profiles')
-          .select('wins, points')
-          .eq('user_id', winnerId)
-          .single();
-
-        const { data: loserProfile } = await supabase
-          .from('profiles')
-          .select('losses, points')
-          .eq('user_id', loserId)
-          .single();
-
-        // Atualizar vencedor
-        if (winnerProfile) {
-          await supabase
-            .from('profiles')
-            .update({ 
-              wins: (winnerProfile.wins || 0) + 1,
-              points: (winnerProfile.points || 0) + 100
-            })
-            .eq('user_id', winnerId);
-        }
-        
-        // Atualizar perdedor
-        if (loserProfile) {
-          await supabase
-            .from('profiles')
-            .update({ 
-              losses: (loserProfile.losses || 0) + 1
-            })
-            .eq('user_id', loserId);
+          if (matchError) {
+            console.error('Erro ao registrar resultado:', matchError);
+            toast({
+              title: "Erro ao registrar resultado",
+              description: matchError.message,
+              variant: "destructive",
+            });
+          }
+        } catch (error: any) {
+          console.error('Erro ao registrar resultado:', error);
+          toast({
+            title: "Erro ao registrar resultado",
+            description: error.message,
+            variant: "destructive",
+          });
         }
       }
 
