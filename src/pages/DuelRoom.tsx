@@ -150,6 +150,7 @@ const DuelRoom = () => {
       if (error) throw error;
       
       if (!data) {
+        console.log('[DuelRoom] Duelo não encontrado');
         toast({
           title: "Duelo não encontrado",
           description: "Este duelo não existe ou foi removido.",
@@ -159,11 +160,19 @@ const DuelRoom = () => {
         return;
       }
       
-      console.log('Duelo carregado:', data);
+      console.log('[DuelRoom] Duelo carregado:', {
+        id: data.id,
+        creator_id: data.creator_id,
+        opponent_id: data.opponent_id,
+        status: data.status
+      });
 
-      // NOVO: Se está aguardando opponent, redirecionar de volta para Duels
       const { data: { session } } = await supabase.auth.getSession();
+      console.log('[DuelRoom] Current user:', session?.user?.id);
+      
+      // Se está aguardando opponent E o usuário é o criador, redirecionar de volta
       if (session?.user && session.user.id === data.creator_id && !data.opponent_id) {
+        console.log('[DuelRoom] Criador aguardando opponent, redirecionando para /duels');
         toast({
           title: "Aguardando oponente",
           description: "Você será redirecionado automaticamente quando alguém entrar.",
@@ -172,23 +181,28 @@ const DuelRoom = () => {
         return;
       }
 
-      // Se não é participante, bloquear acesso
-      if (session?.user && data.creator_id !== session.user.id && data.opponent_id !== session.user.id) {
+      // Se a sala já tem 2 jogadores completos e o usuário atual não é participante, bloquear
+      if (session?.user && data.opponent_id && 
+          data.creator_id !== session.user.id && 
+          data.opponent_id !== session.user.id) {
+        console.log('[DuelRoom] Acesso negado - sala completa e usuário não é participante');
         toast({
           title: "Acesso negado",
-          description: "Você não é participante desta sala.",
+          description: "Esta sala já está completa com 2 jogadores.",
           variant: "destructive",
         });
         navigate('/duels');
         return;
       }
 
+      console.log('[DuelRoom] Acesso permitido, carregando sala');
       setDuel(data);
       setPlayer1LP(data.player1_lp || 8000);
       setPlayer2LP(data.player2_lp || 8000);
 
       // Criar sala Daily.co somente se ambos players estiverem presentes
       if (data.opponent_id && data.creator_id) {
+        console.log('[DuelRoom] Ambos jogadores presentes, criando sala Daily.co');
         const { data: roomData, error: roomError } = await supabase.functions.invoke('create-daily-room', {
           body: { roomName: `duelverse-${id}` }
         });
@@ -206,11 +220,14 @@ const DuelRoom = () => {
           console.log('Setting room URL:', roomData.url);
           setRoomUrl(roomData.url);
         }
+      } else {
+        console.log('[DuelRoom] Aguardando segundo jogador para criar sala Daily.co');
       }
 
       // Garantir que started_at existe (criar se não existir)
       let startedAt = data.started_at;
       if (!startedAt && data.opponent_id) {
+        console.log('[DuelRoom] Definindo started_at');
         const now = new Date().toISOString();
         await supabase
           .from('live_duels')
@@ -229,10 +246,12 @@ const DuelRoom = () => {
         // Verificar se já passou 60 minutos
         const elapsed = Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000);
         if (elapsed >= 3600) {
+          console.log('[DuelRoom] Tempo esgotado (60 minutos)');
           await endDuel();
         }
       }
     } catch (error: any) {
+      console.error('[DuelRoom] Error in fetchDuel:', error);
       toast({
         title: "Erro ao carregar duelo",
         description: error.message,

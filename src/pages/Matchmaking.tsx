@@ -151,12 +151,24 @@ export default function Matchmaking() {
         return;
       }
 
-      toast.success("Sala encontrada! Redirecionando para a chamada...");
+      toast.success("Sala encontrada! Carregando chamada...");
       
-      // Redirecionar após pequeno delay para dar tempo do realtime notificar o criador
-      setTimeout(() => {
+      // Aguardar para garantir que o banco foi atualizado
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Verificar se foi realmente atualizado antes de redirecionar
+      const { data: updatedDuel } = await supabase
+        .from("live_duels")
+        .select('opponent_id')
+        .eq("id", randomDuel.id)
+        .single();
+      
+      if (updatedDuel?.opponent_id === session.user.id) {
         navigate(`/duel/${randomDuel.id}`);
-      }, 500);
+      } else {
+        toast.error("Erro ao confirmar entrada. Tente novamente.");
+        setSearching(false);
+      }
     } catch (error: any) {
       console.error("Unexpected error in joinQueue:", error);
       toast.error("Erro inesperado: " + error.message);

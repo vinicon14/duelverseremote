@@ -18,22 +18,53 @@ export const AdminSettings = () => {
   }, []);
 
   const fetchSettings = async () => {
-    // Table doesn't exist yet - using default values
-    setSupportEmail('suporte@exemplo.com');
-    setPixKey('');
+    try {
+      const { data, error } = await supabase
+        .from('system_settings')
+        .select('*');
+      
+      if (error) throw error;
+      
+      if (data) {
+        const emailSetting = data.find(s => s.key === 'support_email');
+        const pixSetting = data.find(s => s.key === 'pix_key');
+        
+        if (emailSetting) setSupportEmail(emailSetting.value || '');
+        if (pixSetting) setPixKey(pixSetting.value || '');
+      }
+    } catch (error) {
+      console.error('Error fetching settings:', error);
+    }
   };
 
   const saveSettings = async () => {
     setLoading(true);
     try {
+      // Atualizar support_email
+      const { error: emailError } = await supabase
+        .from('system_settings')
+        .update({ value: supportEmail, updated_at: new Date().toISOString() })
+        .eq('key', 'support_email');
+      
+      if (emailError) throw emailError;
+
+      // Atualizar pix_key
+      const { error: pixError } = await supabase
+        .from('system_settings')
+        .update({ value: pixKey, updated_at: new Date().toISOString() })
+        .eq('key', 'pix_key');
+      
+      if (pixError) throw pixError;
+
       toast({ 
         title: "Configurações salvas",
         description: "As configurações foram atualizadas com sucesso!"
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Error saving settings:', error);
       toast({ 
         title: "Erro ao salvar",
-        description: "Não foi possível salvar as configurações",
+        description: error.message || "Não foi possível salvar as configurações",
         variant: "destructive"
       });
     } finally {

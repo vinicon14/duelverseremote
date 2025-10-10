@@ -201,13 +201,28 @@ const Duels = () => {
 
       toast({
         title: "Entrando na partida!",
-        description: "Redirecionando para a chamada...",
+        description: "Aguarde enquanto carregamos a chamada...",
       });
 
-      // Redirecionar após pequeno delay para dar tempo do realtime notificar o criador
-      setTimeout(() => {
+      // Aguardar para garantir que o banco foi atualizado
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Verificar se foi realmente atualizado antes de redirecionar
+      const { data: updatedDuel } = await supabase
+        .from('live_duels')
+        .select('opponent_id')
+        .eq('id', duelId)
+        .single();
+      
+      if (updatedDuel?.opponent_id === user.id) {
         navigate(`/duel/${duelId}`);
-      }, 500);
+      } else {
+        toast({
+          title: "Erro ao entrar",
+          description: "Não foi possível confirmar sua entrada. Tente novamente.",
+          variant: "destructive",
+        });
+      }
     } catch (error: any) {
       toast({
         title: "Erro ao entrar no duelo",
@@ -341,7 +356,7 @@ const Duels = () => {
                     <div className="flex items-center justify-between text-sm">
                       <div className="flex items-center text-muted-foreground">
                         <Users className="w-4 h-4 mr-2" />
-                        {duel.player2_id ? '2/2' : '1/2'} jogadores
+                        {duel.opponent_id ? '2/2' : '1/2'} jogadores
                       </div>
                       <div className="flex items-center text-muted-foreground">
                         <Clock className="w-4 h-4 mr-2" />
@@ -352,7 +367,7 @@ const Duels = () => {
                       </div>
                     </div>
 
-                    {duel.status === 'waiting' && (
+                    {duel.status === 'waiting' && !duel.opponent_id && (
                       <Button
                         onClick={() => joinDuel(duel.id)}
                         className="w-full btn-mystic text-white"
@@ -362,13 +377,24 @@ const Duels = () => {
                       </Button>
                     )}
 
-                    {duel.status === 'in_progress' && (
+                    {duel.status === 'in_progress' && !duel.opponent_id && (
                       <Button
-                        onClick={() => navigate(`/duel/${duel.id}`)}
+                        onClick={() => joinDuel(duel.id)}
                         className="w-full btn-mystic text-white"
                       >
                         <Users className="mr-2 h-4 w-4" />
                         Entrar na Sala
+                      </Button>
+                    )}
+
+                    {duel.status === 'in_progress' && duel.opponent_id && (
+                      <Button
+                        disabled
+                        className="w-full"
+                        variant="outline"
+                      >
+                        <Users className="mr-2 h-4 w-4" />
+                        Sala Completa
                       </Button>
                     )}
                   </div>
