@@ -46,6 +46,8 @@ const DuelRoom = () => {
   useEffect(() => {
     if (!id || !currentUser) return;
 
+    console.log('🔴 Configurando listener realtime para duel:', id);
+
     const channel = supabase
       .channel(`duel-${id}`)
       .on(
@@ -57,16 +59,25 @@ const DuelRoom = () => {
           filter: `id=eq.${id}`,
         },
         async (payload) => {
+          console.log('🔴 Recebeu update realtime:', payload);
+          
           if (payload.new) {
-            // Sempre atualizar LP
+            // Sempre atualizar LP imediatamente
             const newPlayer1LP = payload.new.player1_lp || 8000;
             const newPlayer2LP = payload.new.player2_lp || 8000;
+            
+            console.log('🔴 Atualizando LPs locais:', { 
+              player1LP: newPlayer1LP, 
+              player2LP: newPlayer2LP 
+            });
             
             setPlayer1LP(newPlayer1LP);
             setPlayer2LP(newPlayer2LP);
             
             // Se opponent_id mudou (alguém entrou), recarregar dados do duelo
             if (payload.new.opponent_id && (!duel?.opponent_id || payload.new.opponent_id !== duel?.opponent_id)) {
+              console.log('🔴 Opponent entrou, recarregando dados do duelo');
+              
               const { data: updatedDuel, error: reloadError } = await supabase
                 .from('live_duels')
                 .select(`
@@ -326,6 +337,8 @@ const DuelRoom = () => {
     const currentLP = isPlayer1 ? player1LP : player2LP;
     const newLP = Math.max(0, currentLP + amount);
 
+    console.log('💾 UPDATE LP:', { player, amount, currentLP, newLP });
+
     try {
       const { error } = await supabase
         .from('live_duels')
@@ -334,9 +347,14 @@ const DuelRoom = () => {
         })
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('💾 ❌ Erro ao atualizar LP no banco:', error);
+        throw error;
+      }
 
-      // Atualizar estado local após sucesso no banco
+      console.log('💾 ✅ LP atualizado no banco com sucesso');
+
+      // Atualizar estado local imediatamente (realtime vai confirmar)
       if (isPlayer1) {
         setPlayer1LP(newLP);
       } else {
@@ -346,8 +364,6 @@ const DuelRoom = () => {
       if (newLP === 0) {
         await endDuel(player === 'player1' ? duel?.opponent_id : duel?.creator_id);
       }
-
-      console.log('💾 ✅ LP atualizado com sucesso');
     } catch (error: any) {
       console.error('💾 ❌ Erro ao atualizar LP:', error);
       toast({
@@ -361,15 +377,7 @@ const DuelRoom = () => {
   const setLP = async (player: 'player1' | 'player2', value: number) => {
     const newLP = Math.max(0, value);
     
-    console.log('💾 ========== SET LP DIRETO ==========');
-    console.log('💾 Player sendo atualizado:', player);
-    console.log('💾 Current User ID:', currentUser?.id);
-    console.log('💾 Creator ID:', duel?.creator_id);
-    console.log('💾 Opponent ID:', duel?.opponent_id);
-    console.log('💾 É Player 1?', currentUser?.id === duel?.creator_id);
-    console.log('💾 É Player 2?', currentUser?.id === duel?.opponent_id);
-    console.log('💾 Novo valor:', newLP);
-    console.log('💾 ====================================');
+    console.log('💾 SET LP DIRETO:', { player, value: newLP });
     
     try {
       const { error } = await supabase
@@ -379,9 +387,14 @@ const DuelRoom = () => {
         })
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('💾 ❌ Erro ao definir LP no banco:', error);
+        throw error;
+      }
 
-      // Atualizar estado local após sucesso no banco
+      console.log('💾 ✅ LP definido no banco com sucesso');
+
+      // Atualizar estado local imediatamente (realtime vai confirmar)
       if (player === 'player1') {
         setPlayer1LP(newLP);
       } else {
@@ -391,8 +404,6 @@ const DuelRoom = () => {
       if (newLP === 0) {
         await endDuel(player === 'player1' ? duel?.opponent_id : duel?.creator_id);
       }
-
-      console.log('💾 ✅ LP definido com sucesso');
     } catch (error: any) {
       console.error('💾 ❌ Erro ao definir LP:', error);
       toast({
@@ -483,15 +494,6 @@ const DuelRoom = () => {
   const isPlayer2 = currentUser?.id === duel?.opponent_id || (currentUser?.id && !isPlayer1);
   const isParticipant = isPlayer1 || isPlayer2;
   const currentUserPlayer: 'player1' | 'player2' | null = isPlayer1 ? 'player1' : (isPlayer2 ? 'player2' : null);
-  
-  console.log('👤 Identificação de Players:', {
-    currentUserId: currentUser?.id,
-    creatorId: duel?.creator_id,
-    opponentId: duel?.opponent_id,
-    isPlayer1,
-    isPlayer2,
-    currentUserPlayer
-  });
 
   return (
     <div className="min-h-screen bg-background">

@@ -23,15 +23,6 @@ export const FloatingCalculator = ({
   onSetLP,
   currentUserPlayer = null,
 }: FloatingCalculatorProps) => {
-  // Log para debug
-  console.log('🧮 FloatingCalculator Props:', {
-    player1Name,
-    player2Name,
-    currentUserPlayer,
-    canEditPlayer1: currentUserPlayer === 'player1',
-    canEditPlayer2: currentUserPlayer === 'player2'
-  });
-
   // Posição inicial adaptada ao tamanho da tela
   const [position, setPosition] = useState(() => {
     const isMobile = window.innerWidth < 768;
@@ -295,19 +286,10 @@ export const FloatingCalculator = ({
                     <Input
                       type="number"
                       value={tempLP2}
-                      onChange={(e) => {
-                        console.log('🎮 Player 2 editando LP:', e.target.value);
-                        setTempLP2(e.target.value);
-                      }}
-                      onBlur={() => {
-                        console.log('🎮 Player 2 finalizou edição');
-                        handleLP2Submit();
-                      }}
+                      onChange={(e) => setTempLP2(e.target.value)}
+                      onBlur={handleLP2Submit}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          console.log('🎮 Player 2 pressionou Enter');
-                          handleLP2Submit();
-                        }
+                        if (e.key === 'Enter') handleLP2Submit();
                         if (e.key === 'Escape') {
                           setTempLP2(player2LP.toString());
                           setEditingPlayer2(false);
@@ -319,19 +301,7 @@ export const FloatingCalculator = ({
                    ) : (
                       <span
                         className={`text-lg sm:text-xl font-bold text-gradient-mystic ${currentUserPlayer === 'player2' ? 'cursor-pointer hover:opacity-80' : ''}`}
-                        onClick={() => {
-                          console.log('🎮 Player 2 clicou no LP:', { 
-                            currentUserPlayer, 
-                            canEdit: currentUserPlayer === 'player2',
-                            player2LP 
-                          });
-                          if (currentUserPlayer === 'player2') {
-                            console.log('🎮 Ativando edição para Player 2');
-                            setEditingPlayer2(true);
-                          } else {
-                            console.log('⚠️ Player 2 NÃO pode editar! currentUserPlayer:', currentUserPlayer);
-                          }
-                        }}
+                        onClick={() => currentUserPlayer === 'player2' && setEditingPlayer2(true)}
                       >
                         {player2LP}
                       </span>
@@ -345,10 +315,7 @@ export const FloatingCalculator = ({
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => {
-                        console.log('🎮 Player 2 clicou -1000');
-                        onUpdateLP('player2', -1000);
-                      }}
+                      onClick={() => onUpdateLP('player2', -1000)}
                       className="text-xs"
                     >
                       <Minus className="w-3 h-3 mr-1" />
@@ -357,10 +324,7 @@ export const FloatingCalculator = ({
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => {
-                        console.log('🎮 Player 2 clicou -500');
-                        onUpdateLP('player2', -500);
-                      }}
+                      onClick={() => onUpdateLP('player2', -500)}
                       className="text-xs"
                     >
                       <Minus className="w-3 h-3 mr-1" />
@@ -369,10 +333,7 @@ export const FloatingCalculator = ({
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => {
-                        console.log('🎮 Player 2 clicou +500');
-                        onUpdateLP('player2', 500);
-                      }}
+                      onClick={() => onUpdateLP('player2', 500)}
                       className="text-xs"
                     >
                       <Plus className="w-3 h-3 mr-1" />
@@ -381,10 +342,7 @@ export const FloatingCalculator = ({
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => {
-                        console.log('🎮 Player 2 clicou +1000');
-                        onUpdateLP('player2', 1000);
-                      }}
+                      onClick={() => onUpdateLP('player2', 1000)}
                       className="text-xs"
                     >
                       <Plus className="w-3 h-3 mr-1" />
@@ -396,10 +354,7 @@ export const FloatingCalculator = ({
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => {
-                        console.log('🎮 Player 2 clicou -100');
-                        onUpdateLP('player2', -100);
-                      }}
+                      onClick={() => onUpdateLP('player2', -100)}
                       className="text-xs"
                     >
                       <Minus className="w-3 h-3 mr-1" />
@@ -408,10 +363,7 @@ export const FloatingCalculator = ({
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => {
-                        console.log('🎮 Player 2 clicou +100');
-                        onUpdateLP('player2', 100);
-                      }}
+                      onClick={() => onUpdateLP('player2', 100)}
                       className="text-xs"
                     >
                       <Plus className="w-3 h-3 mr-1" />
