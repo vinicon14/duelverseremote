@@ -151,8 +151,12 @@ export default function Matchmaking() {
         return;
       }
 
-      toast.success("Sala encontrada! Redirecionando...");
-      navigate(`/duel/${randomDuel.id}`);
+      toast.success("Sala encontrada! Redirecionando para a chamada...");
+      
+      // Redirecionar após pequeno delay para dar tempo do realtime notificar o criador
+      setTimeout(() => {
+        navigate(`/duel/${randomDuel.id}`);
+      }, 500);
     } catch (error: any) {
       console.error("Unexpected error in joinQueue:", error);
       toast.error("Erro inesperado: " + error.message);

@@ -3,12 +3,11 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { PhoneOff, Loader2 } from "lucide-react";
+import { PhoneOff } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { DuelChat } from "@/components/DuelChat";
 import { FloatingCalculator } from "@/components/FloatingCalculator";
 import { useBanCheck } from "@/hooks/useBanCheck";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 const DuelRoom = () => {
   useBanCheck(); // Proteger contra usuários banidos
@@ -22,7 +21,6 @@ const DuelRoom = () => {
   const [callDuration, setCallDuration] = useState(0);
   const [showTimeWarning, setShowTimeWarning] = useState(false);
   const [roomUrl, setRoomUrl] = useState<string>('');
-  const [waitingForOpponent, setWaitingForOpponent] = useState(false);
   const callStartTime = useRef<number | null>(null);
   const timerInterval = useRef<NodeJS.Timeout | null>(null);
 
@@ -75,7 +73,6 @@ const DuelRoom = () => {
               if (updatedDuel) {
                 console.log('Dados atualizados do duelo:', updatedDuel);
                 setDuel(updatedDuel);
-                setWaitingForOpponent(false); // Fechar loading quando opponent entrar
               }
             }
           }
@@ -138,34 +135,6 @@ const DuelRoom = () => {
     setCurrentUser(session.user);
   };
 
-  // Registrar usuário como opponent se não for o criador
-  const registerAsOpponent = async (userId: string, duelData: any) => {
-    // Se já tem opponent_id, não fazer nada
-    if (duelData.opponent_id) {
-      return false;
-    }
-    
-    // Se o usuário é o criador, não registrar como opponent
-    if (userId === duelData.creator_id) {
-      return false;
-    }
-    
-    console.log('Registrando como opponent:', userId);
-    const { error } = await supabase
-      .from('live_duels')
-      .update({ opponent_id: userId })
-      .eq('id', id)
-      .eq('opponent_id', null); // Garantir que não sobrescreva se já tem opponent
-    
-    if (error) {
-      console.error('Erro ao registrar opponent:', error);
-      return false;
-    }
-    
-    console.log('Opponent registrado com sucesso');
-    return true;
-  };
-
   const fetchDuel = async () => {
     try {
       const { data, error } = await supabase
@@ -191,65 +160,57 @@ const DuelRoom = () => {
       }
       
       console.log('Duelo carregado:', data);
+
+      // NOVO: Se está aguardando opponent, redirecionar de volta para Duels
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user && session.user.id === data.creator_id && !data.opponent_id) {
+        toast({
+          title: "Aguardando oponente",
+          description: "Você será redirecionado automaticamente quando alguém entrar.",
+        });
+        navigate('/duels');
+        return;
+      }
+
+      // Se não é participante, bloquear acesso
+      if (session?.user && data.creator_id !== session.user.id && data.opponent_id !== session.user.id) {
+        toast({
+          title: "Acesso negado",
+          description: "Você não é participante desta sala.",
+          variant: "destructive",
+        });
+        navigate('/duels');
+        return;
+      }
+
       setDuel(data);
       setPlayer1LP(data.player1_lp || 8000);
       setPlayer2LP(data.player2_lp || 8000);
 
-      // Verificar se é o criador e se está aguardando opponent
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user && session.user.id === data.creator_id && !data.opponent_id) {
-        setWaitingForOpponent(true);
-      }
-
-      // Registrar como opponent se necessário
-      if (session?.user) {
-        console.log('Usuario atual:', session.user.id, 'Creator:', data.creator_id, 'Opponent:', data.opponent_id);
-        const wasRegistered = await registerAsOpponent(session.user.id, data);
-        
-        // Se registrou como opponent, aguardar um pouco e buscar dados atualizados
-        if (wasRegistered) {
-          console.log('Aguardando realtime propagar...');
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          const { data: updatedData } = await supabase
-            .from('live_duels')
-            .select(`
-              *,
-              creator:profiles!live_duels_creator_id_fkey(username, avatar_url, user_id),
-              opponent:profiles!live_duels_opponent_id_fkey(username, avatar_url, user_id)
-            `)
-            .eq('id', id)
-            .maybeSingle();
-          
-          if (updatedData) {
-            console.log('Dados atualizados após registro:', updatedData);
-            setDuel(updatedData);
-          }
-        }
-      }
-
-      // Criar sala Daily.co
-      const { data: roomData, error: roomError } = await supabase.functions.invoke('create-daily-room', {
-        body: { roomName: `duelverse-${id}` }
-      });
-
-      console.log('Daily.co response:', { roomData, roomError });
-
-      if (roomError || !roomData?.url) {
-        console.error('Erro ao criar sala:', roomError);
-        toast({
-          title: "Erro ao iniciar videochamada",
-          description: "Não foi possível criar a sala de vídeo.",
-          variant: "destructive",
+      // Criar sala Daily.co somente se ambos players estiverem presentes
+      if (data.opponent_id && data.creator_id) {
+        const { data: roomData, error: roomError } = await supabase.functions.invoke('create-daily-room', {
+          body: { roomName: `duelverse-${id}` }
         });
-      } else {
-        console.log('Setting room URL:', roomData.url);
-        setRoomUrl(roomData.url);
+
+        console.log('Daily.co response:', { roomData, roomError });
+
+        if (roomError || !roomData?.url) {
+          console.error('Erro ao criar sala:', roomError);
+          toast({
+            title: "Erro ao iniciar videochamada",
+            description: "Não foi possível criar a sala de vídeo.",
+            variant: "destructive",
+          });
+        } else {
+          console.log('Setting room URL:', roomData.url);
+          setRoomUrl(roomData.url);
+        }
       }
 
       // Garantir que started_at existe (criar se não existir)
       let startedAt = data.started_at;
-      if (!startedAt) {
+      if (!startedAt && data.opponent_id) {
         const now = new Date().toISOString();
         await supabase
           .from('live_duels')
@@ -262,12 +223,14 @@ const DuelRoom = () => {
       }
 
       // Iniciar timer baseado no started_at do banco
-      startCallTimer(startedAt);
+      if (startedAt) {
+        startCallTimer(startedAt);
 
-      // Verificar se já passou 60 minutos
-      const elapsed = Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000);
-      if (elapsed >= 3600) {
-        await endDuel();
+        // Verificar se já passou 60 minutos
+        const elapsed = Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000);
+        if (elapsed >= 3600) {
+          await endDuel();
+        }
       }
     } catch (error: any) {
       toast({
@@ -431,39 +394,6 @@ const DuelRoom = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-
-      {/* Dialog de Loading aguardando opponent */}
-      <Dialog open={waitingForOpponent} onOpenChange={(open) => {
-        if (!open) {
-          navigate('/duels');
-        }
-      }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Aguardando adversário...</DialogTitle>
-            <DialogDescription>
-              A sala foi criada com sucesso. Aguardando outro jogador entrar.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col items-center justify-center py-8 space-y-4">
-            <Loader2 className="w-12 h-12 animate-spin text-primary" />
-            <p className="text-sm text-muted-foreground text-center">
-              Você pode continuar navegando na plataforma.<br />
-              A partida iniciará automaticamente quando o adversário entrar.
-            </p>
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setWaitingForOpponent(false);
-                navigate('/duels');
-              }}
-              className="mt-4"
-            >
-              Voltar para Duelos
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
       
       <main className="px-2 sm:px-4 pt-16 sm:pt-20 pb-2 sm:pb-4">
         <div className="h-[calc(100vh-80px)] sm:h-[calc(100vh-100px)] relative">

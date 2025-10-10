@@ -10,6 +10,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Swords, Plus, Users, Clock } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useBanCheck } from "@/hooks/useBanCheck";
+import { QueueWaiting } from "@/components/QueueWaiting";
 
 const Duels = () => {
   useBanCheck(); // Proteger contra usuários banidos
@@ -19,6 +20,8 @@ const Duels = () => {
   const [loading, setLoading] = useState(true);
   const [roomName, setRoomName] = useState("");
   const [isRanked, setIsRanked] = useState(true);
+  const [waitingDuelId, setWaitingDuelId] = useState<string | null>(null);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -121,10 +124,12 @@ const Duels = () => {
 
       toast({
         title: "Sala criada!",
-        description: "Aguardando oponente...",
+        description: "Aguardando oponente entrar na fila...",
       });
 
-      navigate(`/duel/${data.id}`);
+      // NÃO redirecionar, apenas mostrar popup de espera
+      setWaitingDuelId(data.id);
+      setShowCreateDialog(false);
     } catch (error: any) {
       toast({
         title: "Erro ao criar duelo",
@@ -194,7 +199,15 @@ const Duels = () => {
 
       if (error) throw error;
 
-      navigate(`/duel/${duelId}`);
+      toast({
+        title: "Entrando na partida!",
+        description: "Redirecionando para a chamada...",
+      });
+
+      // Redirecionar após pequeno delay para dar tempo do realtime notificar o criador
+      setTimeout(() => {
+        navigate(`/duel/${duelId}`);
+      }, 500);
     } catch (error: any) {
       toast({
         title: "Erro ao entrar no duelo",
@@ -219,7 +232,7 @@ const Duels = () => {
             </p>
           </div>
 
-          <Dialog>
+          <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
             <DialogTrigger asChild>
               <Button className="btn-mystic text-white w-full sm:w-auto">
                 <Plus className="mr-2 h-4 w-4" />
@@ -365,6 +378,14 @@ const Duels = () => {
           </div>
         )}
       </main>
+
+      {/* Popup de espera na fila */}
+      {waitingDuelId && (
+        <QueueWaiting
+          duelId={waitingDuelId}
+          onCancel={() => setWaitingDuelId(null)}
+        />
+      )}
     </div>
   );
 };
