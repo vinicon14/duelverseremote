@@ -330,7 +330,8 @@ const DuelRoom = () => {
   };
 
   const isPlayer1 = currentUser?.id === duel?.creator_id;
-  const isPlayer2 = currentUser?.id === duel?.opponent_id;
+  // Qualquer usuário que não seja o player1 pode controlar o player2
+  const isPlayer2 = currentUser?.id !== duel?.creator_id;
   const canControlLP = isPlayer1 || isPlayer2;
 
   return (
