@@ -99,35 +99,21 @@ const DuelRoom = () => {
                 });
                 setDuel(updatedDuel);
                 
-                // Garantir que started_at existe, senão criar
-                let startedAt = updatedDuel.started_at;
-                if (!startedAt) {
-                  console.log('[DuelRoom] ⏰ Definindo started_at após opponent entrar');
-                  const now = new Date().toISOString();
-                  const { error: updateError } = await supabase
+                // Atualizar status para in_progress quando opponent entrar
+                if (updatedDuel.status !== 'in_progress') {
+                  console.log('[DuelRoom] 🎯 Atualizando status para in_progress');
+                  await supabase
                     .from('live_duels')
-                    .update({ 
-                      started_at: now,
-                      status: 'in_progress'
-                    })
+                    .update({ status: 'in_progress' })
                     .eq('id', id);
-                  
-                  if (updateError) {
-                    console.error('[DuelRoom] ❌ Erro ao definir started_at:', updateError);
-                  } else {
-                    console.log('[DuelRoom] ✅ started_at definido:', now);
-                    startedAt = now;
-                  }
                 }
                 
-                // Iniciar timer se ainda não estiver rodando
-                if (startedAt && !timerInterval.current) {
-                  console.log('[DuelRoom] ▶️ INICIANDO TIMER após opponent entrar');
-                  startCallTimer(startedAt);
-                } else if (timerInterval.current) {
-                  console.log('[DuelRoom] ⏸️ Timer já está rodando');
+                // Timer já deve estar rodando, mas garantir
+                if (!timerInterval.current && updatedDuel.started_at) {
+                  console.log('[DuelRoom] ▶️ Iniciando timer (estava pausado)');
+                  startCallTimer(updatedDuel.started_at);
                 } else {
-                  console.log('[DuelRoom] ⚠️ Não pode iniciar timer - started_at:', startedAt);
+                  console.log('[DuelRoom] ⏸️ Timer já está rodando ou started_at não existe');
                 }
               }
             }
@@ -250,23 +236,23 @@ const DuelRoom = () => {
 
       // Se a sala não tem opponent ainda
       if (!data.opponent_id) {
-        // Se o usuário NÃO é o criador, adicionar como opponent
+        // Se o usuário NÃO é o criador, adicionar como opponent (player 2)
         if (!isCreator) {
-          console.log('[DuelRoom] Sala aberta sem opponent, adicionando usuário como opponent');
+          console.log('[DuelRoom] 👤 Sala aberta - adicionando usuário como PLAYER 2 (opponent)');
           
           try {
+            // NÃO sobrescrever started_at, apenas adicionar opponent
             const { error: updateError } = await supabase
               .from('live_duels')
               .update({
                 opponent_id: userId,
-                status: 'in_progress',
-                started_at: new Date().toISOString(),
+                status: 'in_progress'
               })
               .eq('id', id)
               .is('opponent_id', null);
 
             if (updateError) {
-              console.error('[DuelRoom] Erro ao entrar na sala:', updateError);
+              console.error('[DuelRoom] ❌ Erro ao entrar na sala:', updateError);
               toast({
                 title: "Erro ao entrar",
                 description: "Não foi possível entrar nesta sala.",
@@ -276,7 +262,7 @@ const DuelRoom = () => {
               return;
             }
 
-            console.log('[DuelRoom] Usuário adicionado como opponent, recarregando dados...');
+            console.log('[DuelRoom] ✅ Usuário adicionado como PLAYER 2, recarregando dados...');
             
             const { data: updatedData } = await supabase
               .from('live_duels')
@@ -290,9 +276,10 @@ const DuelRoom = () => {
 
             if (updatedData) {
               data = updatedData;
+              console.log('[DuelRoom] 🎮 Dados atualizados - Player 1:', data.creator?.username, 'Player 2:', data.opponent?.username);
             }
           } catch (error) {
-            console.error('[DuelRoom] Exceção ao entrar na sala:', error);
+            console.error('[DuelRoom] ❌ Exceção ao entrar na sala:', error);
             toast({
               title: "Erro ao entrar",
               description: "Ocorreu um erro ao tentar entrar na sala.",
@@ -303,12 +290,12 @@ const DuelRoom = () => {
           }
         } else {
           // É o criador esperando o opponent - permitir acesso
-          console.log('[DuelRoom] Criador acessando sua própria sala (aguardando opponent)');
+          console.log('[DuelRoom] 👑 Criador (Player 1) acessando sua própria sala (aguardando Player 2)');
         }
       } else {
         // Sala já tem opponent - verificar se o usuário é um dos participantes
         if (!isCreator && !isOpponent) {
-          console.log('[DuelRoom] Acesso negado - sala completa e usuário não é participante');
+          console.log('[DuelRoom] 🚫 Acesso negado - sala completa e usuário não é participante');
           toast({
             title: "Acesso negado",
             description: "Esta sala já está completa.",
@@ -353,34 +340,40 @@ const DuelRoom = () => {
         });
       }
 
-      // Garantir que started_at existe se há opponent
+      // Garantir que started_at existe SEMPRE (timer inicia na criação)
       let startedAt = data.started_at;
-      if (!startedAt && data.opponent_id) {
-        console.log('[DuelRoom] Definindo started_at no banco (tem opponent)');
+      if (!startedAt) {
+        console.log('[DuelRoom] ⏰ Definindo started_at no banco (timer inicia agora)');
         const now = new Date().toISOString();
-        await supabase
+        const { error: updateError } = await supabase
           .from('live_duels')
           .update({ 
             started_at: now,
-            status: 'in_progress'
+            status: data.opponent_id ? 'in_progress' : 'waiting'
           })
           .eq('id', id);
-        startedAt = now;
+        
+        if (updateError) {
+          console.error('[DuelRoom] ❌ Erro ao definir started_at:', updateError);
+        } else {
+          console.log('[DuelRoom] ✅ started_at definido:', now);
+          startedAt = now;
+        }
       }
 
-      // Iniciar timer apenas se já tem opponent e started_at
-      if (startedAt && data.opponent_id) {
-        console.log('[DuelRoom] Iniciando timer (duelo tem 2 jogadores)');
+      // Iniciar timer SEMPRE que houver started_at (não precisa esperar opponent)
+      if (startedAt) {
+        console.log('[DuelRoom] ▶️ Iniciando timer (timer conta desde a criação)');
         startCallTimer(startedAt);
 
         // Verificar se já passou 60 minutos
         const elapsed = Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000);
         if (elapsed >= 3600) {
-          console.log('[DuelRoom] Tempo esgotado (60 minutos)');
+          console.log('[DuelRoom] ⏱️ Tempo esgotado (60 minutos)');
           await endDuel();
         }
       } else {
-        console.log('[DuelRoom] Timer não iniciado - aguardando segundo jogador');
+        console.log('[DuelRoom] ⚠️ Timer não iniciado - started_at não existe');
       }
     } catch (error: any) {
       console.error('[DuelRoom] Erro em fetchDuel:', error);
