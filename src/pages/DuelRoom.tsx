@@ -59,7 +59,7 @@ const DuelRoom = () => {
           table: 'live_duels',
           filter: `id=eq.${id}`,
         },
-        (payload) => {
+        async (payload) => {
           console.log('🔴 [REALTIME] ===== UPDATE RECEBIDO =====');
           console.log('🔴 [REALTIME] NEW:', payload.new);
           console.log('🔴 [REALTIME] OLD:', payload.old);
@@ -75,6 +75,25 @@ const DuelRoom = () => {
             
             setPlayer1LP(newP1LP);
             setPlayer2LP(newP2LP);
+            
+            // Se opponent_id foi atualizado, recarregar dados completos do duel
+            if (payload.new.opponent_id && payload.old?.opponent_id !== payload.new.opponent_id) {
+              console.log('🔴 [REALTIME] Opponent adicionado, recarregando dados do duel...');
+              const { data: updatedDuel, error } = await supabase
+                .from('live_duels')
+                .select(`
+                  *,
+                  creator:profiles!live_duels_creator_id_fkey(username, avatar_url, user_id),
+                  opponent:profiles!live_duels_opponent_id_fkey(username, avatar_url, user_id)
+                `)
+                .eq('id', id)
+                .maybeSingle();
+              
+              if (!error && updatedDuel) {
+                console.log('🔴 [REALTIME] Duel atualizado com opponent:', updatedDuel);
+                setDuel(updatedDuel);
+              }
+            }
             
             console.log('🔴 [REALTIME] ✅ Estados atualizados!');
           }
@@ -466,6 +485,14 @@ const DuelRoom = () => {
   const isPlayer2 = currentUser?.id === duel?.opponent_id || (currentUser?.id && !isPlayer1);
   const isParticipant = isPlayer1 || isPlayer2;
   const currentUserPlayer: 'player1' | 'player2' | null = isPlayer1 ? 'player1' : (isPlayer2 ? 'player2' : null);
+  
+  // Debug logs para verificar identificação do player
+  console.log('🎮 [PLAYER] Current User ID:', currentUser?.id);
+  console.log('🎮 [PLAYER] Creator ID:', duel?.creator_id);
+  console.log('🎮 [PLAYER] Opponent ID:', duel?.opponent_id);
+  console.log('🎮 [PLAYER] isPlayer1:', isPlayer1);
+  console.log('🎮 [PLAYER] isPlayer2:', isPlayer2);
+  console.log('🎮 [PLAYER] currentUserPlayer:', currentUserPlayer);
 
   return (
     <div className="min-h-screen bg-background">
