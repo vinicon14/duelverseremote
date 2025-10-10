@@ -165,7 +165,7 @@ const DuelRoom = () => {
     try {
       console.log('[DuelRoom] Buscando duelo:', id, 'para usuário:', userId);
       
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from('live_duels')
         .select(`
           *,
@@ -208,12 +208,65 @@ const DuelRoom = () => {
       
       console.log('[DuelRoom] Verificação de participação:', { isCreator, isOpponent });
 
-      // Se não é nenhum dos dois, bloquear
-      if (!isCreator && !isOpponent) {
+      // Se a sala está esperando (sem opponent), permitir que qualquer um entre
+      if (!data.opponent_id && !isCreator) {
+        console.log('[DuelRoom] Sala aberta sem opponent, adicionando usuário automaticamente');
+        
+        try {
+          // Adicionar o usuário como opponent
+          const { error: updateError } = await supabase
+            .from('live_duels')
+            .update({
+              opponent_id: userId,
+              status: 'in_progress',
+              started_at: new Date().toISOString(),
+            })
+            .eq('id', id)
+            .is('opponent_id', null); // Garantir que ainda não tem opponent
+
+          if (updateError) {
+            console.error('[DuelRoom] Erro ao entrar na sala:', updateError);
+            toast({
+              title: "Erro ao entrar",
+              description: "Não foi possível entrar nesta sala.",
+              variant: "destructive",
+            });
+            navigate('/duels');
+            return;
+          }
+
+          console.log('[DuelRoom] Usuário adicionado como opponent, recarregando dados...');
+          
+          // Recarregar dados atualizados
+          const { data: updatedData } = await supabase
+            .from('live_duels')
+            .select(`
+              *,
+              creator:profiles!live_duels_creator_id_fkey(username, avatar_url, user_id),
+              opponent:profiles!live_duels_opponent_id_fkey(username, avatar_url, user_id)
+            `)
+            .eq('id', id)
+            .maybeSingle();
+
+          if (updatedData) {
+            data = updatedData;
+          }
+        } catch (error) {
+          console.error('[DuelRoom] Exceção ao entrar na sala:', error);
+          toast({
+            title: "Erro ao entrar",
+            description: "Ocorreu um erro ao tentar entrar na sala.",
+            variant: "destructive",
+          });
+          navigate('/duels');
+          return;
+        }
+      } else if (!isCreator && !isOpponent) {
+        // Sala já tem 2 participantes e o usuário não é nenhum deles
         console.log('[DuelRoom] Acesso negado - usuário não é participante');
         toast({
           title: "Acesso negado",
-          description: "Você não é um participante deste duelo.",
+          description: "Esta sala já está completa.",
           variant: "destructive",
         });
         navigate('/duels');
