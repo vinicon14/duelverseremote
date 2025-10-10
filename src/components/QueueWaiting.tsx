@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, Users, X } from "lucide-react";
+import { Users, X } from "lucide-react";
 
 interface QueueWaitingProps {
   duelId: string;
@@ -99,7 +99,6 @@ export const QueueWaiting = ({ duelId, onCancel }: QueueWaitingProps) => {
 
         <div className="space-y-6 py-4">
           <div className="text-center">
-            <Loader2 className="h-16 w-16 mx-auto mb-4 text-primary animate-spin" />
             <div className="flex items-center justify-center gap-2 text-muted-foreground">
               <Users className="h-4 w-4" />
               <span>Tempo de espera: {formatTime(elapsedTime)}</span>
