@@ -40,18 +40,11 @@ export default function Home() {
   const fetchNews = async () => {
     const { data, error } = await supabase
       .from('news')
-      .select(`
-        *,
-        author:profiles!news_author_id_fkey(username, user_id)
-      `)
+      .select('*, author:profiles!news_author_id_fkey(username)')
       .order('created_at', { ascending: false })
       .limit(10);
 
-    if (error) {
-      console.error('Error fetching news:', error);
-    }
-    
-    if (data) {
+    if (!error && data) {
       setNews(data);
     }
     setLoading(false);
@@ -72,9 +65,9 @@ export default function Home() {
 
   return (
     <SidebarProvider defaultOpen>
-      <Navbar />
-      
       <div className="min-h-screen bg-background flex w-full">
+        <Navbar />
+        
         <main className="flex-1 container mx-auto px-4 pt-20 sm:pt-24 pb-8">
         {/* Cards de Acesso Rápido */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">

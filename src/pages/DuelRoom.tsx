@@ -59,7 +59,7 @@ const DuelRoom = () => {
           table: 'live_duels',
           filter: `id=eq.${id}`,
         },
-        async (payload) => {
+        (payload) => {
           console.log('🔴 [REALTIME] ===== UPDATE RECEBIDO =====');
           console.log('🔴 [REALTIME] NEW:', payload.new);
           console.log('🔴 [REALTIME] OLD:', payload.old);
@@ -75,25 +75,6 @@ const DuelRoom = () => {
             
             setPlayer1LP(newP1LP);
             setPlayer2LP(newP2LP);
-            
-            // Se opponent_id foi atualizado, recarregar dados completos do duel
-            if (payload.new.opponent_id && payload.old?.opponent_id !== payload.new.opponent_id) {
-              console.log('🔴 [REALTIME] Opponent adicionado, recarregando dados do duel...');
-              const { data: updatedDuel, error } = await supabase
-                .from('live_duels')
-                .select(`
-                  *,
-                  creator:profiles!live_duels_creator_id_fkey(username, avatar_url, user_id),
-                  opponent:profiles!live_duels_opponent_id_fkey(username, avatar_url, user_id)
-                `)
-                .eq('id', id)
-                .maybeSingle();
-              
-              if (!error && updatedDuel) {
-                console.log('🔴 [REALTIME] Duel atualizado com opponent:', updatedDuel);
-                setDuel(updatedDuel);
-              }
-            }
             
             console.log('🔴 [REALTIME] ✅ Estados atualizados!');
           }
@@ -326,39 +307,55 @@ const DuelRoom = () => {
   };
 
   const updateLP = async (player: 'player1' | 'player2', amount: number) => {
-    if (!id) return;
-    
     const isPlayer1 = player === 'player1';
     const currentLP = isPlayer1 ? player1LP : player2LP;
     const newLP = Math.max(0, currentLP + amount);
 
-    console.log('💾 [UPDATE LP] Iniciando:', { 
-      player, 
-      amount, 
-      currentLP, 
-      newLP,
-      estadoAtual: { player1LP, player2LP }
-    });
+    console.log('💾 [UPDATE LP]', { player, amount, de: currentLP, para: newLP });
 
     try {
-      // Atualizar APENAS o campo específico do jogador
+      // Buscar valores atuais do banco ANTES de atualizar
+      const { data: currentDuel } = await supabase
+        .from('live_duels')
+        .select('player1_lp, player2_lp')
+        .eq('id', id)
+        .single();
+
+      if (!currentDuel) throw new Error('Duelo não encontrado');
+
+      console.log('💾 [UPDATE LP] Valores no banco:', currentDuel);
+
+      // Atualizar APENAS o campo do jogador atual, preservando o outro
+      const updateData = isPlayer1 
+        ? { player1_lp: newLP, player2_lp: currentDuel.player2_lp }
+        : { player1_lp: currentDuel.player1_lp, player2_lp: newLP };
+
+      console.log('💾 [UPDATE LP] Enviando update:', updateData);
+
       const { error } = await supabase
         .from('live_duels')
-        .update({ [player + '_lp']: newLP })
+        .update(updateData)
         .eq('id', id);
 
       if (error) {
-        console.error('💾 [UPDATE LP] ❌ Erro no banco:', error);
+        console.error('💾 [UPDATE LP] ❌ Erro:', error);
         throw error;
       }
 
-      console.log('💾 [UPDATE LP] ✅ Atualizado no banco!');
+      console.log('💾 [UPDATE LP] ✅ Sucesso!');
+
+      // Atualizar estado local
+      if (isPlayer1) {
+        setPlayer1LP(newLP);
+      } else {
+        setPlayer2LP(newLP);
+      }
 
       if (newLP === 0) {
         await endDuel(player === 'player1' ? duel?.opponent_id : duel?.creator_id);
       }
     } catch (error: any) {
-      console.error('💾 [UPDATE LP] ❌ Erro:', error);
+      console.error('💾 [UPDATE LP] ❌ Erro geral:', error);
       toast({
         title: "Erro ao atualizar LP",
         description: error.message,
@@ -368,35 +365,54 @@ const DuelRoom = () => {
   };
 
   const setLP = async (player: 'player1' | 'player2', value: number) => {
-    if (!id) return;
-    
     const newLP = Math.max(0, value);
     
-    console.log('💾 [SET LP] Iniciando:', { 
-      player, 
-      newLP,
-      estadoAtual: { player1LP, player2LP }
-    });
+    console.log('💾 [SET LP]', { player, para: newLP });
     
     try {
-      // Atualizar APENAS o campo específico do jogador
+      // Buscar valores atuais do banco ANTES de atualizar
+      const { data: currentDuel } = await supabase
+        .from('live_duels')
+        .select('player1_lp, player2_lp')
+        .eq('id', id)
+        .single();
+
+      if (!currentDuel) throw new Error('Duelo não encontrado');
+
+      console.log('💾 [SET LP] Valores no banco:', currentDuel);
+
+      // Atualizar APENAS o campo do jogador atual, preservando o outro
+      const isPlayer1 = player === 'player1';
+      const updateData = isPlayer1 
+        ? { player1_lp: newLP, player2_lp: currentDuel.player2_lp }
+        : { player1_lp: currentDuel.player1_lp, player2_lp: newLP };
+
+      console.log('💾 [SET LP] Enviando update:', updateData);
+
       const { error } = await supabase
         .from('live_duels')
-        .update({ [player + '_lp']: newLP })
+        .update(updateData)
         .eq('id', id);
 
       if (error) {
-        console.error('💾 [SET LP] ❌ Erro no banco:', error);
+        console.error('💾 [SET LP] ❌ Erro:', error);
         throw error;
       }
 
-      console.log('💾 [SET LP] ✅ Atualizado no banco!');
+      console.log('💾 [SET LP] ✅ Sucesso!');
+
+      // Atualizar estado local
+      if (player === 'player1') {
+        setPlayer1LP(newLP);
+      } else {
+        setPlayer2LP(newLP);
+      }
 
       if (newLP === 0) {
         await endDuel(player === 'player1' ? duel?.opponent_id : duel?.creator_id);
       }
     } catch (error: any) {
-      console.error('💾 [SET LP] ❌ Erro:', error);
+      console.error('💾 [SET LP] ❌ Erro geral:', error);
       toast({
         title: "Erro ao atualizar LP",
         description: error.message,
@@ -422,60 +438,34 @@ const DuelRoom = () => {
         .eq('id', id);
 
       // Registrar histórico se houver vencedor usando função segura
-      if (winnerId && duel?.id && duel?.opponent_id) {
+      if (winnerId && duel?.id) {
         try {
-          // Determinar scores corretos - vencedor mantém LP, perdedor tem 0
-          const player1Score = winnerId === duel.creator_id ? player1LP : 0;
-          const player2Score = winnerId === duel.opponent_id ? player2LP : 0;
-          
-          console.log('📊 Registrando resultado:', {
-            duel_id: duel.id,
-            player1_id: duel.creator_id,
-            player2_id: duel.opponent_id,
-            winner_id: winnerId,
-            player1_score: player1Score,
-            player2_score: player2Score,
-            bet_amount: duel.bet_amount || 0
-          });
-
           const { error: matchError } = await supabase.rpc('record_match_result', {
             p_duel_id: duel.id,
             p_player1_id: duel.creator_id,
             p_player2_id: duel.opponent_id,
             p_winner_id: winnerId,
-            p_player1_score: player1Score,
-            p_player2_score: player2Score,
+            p_player1_score: winnerId === duel.opponent_id ? 0 : player1LP,
+            p_player2_score: winnerId === duel.creator_id ? 0 : player2LP,
             p_bet_amount: duel.bet_amount || 0
           });
 
           if (matchError) {
-            console.error('❌ Erro ao registrar resultado:', matchError);
+            console.error('Erro ao registrar resultado:', matchError);
             toast({
               title: "Erro ao registrar resultado",
               description: matchError.message,
               variant: "destructive",
             });
-          } else {
-            console.log('✅ Resultado registrado com sucesso');
-            toast({
-              title: "Resultado registrado!",
-              description: "Pontos atualizados no ranking",
-            });
           }
         } catch (error: any) {
-          console.error('❌ Erro ao registrar resultado:', error);
+          console.error('Erro ao registrar resultado:', error);
           toast({
             title: "Erro ao registrar resultado",
             description: error.message,
             variant: "destructive",
           });
         }
-      } else if (winnerId && !duel?.opponent_id) {
-        toast({
-          title: "Partida sem oponente",
-          description: "Não é possível registrar resultado sem dois jogadores",
-          variant: "destructive",
-        });
       }
 
       // Deletar o duelo após 60 minutos
@@ -511,14 +501,6 @@ const DuelRoom = () => {
   const isPlayer2 = currentUser?.id === duel?.opponent_id || (currentUser?.id && !isPlayer1);
   const isParticipant = isPlayer1 || isPlayer2;
   const currentUserPlayer: 'player1' | 'player2' | null = isPlayer1 ? 'player1' : (isPlayer2 ? 'player2' : null);
-  
-  // Debug logs para verificar identificação do player
-  console.log('🎮 [PLAYER] Current User ID:', currentUser?.id);
-  console.log('🎮 [PLAYER] Creator ID:', duel?.creator_id);
-  console.log('🎮 [PLAYER] Opponent ID:', duel?.opponent_id);
-  console.log('🎮 [PLAYER] isPlayer1:', isPlayer1);
-  console.log('🎮 [PLAYER] isPlayer2:', isPlayer2);
-  console.log('🎮 [PLAYER] currentUserPlayer:', currentUserPlayer);
 
   return (
     <div className="min-h-screen bg-background">

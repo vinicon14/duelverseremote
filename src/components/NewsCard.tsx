@@ -11,6 +11,7 @@ interface NewsCardProps {
     image_url?: string;
     created_at: string;
     author?: {
+      display_name?: string;
       username: string;
     };
   };
@@ -44,7 +45,7 @@ export const NewsCard = ({ news, onClick }: NewsCardProps) => {
           {news.author && (
             <div className="flex items-center gap-1">
               <User className="w-4 h-4" />
-              <span>{news.author.username}</span>
+              <span>{news.author.display_name || news.author.username}</span>
             </div>
           )}
         </div>
