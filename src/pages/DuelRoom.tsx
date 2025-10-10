@@ -88,10 +88,25 @@ const DuelRoom = () => {
                 console.log('[DuelRoom] Duelo atualizado com opponent');
                 setDuel(updatedDuel);
                 
-                // Iniciar timer se started_at existe e timer não está rodando
-                if (updatedDuel.started_at && !timerInterval.current) {
+                // Garantir que started_at existe, senão criar
+                let startedAt = updatedDuel.started_at;
+                if (!startedAt) {
+                  console.log('[DuelRoom] Definindo started_at após opponent entrar');
+                  const now = new Date().toISOString();
+                  await supabase
+                    .from('live_duels')
+                    .update({ 
+                      started_at: now,
+                      status: 'in_progress'
+                    })
+                    .eq('id', id);
+                  startedAt = now;
+                }
+                
+                // Iniciar timer se ainda não estiver rodando
+                if (startedAt && !timerInterval.current) {
                   console.log('[DuelRoom] Iniciando timer após opponent entrar');
-                  startCallTimer(updatedDuel.started_at);
+                  startCallTimer(startedAt);
                 }
               }
             }
@@ -317,10 +332,10 @@ const DuelRoom = () => {
         });
       }
 
-      // Garantir que started_at existe
+      // Garantir que started_at existe se há opponent
       let startedAt = data.started_at;
       if (!startedAt && data.opponent_id) {
-        console.log('[DuelRoom] Definindo started_at no banco');
+        console.log('[DuelRoom] Definindo started_at no banco (tem opponent)');
         const now = new Date().toISOString();
         await supabase
           .from('live_duels')
@@ -332,8 +347,9 @@ const DuelRoom = () => {
         startedAt = now;
       }
 
-      // Iniciar timer
-      if (startedAt) {
+      // Iniciar timer apenas se já tem opponent e started_at
+      if (startedAt && data.opponent_id) {
+        console.log('[DuelRoom] Iniciando timer (duelo tem 2 jogadores)');
         startCallTimer(startedAt);
 
         // Verificar se já passou 60 minutos
@@ -342,6 +358,8 @@ const DuelRoom = () => {
           console.log('[DuelRoom] Tempo esgotado (60 minutos)');
           await endDuel();
         }
+      } else {
+        console.log('[DuelRoom] Timer não iniciado - aguardando segundo jogador');
       }
     } catch (error: any) {
       console.error('[DuelRoom] Erro em fetchDuel:', error);
@@ -509,7 +527,8 @@ const DuelRoom = () => {
     opponentName: duel?.opponent?.username,
     isPlayer1, 
     isPlayer2,
-    isParticipant
+    isParticipant,
+    currentUserPlayer: isPlayer1 ? 'player1' : isPlayer2 ? 'player2' : null
   });
 
   return (
