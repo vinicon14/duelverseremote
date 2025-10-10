@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Navbar } from "@/components/Navbar";
 import { NewsCard } from "@/components/NewsCard";
 import { AdBanner } from "@/components/AdBanner";
+import { NewsSidebar } from "@/components/NewsSidebar";
 import { useAccountType } from "@/hooks/useAccountType";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -11,6 +12,7 @@ import { Newspaper, Zap, Swords, Trophy } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { SidebarProvider } from "@/components/ui/sidebar";
 
 export default function Home() {
   const navigate = useNavigate();
@@ -62,10 +64,11 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      
-      <main className="container mx-auto px-4 pt-20 sm:pt-24 pb-8">
+    <SidebarProvider defaultOpen>
+      <div className="min-h-screen bg-background flex w-full">
+        <Navbar />
+        
+        <main className="flex-1 container mx-auto px-4 pt-20 sm:pt-24 pb-8">
         {/* Cards de Acesso Rápido */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
           <Card className="card-mystic hover:border-primary/60 transition-all cursor-pointer" onClick={() => navigate('/matchmaking')}>
@@ -117,54 +120,19 @@ export default function Home() {
           </Card>
         </div>
 
-        <div className="mb-6 sm:mb-8">
-          <div className="flex items-center gap-2 sm:gap-3 mb-2">
-            <Newspaper className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gradient-mystic">Notícias</h1>
-          </div>
-          <p className="text-sm sm:text-base text-muted-foreground">
-            Fique por dentro das últimas novidades da plataforma
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2">
-            {loading ? (
-              <div className="space-y-4">
-                {[1, 2, 3].map((i) => (
-                  <Skeleton key={i} className="h-64 w-full" />
-                ))}
-              </div>
-            ) : news.length > 0 ? (
-              <div className="space-y-6">
-                {news.map((item) => (
-                  <NewsCard 
-                    key={item.id} 
-                    news={item}
-                    onClick={() => setSelectedNews(item)}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12 text-muted-foreground">
-                <Newspaper className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                <p>Nenhuma notícia publicada ainda</p>
-              </div>
-            )}
-          </div>
-
-          {!isPro && ads.length > 0 && (
-            <div className="lg:col-span-1">
-              <h2 className="text-xl font-semibold mb-4">Anúncios</h2>
-              <div className="space-y-4 sticky top-24">
-                {ads.map((ad) => (
-                  <AdBanner key={ad.id} ad={ad} />
-                ))}
-              </div>
+        {!isPro && ads.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold mb-4">Anúncios</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {ads.map((ad) => (
+                <AdBanner key={ad.id} ad={ad} />
+              ))}
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </main>
+
+      <NewsSidebar news={news} onNewsSelect={setSelectedNews} />
 
       <Dialog open={!!selectedNews} onOpenChange={() => setSelectedNews(null)}>
         <DialogContent className="max-w-3xl">
@@ -194,6 +162,7 @@ export default function Home() {
           </ScrollArea>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </SidebarProvider>
   );
 }
