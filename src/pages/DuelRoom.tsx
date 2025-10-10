@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { PhoneOff } from "lucide-react";
+import { PhoneOff, Loader2 } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { DuelChat } from "@/components/DuelChat";
 import { FloatingCalculator } from "@/components/FloatingCalculator";
@@ -42,7 +42,7 @@ const DuelRoom = () => {
 
   // Listener realtime para sincronizar LP entre usuários e atualização de opponent
   useEffect(() => {
-    if (!id) return;
+    if (!id || !currentUser) return;
 
     const channel = supabase
       .channel(`duel-${id}`)
@@ -61,9 +61,10 @@ const DuelRoom = () => {
             setPlayer1LP(payload.new.player1_lp || 8000);
             setPlayer2LP(payload.new.player2_lp || 8000);
             
-            // Se opponent_id mudou, buscar dados completos com profiles
+            // Se opponent_id mudou (alguém entrou), buscar dados completos e criar sala
             if (payload.new.opponent_id && payload.new.opponent_id !== duel?.opponent_id) {
-              console.log('Opponent mudou, buscando dados atualizados');
+              console.log('Opponent entrou! Buscando dados completos e criando sala...');
+              
               const { data: updatedDuel } = await supabase
                 .from('live_duels')
                 .select(`
@@ -77,6 +78,26 @@ const DuelRoom = () => {
               if (updatedDuel) {
                 console.log('Dados atualizados do duelo:', updatedDuel);
                 setDuel(updatedDuel);
+                
+                // Criar sala Daily.co se ainda não existe
+                if (!roomUrl && updatedDuel.opponent_id && updatedDuel.creator_id) {
+                  console.log('Criando sala Daily.co após opponent entrar...');
+                  const { data: roomData, error: roomError } = await supabase.functions.invoke('create-daily-room', {
+                    body: { roomName: `duelverse-${id}` }
+                  });
+                  
+                  if (roomError || !roomData?.url) {
+                    console.error('Erro ao criar sala:', roomError);
+                    toast({
+                      title: "Erro ao iniciar videochamada",
+                      description: "Não foi possível criar a sala de vídeo.",
+                      variant: "destructive",
+                    });
+                  } else {
+                    console.log('Sala Daily.co criada:', roomData.url);
+                    setRoomUrl(roomData.url);
+                  }
+                }
               }
             }
           }
@@ -87,7 +108,7 @@ const DuelRoom = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [id, duel?.opponent_id]);
+  }, [id, duel?.opponent_id, roomUrl, currentUser]);
 
   const startCallTimer = (startedAt: string) => {
     callStartTime.current = new Date(startedAt).getTime();
@@ -174,17 +195,6 @@ const DuelRoom = () => {
       const { data: { session } } = await supabase.auth.getSession();
       console.log('[DuelRoom] Current user:', session?.user?.id);
       
-      // Se está aguardando opponent E o usuário é o criador, redirecionar de volta
-      if (session?.user && session.user.id === data.creator_id && !data.opponent_id) {
-        console.log('[DuelRoom] Criador aguardando opponent, redirecionando para /duels');
-        toast({
-          title: "Aguardando oponente",
-          description: "Você será redirecionado automaticamente quando alguém entrar.",
-        });
-        navigate('/duels');
-        return;
-      }
-
       // Se a sala já tem 2 jogadores completos e o usuário atual não é participante, bloquear
       if (session?.user && data.opponent_id && 
           data.creator_id !== session.user.id && 
@@ -441,9 +451,14 @@ const DuelRoom = () => {
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
-                <div className="text-center">
-                  <p className="text-muted-foreground mb-2">Carregando sala de vídeo...</p>
-                  <p className="text-xs text-muted-foreground">ID: {id}</p>
+                <div className="text-center space-y-4">
+                  <Loader2 className="w-12 h-12 mx-auto text-primary animate-spin" />
+                  <div>
+                    <p className="text-muted-foreground mb-2">
+                      {duel?.opponent_id ? 'Carregando sala de vídeo...' : 'Aguardando oponente entrar...'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">ID: {id}</p>
+                  </div>
                 </div>
               </div>
             )}
@@ -500,7 +515,7 @@ const DuelRoom = () => {
       {duel && currentUser && (
         <FloatingCalculator
           player1Name={duel.creator?.username || 'Jogador 1'}
-          player2Name={duel.opponent?.username || (duel.opponent_id ? 'Carregando...' : 'Aguardando...')}
+          player2Name={duel.opponent?.username || 'Aguardando...'}
           player1LP={player1LP}
           player2LP={player2LP}
           onUpdateLP={updateLP}
