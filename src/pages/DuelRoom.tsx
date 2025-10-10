@@ -46,10 +46,15 @@ const DuelRoom = () => {
   useEffect(() => {
     if (!id || !currentUser) return;
 
-    console.log('🔴 Configurando listener realtime para duel:', id);
+    console.log('🔴 [REALTIME] Configurando listener para duel:', id);
 
     const channel = supabase
-      .channel(`duel-${id}`)
+      .channel(`duel-${id}`, {
+        config: {
+          broadcast: { self: false },
+          presence: { key: currentUser.id }
+        }
+      })
       .on(
         'postgres_changes',
         {
@@ -59,24 +64,31 @@ const DuelRoom = () => {
           filter: `id=eq.${id}`,
         },
         async (payload) => {
-          console.log('🔴 Recebeu update realtime:', payload);
+          console.log('🔴 [REALTIME] ===== UPDATE RECEBIDO =====');
+          console.log('🔴 [REALTIME] Payload completo:', JSON.stringify(payload, null, 2));
+          console.log('🔴 [REALTIME] Player1 LP atual:', player1LP);
+          console.log('🔴 [REALTIME] Player2 LP atual:', player2LP);
           
           if (payload.new) {
             // Sempre atualizar LP imediatamente
             const newPlayer1LP = payload.new.player1_lp || 8000;
             const newPlayer2LP = payload.new.player2_lp || 8000;
             
-            console.log('🔴 Atualizando LPs locais:', { 
-              player1LP: newPlayer1LP, 
-              player2LP: newPlayer2LP 
+            console.log('🔴 [REALTIME] Novos valores do banco:', { 
+              newPlayer1LP, 
+              newPlayer2LP,
+              mudouPlayer1: newPlayer1LP !== player1LP,
+              mudouPlayer2: newPlayer2LP !== player2LP
             });
             
             setPlayer1LP(newPlayer1LP);
             setPlayer2LP(newPlayer2LP);
             
+            console.log('🔴 [REALTIME] Estados locais atualizados!');
+            
             // Se opponent_id mudou (alguém entrou), recarregar dados do duelo
             if (payload.new.opponent_id && (!duel?.opponent_id || payload.new.opponent_id !== duel?.opponent_id)) {
-              console.log('🔴 Opponent entrou, recarregando dados do duelo');
+              console.log('🔴 [REALTIME] Opponent entrou, recarregando dados do duelo');
               
               const { data: updatedDuel, error: reloadError } = await supabase
                 .from('live_duels')
@@ -109,12 +121,22 @@ const DuelRoom = () => {
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('🔴 [REALTIME] Status da subscrição:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('🔴 [REALTIME] ✅ Canal inscrito com sucesso!');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('🔴 [REALTIME] ❌ Erro no canal');
+        } else if (status === 'TIMED_OUT') {
+          console.error('🔴 [REALTIME] ❌ Timeout na conexão');
+        }
+      });
 
     return () => {
+      console.log('🔴 [REALTIME] Removendo canal');
       supabase.removeChannel(channel);
     };
-  }, [id, duel?.opponent_id, currentUser]);
+  }, [id, currentUser, player1LP, player2LP, duel?.opponent_id]);
 
   const startCallTimer = (startedAt: string, durationMinutes: number = 60) => {
     const startTime = new Date(startedAt).getTime();
