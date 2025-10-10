@@ -233,19 +233,51 @@ const DuelRoom = () => {
         opponent_id: data.opponent_id,
         status: data.status
       });
-      
-      console.log('[DuelRoom] Duelo carregado:', {
-        id: data.id,
-        creator_id: data.creator_id,
-        opponent_id: data.opponent_id,
-        status: data.status
-      });
 
-      // Verificar se o usuário é participante
-      const isCreator = data.creator_id === userId;
-      const isOpponent = data.opponent_id === userId;
+      // Verificar se o usuário é participante (usar let para poder reatribuir)
+      let isCreator = data.creator_id === userId;
+      let isOpponent = data.opponent_id === userId;
       
       console.log('[DuelRoom] Verificação de participação:', { 
+        isCreator, 
+        isOpponent, 
+        userId, 
+        creatorId: data.creator_id,
+        opponentId: data.opponent_id 
+      });
+
+      // CRITICAL: Se o usuário NÃO é o criador E NÃO é reconhecido como opponent
+      // Isso pode significar que a atualização ainda não propagou
+      // Vamos forçar uma recarga e aguardar um pouco mais
+      if (!isCreator && !isOpponent) {
+        console.log('[DuelRoom] ⚠️ Usuário não é criador nem opponent - aguardando atualização...');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Recarregar dados
+        const { data: reloadedData } = await supabase
+          .from('live_duels')
+          .select(`
+            *,
+            creator:profiles!live_duels_creator_id_fkey(username, avatar_url, user_id),
+            opponent:profiles!live_duels_opponent_id_fkey(username, avatar_url, user_id)
+          `)
+          .eq('id', id)
+          .maybeSingle();
+        
+        if (reloadedData) {
+          console.log('[DuelRoom] 🔄 Dados recarregados:', {
+            opponent_id: reloadedData.opponent_id,
+            creator_id: reloadedData.creator_id
+          });
+          data = reloadedData;
+          
+          // Recalcular após recarga
+          isCreator = data.creator_id === userId;
+          isOpponent = data.opponent_id === userId;
+        }
+      }
+      
+      console.log('[DuelRoom] ✅ Estado final de participação:', { 
         isCreator, 
         isOpponent, 
         userId, 
