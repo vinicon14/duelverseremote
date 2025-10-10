@@ -15,6 +15,7 @@ export default function Matchmaking() {
   const [queueId, setQueueId] = useState<string | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [playersInQueue, setPlayersInQueue] = useState(0);
+  const [isRanked, setIsRanked] = useState(true);
   const currentUserId = useRef<string | null>(null);
   const timerInterval = useRef<NodeJS.Timeout | null>(null);
   const queueChannel = useRef<any>(null);
@@ -105,11 +106,12 @@ export default function Matchmaking() {
 
       setSearching(true);
 
-      // Buscar uma sala aleatória com apenas 1 pessoa (status waiting)
+      // Buscar uma sala aleatória com apenas 1 pessoa (status waiting) do tipo escolhido
       const { data: waitingDuels, error: searchError } = await supabase
         .from("live_duels")
         .select("id, creator_id")
         .eq("status", "waiting")
+        .eq("is_ranked", isRanked)
         .is("opponent_id", null)
         .neq("creator_id", session.user.id)
         .limit(10);
@@ -122,7 +124,7 @@ export default function Matchmaking() {
       }
 
       if (!waitingDuels || waitingDuels.length === 0) {
-        toast.error("Nenhuma sala disponível no momento. Tente novamente ou crie sua própria sala.");
+        toast.error(`Nenhuma sala ${isRanked ? 'ranqueada' : 'casual'} disponível. Tente outro tipo ou crie sua própria sala.`);
         setSearching(false);
         navigate('/duels');
         return;
@@ -201,9 +203,36 @@ export default function Matchmaking() {
                 <div className="space-y-4">
                   <div className="text-center py-6 sm:py-8">
                     <Swords className="h-12 w-12 sm:h-16 sm:w-16 mx-auto mb-4 text-primary animate-pulse" />
-                    <h3 className="text-lg sm:text-xl font-semibold mb-2">Ready to Duel?</h3>
+                    <h3 className="text-lg sm:text-xl font-semibold mb-2">Pronto para Duelar?</h3>
                     <p className="text-sm sm:text-base text-muted-foreground mb-6">
-                      We'll match you with an opponent of similar skill level
+                      Vamos encontrar um oponente para você
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-3 mb-4">
+                    <label className="text-sm font-medium">Tipo de Partida</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        type="button"
+                        variant={isRanked ? "default" : "outline"}
+                        onClick={() => setIsRanked(true)}
+                        className={isRanked ? "btn-mystic text-white" : ""}
+                      >
+                        🏆 Ranqueada
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={!isRanked ? "default" : "outline"}
+                        onClick={() => setIsRanked(false)}
+                        className={!isRanked ? "btn-mystic text-white" : ""}
+                      >
+                        🎮 Casual
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground text-center">
+                      {isRanked 
+                        ? "✅ Vale pontos no ranking" 
+                        : "❌ Não vale pontos no ranking"}
                     </p>
                   </div>
                   
@@ -213,7 +242,7 @@ export default function Matchmaking() {
                     size="lg"
                   >
                     <Swords className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                    Find Match
+                    Buscar Partida {isRanked ? 'Ranqueada' : 'Casual'}
                   </Button>
                 </div>
               ) : (

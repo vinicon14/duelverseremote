@@ -21,7 +21,7 @@ export const NotificationBell = ({ userId }: { userId: string }) => {
 
     fetchNotifications();
 
-    // Listen for new friend requests
+    // Listen for new friend requests and duel invites
     const channel = supabase
       .channel(`notifications_${userId}`)
       .on(
@@ -41,8 +41,8 @@ export const NotificationBell = ({ userId }: { userId: string }) => {
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'live_duels',
-          filter: `opponent_id=eq.${userId}`
+          table: 'duel_invites',
+          filter: `receiver_id=eq.${userId}`
         },
         () => {
           fetchNotifications();
@@ -64,12 +64,16 @@ export const NotificationBell = ({ userId }: { userId: string }) => {
         .eq('receiver_id', userId)
         .eq('status', 'pending');
 
-      // Buscar duelos onde o usuário foi convidado
+      // Buscar duelos onde o usuário foi convidado (via duel_invites)
       const { data: duelInvites } = await supabase
-        .from('live_duels')
-        .select('*, creator:profiles!live_duels_creator_id_fkey(username)')
-        .eq('opponent_id', userId)
-        .eq('status', 'waiting');
+        .from('duel_invites')
+        .select(`
+          *,
+          duel:live_duels(id, is_ranked, status),
+          sender:profiles!duel_invites_sender_id_fkey(username)
+        `)
+        .eq('receiver_id', userId)
+        .eq('status', 'pending');
 
       const allNotifications = [
         ...(friendRequests?.map(req => ({
@@ -78,11 +82,12 @@ export const NotificationBell = ({ userId }: { userId: string }) => {
           message: `${(req.sender as any)?.username || 'Alguém'} quer ser seu amigo`,
           data: req,
         })) || []),
-        ...(duelInvites?.map(duel => ({
-          id: duel.id,
+        ...(duelInvites?.map(invite => ({
+          id: invite.id,
+          duelId: invite.duel_id,
           type: 'duel_invite',
-          message: `${(duel.creator as any)?.username || 'Alguém'} te desafiou para um duelo`,
-          data: duel,
+          message: `${(invite.sender as any)?.username || 'Alguém'} te desafiou para um duelo ${(invite.duel as any)?.is_ranked ? '🏆 ranqueado' : '🎮 casual'}`,
+          data: invite,
         })) || []),
       ];
 
@@ -93,11 +98,22 @@ export const NotificationBell = ({ userId }: { userId: string }) => {
     }
   };
 
-  const handleNotificationClick = (notification: any) => {
+  const handleNotificationClick = async (notification: any) => {
     if (notification.type === 'friend_request') {
       navigate('/friends?tab=requests');
     } else if (notification.type === 'duel_invite') {
-      navigate(`/duel/${notification.id}`);
+      // Marcar convite como aceito e entrar no duelo
+      try {
+        await supabase
+          .from('duel_invites')
+          .update({ status: 'accepted' })
+          .eq('id', notification.id);
+        
+        navigate(`/duel/${notification.duelId}`);
+      } catch (error) {
+        console.error('Erro ao aceitar convite:', error);
+        navigate(`/duel/${notification.duelId}`);
+      }
     }
   };
 

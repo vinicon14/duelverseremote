@@ -222,24 +222,45 @@ const Friends = () => {
         return;
       }
 
-      const { data, error } = await supabase
+      // Perguntar se quer ranqueada ou casual
+      const isRanked = window.confirm(
+        "Escolha o tipo de partida:\n\n" +
+        "OK = Ranqueada (vale pontos)\n" +
+        "Cancelar = Casual (não vale pontos)"
+      );
+
+      const { data: duelData, error: duelError } = await supabase
         .from('live_duels')
         .insert({
           creator_id: currentUser.id,
-          opponent_id: friendUserId,
           status: 'waiting',
+          is_ranked: isRanked,
         })
         .select()
         .single();
 
-      if (error) throw error;
+      if (duelError) throw duelError;
+
+      // Criar convite de duelo
+      const { error: inviteError } = await supabase
+        .from('duel_invites')
+        .insert({
+          sender_id: currentUser.id,
+          receiver_id: friendUserId,
+          duel_id: duelData.id,
+          status: 'pending',
+        });
+
+      if (inviteError) {
+        console.error('Erro ao criar convite:', inviteError);
+      }
 
       toast({
         title: "Desafio enviado!",
-        description: "Seu amigo foi convidado para o duelo.",
+        description: `Convite ${isRanked ? 'ranqueado' : 'casual'} enviado para seu amigo.`,
       });
 
-      navigate(`/duel/${data.id}`);
+      navigate(`/duel/${duelData.id}`);
     } catch (error: any) {
       toast({
         title: "Erro ao criar desafio",

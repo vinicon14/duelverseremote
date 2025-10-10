@@ -83,6 +83,44 @@ export type Database = {
           },
         ]
       }
+      duel_invites: {
+        Row: {
+          created_at: string
+          duel_id: string
+          id: string
+          receiver_id: string
+          sender_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          duel_id: string
+          id?: string
+          receiver_id: string
+          sender_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          duel_id?: string
+          id?: string
+          receiver_id?: string
+          sender_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "duel_invites_duel_id_fkey"
+            columns: ["duel_id"]
+            isOneToOne: false
+            referencedRelation: "live_duels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       friend_requests: {
         Row: {
           created_at: string
@@ -132,6 +170,7 @@ export type Database = {
           creator_id: string
           finished_at: string | null
           id: string
+          is_ranked: boolean
           opponent_id: string | null
           player1_lp: number
           player2_lp: number
@@ -145,6 +184,7 @@ export type Database = {
           creator_id: string
           finished_at?: string | null
           id?: string
+          is_ranked?: boolean
           opponent_id?: string | null
           player1_lp?: number
           player2_lp?: number
@@ -158,6 +198,7 @@ export type Database = {
           creator_id?: string
           finished_at?: string | null
           id?: string
+          is_ranked?: boolean
           opponent_id?: string | null
           player1_lp?: number
           player2_lp?: number

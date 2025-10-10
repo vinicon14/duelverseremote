@@ -18,6 +18,7 @@ const Duels = () => {
   const [duels, setDuels] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [roomName, setRoomName] = useState("");
+  const [isRanked, setIsRanked] = useState(true);
 
   useEffect(() => {
     checkAuth();
@@ -111,6 +112,7 @@ const Duels = () => {
         .insert({
           creator_id: user.id,
           status: 'waiting',
+          is_ranked: isRanked,
         })
         .select()
         .single();
@@ -239,6 +241,34 @@ const Duels = () => {
                     className="bg-background/50"
                   />
                 </div>
+                
+                <div className="space-y-2">
+                  <Label>Tipo de Partida</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      type="button"
+                      variant={isRanked ? "default" : "outline"}
+                      onClick={() => setIsRanked(true)}
+                      className={isRanked ? "btn-mystic text-white" : ""}
+                    >
+                      🏆 Ranqueada
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={!isRanked ? "default" : "outline"}
+                      onClick={() => setIsRanked(false)}
+                      className={!isRanked ? "btn-mystic text-white" : ""}
+                    >
+                      🎮 Casual
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {isRanked 
+                      ? "✅ Vale pontos no ranking" 
+                      : "❌ Não vale pontos no ranking"}
+                  </p>
+                </div>
+                
                 <Button onClick={createDuel} className="w-full btn-mystic text-white">
                   Criar e Entrar
                 </Button>
@@ -268,20 +298,29 @@ const Duels = () => {
             {duels.map((duel) => (
               <Card key={duel.id} className="card-mystic hover:border-primary/40 transition-all">
                 <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
+                  <CardTitle className="flex items-center justify-between flex-wrap gap-2">
                     <span className="text-gradient-mystic">{duel.room_name}</span>
-                    {duel.status === 'waiting' ? (
-                      <span className="text-xs px-2 py-1 rounded-full bg-primary/20 text-primary">
-                        Aguardando
+                    <div className="flex gap-1">
+                      <span className={`text-xs px-2 py-1 rounded-full ${
+                        duel.is_ranked 
+                          ? 'bg-yellow-500/20 text-yellow-500' 
+                          : 'bg-blue-500/20 text-blue-500'
+                      }`}>
+                        {duel.is_ranked ? '🏆 Ranqueada' : '🎮 Casual'}
                       </span>
-                    ) : (
-                      <span className="text-xs px-2 py-1 rounded-full bg-accent/20 text-accent">
-                        Em andamento
-                      </span>
-                    )}
+                      {duel.status === 'waiting' ? (
+                        <span className="text-xs px-2 py-1 rounded-full bg-primary/20 text-primary">
+                          Aguardando
+                        </span>
+                      ) : (
+                        <span className="text-xs px-2 py-1 rounded-full bg-accent/20 text-accent">
+                          Em andamento
+                        </span>
+                      )}
+                    </div>
                   </CardTitle>
                   <CardDescription>
-                    Criado por {duel.player1?.username || 'Anônimo'}
+                    Criado por {duel.creator?.username || 'Anônimo'}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
