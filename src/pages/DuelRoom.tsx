@@ -148,6 +148,8 @@ const DuelRoom = () => {
         body: { roomName: `duelverse-${id}` }
       });
 
+      console.log('Daily.co response:', { roomData, roomError });
+
       if (roomError || !roomData?.url) {
         console.error('Erro ao criar sala:', roomError);
         toast({
@@ -156,6 +158,7 @@ const DuelRoom = () => {
           variant: "destructive",
         });
       } else {
+        console.log('Setting room URL:', roomData.url);
         setRoomUrl(roomData.url);
       }
 
@@ -359,12 +362,18 @@ const DuelRoom = () => {
             {roomUrl ? (
               <iframe
                 src={roomUrl}
-                allow="camera; microphone; fullscreen; speaker; display-capture"
+                allow="camera; microphone; fullscreen; speaker; display-capture; autoplay"
                 className="w-full h-full"
+                title="Daily.co Video Call"
+                onLoad={() => console.log('Iframe loaded')}
+                onError={(e) => console.error('Iframe error:', e)}
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
-                <p className="text-muted-foreground">Carregando sala de vídeo...</p>
+                <div className="text-center">
+                  <p className="text-muted-foreground mb-2">Carregando sala de vídeo...</p>
+                  <p className="text-xs text-muted-foreground">ID: {id}</p>
+                </div>
               </div>
             )}
           </div>
