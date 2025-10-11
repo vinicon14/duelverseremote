@@ -332,19 +332,24 @@ const DuelRoom = () => {
     const currentLP = isPlayer1 ? player1LP : player2LP;
     const newLP = Math.max(0, currentLP + amount);
 
-    console.log('💾 [UPDATE LP] Iniciando:', { 
-      player, 
-      amount, 
-      currentLP, 
-      newLP,
-      estadoAtual: { player1LP, player2LP }
-    });
+    console.log('💾 [UPDATE LP] ========================================');
+    console.log('💾 [UPDATE LP] Player solicitado:', player);
+    console.log('💾 [UPDATE LP] Amount:', amount);
+    console.log('💾 [UPDATE LP] Current User ID:', currentUser?.id);
+    console.log('💾 [UPDATE LP] Creator ID:', duel?.creator_id);
+    console.log('💾 [UPDATE LP] Opponent ID:', duel?.opponent_id);
+    console.log('💾 [UPDATE LP] Current LP:', currentLP);
+    console.log('💾 [UPDATE LP] New LP:', newLP);
+    console.log('💾 [UPDATE LP] Estado atual:', { player1LP, player2LP });
 
     try {
       // Atualizar APENAS o campo específico do jogador
+      const updateData = { [player + '_lp']: newLP };
+      console.log('💾 [UPDATE LP] Atualizando com:', updateData);
+      
       const { error } = await supabase
         .from('live_duels')
-        .update({ [player + '_lp']: newLP })
+        .update(updateData)
         .eq('id', id);
 
       if (error) {
@@ -353,6 +358,7 @@ const DuelRoom = () => {
       }
 
       console.log('💾 [UPDATE LP] ✅ Atualizado no banco!');
+      console.log('💾 [UPDATE LP] ========================================');
 
       if (newLP === 0) {
         await endDuel(player === 'player1' ? duel?.opponent_id : duel?.creator_id);
@@ -372,17 +378,22 @@ const DuelRoom = () => {
     
     const newLP = Math.max(0, value);
     
-    console.log('💾 [SET LP] Iniciando:', { 
-      player, 
-      newLP,
-      estadoAtual: { player1LP, player2LP }
-    });
+    console.log('💾 [SET LP] ========================================');
+    console.log('💾 [SET LP] Player solicitado:', player);
+    console.log('💾 [SET LP] New value:', newLP);
+    console.log('💾 [SET LP] Current User ID:', currentUser?.id);
+    console.log('💾 [SET LP] Creator ID:', duel?.creator_id);
+    console.log('💾 [SET LP] Opponent ID:', duel?.opponent_id);
+    console.log('💾 [SET LP] Estado atual:', { player1LP, player2LP });
     
     try {
       // Atualizar APENAS o campo específico do jogador
+      const updateData = { [player + '_lp']: newLP };
+      console.log('💾 [SET LP] Atualizando com:', updateData);
+      
       const { error } = await supabase
         .from('live_duels')
-        .update({ [player + '_lp']: newLP })
+        .update(updateData)
         .eq('id', id);
 
       if (error) {
@@ -391,6 +402,7 @@ const DuelRoom = () => {
       }
 
       console.log('💾 [SET LP] ✅ Atualizado no banco!');
+      console.log('💾 [SET LP] ========================================');
 
       if (newLP === 0) {
         await endDuel(player === 'player1' ? duel?.opponent_id : duel?.creator_id);
@@ -479,20 +491,32 @@ const DuelRoom = () => {
     navigate('/duels');
   };
 
-  // Identificar quem é cada player - LÓGICA OTIMISTA PARA PLAYER 2
+  // Identificar quem é cada player - LÓGICA CORRIGIDA
   const isPlayer1 = currentUser?.id === duel?.creator_id;
-  // Player 2: É reconhecido como opponent OU qualquer usuário que não seja o criador
-  const isPlayer2 = currentUser?.id === duel?.opponent_id || (currentUser?.id && !isPlayer1);
+  // Player 2: É reconhecido como opponent OU como qualquer usuário que entrou e não é o criador
+  const isPlayer2 = currentUser?.id === duel?.opponent_id || (currentUser?.id && !isPlayer1 && duel?.opponent_id);
   const isParticipant = isPlayer1 || isPlayer2;
-  const currentUserPlayer: 'player1' | 'player2' | null = isPlayer1 ? 'player1' : (isPlayer2 ? 'player2' : null);
   
-  // Debug logs para verificar identificação do player
-  console.log('🎮 [PLAYER] Current User ID:', currentUser?.id);
-  console.log('🎮 [PLAYER] Creator ID:', duel?.creator_id);
-  console.log('🎮 [PLAYER] Opponent ID:', duel?.opponent_id);
-  console.log('🎮 [PLAYER] isPlayer1:', isPlayer1);
-  console.log('🎮 [PLAYER] isPlayer2:', isPlayer2);
-  console.log('🎮 [PLAYER] currentUserPlayer:', currentUserPlayer);
+  // Determinar o player atual de forma mais explícita
+  let currentUserPlayer: 'player1' | 'player2' | null = null;
+  if (isPlayer1) {
+    currentUserPlayer = 'player1';
+  } else if (duel?.opponent_id === currentUser?.id) {
+    currentUserPlayer = 'player2';
+  }
+  
+  // Debug logs detalhados
+  useEffect(() => {
+    console.log('🎮 [PLAYER IDENTIFICATION] ========================================');
+    console.log('🎮 [PLAYER] Current User ID:', currentUser?.id);
+    console.log('🎮 [PLAYER] Creator ID:', duel?.creator_id);
+    console.log('🎮 [PLAYER] Opponent ID:', duel?.opponent_id);
+    console.log('🎮 [PLAYER] isPlayer1:', isPlayer1);
+    console.log('🎮 [PLAYER] isPlayer2:', isPlayer2);
+    console.log('🎮 [PLAYER] currentUserPlayer:', currentUserPlayer);
+    console.log('🎮 [PLAYER] isParticipant:', isParticipant);
+    console.log('🎮 [PLAYER] =========================================================');
+  }, [currentUser?.id, duel?.creator_id, duel?.opponent_id, isPlayer1, isPlayer2, currentUserPlayer, isParticipant]);
 
   return (
     <div className="min-h-screen bg-background">
