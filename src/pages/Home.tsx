@@ -1,59 +1,30 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Navbar } from "@/components/Navbar";
-import { NewsCard } from "@/components/NewsCard";
 import { AdBanner } from "@/components/AdBanner";
-import { NewsSidebar } from "@/components/NewsSidebar";
 import { useAccountType } from "@/hooks/useAccountType";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Newspaper, Zap, Swords, Trophy } from "lucide-react";
+import { Zap, Swords, Trophy } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { Badge } from "@/components/ui/badge";
 
 export default function Home() {
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
-  const [news, setNews] = useState<any[]>([]);
   const [ads, setAds] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedNews, setSelectedNews] = useState<any>(null);
-  const [mobileNewsOpen, setMobileNewsOpen] = useState(false);
   const { isPro } = useAccountType();
 
   useEffect(() => {
-    fetchNews();
     fetchAds();
   }, []);
 
   useEffect(() => {
     if (isPro) {
-      // Limpar anúncios se for PRO
       setAds([]);
     } else {
-      // Buscar anúncios se não for PRO
       fetchAds();
     }
   }, [isPro]);
-
-  const fetchNews = async () => {
-    const { data, error } = await supabase
-      .from('news')
-      .select('*, author:profiles!news_author_id_fkey(username)')
-      .order('created_at', { ascending: false })
-      .limit(10);
-
-    if (!error && data) {
-      setNews(data);
-    }
-    setLoading(false);
-  };
 
   const fetchAds = async () => {
     const { data, error } = await supabase
@@ -136,102 +107,6 @@ export default function Home() {
           </div>
         )}
       </main>
-
-      {!isMobile && <NewsSidebar news={news} onNewsSelect={setSelectedNews} />}
-
-      {isMobile && (
-        <>
-          <Button
-            className="fixed bottom-6 right-6 rounded-full w-14 h-14 shadow-lg z-50"
-            size="icon"
-            onClick={() => setMobileNewsOpen(true)}
-          >
-            <Newspaper className="w-6 h-6" />
-          </Button>
-
-          <Sheet open={mobileNewsOpen} onOpenChange={setMobileNewsOpen}>
-            <SheetContent side="right" className="w-full sm:max-w-md">
-              <SheetHeader>
-                <SheetTitle className="flex items-center gap-2">
-                  <Newspaper className="w-5 h-5 text-primary" />
-                  Notícias
-                </SheetTitle>
-              </SheetHeader>
-              <ScrollArea className="h-[calc(100vh-8rem)] mt-4">
-                <div className="space-y-4">
-                  {news.length > 0 ? (
-                    news.map((item) => (
-                      <div
-                        key={item.id}
-                        onClick={() => {
-                          setSelectedNews(item);
-                          setMobileNewsOpen(false);
-                        }}
-                        className="cursor-pointer p-3 rounded-lg hover:bg-accent transition-colors"
-                      >
-                        {item.image_url && (
-                          <div className="w-full h-32 overflow-hidden rounded mb-2">
-                            <img 
-                              src={item.image_url} 
-                              alt={item.title}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        )}
-                        <h3 className="font-semibold text-sm line-clamp-2 mb-1">
-                          {item.title}
-                        </h3>
-                        <p className="text-xs text-muted-foreground mb-2">
-                          {new Date(item.created_at).toLocaleDateString('pt-BR')}
-                        </p>
-                        {item.author && (
-                          <Badge variant="outline" className="text-xs">
-                            {item.author.username}
-                          </Badge>
-                        )}
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-8 px-4 text-muted-foreground text-sm">
-                      <Newspaper className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                      <p>Nenhuma notícia disponível</p>
-                    </div>
-                  )}
-                </div>
-              </ScrollArea>
-            </SheetContent>
-          </Sheet>
-        </>
-      )}
-
-      <Dialog open={!!selectedNews} onOpenChange={() => setSelectedNews(null)}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle className="text-2xl text-gradient-mystic">
-              {selectedNews?.title}
-            </DialogTitle>
-            <DialogDescription>
-              {selectedNews && new Date(selectedNews.created_at).toLocaleDateString('pt-BR', {
-                day: '2-digit',
-                month: 'long',
-                year: 'numeric'
-              })}
-            </DialogDescription>
-          </DialogHeader>
-          {selectedNews?.image_url && (
-            <img 
-              src={selectedNews.image_url} 
-              alt={selectedNews.title}
-              className="w-full h-64 object-cover rounded-lg"
-            />
-          )}
-          <ScrollArea className="max-h-[60vh]">
-            <div className="prose prose-invert max-w-none">
-              <p className="whitespace-pre-wrap">{selectedNews?.content}</p>
-            </div>
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
       </div>
     </SidebarProvider>
   );
