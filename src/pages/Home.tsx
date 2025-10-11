@@ -13,13 +13,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Badge } from "@/components/ui/badge";
 
 export default function Home() {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [news, setNews] = useState<any[]>([]);
   const [ads, setAds] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedNews, setSelectedNews] = useState<any>(null);
+  const [mobileNewsOpen, setMobileNewsOpen] = useState(false);
   const { isPro } = useAccountType();
 
   useEffect(() => {
@@ -132,7 +137,72 @@ export default function Home() {
         )}
       </main>
 
-      <NewsSidebar news={news} onNewsSelect={setSelectedNews} />
+      {!isMobile && <NewsSidebar news={news} onNewsSelect={setSelectedNews} />}
+
+      {isMobile && (
+        <>
+          <Button
+            className="fixed bottom-6 right-6 rounded-full w-14 h-14 shadow-lg z-50"
+            size="icon"
+            onClick={() => setMobileNewsOpen(true)}
+          >
+            <Newspaper className="w-6 h-6" />
+          </Button>
+
+          <Sheet open={mobileNewsOpen} onOpenChange={setMobileNewsOpen}>
+            <SheetContent side="right" className="w-full sm:max-w-md">
+              <SheetHeader>
+                <SheetTitle className="flex items-center gap-2">
+                  <Newspaper className="w-5 h-5 text-primary" />
+                  Notícias
+                </SheetTitle>
+              </SheetHeader>
+              <ScrollArea className="h-[calc(100vh-8rem)] mt-4">
+                <div className="space-y-4">
+                  {news.length > 0 ? (
+                    news.map((item) => (
+                      <div
+                        key={item.id}
+                        onClick={() => {
+                          setSelectedNews(item);
+                          setMobileNewsOpen(false);
+                        }}
+                        className="cursor-pointer p-3 rounded-lg hover:bg-accent transition-colors"
+                      >
+                        {item.image_url && (
+                          <div className="w-full h-32 overflow-hidden rounded mb-2">
+                            <img 
+                              src={item.image_url} 
+                              alt={item.title}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        )}
+                        <h3 className="font-semibold text-sm line-clamp-2 mb-1">
+                          {item.title}
+                        </h3>
+                        <p className="text-xs text-muted-foreground mb-2">
+                          {new Date(item.created_at).toLocaleDateString('pt-BR')}
+                        </p>
+                        {item.author && (
+                          <Badge variant="outline" className="text-xs">
+                            {item.author.username}
+                          </Badge>
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 px-4 text-muted-foreground text-sm">
+                      <Newspaper className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                      <p>Nenhuma notícia disponível</p>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+            </SheetContent>
+          </Sheet>
+        </>
+      )}
 
       <Dialog open={!!selectedNews} onOpenChange={() => setSelectedNews(null)}>
         <DialogContent className="max-w-3xl">
