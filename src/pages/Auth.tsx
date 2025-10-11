@@ -24,13 +24,22 @@ const Auth = () => {
     const email = formData.get("signin-email") as string;
     const password = formData.get("signin-password") as string;
 
+    console.log("🔐 Tentando fazer login com:", email);
+
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) throw error;
+      console.log("📝 Resposta do login:", { data, error });
+
+      if (error) {
+        console.error("❌ Erro no login:", error);
+        throw error;
+      }
+
+      console.log("✅ Login bem-sucedido:", data);
 
       // Verificar se o usuário está banido
       const { data: { session } } = await supabase.auth.getSession();
