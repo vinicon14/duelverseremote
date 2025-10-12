@@ -23,7 +23,6 @@ export const FloatingCalculator = ({
   onSetLP,
   currentUserPlayer = null,
 }: FloatingCalculatorProps) => {
-  console.log('🎮 [CALCULATOR] Renderizando com currentUserPlayer:', currentUserPlayer);
   // Posição inicial adaptada ao tamanho da tela
   const [position, setPosition] = useState(() => {
     const isMobile = window.innerWidth < 768;
@@ -310,7 +309,7 @@ export const FloatingCalculator = ({
                 </div>
               </div>
               
-              {currentUserPlayer === 'player2' ? (
+              {currentUserPlayer === 'player2' && (
                 <>
                   <div className="grid grid-cols-4 gap-2">
                     <Button
@@ -372,10 +371,6 @@ export const FloatingCalculator = ({
                     </Button>
                   </div>
                 </>
-              ) : (
-                <div className="text-xs text-muted-foreground text-center py-2">
-                  {currentUserPlayer === 'player1' ? 'Somente Player 2 pode editar' : 'Aguardando Player 2'}
-                </div>
               )}
             </div>
           </div>
