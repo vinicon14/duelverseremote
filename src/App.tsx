@@ -24,6 +24,33 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+// Componente interno que fica dentro do Router para usar useNavigate
+const RouterContent = ({ currentUserId }: { currentUserId: string | undefined }) => {
+  // Ativar notificações de convites de duelo
+  useDuelInviteNotifications(currentUserId);
+
+  return (
+    <Routes>
+      <Route path="/" element={<Home />} />
+      <Route path="/landing" element={<Landing />} />
+      <Route path="/admin" element={<Admin />} />
+      <Route path="/auth" element={<Auth />} />
+      <Route path="/duels" element={<Duels />} />
+      <Route path="/duel/:id" element={<DuelRoom />} />
+      <Route path="/profile" element={<Profile />} />
+      <Route path="/ranking" element={<Ranking />} />
+      <Route path="/friends" element={<Friends />} />
+      <Route path="/tournaments" element={<Tournaments />} />
+      <Route path="/tournaments/:id" element={<TournamentDetail />} />
+      <Route path="/matchmaking" element={<Matchmaking />} />
+      <Route path="/get-pro" element={<GetPro />} />
+      <Route path="/news" element={<News />} />
+      {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+};
+
 const AppContent = () => {
   const [currentUserId, setCurrentUserId] = useState<string | undefined>();
 
@@ -46,29 +73,9 @@ const AppContent = () => {
     };
   }, []);
 
-  // Ativar notificações de convites de duelo
-  useDuelInviteNotifications(currentUserId);
-
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/landing" element={<Landing />} />
-        <Route path="/admin" element={<Admin />} />
-        <Route path="/auth" element={<Auth />} />
-        <Route path="/duels" element={<Duels />} />
-        <Route path="/duel/:id" element={<DuelRoom />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/ranking" element={<Ranking />} />
-        <Route path="/friends" element={<Friends />} />
-        <Route path="/tournaments" element={<Tournaments />} />
-        <Route path="/tournaments/:id" element={<TournamentDetail />} />
-        <Route path="/matchmaking" element={<Matchmaking />} />
-        <Route path="/get-pro" element={<GetPro />} />
-        <Route path="/news" element={<News />} />
-        {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+      <RouterContent currentUserId={currentUserId} />
     </BrowserRouter>
   );
 };
