@@ -22,8 +22,11 @@ const DuelRoom = () => {
   const [showTimeWarning, setShowTimeWarning] = useState(false);
   const [roomUrl, setRoomUrl] = useState<string>('');
   const [isTimerPaused, setIsTimerPaused] = useState(false);
+  const isTimerPausedRef = useRef(false);
   const callStartTime = useRef<number | null>(null);
   const timerInterval = useRef<NodeJS.Timeout | null>(null);
+  const pausedTime = useRef<number>(0);
+  const lastPauseTime = useRef<number>(0);
 
   // Carrega dados do duelo e inicia timer
   useEffect(() => {
@@ -79,7 +82,20 @@ const DuelRoom = () => {
             
             // Atualizar estado de pausa do timer
             if (payload.new.is_timer_paused !== undefined) {
-              setIsTimerPaused(payload.new.is_timer_paused);
+              const wasPaused = isTimerPausedRef.current;
+              const nowPaused = payload.new.is_timer_paused;
+              
+              setIsTimerPaused(nowPaused);
+              isTimerPausedRef.current = nowPaused;
+              
+              // Se acabou de pausar, registrar o momento
+              if (!wasPaused && nowPaused) {
+                lastPauseTime.current = Date.now();
+              }
+              // Se acabou de despausar, acumular tempo pausado
+              else if (wasPaused && !nowPaused) {
+                pausedTime.current += Date.now() - lastPauseTime.current;
+              }
             }
             
             // Se opponent_id foi atualizado, recarregar dados completos do duel
@@ -120,13 +136,20 @@ const DuelRoom = () => {
     callStartTime.current = startTime;
     const MAX_DURATION = durationMinutes * 60; // Converter minutos para segundos
     
+    // Limpar intervalo anterior se existir
+    if (timerInterval.current) {
+      clearInterval(timerInterval.current);
+    }
+    
     timerInterval.current = setInterval(() => {
       // Se o timer estiver pausado, não atualizar
-      if (isTimerPaused) return;
+      if (isTimerPausedRef.current) return;
 
       const now = Date.now();
-      const elapsed = Math.floor((now - startTime) / 1000);
-      const remaining = remainingSecs !== undefined ? remainingSecs : Math.max(0, MAX_DURATION - elapsed);
+      const elapsedRaw = Math.floor((now - startTime - pausedTime.current) / 1000);
+      const remaining = remainingSecs !== undefined && remainingSecs < MAX_DURATION 
+        ? Math.max(0, remainingSecs - 1)
+        : Math.max(0, MAX_DURATION - elapsedRaw);
       
       setCallDuration(remaining);
 
@@ -278,7 +301,9 @@ const DuelRoom = () => {
       setDuel(data);
       setPlayer1LP(data.player1_lp || 8000);
       setPlayer2LP(data.player2_lp || 8000);
-      setIsTimerPaused(data.is_timer_paused || false);
+      const isPaused = data.is_timer_paused || false;
+      setIsTimerPaused(isPaused);
+      isTimerPausedRef.current = isPaused;
 
       // Criar sala Daily.co
       try {
@@ -508,6 +533,14 @@ const DuelRoom = () => {
       if (error) throw error;
 
       setIsTimerPaused(newPauseState);
+      isTimerPausedRef.current = newPauseState;
+      
+      // Registrar tempo de pausa/despausa
+      if (newPauseState) {
+        lastPauseTime.current = Date.now();
+      } else {
+        pausedTime.current += Date.now() - lastPauseTime.current;
+      }
       
       toast({
         title: newPauseState ? "⏸️ Timer pausado" : "▶️ Timer retomado",
