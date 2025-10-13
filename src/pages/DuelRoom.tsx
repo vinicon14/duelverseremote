@@ -21,6 +21,7 @@ const DuelRoom = () => {
   const [callDuration, setCallDuration] = useState(0);
   const [showTimeWarning, setShowTimeWarning] = useState(false);
   const [roomUrl, setRoomUrl] = useState<string>('');
+  const [isTimerPaused, setIsTimerPaused] = useState(false);
   const callStartTime = useRef<number | null>(null);
   const timerInterval = useRef<NodeJS.Timeout | null>(null);
 
@@ -76,6 +77,11 @@ const DuelRoom = () => {
             setPlayer1LP(newP1LP);
             setPlayer2LP(newP2LP);
             
+            // Atualizar estado de pausa do timer
+            if (payload.new.is_timer_paused !== undefined) {
+              setIsTimerPaused(payload.new.is_timer_paused);
+            }
+            
             // Se opponent_id foi atualizado, recarregar dados completos do duel
             if (payload.new.opponent_id && payload.old?.opponent_id !== payload.new.opponent_id) {
               console.log('🔴 [REALTIME] Opponent adicionado, recarregando dados do duel...');
@@ -109,17 +115,29 @@ const DuelRoom = () => {
     };
   }, [id, currentUser]);
 
-  const startCallTimer = (startedAt: string, durationMinutes: number = 60) => {
+  const startCallTimer = (startedAt: string, durationMinutes: number = 50, remainingSecs?: number) => {
     const startTime = new Date(startedAt).getTime();
     callStartTime.current = startTime;
     const MAX_DURATION = durationMinutes * 60; // Converter minutos para segundos
     
     timerInterval.current = setInterval(() => {
+      // Se o timer estiver pausado, não atualizar
+      if (isTimerPaused) return;
+
       const now = Date.now();
       const elapsed = Math.floor((now - startTime) / 1000);
-      const remaining = Math.max(0, MAX_DURATION - elapsed);
+      const remaining = remainingSecs !== undefined ? remainingSecs : Math.max(0, MAX_DURATION - elapsed);
       
       setCallDuration(remaining);
+
+      // Atualizar remaining_seconds no banco se for participante
+      if (duel && (currentUser?.id === duel.creator_id || currentUser?.id === duel.opponent_id)) {
+        supabase
+          .from('live_duels')
+          .update({ remaining_seconds: remaining })
+          .eq('id', id)
+          .then(() => {});
+      }
 
       // Aviso quando restar 5 minutos (300 segundos)
       if (remaining === 300 && !showTimeWarning) {
@@ -138,7 +156,7 @@ const DuelRoom = () => {
         }
         toast({
           title: "⏱️ Tempo esgotado",
-          description: "A chamada atingiu o limite de 60 minutos e será encerrada.",
+          description: `A chamada atingiu o limite de ${durationMinutes} minutos e será encerrada.`,
           variant: "destructive",
         });
         endDuel();
@@ -260,6 +278,7 @@ const DuelRoom = () => {
       setDuel(data);
       setPlayer1LP(data.player1_lp || 8000);
       setPlayer2LP(data.player2_lp || 8000);
+      setIsTimerPaused(data.is_timer_paused || false);
 
       // Criar sala Daily.co
       try {
@@ -304,14 +323,15 @@ const DuelRoom = () => {
       // Iniciar timer SEMPRE que houver started_at
       if (startedAt) {
         const elapsed = Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000);
-        const durationMins = data.duration_minutes || 60;
+        const durationMins = data.duration_minutes || 50;
         const maxDurationSeconds = durationMins * 60;
         
         // Verificar se já passou o tempo
         if (elapsed >= maxDurationSeconds) {
           await endDuel();
         } else {
-          startCallTimer(startedAt, durationMins);
+          const remainingSecs = data.remaining_seconds !== null ? data.remaining_seconds : Math.max(0, maxDurationSeconds - elapsed);
+          startCallTimer(startedAt, durationMins, remainingSecs);
         }
       }
     } catch (error: any) {
@@ -467,11 +487,46 @@ const DuelRoom = () => {
     navigate('/duels');
   };
 
-  // Identificar quem é cada player - LÓGICA SIMPLIFICADA
+  const toggleTimerPause = async () => {
+    if (!id || !duel) return;
+    
+    // Apenas participantes podem pausar/despausar
+    const isParticipant = currentUser?.id === duel.creator_id || currentUser?.id === duel.opponent_id;
+    if (!isParticipant) return;
+
+    const newPauseState = !isTimerPaused;
+    
+    try {
+      const { error } = await supabase
+        .from('live_duels')
+        .update({ 
+          is_timer_paused: newPauseState,
+          remaining_seconds: callDuration 
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setIsTimerPaused(newPauseState);
+      
+      toast({
+        title: newPauseState ? "⏸️ Timer pausado" : "▶️ Timer retomado",
+        description: newPauseState ? "O tempo foi pausado para ambos os jogadores" : "O tempo foi retomado",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao pausar/despausar",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Identificar quem é cada player
   const isPlayer1 = currentUser?.id === duel?.creator_id;
-  // Player 2: Qualquer usuário autenticado que NÃO é o criador
-  const isPlayer2 = currentUser?.id && !isPlayer1;
+  const isPlayer2 = currentUser?.id === duel?.opponent_id;
   const isParticipant = isPlayer1 || isPlayer2;
+  const isSpectator = currentUser && !isParticipant;
   
   // Determinar o player atual de forma clara
   const currentUserPlayer: 'player1' | 'player2' | null = isPlayer1 ? 'player1' : (isPlayer2 ? 'player2' : null);
@@ -508,6 +563,13 @@ const DuelRoom = () => {
 
           {/* Botão de Sair e Timer - Fixo no canto superior direito */}
           <div className="absolute top-2 sm:top-4 right-2 sm:right-4 z-50 flex flex-col sm:flex-row gap-2 items-end sm:items-center">
+            {/* Badge de modo espectador */}
+            {isSpectator && (
+              <div className="px-2 sm:px-3 py-1 sm:py-2 rounded-lg backdrop-blur-sm text-xs sm:text-sm font-bold bg-purple-500/95 text-white">
+                👁️ Espectador
+              </div>
+            )}
+            
             {/* Badge de Tipo de Partida */}
             {duel && (
               <div className={`px-2 sm:px-3 py-1 sm:py-2 rounded-lg backdrop-blur-sm text-xs sm:text-sm font-bold ${
@@ -524,20 +586,30 @@ const DuelRoom = () => {
               callDuration <= 300 ? 'bg-destructive/95 text-destructive-foreground animate-pulse' : 
               callDuration <= 600 ? 'bg-yellow-500/95 text-black' : 
               'bg-card/95'
-            }`}>
-              ⏱️ {formatTime(callDuration)}
+            } ${isTimerPaused ? 'opacity-60' : ''}`}>
+              {isTimerPaused ? '⏸️' : '⏱️'} {formatTime(callDuration)}
             </div>
             
             <div className="flex gap-2">
               {isParticipant && (
-                <Button
-                  onClick={() => endDuel()}
-                  variant="outline"
-                  size="sm"
-                  className="bg-card/95 backdrop-blur-sm text-xs sm:text-sm"
-                >
-                  Finalizar
-                </Button>
+                <>
+                  <Button
+                    onClick={toggleTimerPause}
+                    variant="outline"
+                    size="sm"
+                    className="bg-card/95 backdrop-blur-sm text-xs sm:text-sm"
+                  >
+                    {isTimerPaused ? '▶️' : '⏸️'}
+                  </Button>
+                  <Button
+                    onClick={() => endDuel()}
+                    variant="outline"
+                    size="sm"
+                    className="bg-card/95 backdrop-blur-sm text-xs sm:text-sm"
+                  >
+                    Finalizar
+                  </Button>
+                </>
               )}
               <Button
                 onClick={handleLeave}
@@ -553,7 +625,7 @@ const DuelRoom = () => {
         </div>
       </main>
 
-      {/* Calculadora Flutuante - Cada participante controla apenas seu LP */}
+      {/* Calculadora Flutuante - Apenas participantes podem editar */}
       {duel && currentUser && (
         <FloatingCalculator
           player1Name={duel.creator?.username || 'Player 1'}
@@ -562,7 +634,7 @@ const DuelRoom = () => {
           player2LP={player2LP}
           onUpdateLP={updateLP}
           onSetLP={setLP}
-          currentUserPlayer={currentUserPlayer}
+          currentUserPlayer={isSpectator ? null : currentUserPlayer}
         />
       )}
 

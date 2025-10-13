@@ -175,9 +175,11 @@ export type Database = {
           finished_at: string | null
           id: string
           is_ranked: boolean
+          is_timer_paused: boolean
           opponent_id: string | null
           player1_lp: number
           player2_lp: number
+          remaining_seconds: number | null
           started_at: string | null
           status: Database["public"]["Enums"]["game_status"]
           winner_id: string | null
@@ -190,9 +192,11 @@ export type Database = {
           finished_at?: string | null
           id?: string
           is_ranked?: boolean
+          is_timer_paused?: boolean
           opponent_id?: string | null
           player1_lp?: number
           player2_lp?: number
+          remaining_seconds?: number | null
           started_at?: string | null
           status?: Database["public"]["Enums"]["game_status"]
           winner_id?: string | null
@@ -205,9 +209,11 @@ export type Database = {
           finished_at?: string | null
           id?: string
           is_ranked?: boolean
+          is_timer_paused?: boolean
           opponent_id?: string | null
           player1_lp?: number
           player2_lp?: number
+          remaining_seconds?: number | null
           started_at?: string | null
           status?: Database["public"]["Enums"]["game_status"]
           winner_id?: string | null
