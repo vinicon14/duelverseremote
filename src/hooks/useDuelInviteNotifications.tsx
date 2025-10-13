@@ -154,5 +154,5 @@ export const useDuelInviteNotifications = (userId: string | undefined) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId, toast, navigate, processedInvites]);
+  }, [userId, toast, navigate]);
 };
