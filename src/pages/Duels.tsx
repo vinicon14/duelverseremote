@@ -20,7 +20,7 @@ const Duels = () => {
   const [loading, setLoading] = useState(true);
   const [roomName, setRoomName] = useState("");
   const [isRanked, setIsRanked] = useState(true);
-  const [durationMinutes, setDurationMinutes] = useState(60);
+  const [durationMinutes, setDurationMinutes] = useState(50);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showAdPopup, setShowAdPopup] = useState(false);
   const [pendingAction, setPendingAction] = useState<{ type: 'create' | 'join', duelId?: string } | null>(null);
@@ -339,7 +339,7 @@ const Duels = () => {
                 <div className="space-y-2">
                   <Label htmlFor="duration">Duração da Partida (minutos)</Label>
                   <div className="grid grid-cols-4 gap-2">
-                    {[30, 60, 90, 120].map((mins) => (
+                    {[30, 50, 90, 120].map((mins) => (
                       <Button
                         key={mins}
                         type="button"
