@@ -25,12 +25,18 @@ export const DuelInvitePopup = ({ userId }: { userId: string | undefined }) => {
   const [processedInvites, setProcessedInvites] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId) {
+      console.log('🔔 [DuelInvitePopup] userId não definido');
+      return;
+    }
+
+    console.log('🔔 [DuelInvitePopup] Iniciando para userId:', userId);
 
     // Verificar convites pendentes ao carregar
     const checkPendingInvites = async () => {
       try {
-        const { data: invites } = await supabase
+        console.log('🔔 [DuelInvitePopup] Verificando convites pendentes...');
+        const { data: invites, error } = await supabase
           .from('duel_invites')
           .select(`
             id,
@@ -42,22 +48,37 @@ export const DuelInvitePopup = ({ userId }: { userId: string | undefined }) => {
           .eq('status', 'pending')
           .order('created_at', { ascending: false });
 
+        if (error) {
+          console.error('🔔 [DuelInvitePopup] Erro ao buscar convites:', error);
+          return;
+        }
+
+        console.log('🔔 [DuelInvitePopup] Convites encontrados:', invites);
+
         if (invites && invites.length > 0) {
           const latestInvite = invites[0] as any;
+          console.log('🔔 [DuelInvitePopup] Último convite:', latestInvite);
+          
           // Só mostrar se o duelo ainda está esperando
           if (latestInvite.duel?.status === 'waiting' && !processedInvites.has(latestInvite.id)) {
+            console.log('🔔 [DuelInvitePopup] Mostrando pop-up para convite:', latestInvite.id);
             setInvite(latestInvite);
             setProcessedInvites(prev => new Set(prev).add(latestInvite.id));
+          } else {
+            console.log('🔔 [DuelInvitePopup] Convite não exibido. Status:', latestInvite.duel?.status, 'Processado:', processedInvites.has(latestInvite.id));
           }
+        } else {
+          console.log('🔔 [DuelInvitePopup] Nenhum convite pendente encontrado');
         }
       } catch (error) {
-        console.error('Erro ao verificar convites pendentes:', error);
+        console.error('🔔 [DuelInvitePopup] Erro ao verificar convites:', error);
       }
     };
 
     checkPendingInvites();
 
     // Listener em tempo real para novos convites
+    console.log('🔔 [DuelInvitePopup] Configurando listener realtime');
     const channel = supabase
       .channel(`duel_invites_popup_${userId}`)
       .on(
@@ -69,7 +90,7 @@ export const DuelInvitePopup = ({ userId }: { userId: string | undefined }) => {
           filter: `receiver_id=eq.${userId}`,
         },
         async (payload) => {
-          console.log('🔔 Novo convite de duelo recebido:', payload);
+          console.log('🔔 [DuelInvitePopup] Novo convite de duelo recebido via realtime:', payload);
           
           // Buscar dados completos do convite
           try {
@@ -84,7 +105,10 @@ export const DuelInvitePopup = ({ userId }: { userId: string | undefined }) => {
               .eq('id', payload.new.id)
               .single();
 
+            console.log('🔔 [DuelInvitePopup] Dados do convite recebido:', newInvite);
+            
             if (newInvite && !processedInvites.has(newInvite.id)) {
+              console.log('🔔 [DuelInvitePopup] Mostrando pop-up via realtime para convite:', newInvite.id);
               setInvite(newInvite as any);
               setProcessedInvites(prev => new Set(prev).add(newInvite.id));
               
@@ -92,13 +116,17 @@ export const DuelInvitePopup = ({ userId }: { userId: string | undefined }) => {
               const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBy/LaizsIGGS57OyhUBELTKXh8bllHAU2jdXzzn0vBSF0xPDdl0QKElyw6OyrWBQLRJvi8sFuIwUrfsfx3I4+CRdjuOvvoVIRC0ml4fG6ZxwFNo/X8s18LgUhc8Tv3phFChJbr+jur1sVDEKZ4PK+cSMFKnvF8NyQPwkWYrfr76RUEQtHo+HxtGkcBTWL1PLPfi8GIHHB79yaRwkRWK7n7LFeIgcrfsXu3JE/CBVftuvtoV8YC0mi4PG1bR4FPZLW8sx+MQgfdL/u3Z1KCxFYrez0pGQaDj+Y3vHBcCQFKnjE7tySQAcUW7Tr6pVpHAM+ldvxwHImByF4u+3dnVUPFV+96/CkbCQON4rW8sZ+PAgfesvv3J5ODxdgu+rrpXEhEkCW2vC/diYGHnm+7N2gWRUSV6zl6qZxKRMxidPvw3s1Dx18yO7dlFgWFV2w5euocisQN4fP7MBwOwwQbsPq6qF4LhI6j9XuwHo6EBl5vu3cmlkVEleq4+qmcisTMYfS78J7Nw4ffMbq3JdaGBVerunro30yFDSEx+bBcz4LEG6/6uigeSUaNJDU77x4OQ8SeMXt3JVgGRJYpOPpnnErETaH0O7Be0QPHnvH69uWZB0UX6vn6aN+NBEzhcfl');
               audio.volume = 0.3;
               audio.play().catch(() => {});
+            } else {
+              console.log('🔔 [DuelInvitePopup] Convite já processado:', newInvite?.id);
             }
           } catch (error) {
-            console.error('Erro ao buscar dados do convite:', error);
+            console.error('🔔 [DuelInvitePopup] Erro ao buscar dados do convite:', error);
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('🔔 [DuelInvitePopup] Status da subscrição realtime:', status);
+      });
 
     return () => {
       supabase.removeChannel(channel);
