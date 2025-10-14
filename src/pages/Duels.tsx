@@ -448,12 +448,12 @@ const Duels = () => {
 
                     {duel.status === 'in_progress' && duel.opponent_id && (
                       <Button
-                        onClick={() => navigate(`/duel/${duel.id}?spectator=true`)}
+                        disabled
                         className="w-full"
                         variant="outline"
                       >
                         <Users className="mr-2 h-4 w-4" />
-                        Assistir como Espectador
+                        Sala Completa
                       </Button>
                     )}
                   </div>

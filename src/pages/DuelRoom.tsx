@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
@@ -14,8 +14,6 @@ const DuelRoom = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [searchParams] = useSearchParams();
-  const isSpectatorMode = searchParams.get('spectator') === 'true';
   const [duel, setDuel] = useState<any>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [player1LP, setPlayer1LP] = useState(8000);
@@ -288,8 +286,8 @@ const DuelRoom = () => {
           }
         }
       } else {
-        // Sala já tem opponent - verificar se o usuário é um dos participantes ou espectador
-        if (!isCreator && !isOpponent && !isSpectatorMode) {
+        // Sala já tem opponent - verificar se o usuário é um dos participantes
+        if (!isCreator && !isOpponent) {
           toast({
             title: "Acesso negado",
             description: "Esta sala já está completa.",
@@ -297,14 +295,6 @@ const DuelRoom = () => {
           });
           navigate('/duels');
           return;
-        }
-        
-        // Se for modo espectador, mostrar mensagem de boas-vindas
-        if (isSpectatorMode && !isCreator && !isOpponent) {
-          toast({
-            title: "👁️ Modo Espectador",
-            description: "Você está assistindo este duelo",
-          });
         }
       }
 

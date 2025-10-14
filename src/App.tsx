@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { DuelInvitePopup } from "@/components/DuelInvitePopup";
+import { useDuelInviteNotifications } from "@/hooks/useDuelInviteNotifications";
 import Home from "./pages/Home";
 import Landing from "./pages/Landing";
 import Admin from "./pages/Admin";
@@ -26,12 +26,11 @@ const queryClient = new QueryClient();
 
 // Componente interno que fica dentro do Router para usar useNavigate
 const RouterContent = ({ currentUserId }: { currentUserId: string | undefined }) => {
+  // Ativar notificações de convites de duelo
+  useDuelInviteNotifications(currentUserId);
+
   return (
-    <>
-      {/* Pop-up de convite de duelo */}
-      <DuelInvitePopup userId={currentUserId} />
-      
-      <Routes>
+    <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/landing" element={<Landing />} />
       <Route path="/admin" element={<Admin />} />
@@ -48,8 +47,7 @@ const RouterContent = ({ currentUserId }: { currentUserId: string | undefined })
       <Route path="/news" element={<News />} />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
-      </Routes>
-    </>
+    </Routes>
   );
 };
 
