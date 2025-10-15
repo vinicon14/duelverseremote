@@ -98,6 +98,13 @@ const DuelRoom = () => {
               }
             }
             
+            // Atualizar countdown se remaining_seconds mudou (para sincronizar player 2)
+            if (payload.new.remaining_seconds !== undefined && 
+                payload.new.remaining_seconds !== payload.old?.remaining_seconds) {
+              console.log('🔴 [REALTIME] Atualizando countdown para:', payload.new.remaining_seconds);
+              setCallDuration(payload.new.remaining_seconds);
+            }
+            
             // Se opponent_id foi atualizado, recarregar dados completos do duel
             if (payload.new.opponent_id && payload.old?.opponent_id !== payload.new.opponent_id) {
               console.log('🔴 [REALTIME] Opponent adicionado, recarregando dados do duel...');

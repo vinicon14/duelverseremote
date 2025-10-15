@@ -28,6 +28,20 @@ const Duels = () => {
   useEffect(() => {
     checkAuth();
     fetchDuels();
+    
+    // Limpar salas vazias ao carregar a página
+    const cleanupEmptyRooms = async () => {
+      try {
+        const { error } = await supabase.rpc('cleanup_empty_duels');
+        if (error) {
+          console.error('Erro ao limpar salas vazias:', error);
+        }
+      } catch (error) {
+        console.error('Erro ao executar limpeza:', error);
+      }
+    };
+    
+    cleanupEmptyRooms();
 
     const channel = supabase
       .channel('live_duels_changes')
