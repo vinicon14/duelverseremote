@@ -507,8 +507,57 @@ const DuelRoom = () => {
     }
   };
 
-  const handleLeave = () => {
-    navigate('/duels');
+  const handleLeave = async () => {
+    if (!id || !currentUser) {
+      navigate('/duels');
+      return;
+    }
+
+    try {
+      // Se for espectador, apenas sair
+      if (isSpectator) {
+        navigate('/duels');
+        return;
+      }
+
+      // Se for o criador, deletar a sala
+      if (currentUser.id === duel?.creator_id) {
+        await supabase
+          .from('live_duels')
+          .delete()
+          .eq('id', id);
+        
+        toast({
+          title: "Sala encerrada",
+          description: "Você saiu e a sala foi removida",
+        });
+      } 
+      // Se for o oponente, remover ele da sala
+      else if (currentUser.id === duel?.opponent_id) {
+        await supabase
+          .from('live_duels')
+          .update({ 
+            opponent_id: null,
+            status: 'waiting'
+          })
+          .eq('id', id);
+        
+        toast({
+          title: "Você saiu do duelo",
+          description: "A sala voltou para modo de espera",
+        });
+      }
+
+      navigate('/duels');
+    } catch (error: any) {
+      console.error('Erro ao sair:', error);
+      toast({
+        title: "Erro ao sair",
+        description: error.message,
+        variant: "destructive",
+      });
+      navigate('/duels');
+    }
   };
 
   const toggleTimerPause = async () => {
