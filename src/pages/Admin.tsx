@@ -8,6 +8,7 @@ import { AdminAds } from "@/components/admin/AdminAds";
 import { AdminUsers } from "@/components/admin/AdminUsers";
 import { AdminTournaments } from "@/components/admin/AdminTournaments";
 import { AdminSettings } from "@/components/admin/AdminSettings";
+import { AdminDuels } from "@/components/admin/AdminDuels";
 import { Shield, Loader2 } from "lucide-react";
 
 export default function Admin() {
@@ -48,10 +49,11 @@ export default function Admin() {
         </div>
 
         <Tabs defaultValue="news" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="news">Notícias</TabsTrigger>
             <TabsTrigger value="ads">Anúncios</TabsTrigger>
             <TabsTrigger value="users">Usuários</TabsTrigger>
+            <TabsTrigger value="duels">Salas</TabsTrigger>
             <TabsTrigger value="tournaments">Torneios</TabsTrigger>
             <TabsTrigger value="settings">Configurações</TabsTrigger>
           </TabsList>
@@ -66,6 +68,10 @@ export default function Admin() {
           
           <TabsContent value="users" className="mt-6">
             <AdminUsers />
+          </TabsContent>
+          
+          <TabsContent value="duels" className="mt-6">
+            <AdminDuels />
           </TabsContent>
           
           <TabsContent value="tournaments" className="mt-6">

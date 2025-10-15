@@ -286,15 +286,14 @@ const DuelRoom = () => {
           }
         }
       } else {
-        // Sala já tem opponent - verificar se o usuário é um dos participantes
+        // Sala já tem opponent
+        // Se o usuário não é participante, permitir como espectador
         if (!isCreator && !isOpponent) {
+          console.log('[DuelRoom] Usuário entrando como espectador');
           toast({
-            title: "Acesso negado",
-            description: "Esta sala já está completa.",
-            variant: "destructive",
+            title: "👁️ Modo Espectador",
+            description: "Você está assistindo esta partida.",
           });
-          navigate('/duels');
-          return;
         }
       }
 
