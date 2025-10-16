@@ -11,6 +11,7 @@ import { Swords, Plus, Users, Clock } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useBanCheck } from "@/hooks/useBanCheck";
 import { AdPopup } from "@/components/AdPopup";
+import { GlobalChat } from "@/components/GlobalChat";
 
 const Duels = () => {
   useBanCheck(); // Proteger contra usuários banidos
@@ -137,6 +138,7 @@ const Duels = () => {
         .from('live_duels')
         .insert({
           creator_id: user.id,
+          room_name: roomName,
           status: 'waiting',
           is_ranked: isRanked,
           duration_minutes: durationMinutes,
@@ -290,191 +292,200 @@ const Duels = () => {
       <Navbar />
       
       <main className="container mx-auto px-4 pt-20 sm:pt-24 pb-12">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
-          <div>
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gradient-mystic mb-2">
-              Arena de Duelos
-            </h1>
-            <p className="text-sm sm:text-base text-muted-foreground">
-              Crie ou entre em um duelo ao vivo
-            </p>
-          </div>
-
-          <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-            <DialogTrigger asChild>
-              <Button className="btn-mystic text-white w-full sm:w-auto">
-                <Plus className="mr-2 h-4 w-4" />
-                Criar Duelo
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="card-mystic">
-              <DialogHeader>
-                <DialogTitle className="text-gradient-mystic">Criar Nova Sala</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="room-name">Nome da Sala</Label>
-                  <Input
-                    id="room-name"
-                    placeholder="Ex: Duelo Épico"
-                    value={roomName}
-                    onChange={(e) => setRoomName(e.target.value)}
-                    className="bg-background/50"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label>Tipo de Partida</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      type="button"
-                      variant={isRanked ? "default" : "outline"}
-                      onClick={() => setIsRanked(true)}
-                      className={isRanked ? "btn-mystic text-white" : ""}
-                    >
-                      🏆 Ranqueada
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={!isRanked ? "default" : "outline"}
-                      onClick={() => setIsRanked(false)}
-                      className={!isRanked ? "btn-mystic text-white" : ""}
-                    >
-                      🎮 Casual
-                    </Button>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {isRanked 
-                      ? "✅ Vale pontos no ranking" 
-                      : "❌ Não vale pontos no ranking"}
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="duration">Duração da Partida (minutos)</Label>
-                  <div className="grid grid-cols-4 gap-2">
-                    {[30, 50, 90, 120].map((mins) => (
-                      <Button
-                        key={mins}
-                        type="button"
-                        variant={durationMinutes === mins ? "default" : "outline"}
-                        onClick={() => setDurationMinutes(mins)}
-                        className={durationMinutes === mins ? "btn-mystic text-white" : ""}
-                      >
-                        {mins}m
-                      </Button>
-                    ))}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    ⏱️ A partida durará {durationMinutes} minutos
-                  </p>
-                </div>
-                
-                <Button onClick={handleCreateDuel} className="w-full btn-mystic text-white">
-                  Criar e Entrar
-                </Button>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+          <div className="lg:col-span-2">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
+              <div>
+                <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gradient-mystic mb-2">
+                  Arena de Duelos
+                </h1>
+                <p className="text-sm sm:text-base text-muted-foreground">
+                  Crie ou entre em um duelo ao vivo
+                </p>
               </div>
-            </DialogContent>
-          </Dialog>
-        </div>
 
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3].map((i) => (
-              <Card key={i} className="card-mystic animate-pulse">
-                <CardHeader className="h-32" />
-              </Card>
-            ))}
-          </div>
-        ) : duels.length === 0 ? (
-          <Card className="card-mystic text-center py-12">
-            <Swords className="w-16 h-16 mx-auto text-primary/50 mb-4" />
-            <h3 className="text-xl font-semibold mb-2">Nenhum duelo disponível</h3>
-            <p className="text-muted-foreground">
-              Seja o primeiro a criar uma sala!
-            </p>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {duels.map((duel) => (
-              <Card key={duel.id} className="card-mystic hover:border-primary/40 transition-all">
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between flex-wrap gap-2">
-                    <span className="text-gradient-mystic">{duel.room_name}</span>
-                    <div className="flex gap-1">
-                      <span className={`text-xs px-2 py-1 rounded-full ${
-                        duel.is_ranked 
-                          ? 'bg-yellow-500/20 text-yellow-500' 
-                          : 'bg-blue-500/20 text-blue-500'
-                      }`}>
-                        {duel.is_ranked ? '🏆 Ranqueada' : '🎮 Casual'}
-                      </span>
-                      {duel.status === 'waiting' ? (
-                        <span className="text-xs px-2 py-1 rounded-full bg-primary/20 text-primary">
-                          Aguardando
-                        </span>
-                      ) : (
-                        <span className="text-xs px-2 py-1 rounded-full bg-accent/20 text-accent">
-                          Em andamento
-                        </span>
-                      )}
+              <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+                <DialogTrigger asChild>
+                  <Button className="btn-mystic text-white w-full sm:w-auto">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Criar Duelo
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="card-mystic">
+                  <DialogHeader>
+                    <DialogTitle className="text-gradient-mystic">Criar Nova Sala</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="room-name">Nome da Sala</Label>
+                      <Input
+                        id="room-name"
+                        placeholder="Ex: Duelo Épico"
+                        value={roomName}
+                        onChange={(e) => setRoomName(e.target.value)}
+                        className="bg-background/50"
+                      />
                     </div>
-                  </CardTitle>
-                  <CardDescription>
-                    Criado por {duel.creator?.username || 'Anônimo'}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center text-muted-foreground">
-                        <Users className="w-4 h-4 mr-2" />
-                        {duel.opponent_id ? '2/2' : '1/2'} jogadores
+                    
+                    <div className="space-y-2">
+                      <Label>Tipo de Partida</Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          type="button"
+                          variant={isRanked ? "default" : "outline"}
+                          onClick={() => setIsRanked(true)}
+                          className={isRanked ? "btn-mystic text-white" : ""}
+                        >
+                          🏆 Ranqueada
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={!isRanked ? "default" : "outline"}
+                          onClick={() => setIsRanked(false)}
+                          className={!isRanked ? "btn-mystic text-white" : ""}
+                        >
+                          🎮 Casual
+                        </Button>
                       </div>
-                      <div className="flex items-center text-muted-foreground">
-                        <Clock className="w-4 h-4 mr-2" />
-                        {new Date(duel.created_at).toLocaleTimeString('pt-BR', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {isRanked 
+                          ? "✅ Vale pontos no ranking" 
+                          : "❌ Não vale pontos no ranking"}
+                      </p>
                     </div>
 
-                    {duel.status === 'waiting' && !duel.opponent_id && (
-                      <Button
-                        onClick={() => handleJoinDuel(duel.id)}
-                        className="w-full btn-mystic text-white"
-                      >
-                        <Swords className="mr-2 h-4 w-4" />
-                        Entrar no Duelo
-                      </Button>
-                    )}
-
-                    {duel.status === 'in_progress' && !duel.opponent_id && (
-                      <Button
-                        onClick={() => handleJoinDuel(duel.id)}
-                        className="w-full btn-mystic text-white"
-                      >
-                        <Users className="mr-2 h-4 w-4" />
-                        Entrar na Sala
-                      </Button>
-                    )}
-
-                    {duel.status === 'in_progress' && duel.opponent_id && (
-                      <Button
-                        onClick={() => navigate(`/duel/${duel.id}`)}
-                        className="w-full btn-mystic text-white"
-                      >
-                        <Users className="mr-2 h-4 w-4" />
-                        👁️ Assistir Duelo
-                      </Button>
-                    )}
+                    <div className="space-y-2">
+                      <Label htmlFor="duration">Duração da Partida (minutos)</Label>
+                      <div className="grid grid-cols-4 gap-2">
+                        {[30, 50, 90, 120].map((mins) => (
+                          <Button
+                            key={mins}
+                            type="button"
+                            variant={durationMinutes === mins ? "default" : "outline"}
+                            onClick={() => setDurationMinutes(mins)}
+                            className={durationMinutes === mins ? "btn-mystic text-white" : ""}
+                          >
+                            {mins}m
+                          </Button>
+                        ))}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        ⏱️ A partida durará {durationMinutes} minutos
+                      </p>
+                    </div>
+                    
+                    <Button onClick={handleCreateDuel} className="w-full btn-mystic text-white">
+                      Criar e Entrar
+                    </Button>
                   </div>
-                </CardContent>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            {loading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {[1, 2, 3].map((i) => (
+                  <Card key={i} className="card-mystic animate-pulse">
+                    <CardHeader className="h-32" />
+                  </Card>
+                ))}
+              </div>
+            ) : duels.length === 0 ? (
+              <Card className="card-mystic text-center py-12">
+                <Swords className="w-16 h-16 mx-auto text-primary/50 mb-4" />
+                <h3 className="text-xl font-semibold mb-2">Nenhum duelo disponível</h3>
+                <p className="text-muted-foreground">
+                  Seja o primeiro a criar uma sala!
+                </p>
               </Card>
-            ))}
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {duels.map((duel) => (
+                  <Card key={duel.id} className="card-mystic hover:border-primary/40 transition-all">
+                    <CardHeader>
+                      <CardTitle className="flex items-center justify-between flex-wrap gap-2">
+                        <span className="text-gradient-mystic">{duel.room_name}</span>
+                        <div className="flex gap-1">
+                          <span className={`text-xs px-2 py-1 rounded-full ${
+                            duel.is_ranked 
+                              ? 'bg-yellow-500/20 text-yellow-500' 
+                              : 'bg-blue-500/20 text-blue-500'
+                          }`}>
+                            {duel.is_ranked ? '🏆 Ranqueada' : '🎮 Casual'}
+                          </span>
+                          {duel.status === 'waiting' ? (
+                            <span className="text-xs px-2 py-1 rounded-full bg-primary/20 text-primary">
+                              Aguardando
+                            </span>
+                          ) : (
+                            <span className="text-xs px-2 py-1 rounded-full bg-accent/20 text-accent">
+                              Em andamento
+                            </span>
+                          )}
+                        </div>
+                      </CardTitle>
+                      <CardDescription>
+                        Criado por {duel.creator?.username || 'Anônimo'}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center text-muted-foreground">
+                            <Users className="w-4 h-4 mr-2" />
+                            {duel.opponent_id ? '2/2' : '1/2'} jogadores
+                          </div>
+                          <div className="flex items-center text-muted-foreground">
+                            <Clock className="w-4 h-4 mr-2" />
+                            {new Date(duel.created_at).toLocaleTimeString('pt-BR', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </div>
+                        </div>
+
+                        {duel.status === 'waiting' && !duel.opponent_id && (
+                          <Button
+                            onClick={() => handleJoinDuel(duel.id)}
+                            className="w-full btn-mystic text-white"
+                          >
+                            <Swords className="mr-2 h-4 w-4" />
+                            Entrar no Duelo
+                          </Button>
+                        )}
+
+                        {duel.status === 'in_progress' && !duel.opponent_id && (
+                          <Button
+                            onClick={() => handleJoinDuel(duel.id)}
+                            className="w-full btn-mystic text-white"
+                          >
+                            <Users className="mr-2 h-4 w-4" />
+                            Entrar na Sala
+                          </Button>
+                        )}
+
+                        {duel.status === 'in_progress' && duel.opponent_id && (
+                          <Button
+                            onClick={() => navigate(`/duel/${duel.id}`)}
+                            className="w-full btn-mystic text-white"
+                          >
+                            <Users className="mr-2 h-4 w-4" />
+                            👁️ Assistir Duelo
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
-        )}
+
+          {/* Chat Global */}
+          <div className="h-[600px]">
+            <GlobalChat />
+          </div>
+        </div>
       </main>
 
       {/* Popup de anúncio */}

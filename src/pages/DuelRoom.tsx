@@ -98,9 +98,8 @@ const DuelRoom = () => {
               }
             }
             
-            // Atualizar countdown se remaining_seconds mudou (para sincronizar player 2)
-            if (payload.new.remaining_seconds !== undefined && 
-                payload.new.remaining_seconds !== payload.old?.remaining_seconds) {
+            // SEMPRE atualizar countdown quando remaining_seconds mudar (para sincronizar todos os players)
+            if (payload.new.remaining_seconds !== undefined) {
               console.log('🔴 [REALTIME] Atualizando countdown para:', payload.new.remaining_seconds);
               setCallDuration(payload.new.remaining_seconds);
             }
@@ -521,14 +520,19 @@ const DuelRoom = () => {
     }
 
     try {
-      // Se for espectador, apenas sair
+      const isCreator = currentUser.id === duel?.creator_id;
+      const isOpponent = currentUser.id === duel?.opponent_id;
+      const isSpectator = !isCreator && !isOpponent;
+
+      // Se for espectador, apenas sair (não encerrar partida)
       if (isSpectator) {
+        console.log('[DuelRoom] Espectador saindo, partida continua');
         navigate('/duels');
         return;
       }
 
       // Se for o criador, deletar a sala
-      if (currentUser.id === duel?.creator_id) {
+      if (isCreator) {
         await supabase
           .from('live_duels')
           .delete()
@@ -540,7 +544,7 @@ const DuelRoom = () => {
         });
       } 
       // Se for o oponente, remover ele da sala
-      else if (currentUser.id === duel?.opponent_id) {
+      else if (isOpponent) {
         await supabase
           .from('live_duels')
           .update({ 

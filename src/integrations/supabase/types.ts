@@ -166,6 +166,27 @@ export type Database = {
           },
         ]
       }
+      global_chat_messages: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       live_duels: {
         Row: {
           bet_amount: number
@@ -180,6 +201,7 @@ export type Database = {
           player1_lp: number
           player2_lp: number
           remaining_seconds: number | null
+          room_name: string | null
           started_at: string | null
           status: Database["public"]["Enums"]["game_status"]
           winner_id: string | null
@@ -197,6 +219,7 @@ export type Database = {
           player1_lp?: number
           player2_lp?: number
           remaining_seconds?: number | null
+          room_name?: string | null
           started_at?: string | null
           status?: Database["public"]["Enums"]["game_status"]
           winner_id?: string | null
@@ -214,6 +237,7 @@ export type Database = {
           player1_lp?: number
           player2_lp?: number
           remaining_seconds?: number | null
+          room_name?: string | null
           started_at?: string | null
           status?: Database["public"]["Enums"]["game_status"]
           winner_id?: string | null
