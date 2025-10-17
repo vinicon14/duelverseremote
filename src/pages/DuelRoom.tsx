@@ -140,7 +140,7 @@ const DuelRoom = () => {
   const startCallTimer = (startedAt: string, durationMinutes: number = 50, remainingSecs?: number) => {
     const startTime = new Date(startedAt).getTime();
     callStartTime.current = startTime;
-    const MAX_DURATION = durationMinutes * 60; // Converter minutos para segundos
+    const MAX_DURATION = durationMinutes * 60;
     
     // Definir remaining_seconds inicial
     if (remainingSecs !== undefined) {
@@ -152,49 +152,53 @@ const DuelRoom = () => {
       clearInterval(timerInterval.current);
     }
     
-    // Apenas o criador atualiza o timer no banco (evita conflitos)
     const isCreator = currentUser?.id === duel?.creator_id;
+    let lastDbUpdate = 0;
     
-    if (isCreator) {
-      timerInterval.current = setInterval(() => {
-        // Se o timer estiver pausado, não atualizar
-        if (isTimerPausedRef.current) return;
+    // Todos os participantes rodam o timer localmente para evitar travamentos
+    timerInterval.current = setInterval(() => {
+      if (isTimerPausedRef.current) return;
 
-        const now = Date.now();
-        const elapsedRaw = Math.floor((now - startTime - pausedTime.current) / 1000);
-        const remaining = Math.max(0, MAX_DURATION - elapsedRaw);
-        
-        // Atualizar no banco (o realtime irá sincronizar para todos)
+      const now = Date.now();
+      const elapsedRaw = Math.floor((now - startTime - pausedTime.current) / 1000);
+      const remaining = Math.max(0, MAX_DURATION - elapsedRaw);
+      
+      // Atualizar UI local
+      setCallDuration(remaining);
+      
+      // Apenas o criador atualiza o banco a cada 3 segundos (reduz carga)
+      if (isCreator && now - lastDbUpdate > 3000) {
+        lastDbUpdate = now;
         supabase
           .from('live_duels')
           .update({ remaining_seconds: remaining })
           .eq('id', id)
           .then(() => {});
+      }
 
-        // Aviso quando restar 5 minutos (300 segundos)
-        if (remaining === 300 && !showTimeWarning) {
-          setShowTimeWarning(true);
-          toast({
-            title: "⏰ Atenção: Tempo de chamada",
-            description: "Restam apenas 5 minutos. A chamada será encerrada automaticamente em 0:00.",
-            duration: 10000,
-          });
-        }
+      // Aviso quando restar 5 minutos (300 segundos)
+      if (remaining === 300 && !showTimeWarning) {
+        setShowTimeWarning(true);
+        toast({
+          title: "⏰ Atenção: Tempo de chamada",
+          description: "Restam apenas 5 minutos. A chamada será encerrada automaticamente em 0:00.",
+          duration: 10000,
+        });
+      }
 
-        // Finalizar automaticamente quando chegar a 0:00
-        if (remaining === 0) {
-          if (timerInterval.current) {
-            clearInterval(timerInterval.current);
-          }
-          toast({
-            title: "⏱️ Tempo esgotado",
-            description: `A chamada atingiu o limite de ${durationMinutes} minutos e será encerrada.`,
-            variant: "destructive",
-          });
-          endDuel();
+      // Finalizar automaticamente quando chegar a 0:00
+      if (remaining === 0) {
+        if (timerInterval.current) {
+          clearInterval(timerInterval.current);
         }
-      }, 1000);
-    }
+        toast({
+          title: "⏱️ Tempo esgotado",
+          description: `A chamada atingiu o limite de ${durationMinutes} minutos e será encerrada.`,
+          variant: "destructive",
+        });
+        endDuel();
+      }
+    }, 1000);
   };
 
   const formatTime = (seconds: number) => {

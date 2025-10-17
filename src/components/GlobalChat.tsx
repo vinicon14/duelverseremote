@@ -77,11 +77,12 @@ export const GlobalChat = () => {
 
   const fetchMessages = async () => {
     try {
+      // Buscar apenas as últimas 30 mensagens
       const { data, error } = await supabase
         .from('global_chat_messages')
         .select('*')
-        .order('created_at', { ascending: true })
-        .limit(50);
+        .order('created_at', { ascending: false })
+        .limit(30);
 
       if (error) throw error;
 
@@ -101,12 +102,36 @@ export const GlobalChat = () => {
         user_id: msg.user_id,
         username: profileMap.get(msg.user_id)?.username || 'Anônimo',
         avatar_url: profileMap.get(msg.user_id)?.avatar_url
-      })) || [];
+      })).reverse() || [];
 
       setMessages(formattedMessages);
       scrollToBottom();
+      
+      // Deletar mensagens antigas (manter apenas as últimas 30)
+      await cleanupOldMessages();
     } catch (error: any) {
       console.error('Erro ao buscar mensagens:', error);
+    }
+  };
+
+  const cleanupOldMessages = async () => {
+    try {
+      // Buscar todas as mensagens ordenadas por data
+      const { data: allMessages } = await supabase
+        .from('global_chat_messages')
+        .select('id, created_at')
+        .order('created_at', { ascending: false });
+
+      // Se houver mais de 30, deletar as antigas
+      if (allMessages && allMessages.length > 30) {
+        const idsToDelete = allMessages.slice(30).map(msg => msg.id);
+        await supabase
+          .from('global_chat_messages')
+          .delete()
+          .in('id', idsToDelete);
+      }
+    } catch (error) {
+      console.error('Erro ao limpar mensagens antigas:', error);
     }
   };
 
@@ -134,6 +159,9 @@ export const GlobalChat = () => {
       if (error) throw error;
 
       setNewMessage("");
+      
+      // Limpar mensagens antigas após enviar nova
+      await cleanupOldMessages();
     } catch (error: any) {
       toast({
         title: "Erro ao enviar mensagem",

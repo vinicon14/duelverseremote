@@ -56,7 +56,7 @@ serve(async (req) => {
           enable_chat: false,
           start_video_off: false,
           start_audio_off: false,
-          max_participants: 2,
+          max_participants: 20,
         },
       }),
     });
