@@ -293,7 +293,7 @@ const Friends = () => {
               Pedidos ({pendingRequests.length})
             </TabsTrigger>
             <TabsTrigger value="search">
-              Buscar
+              Adicionar amigos
             </TabsTrigger>
           </TabsList>
 

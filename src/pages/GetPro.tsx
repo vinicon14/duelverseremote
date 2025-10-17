@@ -55,7 +55,6 @@ export default function GetPro() {
     "Badges exclusivas",
     "Acesso antecipado a novos recursos",
     "Suporte prioritário",
-    "Estatísticas avançadas",
   ];
 
   return (
