@@ -148,7 +148,7 @@ const Auth = () => {
         return;
       }
 
-      const { data: authData, error } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -160,22 +160,6 @@ const Auth = () => {
       });
 
       if (error) throw error;
-
-      // Criar perfil manualmente com o username
-      if (authData.user) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            user_id: authData.user.id,
-            username: username.trim(),
-            is_online: true,
-            last_seen: new Date().toISOString(),
-          });
-
-        if (profileError) {
-          console.error('Erro ao criar perfil:', profileError);
-        }
-      }
 
       toast({
         title: "Cadastro realizado!",

@@ -101,7 +101,7 @@ const Profile = () => {
           winner:profiles!match_history_winner_id_fkey(username)
         `)
         .or(`player1_id.eq.${userId},player2_id.eq.${userId}`)
-        .order('created_at', { ascending: false })
+        .order('played_at', { ascending: false })
         .limit(5);
 
       if (error) throw error;
@@ -256,7 +256,7 @@ const Profile = () => {
                           </span>
                         </div>
                         <div className="text-sm text-muted-foreground">
-                          {new Date(match.created_at).toLocaleDateString('pt-BR')}
+                          {new Date(match.played_at).toLocaleDateString('pt-BR')}
                         </div>
                       </div>
                     </div>
