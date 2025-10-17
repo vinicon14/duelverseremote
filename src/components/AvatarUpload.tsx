@@ -17,6 +17,44 @@ export const AvatarUpload = ({ userId, currentAvatarUrl, username, onAvatarUpdat
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const resizeImage = (file: File): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      img.onload = () => {
+        const maxSize = 400;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxSize) {
+            height = (height * maxSize) / width;
+            width = maxSize;
+          }
+        } else {
+          if (height > maxSize) {
+            width = (width * maxSize) / height;
+            height = maxSize;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        ctx?.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob((blob) => {
+          if (blob) resolve(blob);
+          else reject(new Error('Erro ao redimensionar imagem'));
+        }, file.type, 0.9);
+      };
+
+      img.onerror = reject;
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
       const file = event.target.files?.[0];
@@ -44,40 +82,45 @@ export const AvatarUpload = ({ userId, currentAvatarUrl, username, onAvatarUpdat
 
       setUploading(true);
 
-      // Criar nome único para o arquivo
-      const fileExt = file.name.split('.').pop();
+      // Redimensionar imagem
+      const resizedBlob = await resizeImage(file);
+
+      // Determinar extensão baseada no tipo do arquivo original
+      const fileType = file.type;
+      let fileExt = 'jpg';
+      if (fileType === 'image/png') fileExt = 'png';
+      else if (fileType === 'image/jpeg' || fileType === 'image/jpg') fileExt = 'jpg';
+
+      // Nome fixo por tipo: avatar.jpg ou avatar.png
       const fileName = `${userId}/avatar.${fileExt}`;
 
-      // Deletar avatar antigo se existir
-      if (currentAvatarUrl) {
-        const oldPath = currentAvatarUrl.split('/').slice(-2).join('/');
-        await supabase.storage.from('avatars').remove([oldPath]);
-      }
-
-      // Upload do novo avatar
+      // Upload do novo avatar (upsert true vai substituir o arquivo existente)
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(fileName, file, {
+        .upload(fileName, resizedBlob, {
           upsert: true,
-          contentType: file.type,
+          contentType: fileType,
         });
 
       if (uploadError) throw uploadError;
 
-      // Obter URL pública
+      // Obter URL pública com timestamp para evitar cache
+      const timestamp = new Date().getTime();
       const { data: { publicUrl } } = supabase.storage
         .from('avatars')
         .getPublicUrl(fileName);
 
+      const urlWithTimestamp = `${publicUrl}?t=${timestamp}`;
+
       // Atualizar perfil com nova URL
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({ avatar_url: publicUrl })
+        .update({ avatar_url: urlWithTimestamp })
         .eq('user_id', userId);
 
       if (updateError) throw updateError;
 
-      onAvatarUpdated(publicUrl);
+      onAvatarUpdated(urlWithTimestamp);
 
       toast({
         title: "Avatar atualizado!",

@@ -96,8 +96,19 @@ const Auth = () => {
 
     const formData = new FormData(e.currentTarget);
     const email = formData.get("signup-email") as string;
+    const username = formData.get("signup-username") as string;
     const password = formData.get("signup-password") as string;
     const confirmPassword = formData.get("signup-confirm-password") as string;
+
+    if (!username || username.trim().length < 3) {
+      toast({
+        title: "Erro no cadastro",
+        description: "O nickname deve ter no mínimo 3 caracteres.",
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
 
     if (password !== confirmPassword) {
       toast({
@@ -120,15 +131,51 @@ const Auth = () => {
     }
 
     try {
-      const { error } = await supabase.auth.signUp({
+      // Verificar se o username já existe
+      const { data: existingUser } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('username', username.trim())
+        .maybeSingle();
+
+      if (existingUser) {
+        toast({
+          title: "Erro no cadastro",
+          description: "Este nickname já está em uso. Escolha outro.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      const { data: authData, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/duels`,
+          data: {
+            username: username.trim(),
+          },
         },
       });
 
       if (error) throw error;
+
+      // Criar perfil manualmente com o username
+      if (authData.user) {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            user_id: authData.user.id,
+            username: username.trim(),
+            is_online: true,
+            last_seen: new Date().toISOString(),
+          });
+
+        if (profileError) {
+          console.error('Erro ao criar perfil:', profileError);
+        }
+      }
 
       toast({
         title: "Cadastro realizado!",
@@ -217,6 +264,19 @@ const Auth = () => {
 
             <TabsContent value="signup">
               <form onSubmit={handleSignUp} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="signup-username">Nickname</Label>
+                  <Input
+                    id="signup-username"
+                    name="signup-username"
+                    type="text"
+                    placeholder="Seu apelido"
+                    required
+                    minLength={3}
+                    maxLength={20}
+                    className="bg-background/50"
+                  />
+                </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-email">Email</Label>
                   <Input

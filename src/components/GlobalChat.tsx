@@ -137,8 +137,12 @@ export const GlobalChat = () => {
 
   const scrollToBottom = () => {
     setTimeout(() => {
-      if (scrollRef.current) {
-        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      const scrollArea = scrollRef.current;
+      if (scrollArea) {
+        const scrollViewport = scrollArea.querySelector('[data-radix-scroll-area-viewport]');
+        if (scrollViewport) {
+          scrollViewport.scrollTop = scrollViewport.scrollHeight;
+        }
       }
     }, 100);
   };
