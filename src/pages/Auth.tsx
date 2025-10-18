@@ -21,7 +21,7 @@ const Auth = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/duels`,
+          redirectTo: 'https://duelverse.online/duels',
         },
       });
 
@@ -173,7 +173,7 @@ const Auth = () => {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/duels`,
+          emailRedirectTo: 'https://duelverse.online/duels',
           data: {
             username: username.trim(),
           },
