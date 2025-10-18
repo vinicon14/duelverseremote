@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { User, Session } from '@supabase/supabase-js';
 import { useDuelInviteNotifications } from "@/hooks/useDuelInviteNotifications";
 import Home from "./pages/Home";
 import Landing from "./pages/Landing";
@@ -52,20 +53,22 @@ const RouterContent = ({ currentUserId }: { currentUserId: string | undefined })
 };
 
 const AppContent = () => {
-  const [currentUserId, setCurrentUserId] = useState<string | undefined>();
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
 
   useEffect(() => {
-    // Obter usuário atual
-    const getCurrentUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setCurrentUserId(session?.user?.id);
-    };
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+      }
+    );
 
-    getCurrentUser();
-
-    // Listener para mudanças de autenticação
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setCurrentUserId(session?.user?.id);
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
     });
 
     return () => {
@@ -75,7 +78,7 @@ const AppContent = () => {
 
   return (
     <BrowserRouter>
-      <RouterContent currentUserId={currentUserId} />
+      <RouterContent currentUserId={user?.id} />
     </BrowserRouter>
   );
 };
