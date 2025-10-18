@@ -399,10 +399,6 @@ const DuelRoom = () => {
         .eq('id', id);
 
       if (error) throw error;
-
-      if (newLP === 0) {
-        await endDuel(player === 'player1' ? duel?.opponent_id : duel?.creator_id);
-      }
     } catch (error: any) {
       toast({
         title: "Erro ao atualizar LP",
@@ -426,10 +422,6 @@ const DuelRoom = () => {
         .eq('id', id);
 
       if (error) throw error;
-
-      if (newLP === 0) {
-        await endDuel(player === 'player1' ? duel?.opponent_id : duel?.creator_id);
-      }
     } catch (error: any) {
       console.error('💾 [SET LP] ❌ Erro:', error);
       toast({
@@ -446,26 +438,37 @@ const DuelRoom = () => {
         ? Math.floor((Date.now() - callStartTime.current) / 60000) 
         : 0;
 
+      // Determinar vencedor baseado nos Life Points se não foi especificado
+      let finalWinnerId = winnerId;
+      if (!finalWinnerId && duel?.creator_id && duel?.opponent_id) {
+        if (player1LP > player2LP) {
+          finalWinnerId = duel.creator_id;
+        } else if (player2LP > player1LP) {
+          finalWinnerId = duel.opponent_id;
+        }
+        // Se empate (player1LP === player2LP), finalWinnerId fica undefined (empate)
+      }
+
       // Atualizar status do duelo
       await supabase
         .from('live_duels')
         .update({
           status: 'finished',
           finished_at: new Date().toISOString(),
-          winner_id: winnerId,
+          winner_id: finalWinnerId,
         })
         .eq('id', id);
 
       // Registrar histórico se houver vencedor e ambos os jogadores
-      if (winnerId && duel?.id && duel?.creator_id && duel?.opponent_id) {
+      if (finalWinnerId && duel?.id && duel?.creator_id && duel?.opponent_id) {
         try {
           const { error: matchError } = await supabase.rpc('record_match_result', {
             p_duel_id: duel.id,
             p_player1_id: duel.creator_id,
             p_player2_id: duel.opponent_id,
-            p_winner_id: winnerId,
-            p_player1_score: winnerId === duel.opponent_id ? 0 : player1LP,
-            p_player2_score: winnerId === duel.creator_id ? 0 : player2LP,
+            p_winner_id: finalWinnerId,
+            p_player1_score: player1LP,
+            p_player2_score: player2LP,
             p_bet_amount: duel.bet_amount || 0
           });
 
@@ -506,9 +509,19 @@ const DuelRoom = () => {
           .eq('id', id);
       }, 60000);
 
+      const winnerName = finalWinnerId === duel?.creator_id 
+        ? duel?.creator?.username 
+        : finalWinnerId === duel?.opponent_id 
+        ? duel?.opponent?.username 
+        : null;
+
       toast({
         title: "Duelo finalizado!",
-        description: winnerId ? "Vencedor registrado" : "Duelo encerrado",
+        description: finalWinnerId 
+          ? `🏆 Vencedor: ${winnerName} (${finalWinnerId === duel?.creator_id ? player1LP : player2LP} LP)` 
+          : player1LP === player2LP 
+          ? "⚖️ Empate!" 
+          : "Duelo encerrado",
       });
 
       setTimeout(() => navigate('/duels'), 2000);
