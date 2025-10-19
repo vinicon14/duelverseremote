@@ -222,25 +222,7 @@ export const DuelInviteNotification = ({ currentUserId }: { currentUserId?: stri
   if (!pendingInvite) return null;
 
   return (
-    <>
-      {/* Debug info - remova em produção */}
-      {isReady && (
-        <div style={{ 
-          position: 'fixed', 
-          bottom: '10px', 
-          right: '10px', 
-          background: 'rgba(0,0,0,0.7)', 
-          color: 'white', 
-          padding: '5px 10px', 
-          borderRadius: '5px',
-          fontSize: '10px',
-          zIndex: 9998
-        }}>
-          🔔 Sistema de notificações ativo
-        </div>
-      )}
-      
-      <AlertDialog open={!!pendingInvite} onOpenChange={(open) => !open && setPendingInvite(null)}>
+    <AlertDialog open={!!pendingInvite} onOpenChange={(open) => !open && handleReject()}>
         <AlertDialogContent className="card-mystic border-primary/30">
           <AlertDialogHeader>
             <div className="flex items-center justify-center mb-4">
@@ -258,16 +240,22 @@ export const DuelInviteNotification = ({ currentUserId }: { currentUserId?: stri
               te convidou para um duelo!
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-            <AlertDialogCancel onClick={handleReject} className="w-full sm:w-auto">
-              Recusar
+          <AlertDialogFooter className="flex-col sm:flex-row gap-3">
+            <AlertDialogCancel 
+              onClick={handleReject} 
+              className="w-full sm:w-auto border-destructive text-destructive hover:bg-destructive hover:text-white"
+            >
+              ❌ Recusar Duelo
             </AlertDialogCancel>
-            <AlertDialogAction onClick={handleAccept} className="btn-mystic text-white w-full sm:w-auto">
-              Aceitar Desafio
+            <AlertDialogAction 
+              onClick={handleAccept} 
+              className="btn-mystic text-white w-full sm:w-auto"
+            >
+              <Swords className="w-4 h-4 mr-2" />
+              ⚔️ Entrar no Duelo
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
-      </AlertDialog>
-    </>
+    </AlertDialog>
   );
 };
