@@ -30,12 +30,26 @@ export const DuelInviteNotification = ({ currentUserId }: { currentUserId?: stri
   const navigate = useNavigate();
   const { toast } = useToast();
   const [pendingInvite, setPendingInvite] = useState<DuelInvite | null>(null);
+  const [isReady, setIsReady] = useState(false);
+
+  // Log quando o componente é montado
+  useEffect(() => {
+    console.log('🔔 [INVITE NOTIFICATION] Componente montado. CurrentUserId:', currentUserId);
+  }, []);
 
   useEffect(() => {
-    if (!currentUserId) return;
+    if (!currentUserId) {
+      console.log('🔔 [INVITE NOTIFICATION] Aguardando currentUserId...');
+      setIsReady(false);
+      return;
+    }
+
+    setIsReady(true);
+    console.log('✅ [INVITE NOTIFICATION] Sistema de notificações ATIVO para:', currentUserId);
 
     // Buscar convites pendentes ao montar
     const fetchPendingInvites = async () => {
+      console.log('🔔 [INVITE NOTIFICATION] Buscando convites pendentes...');
       const { data, error } = await supabase
         .from('duel_invites')
         .select(`
@@ -48,12 +62,19 @@ export const DuelInviteNotification = ({ currentUserId }: { currentUserId?: stri
         .limit(1)
         .maybeSingle();
 
-      if (!error && data) {
+      if (error) {
+        console.error('🔔 [INVITE NOTIFICATION] Erro ao buscar convites:', error);
+      } else if (data) {
+        console.log('🔔 [INVITE NOTIFICATION] Convite pendente encontrado:', data);
         setPendingInvite(data as any);
+      } else {
+        console.log('🔔 [INVITE NOTIFICATION] Nenhum convite pendente');
       }
     };
 
     fetchPendingInvites();
+
+    console.log('🔔 [INVITE NOTIFICATION] Configurando listener para user:', currentUserId);
 
     // Listener realtime para novos convites
     const channel = supabase
@@ -67,7 +88,19 @@ export const DuelInviteNotification = ({ currentUserId }: { currentUserId?: stri
           filter: `receiver_id=eq.${currentUserId}`,
         },
         async (payload) => {
-          console.log('🔔 Novo convite de duelo recebido:', payload);
+          console.log('🔔 [INVITE NOTIFICATION] Novo convite de duelo recebido:', payload);
+          
+          // Tocar som de notificação (opcional)
+          try {
+            const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBCmGzu/aij0GG2S659+USwsRVrLn65djGAg+luDzxW8fByR9y+/glEIIElys5+mVWBwIK4PQ8N2dXiAELYjU8N6gUwwTUKvq8axXFAk2i9Xx0X4lCCGAzu7ag0IJGGm45+SRSwwPUqzl7qhcHwQthtPy0oEoCS+G0fDejzsIHHK+6uSMQwoTXLHm66dVEwk3jNby0H4lCCGAzu7ag0IJGGm45+SRSwwPUqzl7qhcHwQthtPy0oEoCS+G0fDejzsIHHK+6uSMQwoTXLHm66dVEwk3jNby0H4lCCGAzu7ag0IJGGm45+SRSwwPUqzl7qhcHwQthtPy0oEoCS+G0fDejzsIHHK+6uSMQwoTXLHm66dVEwk3jNby0H4lCCGAzu7ag0IJGGm45+SRSwwPUqzl7qhcHwQthtPy0oEoCS+G0fDejzsIHHK+6uSMQwoTXLHm66dVEwk3jNby0H4lCCGAzu7ag0IJGGm45+SRSwwPUqzl7qhcHwQthtPy0oEoCS+G0fDejzsIHHK+6uSMQwoTXLHm66dVEwk3jNby0H4lCCGAzu7ag0IJGGm45+SRSwwPUqzl7qhcHwQthtPy0oEoCS+G0fDejzsIHHK+6uSMQwoTXLHm66dVEwk3jNby0H4lCCGAzu7ag0IJGGm45+SRSwwPUqzl7qhcHwQthtPy0oEoCS+G0fDejzsIHHK+6uSMQwoTXLHm66dVEwk3jNby0H4lCCGAzu7ag0IJGGm45+SRSwwPUqzl7qhcHwQthtPy0oEoCS+G0fDejzsIHHK+6uSMQwoTXLHm66dVEwk3jNby0H4lCCGAzu7ag0IJGGm45+SRSwwPUqzl7qhcHwQthtPy0oEoCS+G0fDejzsIHHK+6uSMQwoTXLHm66dVEwk3jNby0H4lCCGAzu7ag0IJGGm45+SRSwwPUqzl7qhc');
+            audio.play().catch(() => {});
+          } catch (e) {}
+          
+          // Mostrar toast também
+          toast({
+            title: "🎮 Novo Desafio!",
+            description: "Você recebeu um convite de duelo. Verifique a notificação!",
+          });
           
           // Buscar dados completos do convite com informações do sender
           const { data, error } = await supabase
@@ -80,16 +113,22 @@ export const DuelInviteNotification = ({ currentUserId }: { currentUserId?: stri
             .maybeSingle();
 
           if (!error && data) {
+            console.log('🔔 [INVITE NOTIFICATION] Dados do convite carregados:', data);
             setPendingInvite(data as any);
+          } else {
+            console.error('🔔 [INVITE NOTIFICATION] Erro ao carregar convite:', error);
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('🔔 [INVITE NOTIFICATION] Status da subscrição:', status);
+      });
 
     return () => {
+      console.log('🔔 [INVITE NOTIFICATION] Removendo canal');
       supabase.removeChannel(channel);
     };
-  }, [currentUserId]);
+  }, [currentUserId, toast]);
 
   const handleAccept = async () => {
     if (!pendingInvite) return;
@@ -183,33 +222,52 @@ export const DuelInviteNotification = ({ currentUserId }: { currentUserId?: stri
   if (!pendingInvite) return null;
 
   return (
-    <AlertDialog open={!!pendingInvite} onOpenChange={(open) => !open && setPendingInvite(null)}>
-      <AlertDialogContent className="card-mystic border-primary/30">
-        <AlertDialogHeader>
-          <div className="flex items-center justify-center mb-4">
-            <div className="p-3 rounded-full bg-primary/20">
-              <Swords className="w-8 h-8 text-primary" />
+    <>
+      {/* Debug info - remova em produção */}
+      {isReady && (
+        <div style={{ 
+          position: 'fixed', 
+          bottom: '10px', 
+          right: '10px', 
+          background: 'rgba(0,0,0,0.7)', 
+          color: 'white', 
+          padding: '5px 10px', 
+          borderRadius: '5px',
+          fontSize: '10px',
+          zIndex: 9998
+        }}>
+          🔔 Sistema de notificações ativo
+        </div>
+      )}
+      
+      <AlertDialog open={!!pendingInvite} onOpenChange={(open) => !open && setPendingInvite(null)}>
+        <AlertDialogContent className="card-mystic border-primary/30">
+          <AlertDialogHeader>
+            <div className="flex items-center justify-center mb-4">
+              <div className="p-3 rounded-full bg-primary/20 animate-pulse">
+                <Swords className="w-8 h-8 text-primary" />
+              </div>
             </div>
-          </div>
-          <AlertDialogTitle className="text-center text-2xl text-gradient-mystic">
-            Convite de Duelo!
-          </AlertDialogTitle>
-          <AlertDialogDescription className="text-center text-lg">
-            <span className="font-semibold text-primary">
-              {pendingInvite.sender.username}
-            </span>{" "}
-            te convidou para um duelo!
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-          <AlertDialogCancel onClick={handleReject} className="w-full sm:w-auto">
-            Recusar
-          </AlertDialogCancel>
-          <AlertDialogAction onClick={handleAccept} className="btn-mystic text-white w-full sm:w-auto">
-            Aceitar Desafio
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+            <AlertDialogTitle className="text-center text-2xl text-gradient-mystic">
+              Convite de Duelo!
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-lg">
+              <span className="font-semibold text-primary">
+                {pendingInvite.sender.username}
+              </span>{" "}
+              te convidou para um duelo!
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel onClick={handleReject} className="w-full sm:w-auto">
+              Recusar
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleAccept} className="btn-mystic text-white w-full sm:w-auto">
+              Aceitar Desafio
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
