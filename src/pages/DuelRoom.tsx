@@ -100,8 +100,12 @@ const DuelRoom = () => {
             
             // SEMPRE atualizar countdown quando remaining_seconds mudar (para sincronizar todos os players)
             if (payload.new.remaining_seconds !== undefined) {
-              console.log('🔴 [REALTIME] Atualizando countdown para:', payload.new.remaining_seconds);
-              setCallDuration(payload.new.remaining_seconds);
+              const durationMins = payload.new.duration_minutes || 50;
+              const maxSeconds = durationMins * 60;
+              // Validar valor recebido
+              const validRemaining = Math.min(Math.max(0, payload.new.remaining_seconds), maxSeconds);
+              console.log('🔴 [REALTIME] Atualizando countdown para:', validRemaining);
+              setCallDuration(validRemaining);
             }
             
             // Se opponent_id foi atualizado, recarregar dados completos do duel
@@ -142,9 +146,21 @@ const DuelRoom = () => {
     callStartTime.current = startTime;
     const MAX_DURATION = durationMinutes * 60;
     
-    // Definir remaining_seconds inicial
+    // Validar e definir remaining_seconds inicial
     if (remainingSecs !== undefined) {
-      setCallDuration(remainingSecs);
+      // Proteger contra valores corrompidos - o tempo restante não pode ser maior que a duração máxima
+      const validRemaining = Math.min(Math.max(0, remainingSecs), MAX_DURATION);
+      setCallDuration(validRemaining);
+      
+      // Se o valor estava corrompido, resetar no banco
+      if (remainingSecs > MAX_DURATION || remainingSecs < 0) {
+        console.warn('⚠️ Timer corrompido detectado. Resetando...', { remainingSecs, MAX_DURATION });
+        supabase
+          .from('live_duels')
+          .update({ remaining_seconds: validRemaining })
+          .eq('id', id)
+          .then(() => console.log('✅ Timer resetado com sucesso'));
+      }
     }
     
     // Limpar intervalo anterior se existir
@@ -368,7 +384,15 @@ const DuelRoom = () => {
         if (elapsed >= maxDurationSeconds) {
           await endDuel();
         } else {
-          const remainingSecs = data.remaining_seconds !== null ? data.remaining_seconds : Math.max(0, maxDurationSeconds - elapsed);
+          // Validar remaining_seconds do banco - não pode exceder a duração máxima
+          let remainingSecs = data.remaining_seconds !== null ? data.remaining_seconds : Math.max(0, maxDurationSeconds - elapsed);
+          
+          // Proteger contra valores corrompidos
+          if (remainingSecs > maxDurationSeconds || remainingSecs < 0) {
+            console.warn('⚠️ Valor corrompido no banco. Recalculando...', { remainingSecs, maxDurationSeconds });
+            remainingSecs = Math.max(0, maxDurationSeconds - elapsed);
+          }
+          
           startCallTimer(startedAt, durationMins, remainingSecs);
         }
       }
