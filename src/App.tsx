@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from '@supabase/supabase-js';
 import { useDuelInviteNotifications } from "@/hooks/useDuelInviteNotifications";
+import { DuelInviteNotification } from "@/components/DuelInviteNotification";
 import Home from "./pages/Home";
 import Landing from "./pages/Landing";
 import Admin from "./pages/Admin";
@@ -78,6 +79,7 @@ const AppContent = () => {
 
   return (
     <BrowserRouter>
+      <DuelInviteNotification currentUserId={user?.id} />
       <RouterContent currentUserId={user?.id} />
     </BrowserRouter>
   );

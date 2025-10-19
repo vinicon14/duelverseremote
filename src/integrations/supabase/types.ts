@@ -275,7 +275,7 @@ export type Database = {
           player1_score: number
           player2_id: string
           player2_score: number
-          winner_id: string
+          winner_id: string | null
         }
         Insert: {
           bet_amount?: number
@@ -285,7 +285,7 @@ export type Database = {
           player1_score?: number
           player2_id: string
           player2_score?: number
-          winner_id: string
+          winner_id?: string | null
         }
         Update: {
           bet_amount?: number
@@ -295,7 +295,7 @@ export type Database = {
           player1_score?: number
           player2_id?: string
           player2_score?: number
-          winner_id?: string
+          winner_id?: string | null
         }
         Relationships: [
           {

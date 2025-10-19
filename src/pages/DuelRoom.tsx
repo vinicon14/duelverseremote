@@ -212,6 +212,7 @@ const DuelRoom = () => {
           description: `A chamada atingiu o limite de ${durationMinutes} minutos e será encerrada.`,
           variant: "destructive",
         });
+        // Garante que a partida seja contabilizada mesmo com tempo esgotado
         endDuel();
       }
     }, 1000);
@@ -483,14 +484,14 @@ const DuelRoom = () => {
         })
         .eq('id', id);
 
-      // Registrar histórico se houver vencedor e ambos os jogadores
-      if (finalWinnerId && duel?.id && duel?.creator_id && duel?.opponent_id) {
+      // SEMPRE registrar histórico se houver ambos os jogadores (mesmo empate)
+      if (duel?.id && duel?.creator_id && duel?.opponent_id) {
         try {
           const { error: matchError } = await supabase.rpc('record_match_result', {
             p_duel_id: duel.id,
             p_player1_id: duel.creator_id,
             p_player2_id: duel.opponent_id,
-            p_winner_id: finalWinnerId,
+            p_winner_id: finalWinnerId || null, // Aceita null para empates
             p_player1_score: player1LP,
             p_player2_score: player2LP,
             p_bet_amount: duel.bet_amount || 0
@@ -504,9 +505,12 @@ const DuelRoom = () => {
               variant: "destructive",
             });
           } else {
+            const resultMsg = finalWinnerId 
+              ? "A partida foi contabilizada com sucesso" 
+              : "Empate registrado no histórico";
             toast({
               title: "Resultado registrado!",
-              description: "A partida foi contabilizada com sucesso",
+              description: resultMsg,
             });
           }
         } catch (error: any) {
@@ -517,7 +521,7 @@ const DuelRoom = () => {
             variant: "destructive",
           });
         }
-      } else if (winnerId && (!duel?.opponent_id)) {
+      } else if (!duel?.opponent_id) {
         toast({
           title: "Partida não contabilizada",
           description: "É necessário dois jogadores para registrar o resultado",
