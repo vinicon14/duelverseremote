@@ -14,15 +14,12 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { NotificationBell } from "@/components/NotificationBell";
 import { OnlineUsersCounter } from "@/components/OnlineUsersCounter";
-import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 
 export const Navbar = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const { isAdmin } = useAdmin();
-  
-  useOnlineStatus();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {

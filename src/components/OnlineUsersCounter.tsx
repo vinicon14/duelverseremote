@@ -17,33 +17,31 @@ export const OnlineUsersCounter = () => {
       }
 
       // Create a shared presence channel that all users join
-      channelRef.current = supabase.channel('online-presence', {
-        config: {
-          presence: {
-            key: session.user.id,
-          },
-        },
-      });
+      const channelName = 'room:online';
+      
+      channelRef.current = supabase.channel(channelName);
 
       channelRef.current
         .on('presence', { event: 'sync' }, () => {
           const state = channelRef.current.presenceState();
           const count = Object.keys(state).length;
-          console.log('Online users count:', count, state);
+          console.log('✅ Online users synced:', count);
           setOnlineCount(count);
         })
-        .on('presence', { event: 'join' }, ({ newPresences }: any) => {
-          console.log('User joined:', newPresences);
+        .on('presence', { event: 'join' }, ({ key, newPresences }: any) => {
+          console.log('👋 User joined:', key, newPresences);
         })
-        .on('presence', { event: 'leave' }, ({ leftPresences }: any) => {
-          console.log('User left:', leftPresences);
+        .on('presence', { event: 'leave' }, ({ key, leftPresences }: any) => {
+          console.log('👋 User left:', key, leftPresences);
         })
         .subscribe(async (status: string) => {
+          console.log('📡 Channel status:', status);
           if (status === 'SUBSCRIBED') {
-            await channelRef.current.track({
+            const presenceStatus = await channelRef.current.track({
               user_id: session.user.id,
               online_at: new Date().toISOString(),
             });
+            console.log('📍 Presence tracked:', presenceStatus);
           }
         });
     };
