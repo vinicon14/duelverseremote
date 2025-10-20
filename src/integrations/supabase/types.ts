@@ -575,6 +575,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      cleanup_matchmaking_queue: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       get_leaderboard: {
         Args: { limit_count?: number }
         Returns: {

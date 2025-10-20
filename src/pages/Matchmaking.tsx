@@ -25,7 +25,23 @@ export default function Matchmaking() {
     checkAuth();
     fetchQueueStats();
 
+    // Limpar entrada da fila ao desmontar ou recarregar página
+    const cleanupOnUnload = async () => {
+      if (currentUserId.current) {
+        await supabase
+          .from('matchmaking_queue')
+          .delete()
+          .eq('user_id', currentUserId.current)
+          .eq('status', 'waiting');
+      }
+    };
+
+    window.addEventListener('beforeunload', cleanupOnUnload);
+    window.addEventListener('pagehide', cleanupOnUnload);
+
     return () => {
+      window.removeEventListener('beforeunload', cleanupOnUnload);
+      window.removeEventListener('pagehide', cleanupOnUnload);
       cleanup();
     };
   }, []);
@@ -91,6 +107,12 @@ export default function Matchmaking() {
         return;
       }
 
+      // Limpar qualquer entrada antiga do usuário primeiro
+      await supabase
+        .from('matchmaking_queue')
+        .delete()
+        .eq('user_id', session.user.id);
+
       // Verificar se já está em duelo
       const { data: existingDuels } = await supabase
         .from("live_duels")
@@ -101,19 +123,6 @@ export default function Matchmaking() {
       if (existingDuels && existingDuels.length > 0) {
         toast.error("Você já está em um duelo ativo");
         navigate(`/duel/${existingDuels[0].id}`);
-        return;
-      }
-
-      // Verificar se já está na fila
-      const { data: existingQueue } = await supabase
-        .from('matchmaking_queue')
-        .select('id')
-        .eq('user_id', session.user.id)
-        .eq('status', 'waiting')
-        .maybeSingle();
-
-      if (existingQueue) {
-        toast.error("Você já está na fila de matchmaking");
         return;
       }
 
@@ -157,6 +166,7 @@ export default function Matchmaking() {
         return;
       }
 
+      console.log('✅ Joined queue:', queueEntry);
       setQueueId(queueEntry.id);
       fetchQueueStats();
 
@@ -185,6 +195,7 @@ export default function Matchmaking() {
 
       // Timeout de 30 segundos
       queueTimeout.current = setTimeout(async () => {
+        console.log('⏱️ Queue timeout reached');
         await cancelSearch();
         toast.error("Nenhum oponente encontrado. Tente novamente ou crie uma sala.");
       }, 30000);
