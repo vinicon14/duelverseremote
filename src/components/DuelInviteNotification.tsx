@@ -219,43 +219,49 @@ export const DuelInviteNotification = ({ currentUserId }: { currentUserId?: stri
     }
   };
 
-  if (!pendingInvite) return null;
+  if (!pendingInvite || !isReady) {
+    return null;
+  }
 
   return (
-    <AlertDialog open={!!pendingInvite} onOpenChange={(open) => !open && handleReject()}>
-        <AlertDialogContent className="card-mystic border-primary/30">
-          <AlertDialogHeader>
-            <div className="flex items-center justify-center mb-4">
-              <div className="p-3 rounded-full bg-primary/20 animate-pulse">
-                <Swords className="w-8 h-8 text-primary" />
-              </div>
+    <AlertDialog open={true} onOpenChange={(open) => {
+      if (!open) {
+        handleReject();
+      }
+    }}>
+      <AlertDialogContent className="card-mystic border-primary/30">
+        <AlertDialogHeader>
+          <div className="flex items-center justify-center mb-4">
+            <div className="p-3 rounded-full bg-primary/20 animate-pulse">
+              <Swords className="w-8 h-8 text-primary" />
             </div>
-            <AlertDialogTitle className="text-center text-2xl text-gradient-mystic">
-              Convite de Duelo!
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-center text-lg">
-              <span className="font-semibold text-primary">
-                {pendingInvite.sender.username}
-              </span>{" "}
-              te convidou para um duelo!
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="flex-col sm:flex-row gap-3">
-            <AlertDialogCancel 
-              onClick={handleReject} 
-              className="w-full sm:w-auto border-destructive text-destructive hover:bg-destructive hover:text-white"
-            >
-              ❌ Recusar Duelo
-            </AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleAccept} 
-              className="btn-mystic text-white w-full sm:w-auto"
-            >
-              <Swords className="w-4 h-4 mr-2" />
-              ⚔️ Entrar no Duelo
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
+          </div>
+          <AlertDialogTitle className="text-center text-2xl text-gradient-mystic">
+            Convite de Duelo!
+          </AlertDialogTitle>
+          <AlertDialogDescription className="text-center text-lg">
+            <span className="font-semibold text-primary">
+              {pendingInvite.sender.username}
+            </span>{" "}
+            te convidou para um duelo!
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter className="flex-col sm:flex-row gap-3">
+          <AlertDialogCancel 
+            onClick={handleReject} 
+            className="w-full sm:w-auto border-destructive text-destructive hover:bg-destructive hover:text-white"
+          >
+            ❌ Recusar Duelo
+          </AlertDialogCancel>
+          <AlertDialogAction 
+            onClick={handleAccept} 
+            className="btn-mystic text-white w-full sm:w-auto"
+          >
+            <Swords className="w-4 h-4 mr-2" />
+            ⚔️ Entrar no Duelo
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
     </AlertDialog>
   );
 };

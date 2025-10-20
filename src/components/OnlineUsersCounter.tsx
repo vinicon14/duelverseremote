@@ -18,16 +18,15 @@ export const OnlineUsersCounter = () => {
 
     fetchOnlineUsers();
 
-    // Subscribe to profile changes
+    // Subscribe to profile changes for real-time updates
     const channel = supabase
       .channel('online-users-changes')
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'UPDATE',
           schema: 'public',
-          table: 'profiles',
-          filter: 'is_online=eq.true'
+          table: 'profiles'
         },
         () => {
           fetchOnlineUsers();
@@ -35,8 +34,8 @@ export const OnlineUsersCounter = () => {
       )
       .subscribe();
 
-    // Refresh count every minute
-    const interval = setInterval(fetchOnlineUsers, 60000);
+    // Refresh count every 30 seconds
+    const interval = setInterval(fetchOnlineUsers, 30000);
 
     return () => {
       supabase.removeChannel(channel);

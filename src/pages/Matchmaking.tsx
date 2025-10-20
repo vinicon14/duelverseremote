@@ -19,11 +19,11 @@ export default function Matchmaking() {
   const currentUserId = useRef<string | null>(null);
   const timerInterval = useRef<NodeJS.Timeout | null>(null);
   const queueChannel = useRef<any>(null);
+  const queueTimeout = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     checkAuth();
     fetchQueueStats();
-    setupRealtimeListeners();
 
     return () => {
       cleanup();
@@ -32,7 +32,6 @@ export default function Matchmaking() {
 
   useEffect(() => {
     if (searching) {
-      // Timer para mostrar tempo decorrido
       timerInterval.current = setInterval(() => {
         setElapsedTime(prev => prev + 1);
       }, 1000);
@@ -47,20 +46,18 @@ export default function Matchmaking() {
     }
   }, [searching]);
 
-  const setupRealtimeListeners = () => {
-    // Listener para mudanças na fila (novo match criado)
-    // Realtime listeners disabled for now (matchmaking not fully implemented)
-  };
-
   const cleanup = async () => {
-    // Limpar listeners
     if (queueChannel.current) {
       await supabase.removeChannel(queueChannel.current);
     }
-
-    // Limpar timer
     if (timerInterval.current) {
       clearInterval(timerInterval.current);
+    }
+    if (queueTimeout.current) {
+      clearTimeout(queueTimeout.current);
+    }
+    if (queueId) {
+      await supabase.from('matchmaking_queue').delete().eq('id', queueId);
     }
   };
 
@@ -74,113 +71,177 @@ export default function Matchmaking() {
   };
 
   const fetchQueueStats = async () => {
-    // Matchmaking queue not yet implemented
-    setPlayersInQueue(0);
+    try {
+      const { count } = await supabase
+        .from('matchmaking_queue')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'waiting');
+      setPlayersInQueue(count || 0);
+    } catch (error) {
+      console.error('Error fetching queue stats:', error);
+    }
   };
 
   const joinQueue = async () => {
     try {
-      console.log('[Matchmaking] Iniciando busca de sala...');
-      
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        console.log('[Matchmaking] Usuário não autenticado');
         toast.error("Você precisa estar logado");
         navigate("/auth");
         return;
       }
 
-      // Verificar se o usuário já está em algum duelo ativo
-      const { data: existingDuels, error: duelsError } = await supabase
+      // Verificar se já está em duelo
+      const { data: existingDuels } = await supabase
         .from("live_duels")
-        .select("id, status")
+        .select("id")
         .or(`creator_id.eq.${session.user.id},opponent_id.eq.${session.user.id}`)
         .in("status", ["waiting", "in_progress"]);
 
-      if (duelsError) {
-        console.error("[Matchmaking] Erro ao verificar duelos existentes:", duelsError);
-      }
-
       if (existingDuels && existingDuels.length > 0) {
-        console.log('[Matchmaking] Usuário já está em duelo, redirecionando...');
         toast.error("Você já está em um duelo ativo");
         navigate(`/duel/${existingDuels[0].id}`);
         return;
       }
 
+      // Verificar se já está na fila
+      const { data: existingQueue } = await supabase
+        .from('matchmaking_queue')
+        .select('id')
+        .eq('user_id', session.user.id)
+        .eq('status', 'waiting')
+        .maybeSingle();
+
+      if (existingQueue) {
+        toast.error("Você já está na fila de matchmaking");
+        return;
+      }
+
       setSearching(true);
+      const matchType = isRanked ? 'ranked' : 'casual';
 
-      console.log('[Matchmaking] Buscando salas disponíveis (is_ranked:', isRanked, ')');
+      // Primeiro, verificar se há alguém esperando
+      const { data: waitingPlayers } = await supabase
+        .from('matchmaking_queue')
+        .select('id, user_id')
+        .eq('match_type', matchType)
+        .eq('status', 'waiting')
+        .neq('user_id', session.user.id)
+        .gt('expires_at', new Date().toISOString())
+        .limit(1)
+        .maybeSingle();
 
-      // Buscar uma sala aleatória com apenas 1 pessoa (status waiting) do tipo escolhido
-      const { data: waitingDuels, error: searchError } = await supabase
-        .from("live_duels")
-        .select("id, creator_id")
-        .eq("status", "waiting")
-        .eq("is_ranked", isRanked)
-        .is("opponent_id", null)
-        .neq("creator_id", session.user.id)
-        .limit(10);
-
-      if (searchError) {
-        console.error("[Matchmaking] Erro ao buscar salas:", searchError);
-        toast.error("Erro ao buscar salas disponíveis");
-        setSearching(false);
+      if (waitingPlayers) {
+        // Match encontrado imediatamente!
+        await createMatchAndRedirect(session.user.id, waitingPlayers.user_id, waitingPlayers.id, isRanked);
         return;
       }
 
-      console.log('[Matchmaking] Salas encontradas:', waitingDuels?.length || 0);
-
-      if (!waitingDuels || waitingDuels.length === 0) {
-        console.log('[Matchmaking] Nenhuma sala disponível');
-        toast.error(`Nenhuma sala ${isRanked ? 'ranqueada' : 'casual'} disponível. Tente outro tipo ou crie sua própria sala.`);
-        setSearching(false);
-        navigate('/duels');
-        return;
-      }
-
-      // Selecionar uma sala aleatória
-      const randomDuel = waitingDuels[Math.floor(Math.random() * waitingDuels.length)];
-      console.log('[Matchmaking] Sala selecionada:', randomDuel.id);
-
-      // Entrar na sala como opponent
-      const { error: updateError } = await supabase
-        .from("live_duels")
-        .update({ 
-          opponent_id: session.user.id,
-          status: "in_progress",
-          started_at: new Date().toISOString()
+      // Ninguém esperando, entrar na fila
+      const expiresAt = new Date(Date.now() + 30000).toISOString(); // 30 segundos
+      const { data: queueEntry, error: queueError } = await supabase
+        .from('matchmaking_queue')
+        .insert({
+          user_id: session.user.id,
+          match_type: matchType,
+          expires_at: expiresAt,
+          status: 'waiting'
         })
-        .eq("id", randomDuel.id)
-        .is("opponent_id", null);
+        .select()
+        .single();
 
-      if (updateError) {
-        console.error("[Matchmaking] Erro ao entrar na sala:", updateError);
-        toast.error("Erro ao entrar na sala. Tente novamente.");
+      if (queueError) {
+        console.error('Error joining queue:', queueError);
+        toast.error("Erro ao entrar na fila");
         setSearching(false);
         return;
       }
 
-      console.log('[Matchmaking] Entrada na sala bem-sucedida, redirecionando...');
+      setQueueId(queueEntry.id);
+      fetchQueueStats();
 
-      toast.success("Sala encontrada! Carregando chamada...");
-      
-      // Aguardar para o banco processar
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      navigate(`/duel/${randomDuel.id}`);
+      // Setup realtime listener para novos jogadores
+      queueChannel.current = supabase
+        .channel(`matchmaking_${session.user.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'matchmaking_queue',
+            filter: `match_type=eq.${matchType}`
+          },
+          async (payload) => {
+            const newPlayer = payload.new as any;
+            if (newPlayer.user_id !== session.user.id && newPlayer.status === 'waiting') {
+              // Alguém novo entrou! Fazer o match
+              await createMatchAndRedirect(session.user.id, newPlayer.user_id, queueEntry.id, isRanked);
+            }
+          }
+        )
+        .subscribe();
+
+      // Timeout de 30 segundos
+      queueTimeout.current = setTimeout(async () => {
+        await cancelSearch();
+        toast.error("Nenhum oponente encontrado. Tente novamente ou crie uma sala.");
+      }, 30000);
+
     } catch (error: any) {
-      console.error("Unexpected error in joinQueue:", error);
+      console.error("Error in joinQueue:", error);
       toast.error("Erro inesperado: " + error.message);
       setSearching(false);
     }
   };
 
-  const findMatch = async (playerId: string, playerElo: number) => {
-    // Not implemented yet
+  const createMatchAndRedirect = async (player1Id: string, player2Id: string, queueIdToDelete: string, ranked: boolean) => {
+    try {
+      // Marcar ambas entradas como matched
+      await supabase
+        .from('matchmaking_queue')
+        .update({ status: 'matched' })
+        .in('user_id', [player1Id, player2Id]);
+
+      // Criar duelo
+      const { data: duel, error } = await supabase
+        .from('live_duels')
+        .insert({
+          creator_id: player1Id,
+          opponent_id: player2Id,
+          room_name: `Match ${ranked ? 'Ranqueado' : 'Casual'}`,
+          status: 'in_progress',
+          is_ranked: ranked,
+          duration_minutes: 50,
+          started_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Limpar fila
+      await supabase
+        .from('matchmaking_queue')
+        .delete()
+        .in('id', [queueId, queueIdToDelete].filter(Boolean));
+
+      cleanup();
+      
+      toast.success("🎮 Match encontrado! Redirecionando...");
+      await new Promise(resolve => setTimeout(resolve, 500));
+      navigate(`/duel/${duel.id}`);
+    } catch (error: any) {
+      console.error('Error creating match:', error);
+      toast.error("Erro ao criar partida");
+      setSearching(false);
+    }
   };
 
   const cancelSearch = async () => {
+    if (queueId) {
+      await supabase.from('matchmaking_queue').delete().eq('id', queueId);
+    }
+    cleanup();
     setSearching(false);
     setQueueId(null);
     setElapsedTime(0);
@@ -277,7 +338,7 @@ export default function Matchmaking() {
                       <div className="h-full bg-gradient-primary animate-pulse" style={{ width: "60%" }} />
                     </div>
                     <p className="text-xs text-center text-muted-foreground">
-                      Expandindo busca... (ELO ±{200 + (elapsedTime * 10)})
+                      Procurando oponente... {30 - elapsedTime}s restantes
                     </p>
                   </div>
 

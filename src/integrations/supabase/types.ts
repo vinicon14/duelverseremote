@@ -321,6 +321,33 @@ export type Database = {
           },
         ]
       }
+      matchmaking_queue: {
+        Row: {
+          expires_at: string
+          id: string
+          joined_at: string
+          match_type: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          expires_at: string
+          id?: string
+          joined_at?: string
+          match_type: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          expires_at?: string
+          id?: string
+          joined_at?: string
+          match_type?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       news: {
         Row: {
           author_id: string | null
@@ -541,6 +568,10 @@ export type Database = {
     }
     Functions: {
       cleanup_empty_duels: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      cleanup_expired_queue_entries: {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
