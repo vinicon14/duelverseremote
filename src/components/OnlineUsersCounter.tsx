@@ -1,45 +1,60 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export const OnlineUsersCounter = () => {
   const [onlineCount, setOnlineCount] = useState(0);
+  const channelRef = useRef<any>(null);
 
   useEffect(() => {
-    const fetchOnlineUsers = async () => {
-      const { count } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true })
-        .eq('is_online', true);
+    const initPresence = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
       
-      setOnlineCount(count || 0);
+      if (!session) {
+        setOnlineCount(0);
+        return;
+      }
+
+      // Create a shared presence channel that all users join
+      channelRef.current = supabase.channel('online-presence', {
+        config: {
+          presence: {
+            key: session.user.id,
+          },
+        },
+      });
+
+      channelRef.current
+        .on('presence', { event: 'sync' }, () => {
+          const state = channelRef.current.presenceState();
+          const count = Object.keys(state).length;
+          console.log('Online users count:', count, state);
+          setOnlineCount(count);
+        })
+        .on('presence', { event: 'join' }, ({ newPresences }: any) => {
+          console.log('User joined:', newPresences);
+        })
+        .on('presence', { event: 'leave' }, ({ leftPresences }: any) => {
+          console.log('User left:', leftPresences);
+        })
+        .subscribe(async (status: string) => {
+          if (status === 'SUBSCRIBED') {
+            await channelRef.current.track({
+              user_id: session.user.id,
+              online_at: new Date().toISOString(),
+            });
+          }
+        });
     };
 
-    fetchOnlineUsers();
-
-    // Subscribe to profile changes for real-time updates
-    const channel = supabase
-      .channel('online-users-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'profiles'
-        },
-        () => {
-          fetchOnlineUsers();
-        }
-      )
-      .subscribe();
-
-    // Refresh count every 30 seconds
-    const interval = setInterval(fetchOnlineUsers, 30000);
+    initPresence();
 
     return () => {
-      supabase.removeChannel(channel);
-      clearInterval(interval);
+      if (channelRef.current) {
+        channelRef.current.untrack();
+        supabase.removeChannel(channelRef.current);
+      }
     };
   }, []);
 
