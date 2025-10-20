@@ -162,7 +162,7 @@ export default function Matchmaking() {
 
       // Setup realtime listener para novos jogadores
       queueChannel.current = supabase
-        .channel(`matchmaking_${session.user.id}`)
+        .channel(`matchmaking_${session.user.id}_${Date.now()}`)
         .on(
           'postgres_changes',
           {
@@ -173,8 +173,10 @@ export default function Matchmaking() {
           },
           async (payload) => {
             const newPlayer = payload.new as any;
+            console.log('New player joined queue:', newPlayer);
             if (newPlayer.user_id !== session.user.id && newPlayer.status === 'waiting') {
               // Alguém novo entrou! Fazer o match
+              console.log('Match found! Creating match...');
               await createMatchAndRedirect(session.user.id, newPlayer.user_id, queueEntry.id, isRanked);
             }
           }
@@ -194,9 +196,19 @@ export default function Matchmaking() {
     }
   };
 
-  const createMatchAndRedirect = async (player1Id: string, player2Id: string, queueIdToDelete: string, ranked: boolean) => {
+  const createMatchAndRedirect = async (player1Id: string, player2Id: string, myQueueId: string, ranked: boolean) => {
     try {
-      // Marcar ambas entradas como matched
+      console.log('Creating match between', player1Id, 'and', player2Id);
+      
+      // Marcar ambas entradas como matched e obter IDs
+      const { data: queueEntries } = await supabase
+        .from('matchmaking_queue')
+        .select('id')
+        .in('user_id', [player1Id, player2Id]);
+
+      const queueIdsToDelete = queueEntries?.map(entry => entry.id) || [myQueueId];
+
+      // Atualizar status para matched
       await supabase
         .from('matchmaking_queue')
         .update({ status: 'matched' })
@@ -219,33 +231,41 @@ export default function Matchmaking() {
 
       if (error) throw error;
 
+      console.log('Match created, duel ID:', duel.id);
+
       // Limpar fila
       await supabase
         .from('matchmaking_queue')
         .delete()
-        .in('id', [queueId, queueIdToDelete].filter(Boolean));
+        .in('id', queueIdsToDelete);
 
-      cleanup();
+      await cleanup();
       
       toast.success("🎮 Match encontrado! Redirecionando...");
-      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Navegar imediatamente
       navigate(`/duel/${duel.id}`);
     } catch (error: any) {
       console.error('Error creating match:', error);
       toast.error("Erro ao criar partida");
+      await cleanup();
       setSearching(false);
     }
   };
 
   const cancelSearch = async () => {
-    if (queueId) {
-      await supabase.from('matchmaking_queue').delete().eq('id', queueId);
+    try {
+      if (queueId) {
+        await supabase.from('matchmaking_queue').delete().eq('id', queueId);
+      }
+      await cleanup();
+      setSearching(false);
+      setQueueId(null);
+      setElapsedTime(0);
+      toast.info("Busca cancelada");
+    } catch (error) {
+      console.error('Error canceling search:', error);
     }
-    cleanup();
-    setSearching(false);
-    setQueueId(null);
-    setElapsedTime(0);
-    toast.info("Busca cancelada");
   };
 
   const formatTime = (seconds: number) => {
