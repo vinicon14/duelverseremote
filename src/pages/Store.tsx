@@ -83,8 +83,7 @@ export default function Store() {
             <CardContent className="space-y-6">
               <div className="space-y-4">
                 <p className="text-muted-foreground">
-                  Na nossa loja você encontra produtos oficiais, cards exclusivos, 
-                  acessórios e muito mais para turbinar seus duelos!
+                  na nossa loja você encontra planos personalizados moedas do game e muito mais
                 </p>
                 
                 <Button 
