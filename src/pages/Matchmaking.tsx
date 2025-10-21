@@ -209,21 +209,39 @@ export default function Matchmaking() {
             if (updated.status === 'matched') {
               console.log('🎮 I was matched! Looking for duel...');
               
-              // Buscar o duelo criado onde sou o opponent
-              const { data: myDuel } = await supabase
-                .from('live_duels')
-                .select('id')
-                .eq('opponent_id', session.user.id)
-                .eq('status', 'in_progress')
-                .order('created_at', { ascending: false })
-                .limit(1)
-                .maybeSingle();
+              // Tentar buscar o duelo algumas vezes (pode não estar criado ainda)
+              let attempts = 0;
+              const maxAttempts = 5;
+              let myDuel = null;
+
+              while (attempts < maxAttempts && !myDuel) {
+                const { data } = await supabase
+                  .from('live_duels')
+                  .select('id')
+                  .or(`opponent_id.eq.${session.user.id},creator_id.eq.${session.user.id}`)
+                  .eq('status', 'in_progress')
+                  .order('created_at', { ascending: false })
+                  .limit(1)
+                  .maybeSingle();
+
+                if (data) {
+                  myDuel = data;
+                  console.log('✅ Found my duel:', myDuel.id);
+                } else {
+                  attempts++;
+                  console.log(`🔍 Attempt ${attempts}/${maxAttempts} - Duel not found yet, retrying...`);
+                  await new Promise(resolve => setTimeout(resolve, 200));
+                }
+              }
 
               if (myDuel) {
-                console.log('✅ Found my duel:', myDuel.id);
                 await cleanup();
                 toast.success("🎮 Match encontrado! Redirecionando...");
                 navigate(`/duel/${myDuel.id}`);
+              } else {
+                console.error('❌ Could not find duel after all attempts');
+                toast.error("Erro ao encontrar partida");
+                await cancelSearch();
               }
             }
           }
@@ -259,18 +277,7 @@ export default function Matchmaking() {
 
       console.log('📋 Queue IDs to process:', queueIdsToDelete);
 
-      // Primeiro: Atualizar status para 'matched' para notificar o outro jogador
-      await supabase
-        .from('matchmaking_queue')
-        .update({ status: 'matched' })
-        .in('id', queueIdsToDelete);
-
-      console.log('✅ Updated queue entries to matched');
-
-      // Aguardar um momento para garantir que o update foi processado
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      // Criar duelo
+      // Criar duelo PRIMEIRO
       const { data: duel, error } = await supabase
         .from('live_duels')
         .insert({
@@ -288,6 +295,17 @@ export default function Matchmaking() {
       if (error) throw error;
 
       console.log('🎯 Match created, duel ID:', duel.id);
+
+      // DEPOIS: Atualizar status para 'matched' para notificar o outro jogador
+      await supabase
+        .from('matchmaking_queue')
+        .update({ status: 'matched' })
+        .in('id', queueIdsToDelete);
+
+      console.log('✅ Updated queue entries to matched');
+
+      // Aguardar para dar tempo do outro usuário receber o evento e encontrar o duelo
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       // Limpar fila
       await supabase
