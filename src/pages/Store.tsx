@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Navbar } from "@/components/Navbar";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,12 +29,12 @@ export default function Store() {
         const urlSetting = data.find(s => s.key === 'store_url');
         
         setSupportEmail(emailSetting?.value || 'suporte@duelverse.online');
-        setStoreUrl(urlSetting?.value || 'https://loja.duelverse.online');
+        setStoreUrl(urlSetting?.value || 'https://loja.menu/duelverse');
       }
     } catch (error) {
       console.error('Error fetching settings:', error);
       setSupportEmail('suporte@duelverse.online');
-      setStoreUrl('https://loja.duelverse.online');
+      setStoreUrl('https://loja.menu/duelverse');
     }
   };
 
@@ -76,9 +76,6 @@ export default function Store() {
                 <StoreIcon className="w-6 h-6 text-primary" />
                 Acesso à Loja
               </CardTitle>
-              <CardDescription>
-                Visite nossa loja oficial para produtos, cards e acessórios
-              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-4">
