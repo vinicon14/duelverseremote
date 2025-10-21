@@ -43,13 +43,21 @@ export const AdminSettings = () => {
   const saveSettings = async () => {
     setLoading(true);
     try {
-      const { error } = await supabase.from('system_settings').upsert([
+      const settingsToSave = [
         { key: 'support_email', value: supportEmail },
         { key: 'pix_key', value: pixKey },
         { key: 'store_url', value: storeUrl }
-      ], { onConflict: 'key' });
+      ];
 
-      if (error) throw error;
+      const promises = settingsToSave.map(setting =>
+        supabase.from('system_settings').upsert(setting, { onConflict: 'key' })
+      );
+
+      const results = await Promise.all(promises);
+
+      results.forEach(result => {
+        if (result.error) throw result.error;
+      });
 
       toast({
         title: "Configurações salvas",
