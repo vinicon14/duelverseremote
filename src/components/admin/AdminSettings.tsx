@@ -127,7 +127,7 @@ export const AdminSettings = () => {
             <Input
               id="store-url"
               type="url"
-              placeholder="https://loja.duelverse.online"
+              placeholder="https://loja.menu/duelverse"
               value={storeUrl}
               onChange={(e) => setStoreUrl(e.target.value)}
             />
