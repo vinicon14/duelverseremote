@@ -43,37 +43,21 @@ export const AdminSettings = () => {
   const saveSettings = async () => {
     setLoading(true);
     try {
-      // Atualizar support_email
-      const { error: emailError } = await supabase
-        .from('system_settings')
-        .upsert({ key: 'support_email', value: supportEmail, updated_at: new Date().toISOString() })
-        .eq('key', 'support_email');
-      
-      if (emailError) throw emailError;
+      const { error } = await supabase.from('system_settings').upsert([
+        { key: 'support_email', value: supportEmail, updated_at: new Date().toISOString() },
+        { key: 'pix_key', value: pixKey, updated_at: new Date().toISOString() },
+        { key: 'store_url', value: storeUrl, updated_at: new Date().toISOString() }
+      ]);
 
-      // Atualizar pix_key
-      const { error: pixError } = await supabase
-        .from('system_settings')
-        .upsert({ key: 'pix_key', value: pixKey, updated_at: new Date().toISOString() })
-        .eq('key', 'pix_key');
-      
-      if (pixError) throw pixError;
+      if (error) throw error;
 
-      // Atualizar store_url
-      const { error: storeError } = await supabase
-        .from('system_settings')
-        .upsert({ key: 'store_url', value: storeUrl, updated_at: new Date().toISOString() })
-        .eq('key', 'store_url');
-      
-      if (storeError) throw storeError;
-
-      toast({ 
+      toast({
         title: "Configurações salvas",
         description: "As configurações foram atualizadas com sucesso!"
       });
     } catch (error: any) {
       console.error('Error saving settings:', error);
-      toast({ 
+      toast({
         title: "Erro ao salvar",
         description: error.message || "Não foi possível salvar as configurações",
         variant: "destructive"
