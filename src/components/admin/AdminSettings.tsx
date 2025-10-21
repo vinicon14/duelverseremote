@@ -47,7 +47,7 @@ export const AdminSettings = () => {
         { key: 'support_email', value: supportEmail, updated_at: new Date().toISOString() },
         { key: 'pix_key', value: pixKey, updated_at: new Date().toISOString() },
         { key: 'store_url', value: storeUrl, updated_at: new Date().toISOString() }
-      ]);
+      ], { onConflict: 'key' });
 
       if (error) throw error;
 
