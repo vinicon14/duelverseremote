@@ -44,9 +44,9 @@ export const AdminSettings = () => {
     setLoading(true);
     try {
       const { error } = await supabase.from('system_settings').upsert([
-        { key: 'support_email', value: supportEmail, updated_at: new Date().toISOString() },
-        { key: 'pix_key', value: pixKey, updated_at: new Date().toISOString() },
-        { key: 'store_url', value: storeUrl, updated_at: new Date().toISOString() }
+        { key: 'support_email', value: supportEmail },
+        { key: 'pix_key', value: pixKey },
+        { key: 'store_url', value: storeUrl }
       ], { onConflict: 'key' });
 
       if (error) throw error;
