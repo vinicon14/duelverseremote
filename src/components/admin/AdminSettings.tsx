@@ -10,6 +10,7 @@ import { Save } from "lucide-react";
 export const AdminSettings = () => {
   const [supportEmail, setSupportEmail] = useState("");
   const [pixKey, setPixKey] = useState("");
+  const [storeUrl, setStoreUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
@@ -28,9 +29,11 @@ export const AdminSettings = () => {
       if (data) {
         const emailSetting = data.find(s => s.key === 'support_email');
         const pixSetting = data.find(s => s.key === 'pix_key');
+        const storeSetting = data.find(s => s.key === 'store_url');
         
         if (emailSetting) setSupportEmail(emailSetting.value || '');
         if (pixSetting) setPixKey(pixSetting.value || '');
+        if (storeSetting) setStoreUrl(storeSetting.value || '');
       }
     } catch (error) {
       console.error('Error fetching settings:', error);
@@ -43,7 +46,7 @@ export const AdminSettings = () => {
       // Atualizar support_email
       const { error: emailError } = await supabase
         .from('system_settings')
-        .update({ value: supportEmail, updated_at: new Date().toISOString() })
+        .upsert({ key: 'support_email', value: supportEmail, updated_at: new Date().toISOString() })
         .eq('key', 'support_email');
       
       if (emailError) throw emailError;
@@ -51,10 +54,18 @@ export const AdminSettings = () => {
       // Atualizar pix_key
       const { error: pixError } = await supabase
         .from('system_settings')
-        .update({ value: pixKey, updated_at: new Date().toISOString() })
+        .upsert({ key: 'pix_key', value: pixKey, updated_at: new Date().toISOString() })
         .eq('key', 'pix_key');
       
       if (pixError) throw pixError;
+
+      // Atualizar store_url
+      const { error: storeError } = await supabase
+        .from('system_settings')
+        .upsert({ key: 'store_url', value: storeUrl, updated_at: new Date().toISOString() })
+        .eq('key', 'store_url');
+      
+      if (storeError) throw storeError;
 
       toast({ 
         title: "Configurações salvas",
@@ -108,6 +119,20 @@ export const AdminSettings = () => {
             />
             <p className="text-sm text-muted-foreground">
               Chave PIX no formato cópia e cola para pagamentos
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="store-url">Link da Loja</Label>
+            <Input
+              id="store-url"
+              type="url"
+              placeholder="https://loja.duelverse.online"
+              value={storeUrl}
+              onChange={(e) => setStoreUrl(e.target.value)}
+            />
+            <p className="text-sm text-muted-foreground">
+              URL da loja oficial que será acessada pelos usuários
             </p>
           </div>
 

@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Swords, Trophy, User, LogOut, Menu, Users, Zap, Shield, Crown, Newspaper } from "lucide-react";
+import { Swords, Trophy, User, LogOut, Menu, Users, Zap, Shield, Store, Newspaper } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/hooks/useAdmin";
@@ -104,10 +104,10 @@ export const Navbar = () => {
           Notícias
         </Button>
       </Link>
-      <Link to="/get-pro">
+      <Link to="/store">
         <Button variant="ghost" className="text-foreground hover:text-primary">
-          <Crown className="mr-2 h-4 w-4" />
-          Obter PRO
+          <Store className="mr-2 h-4 w-4" />
+          Loja
         </Button>
       </Link>
       {isAdmin && (

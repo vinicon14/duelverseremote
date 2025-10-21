@@ -19,7 +19,7 @@ import Friends from "./pages/Friends";
 import Tournaments from "./pages/Tournaments";
 import TournamentDetail from "./pages/TournamentDetail";
 import Matchmaking from "./pages/Matchmaking";
-import GetPro from "./pages/GetPro";
+import Store from "./pages/Store";
 import News from "./pages/News";
 import NotFound from "./pages/NotFound";
 
@@ -41,7 +41,7 @@ const RouterContent = () => {
       <Route path="/tournaments" element={<Tournaments />} />
       <Route path="/tournaments/:id" element={<TournamentDetail />} />
       <Route path="/matchmaking" element={<Matchmaking />} />
-      <Route path="/get-pro" element={<GetPro />} />
+      <Route path="/store" element={<Store />} />
       <Route path="/news" element={<News />} />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
