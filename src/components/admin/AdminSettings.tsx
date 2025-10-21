@@ -43,29 +43,17 @@ export const AdminSettings = () => {
   const saveSettings = async () => {
     setLoading(true);
     try {
-      // Atualizar support_email
-      const { error: emailError } = await supabase
-        .from('system_settings')
-        .upsert({ key: 'support_email', value: supportEmail, updated_at: new Date().toISOString() })
-        .eq('key', 'support_email');
-      
-      if (emailError) throw emailError;
+      const settings = [
+        { key: 'support_email', value: supportEmail, updated_at: new Date().toISOString() },
+        { key: 'pix_key', value: pixKey, updated_at: new Date().toISOString() },
+        { key: 'store_url', value: storeUrl, updated_at: new Date().toISOString() }
+      ];
 
-      // Atualizar pix_key
-      const { error: pixError } = await supabase
+      const { error } = await supabase
         .from('system_settings')
-        .upsert({ key: 'pix_key', value: pixKey, updated_at: new Date().toISOString() })
-        .eq('key', 'pix_key');
+        .upsert(settings);
       
-      if (pixError) throw pixError;
-
-      // Atualizar store_url
-      const { error: storeError } = await supabase
-        .from('system_settings')
-        .upsert({ key: 'store_url', value: storeUrl, updated_at: new Date().toISOString() })
-        .eq('key', 'store_url');
-      
-      if (storeError) throw storeError;
+      if (error) throw error;
 
       toast({ 
         title: "Configurações salvas",
