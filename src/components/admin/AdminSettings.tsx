@@ -43,29 +43,37 @@ export const AdminSettings = () => {
   const saveSettings = async () => {
     setLoading(true);
     try {
-      const settingsToSave = [
-        { key: 'support_email', value: supportEmail },
-        { key: 'pix_key', value: pixKey },
-        { key: 'store_url', value: storeUrl }
-      ];
+      // Atualizar support_email
+      const { error: emailError } = await supabase
+        .from('system_settings')
+        .upsert({ key: 'support_email', value: supportEmail, updated_at: new Date().toISOString() })
+        .eq('key', 'support_email');
+      
+      if (emailError) throw emailError;
 
-      const promises = settingsToSave.map(setting =>
-        supabase.from('system_settings').upsert(setting, { onConflict: 'key' })
-      );
+      // Atualizar pix_key
+      const { error: pixError } = await supabase
+        .from('system_settings')
+        .upsert({ key: 'pix_key', value: pixKey, updated_at: new Date().toISOString() })
+        .eq('key', 'pix_key');
+      
+      if (pixError) throw pixError;
 
-      const results = await Promise.all(promises);
+      // Atualizar store_url
+      const { error: storeError } = await supabase
+        .from('system_settings')
+        .upsert({ key: 'store_url', value: storeUrl, updated_at: new Date().toISOString() })
+        .eq('key', 'store_url');
+      
+      if (storeError) throw storeError;
 
-      results.forEach(result => {
-        if (result.error) throw result.error;
-      });
-
-      toast({
+      toast({ 
         title: "Configurações salvas",
         description: "As configurações foram atualizadas com sucesso!"
       });
     } catch (error: any) {
       console.error('Error saving settings:', error);
-      toast({
+      toast({ 
         title: "Erro ao salvar",
         description: error.message || "Não foi possível salvar as configurações",
         variant: "destructive"
@@ -119,7 +127,7 @@ export const AdminSettings = () => {
             <Input
               id="store-url"
               type="url"
-              placeholder="https://loja.menu/duelverse"
+              placeholder="https://loja.duelverse.online"
               value={storeUrl}
               onChange={(e) => setStoreUrl(e.target.value)}
             />

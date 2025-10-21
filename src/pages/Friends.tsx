@@ -7,9 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Navbar } from "@/components/Navbar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { Users, UserPlus, Check, X, Search, Swords, Coins } from "lucide-react";
+import { Users, UserPlus, Check, X, Search, Swords } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TransferDuelCoinsModal } from "@/components/TransferDuelCoinsModal";
 
 const Friends = () => {
   const navigate = useNavigate();
@@ -21,20 +20,6 @@ const Friends = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
-  const [selectedFriend, setSelectedFriend] = useState<any>(null);
-
-  const handleTransferSuccess = () => {
-    setIsTransferModalOpen(false);
-    toast({
-      title: "Transferência bem-sucedida!",
-      description: "Os DuelCoins foram enviados.",
-    });
-    // Atualizar dados
-    if (currentUser) {
-      checkAuth();
-    }
-  };
 
   useEffect(() => {
     checkAuth();
@@ -46,22 +31,7 @@ const Friends = () => {
       navigate('/auth');
       return;
     }
-
-    // Buscar perfil completo do usuário, incluindo DuelCoins
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('user_id', session.user.id)
-      .single();
-
-    if (profileError) {
-      console.error("Erro ao buscar perfil do usuário:", profileError);
-      navigate('/auth');
-      return;
-    }
-
-    setCurrentUser(profile);
-
+    setCurrentUser(session.user);
     await Promise.all([
       fetchFriends(session.user.id),
       fetchPendingRequests(session.user.id),
@@ -76,8 +46,8 @@ const Friends = () => {
         .from('friend_requests')
         .select(`
           *,
-          requester:profiles!friend_requests_sender_id_fkey(user_id, username, avatar_url, duelcoins_balance),
-          addressee:profiles!friend_requests_receiver_id_fkey(user_id, username, avatar_url, duelcoins_balance)
+          requester:profiles!friend_requests_sender_id_fkey(user_id, username, avatar_url),
+          addressee:profiles!friend_requests_receiver_id_fkey(user_id, username, avatar_url)
         `)
         .eq('status', 'accepted')
         .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`);
@@ -367,27 +337,13 @@ const Friends = () => {
                           </p>
                         </div>
 
-                        <div className="flex flex-col gap-2">
-                          <Button
-                            onClick={() => challengeFriend(friend.user_id)}
-                            className="btn-mystic text-white w-full"
-                            size="sm"
-                          >
-                            <Swords className="w-4 h-4 mr-2" />
-                            Desafiar
-                          </Button>
-                          <Button
-                            onClick={() => {
-                              setSelectedFriend(friend);
-                              setIsTransferModalOpen(true);
-                            }}
-                            className="btn-outline-mystic w-full"
-                            size="sm"
-                          >
-                            <Coins className="w-4 h-4 mr-2" />
-                            Enviar DuelCoins
-                          </Button>
-                        </div>
+                        <Button
+                          onClick={() => challengeFriend(friend.user_id)}
+                          className="btn-mystic text-white"
+                        >
+                          <Swords className="w-4 h-4 mr-2" />
+                          Desafiar
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>
@@ -547,16 +503,6 @@ const Friends = () => {
           </TabsContent>
         </Tabs>
       </main>
-
-      {selectedFriend && (
-        <TransferDuelCoinsModal
-          isOpen={isTransferModalOpen}
-          onClose={() => setIsTransferModalOpen(false)}
-          friend={selectedFriend}
-          currentUserBalance={currentUser?.duelcoins_balance || 0}
-          onTransferSuccess={handleTransferSuccess}
-        />
-      )}
     </div>
   );
 };

@@ -5,9 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/Navbar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { Trophy, Swords, TrendingUp, Calendar, Coins } from "lucide-react";
+import { Trophy, Swords, TrendingUp, Calendar } from "lucide-react";
 import { AvatarUpload } from "@/components/AvatarUpload";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -15,7 +14,6 @@ const Profile = () => {
   const [profile, setProfile] = useState<any>(null);
   const [stats, setStats] = useState<any>(null);
   const [recentMatches, setRecentMatches] = useState<any[]>([]);
-  const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -31,27 +29,6 @@ const Profile = () => {
     await fetchProfile(session.user.id);
     await fetchStats(session.user.id);
     await fetchRecentMatches(session.user.id);
-    await fetchTransactions(session.user.id);
-  };
-
-  const fetchTransactions = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('duelcoins_transactions')
-        .select(`
-          *,
-          sender:sender_id(username),
-          receiver:receiver_id(username)
-        `)
-        .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
-        .order('created_at', { ascending: false })
-        .limit(20);
-
-      if (error) throw error;
-      setTransactions(data || []);
-    } catch (error: any) {
-      console.error('Erro ao carregar transações:', error);
-    }
   };
 
   const fetchProfile = async (userId: string) => {
@@ -185,10 +162,6 @@ const Profile = () => {
                     <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                     <span className="text-sm sm:text-base font-semibold">ELO: {profile?.elo_rating || 1500}</span>
                   </div>
-                  <div className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg bg-primary/10">
-                    <Coins className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400" />
-                    <span className="text-sm sm:text-base font-semibold">{profile?.duelcoins_balance || 0} DuelCoins</span>
-                  </div>
                 </div>
               </div>
 
@@ -200,146 +173,99 @@ const Profile = () => {
           </CardContent>
         </Card>
 
-        <Tabs defaultValue="stats" className="space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="stats">Estatísticas</TabsTrigger>
-            <TabsTrigger value="duelcoins">Histórico de DuelCoins</TabsTrigger>
-          </TabsList>
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
+          <Card className="card-mystic">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs sm:text-sm text-muted-foreground">Total de Jogos</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl sm:text-3xl font-bold text-gradient-mystic">
+                {stats?.totalGames || 0}
+              </div>
+            </CardContent>
+          </Card>
 
-          <TabsContent value="stats">
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
-              <Card className="card-mystic">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-xs sm:text-sm text-muted-foreground">Total de Jogos</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl sm:text-3xl font-bold text-gradient-mystic">
-                    {stats?.totalGames || 0}
-                  </div>
-                </CardContent>
-              </Card>
+          <Card className="card-mystic">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs sm:text-sm text-muted-foreground">Vitórias</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl sm:text-3xl font-bold text-gradient-gold">
+                {stats?.wins || 0}
+              </div>
+            </CardContent>
+          </Card>
 
-              <Card className="card-mystic">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-xs sm:text-sm text-muted-foreground">Vitórias</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl sm:text-3xl font-bold text-gradient-gold">
-                    {stats?.wins || 0}
-                  </div>
-                </CardContent>
-              </Card>
+          <Card className="card-mystic">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs sm:text-sm text-muted-foreground">Derrotas</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl sm:text-3xl font-bold text-destructive">
+                {stats?.losses || 0}
+              </div>
+            </CardContent>
+          </Card>
 
-              <Card className="card-mystic">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-xs sm:text-sm text-muted-foreground">Derrotas</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl sm:text-3xl font-bold text-destructive">
-                    {stats?.losses || 0}
-                  </div>
-                </CardContent>
-              </Card>
+          <Card className="card-mystic">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs sm:text-sm text-muted-foreground">Taxa de Vitória</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl sm:text-3xl font-bold text-primary">
+                {stats?.winRate || 0}%
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-              <Card className="card-mystic">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-xs sm:text-sm text-muted-foreground">Taxa de Vitória</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl sm:text-3xl font-bold text-primary">
-                    {stats?.winRate || 0}%
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            <Card className="card-mystic">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-primary" />
-                  <span className="text-gradient-mystic">Partidas Recentes</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {recentMatches.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">
-                    Nenhuma partida jogada ainda
-                  </p>
-                ) : (
-                  <div className="space-y-4">
-                    {recentMatches.map((match) => {
-                      const isWinner = match.winner_id === profile?.user_id;
-                      return (
-                        <div
-                          key={match.id}
-                          className={`p-4 rounded-lg border ${
-                            isWinner ? 'border-secondary/30 bg-secondary/5' : 'border-destructive/30 bg-destructive/5'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                              <div className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                                isWinner ? 'bg-secondary/20 text-secondary' : 'bg-destructive/20 text-destructive'
-                              }`}>
-                                {isWinner ? 'VITÓRIA' : 'DERROTA'}
-                              </div>
-                              <span className="text-sm text-muted-foreground">
-                                vs {match.player1?.username === profile?.username ? match.player2?.username : match.player1?.username}
-                              </span>
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              {new Date(match.played_at).toLocaleDateString('pt-BR')}
-                            </div>
+        {/* Recent Matches */}
+        <Card className="card-mystic">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-primary" />
+              <span className="text-gradient-mystic">Partidas Recentes</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {recentMatches.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">
+                Nenhuma partida jogada ainda
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {recentMatches.map((match) => {
+                  const isWinner = match.winner_id === profile?.user_id;
+                  return (
+                    <div
+                      key={match.id}
+                      className={`p-4 rounded-lg border ${
+                        isWinner ? 'border-secondary/30 bg-secondary/5' : 'border-destructive/30 bg-destructive/5'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                            isWinner ? 'bg-secondary/20 text-secondary' : 'bg-destructive/20 text-destructive'
+                          }`}>
+                            {isWinner ? 'VITÓRIA' : 'DERROTA'}
                           </div>
+                          <span className="text-sm text-muted-foreground">
+                            vs {match.player1?.username === profile?.username ? match.player2?.username : match.player1?.username}
+                          </span>
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="duelcoins">
-            <Card className="card-mystic">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Coins className="w-5 h-5 text-primary" />
-                  <span className="text-gradient-mystic">Últimas Transações</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {transactions.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">
-                    Nenhuma transação registrada
-                  </p>
-                ) : (
-                  <div className="space-y-4">
-                    {transactions.map((tx) => {
-                      const isSender = tx.sender_id === profile?.user_id;
-                      const otherUser = isSender ? tx.receiver.username : tx.sender.username;
-                      return (
-                        <div key={tx.id} className="p-4 rounded-lg bg-background/50 flex items-center justify-between">
-                          <div>
-                            <p className="font-semibold">
-                              {isSender ? "Enviado para" : "Recebido de"} {otherUser}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              {new Date(tx.created_at).toLocaleString('pt-BR')}
-                            </p>
-                          </div>
-                          <p className={`font-bold text-lg ${isSender ? 'text-destructive' : 'text-green-400'}`}>
-                            {isSender ? '-' : '+'} {tx.amount}
-                          </p>
+                        <div className="text-sm text-muted-foreground">
+                          {new Date(match.played_at).toLocaleDateString('pt-BR')}
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </main>
     </div>
   );
