@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Navbar } from "@/components/Navbar";
 import { AdBanner } from "@/components/AdBanner";
+import { GoogleAdBanner } from "@/components/GoogleAdBanner";
 import { useAccountType } from "@/hooks/useAccountType";
 import { Zap, Swords, Trophy } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -45,6 +46,11 @@ export default function Home() {
         <Navbar />
         
         <main className="flex-1 container mx-auto px-4 pt-20 sm:pt-24 pb-8">
+        {/* Google Ad Banner Topo */}
+        {!isPro && (
+          <GoogleAdBanner slot="1234567890" className="mb-6" />
+        )}
+
         {/* Cards de Acesso Rápido */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
           <Card className="card-mystic hover:border-primary/60 transition-all cursor-pointer" onClick={() => navigate('/matchmaking')}>
@@ -105,6 +111,11 @@ export default function Home() {
               ))}
             </div>
           </div>
+        )}
+
+        {/* Google Ad Banner Meio */}
+        {!isPro && (
+          <GoogleAdBanner slot="1234567891" className="my-6" />
         )}
       </main>
       </div>
