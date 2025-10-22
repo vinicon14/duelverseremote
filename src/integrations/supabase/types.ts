@@ -124,6 +124,36 @@ export type Database = {
           },
         ]
       }
+      duelcoins_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string | null
+          id: string
+          receiver_id: string
+          sender_id: string | null
+          transaction_type: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          receiver_id: string
+          sender_id?: string | null
+          transaction_type: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          receiver_id?: string
+          sender_id?: string | null
+          transaction_type?: string
+        }
+        Relationships: []
+      }
       friend_requests: {
         Row: {
           created_at: string
@@ -433,6 +463,7 @@ export type Database = {
           account_type: Database["public"]["Enums"]["account_type"]
           avatar_url: string | null
           created_at: string
+          duelcoins_balance: number
           is_banned: boolean
           is_online: boolean
           last_seen: string
@@ -447,6 +478,7 @@ export type Database = {
           account_type?: Database["public"]["Enums"]["account_type"]
           avatar_url?: string | null
           created_at?: string
+          duelcoins_balance?: number
           is_banned?: boolean
           is_online?: boolean
           last_seen?: string
@@ -461,6 +493,7 @@ export type Database = {
           account_type?: Database["public"]["Enums"]["account_type"]
           avatar_url?: string | null
           created_at?: string
+          duelcoins_balance?: number
           is_banned?: boolean
           is_online?: boolean
           last_seen?: string
@@ -502,34 +535,40 @@ export type Database = {
           created_at: string
           description: string | null
           end_date: string
+          entry_fee: number
           id: string
           max_participants: number
           name: string
           prize_pool: number
           start_date: string
           status: string
+          total_prize: number
         }
         Insert: {
           created_at?: string
           description?: string | null
           end_date: string
+          entry_fee?: number
           id?: string
           max_participants: number
           name: string
           prize_pool?: number
           start_date: string
           status?: string
+          total_prize?: number
         }
         Update: {
           created_at?: string
           description?: string | null
           end_date?: string
+          entry_fee?: number
           id?: string
           max_participants?: number
           name?: string
           prize_pool?: number
           start_date?: string
           status?: string
+          total_prize?: number
         }
         Relationships: []
       }
@@ -567,6 +606,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_manage_duelcoins: {
+        Args: {
+          p_amount: number
+          p_operation: string
+          p_reason?: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       cleanup_empty_duels: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -632,6 +680,10 @@ export type Database = {
           user_id: string
           username: string
         }[]
+      }
+      transfer_duelcoins: {
+        Args: { p_amount: number; p_receiver_id: string }
+        Returns: Json
       }
     }
     Enums: {
