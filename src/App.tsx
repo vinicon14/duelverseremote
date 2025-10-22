@@ -24,6 +24,7 @@ import DuelCoins from "./pages/DuelCoins";
 import JudgePanel from "./pages/JudgePanel";
 import News from "./pages/News";
 import NotFound from "./pages/NotFound";
+import LiveStream from "./components/LiveStream";
 
 const queryClient = new QueryClient();
 
@@ -47,6 +48,7 @@ const RouterContent = () => {
       <Route path="/judge-panel" element={<JudgePanel />} />
       <Route path="/store" element={<Store />} />
       <Route path="/news" element={<News />} />
+      <Route path="/live/:match_id" element={<LiveStream />} />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
     </Routes>
