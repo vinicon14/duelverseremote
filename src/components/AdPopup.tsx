@@ -65,6 +65,8 @@ export const AdPopup = ({ onClose }: AdPopupProps) => {
 
   if (!ad) return null;
 
+  const imageUrl = ad.image_url || '/placeholder.svg';
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
@@ -86,13 +88,16 @@ export const AdPopup = ({ onClose }: AdPopupProps) => {
           className={`space-y-4 ${ad.link_url ? 'cursor-pointer' : ''}`}
           onClick={handleAdClick}
         >
-          {ad.image_url && (
-            <img 
-              src={ad.image_url} 
-              alt={ad.title}
-              className="w-full h-48 object-cover rounded-lg"
-            />
-          )}
+          <img
+            src={imageUrl}
+            alt={ad.title}
+            className="w-full h-48 object-cover rounded-lg"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.onerror = null;
+              target.src = '/placeholder.svg';
+            }}
+          />
           
           <div className="space-y-2">
             <h3 className="font-bold text-lg flex items-center gap-2">
