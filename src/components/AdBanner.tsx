@@ -18,6 +18,8 @@ export const AdBanner = ({ ad }: AdBannerProps) => {
     }
   };
 
+  const imageUrl = ad.image_url || '/placeholder.svg';
+
   return (
     <Card 
       className={`border-2 border-secondary/30 ${ad.link_url ? 'cursor-pointer hover:border-secondary/60 transition-all' : ''}`}
@@ -25,13 +27,16 @@ export const AdBanner = ({ ad }: AdBannerProps) => {
     >
       <CardContent className="p-4">
         <div className="flex items-start gap-4">
-          {ad.image_url && (
-            <img 
-              src={ad.image_url} 
-              alt={ad.title}
-              className="w-24 h-24 object-cover rounded"
-            />
-          )}
+          <img
+            src={imageUrl}
+            alt={ad.title}
+            className="w-24 h-24 object-cover rounded"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.onerror = null;
+              target.src = '/placeholder.svg';
+            }}
+          />
           <div className="flex-1">
             <div className="flex items-start justify-between gap-2">
               <h3 className="font-semibold text-lg">{ad.title}</h3>

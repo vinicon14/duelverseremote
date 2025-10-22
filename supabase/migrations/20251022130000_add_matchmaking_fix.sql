@@ -1,4 +1,8 @@
--- supabase/migrations/20251022120004_add_matchmaking.sql
+-- supabase/migrations/20251022130000_add_matchmaking_fix.sql
+
+ALTER TABLE public.live_duels
+  ADD COLUMN IF NOT EXISTS is_ranked BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS duration_minutes INTEGER NOT NULL DEFAULT 50;
 
 CREATE TABLE IF NOT EXISTS public.matchmaking_queue (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

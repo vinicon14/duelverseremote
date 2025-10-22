@@ -216,7 +216,16 @@ export const AdminAds = () => {
                       {mediaPreview.startsWith('data:video') || formData.image_url?.includes('.mp4') || formData.image_url?.includes('.webm') ? (
                         <video src={mediaPreview || formData.image_url} controls className="w-full h-48 object-cover" />
                       ) : (
-                        <img src={mediaPreview || formData.image_url} alt="Preview" className="w-full h-48 object-cover" />
+                        <img
+                          src={mediaPreview || formData.image_url || '/placeholder.svg'}
+                          alt="Preview"
+                          className="w-full h-48 object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.onerror = null;
+                            target.src = '/placeholder.svg';
+                          }}
+                        />
                       )}
                       <Button
                         type="button"
@@ -278,52 +287,62 @@ export const AdminAds = () => {
       </div>
 
       <div className="grid gap-4">
-        {ads.map((item) => (
-          <Card key={item.id}>
-            <CardHeader>
-              <div className="flex justify-between items-start">
-                <div className="flex-1">
-                  <CardTitle className="text-lg">{item.title}</CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {item.expires_at ? `Expira em: ${new Date(item.expires_at).toLocaleDateString('pt-BR')}` : 'Sem expiração'}
-                  </p>
+        {ads.map((item) => {
+          const imageUrl = item.image_url || '/placeholder.svg';
+          return (
+            <Card key={item.id}>
+              <CardHeader>
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <CardTitle className="text-lg">{item.title}</CardTitle>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {item.expires_at ? `Expira em: ${new Date(item.expires_at).toLocaleDateString('pt-BR')}` : 'Sem expiração'}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    {item.is_active ? (
+                      <Eye className="w-5 h-5 text-green-500" />
+                    ) : (
+                      <EyeOff className="w-5 h-5 text-muted-foreground" />
+                    )}
+                    <Button variant="ghost" size="icon" onClick={() => openEdit(item)}>
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)}>
+                      <Trash2 className="w-4 h-4 text-destructive" />
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  {item.is_active ? (
-                    <Eye className="w-5 h-5 text-green-500" />
-                  ) : (
-                    <EyeOff className="w-5 h-5 text-muted-foreground" />
-                  )}
-                  <Button variant="ghost" size="icon" onClick={() => openEdit(item)}>
-                    <Edit className="w-4 h-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)}>
-                    <Trash2 className="w-4 h-4 text-destructive" />
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {item.image_url && (
+              </CardHeader>
+              <CardContent>
                 <div className="mb-3 rounded-lg overflow-hidden">
-                  {item.image_url.includes('.mp4') || item.image_url.includes('.webm') ? (
-                    <video src={item.image_url} controls className="w-full h-32 object-cover" />
+                  {imageUrl.includes('.mp4') || imageUrl.includes('.webm') ? (
+                    <video src={imageUrl} controls className="w-full h-32 object-cover" />
                   ) : (
-                    <img src={item.image_url} alt={item.title} className="w-full h-32 object-cover" />
+                    <img
+                      src={imageUrl}
+                      alt={item.title}
+                      className="w-full h-32 object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.onerror = null;
+                        target.src = '/placeholder.svg';
+                      }}
+                    />
                   )}
                 </div>
-              )}
-              {item.content && (
-                <p className="text-sm text-muted-foreground mb-2">
-                  {item.content}
+                {item.content && (
+                  <p className="text-sm text-muted-foreground mb-2">
+                    {item.content}
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Link: {item.link_url}
                 </p>
-              )}
-              <p className="text-xs text-muted-foreground">
-                Link: {item.link_url}
-              </p>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
     </div>
   );

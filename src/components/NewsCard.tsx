@@ -19,20 +19,25 @@ interface NewsCardProps {
 }
 
 export const NewsCard = ({ news, onClick }: NewsCardProps) => {
+  const imageUrl = news.image_url || '/placeholder.svg';
+
   return (
     <Card 
       className="card-mystic hover:border-primary/40 transition-all cursor-pointer"
       onClick={onClick}
     >
-      {news.image_url && (
-        <div className="w-full h-48 overflow-hidden rounded-t-lg">
-          <img 
-            src={news.image_url} 
-            alt={news.title}
-            className="w-full h-full object-cover"
-          />
-        </div>
-      )}
+      <div className="w-full h-48 overflow-hidden rounded-t-lg">
+        <img
+          src={imageUrl}
+          alt={news.title}
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            const target = e.target as HTMLImageElement;
+            target.onerror = null;
+            target.src = '/placeholder.svg';
+          }}
+        />
+      </div>
       <CardHeader>
         <CardTitle className="text-xl text-gradient-mystic">
           {news.title}
