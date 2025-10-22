@@ -45,11 +45,26 @@ const TournamentDetail = () => {
       if (tournamentError) throw tournamentError;
       setTournament(tournamentData);
 
-      // Fetch participants - feature not yet implemented
-      setParticipants([]);
+      // Fetch participants
+      const { data: participantsData, error: participantsError } = await supabase
+        .from('tournament_players')
+        .select('*, profiles(username, elo_rating)')
+        .eq('tournament_id', id);
 
-      // Fetch matches - feature not yet implemented  
-      setMatches([]);
+      if(participantsError) throw participantsError;
+      setParticipants(participantsData);
+
+      // Fetch matches
+      const { data: matchesData, error: matchesError } = await supabase
+        .from('tournament_matches')
+        .select('*, player1:profiles!player1_id(username), player2:profiles!player2_id(username)')
+        .eq('tournament_id', id)
+        .order('round', { ascending: true })
+        .order('match_number', { ascending: true });
+
+      if(matchesError) throw matchesError;
+      setMatches(matchesData);
+
     } catch (error: any) {
       toast({
         title: "Erro ao carregar torneio",
@@ -62,31 +77,18 @@ const TournamentDetail = () => {
   };
 
   const startTournament = async () => {
-    if (!tournament || participants.length < 2) {
-      toast({
-        title: "Participantes insuficientes",
-        description: "É necessário pelo menos 2 participantes para iniciar o torneio.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     try {
-      // Update tournament status
-      await supabase
-        .from('tournaments')
-        .update({ status: 'active', start_time: new Date().toISOString() })
-        .eq('id', id);
+      const { error } = await supabase.functions.invoke('start-tournament', {
+        body: { tournament_id: id },
+      });
 
-      // Generate bracket
-      await generateBracket();
+      if (error) throw error;
 
       toast({
         title: "Torneio iniciado!",
         description: "As partidas foram geradas.",
       });
-
-      await fetchTournamentData();
+      fetchTournamentData();
     } catch (error: any) {
       toast({
         title: "Erro ao iniciar torneio",
@@ -247,20 +249,29 @@ const TournamentDetail = () => {
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2 mb-2">
                                     <span className={match.winner_id === match.player1_id ? 'font-bold text-primary' : ''}>
-                                      {match.player1?.username || 'TBD'}
+                                      {match.player1?.username || 'Aguardando'}
                                     </span>
                                   </div>
                                   <div className="flex items-center gap-2">
                                     <span className={match.winner_id === match.player2_id ? 'font-bold text-primary' : ''}>
-                                      {match.player2?.username || 'TBD'}
+                                      {match.player2?.username || 'Aguardando'}
                                     </span>
                                   </div>
                                 </div>
-                                <Badge variant={match.status === 'completed' ? 'default' : 'secondary'}>
-                                  {match.status === 'pending' && 'Pendente'}
-                                  {match.status === 'in_progress' && 'Em Andamento'}
-                                  {match.status === 'completed' && 'Concluído'}
-                                </Badge>
+                                <div className="flex items-center gap-2">
+                                    <Badge variant={match.status === 'completed' ? 'default' : 'secondary'}>
+                                    {match.status === 'pending' && 'Pendente'}
+                                    {match.status === 'in_progress' && 'Em Andamento'}
+                                    {match.status === 'completed' && 'Concluído'}
+                                    </Badge>
+                                    {match.daily_room_url && (
+                                        <Button asChild size="sm">
+                                            <a href={match.daily_room_url} target="_blank" rel="noopener noreferrer">
+                                                Entrar
+                                            </a>
+                                        </Button>
+                                    )}
+                                </div>
                               </div>
                             </CardContent>
                           </Card>
@@ -292,15 +303,13 @@ const TournamentDetail = () => {
                           <span className="text-xs font-bold">{index + 1}</span>
                         </div>
                         <div className="flex-1">
-                          <p className="font-medium">{participant.player?.username}</p>
+                          <p className="font-medium">{participant.profiles?.username}</p>
                           <p className="text-xs text-muted-foreground">
-                            ELO: {participant.player?.elo_rating || 1200}
+                            ELO: {participant.profiles?.elo_rating || 1200}
                           </p>
                         </div>
-                        {participant.placement && (
-                          <Badge variant="outline">
-                            {participant.placement}º
-                          </Badge>
+                        {participant.status === 'eliminated' && (
+                            <Badge variant="destructive">Eliminado</Badge>
                         )}
                       </div>
                     </div>

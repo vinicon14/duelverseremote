@@ -13,7 +13,7 @@ interface TournamentCardProps {
     prize_pool: number;
     status: string;
     start_time?: string;
-    participants?: number;
+    participant_count?: number;
   };
   onJoin?: (tournamentId: string) => void;
 }
@@ -69,7 +69,7 @@ export const TournamentCard = ({ tournament, onJoin }: TournamentCardProps) => {
           <div className="flex items-center gap-2 text-sm">
             <Users className="w-4 h-4 text-primary" />
             <span>
-              {tournament.participants || 0}/{tournament.max_participants}
+              {tournament.participant_count || 0}/{tournament.max_participants}
             </span>
           </div>
           <div className="flex items-center gap-2 text-sm">
