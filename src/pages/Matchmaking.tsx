@@ -123,25 +123,22 @@ export default function Matchmaking() {
 
     try {
       const { data, error } = await supabase.rpc('matchmake', {
-        p_user_id: currentUserId.current,
-        p_match_type: matchType
+        p_match_type: matchType,
+        p_user_id: currentUserId.current
       });
 
       if (error) {
         throw new Error(`RPC Error: ${error.message}`);
       }
 
-      // If data is returned, a match was created instantly by the function.
-      // The redirect listener will handle the navigation.
       if (data && data.length > 0) {
         console.log('Match made instantly:', data);
       } else {
-        // No match found, user is in the queue. Set a timeout.
         console.log('Entered queue, waiting for opponent...');
         queueTimeout.current = setTimeout(() => {
           cancelSearch();
           toast.error("Nenhum oponente encontrado. Tente novamente.");
-        }, 60000); // 60-second timeout
+        }, 60000);
       }
     } catch (error: any) {
       console.error("Error in joinQueue:", error);

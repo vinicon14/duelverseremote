@@ -1,6 +1,6 @@
 CREATE OR REPLACE FUNCTION matchmake(
-    p_user_id UUID,
-    p_match_type TEXT
+    p_match_type TEXT,
+    p_user_id UUID
 )
 RETURNS TABLE (
     duel_id UUID,
