@@ -253,6 +253,20 @@ export type Database = {
             referencedRelation: "live_duels"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "judge_logs_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "judge_logs_judge_id_fkey"
+            columns: ["judge_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          }
         ]
       }
       live_duels: {

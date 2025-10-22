@@ -147,7 +147,7 @@ export const Navbar = () => {
         </Link>
 
         {/* Desktop Navigation */}
-        <div className="hidden md:flex items-center space-x-4">
+        <div className="hidden md:flex items-center space-x-4 overflow-x-auto max-w-full">
           <NavLinks />
           
           <OnlineUsersCounter />

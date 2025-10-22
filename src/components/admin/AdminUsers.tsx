@@ -4,20 +4,31 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, Ban, Crown, User, Loader2 } from "lucide-react";
+import { Shield, Ban, Crown, User, Loader2, Coins } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 export const AdminUsers = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [newBalance, setNewBalance] = useState<number>(0);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     fetchUsers();
-    
-    // Listener de tempo real para mudanças em user_roles e profiles
+
     const rolesChannel = supabase
       .channel('admin_changes')
       .on(
@@ -38,7 +49,6 @@ export const AdminUsers = () => {
   }, []);
 
   const logAdminAction = async (targetUserId: string, actionType: string, oldValue: string, newValue: string) => {
-    // Log para console por enquanto - a tabela admin_action_logs será criada posteriormente
     console.log('Admin Action:', {
       targetUserId,
       actionType,
@@ -67,7 +77,6 @@ export const AdminUsers = () => {
       }
 
       if (data) {
-        // Buscar roles separadamente para cada usuário
         const usersWithRoles = await Promise.all(
           data.map(async (user) => {
             const { data: rolesData, error: rolesError } = await supabase
@@ -99,7 +108,7 @@ export const AdminUsers = () => {
       setLoading(false);
     }
   };
-
+  
   const toggleAdmin = async (userId: string, isCurrentlyAdmin: boolean) => {
     setActionLoading(`admin-${userId}`);
     try {
@@ -344,6 +353,34 @@ export const AdminUsers = () => {
     }
   };
 
+  const handleOpenModal = (user: any) => {
+    setSelectedUser(user);
+    setNewBalance(user.duelcoins_balance);
+    setIsModalOpen(true);
+  };
+
+  const handleBalanceChange = async () => {
+    if (!selectedUser) return;
+    setActionLoading(`balance-${selectedUser.user_id}`);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ duelcoins_balance: newBalance })
+        .eq('user_id', selectedUser.user_id);
+      
+      if (error) {
+        toast({ title: "Erro ao atualizar saldo", description: error.message, variant: "destructive" });
+      } else {
+        toast({ title: "✅ Saldo atualizado", description: `O saldo de ${selectedUser.username} foi atualizado para ${newBalance}` });
+        await logAdminAction(selectedUser.user_id, 'update_balance', selectedUser.duelcoins_balance, String(newBalance));
+        fetchUsers();
+        setIsModalOpen(false);
+      }
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const filteredUsers = users.filter(user => 
     user.username?.toLowerCase().includes(search.toLowerCase()) ||
     user.display_name?.toLowerCase().includes(search.toLowerCase())
@@ -406,7 +443,7 @@ export const AdminUsers = () => {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
                     <Button
                       variant={isAdmin ? "destructive" : "default"}
                       size="sm"
@@ -450,6 +487,14 @@ export const AdminUsers = () => {
                       )}
                       Excluir Usuário
                     </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleOpenModal(user)}
+                    >
+                      <Coins className="w-4 h-4 mr-1" />
+                      Editar Saldo
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -457,6 +502,39 @@ export const AdminUsers = () => {
           })}
         </div>
       )}
+
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Saldo de DuelCoins</DialogTitle>
+            <DialogDescription>
+              Altere o saldo de DuelCoins para {selectedUser?.username}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label htmlFor="balance" className="text-right">
+                Saldo
+              </label>
+              <Input
+                id="balance"
+                type="number"
+                value={newBalance}
+                onChange={(e) => setNewBalance(Number(e.target.value))}
+                className="col-span-3"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={handleBalanceChange} disabled={actionLoading === `balance-${selectedUser?.user_id}`}>
+              {actionLoading === `balance-${selectedUser?.user_id}` ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : null}
+              Salvar alterações
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
