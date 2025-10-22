@@ -142,7 +142,8 @@ export default function Matchmaking() {
 
       if (waitingPlayers) {
         // Match encontrado imediatamente!
-        await createMatchAndRedirect(session.user.id, waitingPlayers.user_id, waitingPlayers.id, isRanked);
+        // Eu sou o segundo jogador (player2), o outro estava esperando (player1)
+        await createMatchAndRedirect(waitingPlayers.user_id, session.user.id, waitingPlayers.id, isRanked);
         return;
       }
 
@@ -187,9 +188,9 @@ export default function Matchmaking() {
             const newPlayer = payload.new as any;
             console.log('👤 New player joined queue:', newPlayer);
             if (newPlayer.user_id !== session.user.id && newPlayer.status === 'waiting') {
-              // Alguém novo entrou! Fazer o match
+              // Alguém novo entrou! Eu estava esperando (player1), ele é o player2
               console.log('🎮 Match found! Creating match...');
-              await createMatchAndRedirect(session.user.id, newPlayer.user_id, queueEntry.id, isRanked);
+              await createMatchAndRedirect(session.user.id, newPlayer.user_id, newPlayer.id, isRanked);
             }
           }
         )

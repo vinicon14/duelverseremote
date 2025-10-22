@@ -43,27 +43,33 @@ export const AdminSettings = () => {
   const saveSettings = async () => {
     setLoading(true);
     try {
-      // Atualizar support_email
+      // Upsert support_email (onConflict especifica a coluna única)
       const { error: emailError } = await supabase
         .from('system_settings')
-        .upsert({ key: 'support_email', value: supportEmail, updated_at: new Date().toISOString() })
-        .eq('key', 'support_email');
+        .upsert(
+          { key: 'support_email', value: supportEmail, updated_at: new Date().toISOString() },
+          { onConflict: 'key' }
+        );
       
       if (emailError) throw emailError;
 
-      // Atualizar pix_key
+      // Upsert pix_key
       const { error: pixError } = await supabase
         .from('system_settings')
-        .upsert({ key: 'pix_key', value: pixKey, updated_at: new Date().toISOString() })
-        .eq('key', 'pix_key');
+        .upsert(
+          { key: 'pix_key', value: pixKey, updated_at: new Date().toISOString() },
+          { onConflict: 'key' }
+        );
       
       if (pixError) throw pixError;
 
-      // Atualizar store_url
+      // Upsert store_url
       const { error: storeError } = await supabase
         .from('system_settings')
-        .upsert({ key: 'store_url', value: storeUrl, updated_at: new Date().toISOString() })
-        .eq('key', 'store_url');
+        .upsert(
+          { key: 'store_url', value: storeUrl, updated_at: new Date().toISOString() },
+          { onConflict: 'key' }
+        );
       
       if (storeError) throw storeError;
 
