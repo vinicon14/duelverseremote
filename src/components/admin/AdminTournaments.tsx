@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Trash2, Calendar, Users } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { CreateTournamentModal } from "./CreateTournamentModal";
 
 export const AdminTournaments = () => {
   const [tournaments, setTournaments] = useState<any[]>([]);
@@ -69,6 +70,7 @@ export const AdminTournaments = () => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Gerenciar Torneios</h2>
+        <CreateTournamentModal onTournamentCreated={fetchTournaments} />
       </div>
 
       <div className="grid gap-4">
