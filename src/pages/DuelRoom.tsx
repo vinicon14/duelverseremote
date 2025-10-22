@@ -3,7 +3,7 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { PhoneOff, Loader2, Scale } from "lucide-react";
+import { PhoneOff, Loader2, Scale, EyeOff } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { DuelChat } from "@/components/DuelChat";
 import { FloatingCalculator } from "@/components/FloatingCalculator";
@@ -24,6 +24,7 @@ const DuelRoom = () => {
   const [roomUrl, setRoomUrl] = useState<string>('');
   const [isTimerPaused, setIsTimerPaused] = useState(false);
   const [judgeCalled, setJudgeCalled] = useState(false);
+  const [uiHidden, setUiHidden] = useState(false);
   const isTimerPausedRef = useRef(false);
   const callStartTime = useRef<number | null>(null);
   const timerInterval = useRef<NodeJS.Timeout | null>(null);
@@ -833,76 +834,89 @@ const DuelRoom = () => {
               </div>
             )}
             
-            {/* Timer Display - Contagem Regressiva */}
-            <div className={`px-2 sm:px-4 py-1 sm:py-2 rounded-lg backdrop-blur-sm font-mono text-xs sm:text-sm font-bold ${
-              callDuration <= 300 ? 'bg-destructive/95 text-destructive-foreground animate-pulse' : 
-              callDuration <= 600 ? 'bg-yellow-500/95 text-black' : 
-              'bg-card/95'
-            } ${isTimerPaused ? 'opacity-60' : ''}`}>
-              {isTimerPaused ? '⏸️' : '⏱️'} {formatTime(callDuration)}
-            </div>
-            
-            <div className="flex gap-2">
-              {isParticipant && !isJudge && (
-                <>
-                  <Button
-                    onClick={callJudge}
-                    disabled={judgeCalled}
-                    variant="outline"
-                    size="sm"
-                    className="bg-purple-600/95 hover:bg-purple-700 text-white backdrop-blur-sm text-xs sm:text-sm"
-                    title="Chamar Juiz"
-                  >
-                    <Scale className="w-3 h-3 sm:w-4 sm:h-4" />
-                    {judgeCalled && <span className="ml-1 hidden sm:inline">✓</span>}
-                  </Button>
-                  <Button
-                    onClick={toggleTimerPause}
-                    variant="outline"
-                    size="sm"
-                    className="bg-card/95 backdrop-blur-sm text-xs sm:text-sm"
-                  >
-                    {isTimerPaused ? '▶️' : '⏸️'}
-                  </Button>
-                  <Button
-                    onClick={() => endDuel()}
-                    variant="outline"
-                    size="sm"
-                    className="bg-card/95 backdrop-blur-sm text-xs sm:text-sm"
-                  >
-                    Finalizar
-                  </Button>
-                  {!liveStreamUrl ? (
-                    <Button
-                      onClick={startLiveStream}
-                      variant="outline"
-                      size="sm"
-                      className="bg-green-600/95 hover:bg-green-700 text-white backdrop-blur-sm text-xs sm:text-sm"
-                    >
-                      Iniciar Transmissão
-                    </Button>
-                  ) : (
-                    <Button
-                      onClick={() => navigate(`/live/${id}`)}
-                      variant="outline"
-                      size="sm"
-                      className="bg-blue-600/95 hover:bg-blue-700 text-white backdrop-blur-sm text-xs sm:text-sm"
-                    >
-                      Assistir Ao Vivo
-                    </Button>
+            {!uiHidden && (
+              <>
+                {/* Timer Display - Contagem Regressiva */}
+                <div className={`px-2 sm:px-4 py-1 sm:py-2 rounded-lg backdrop-blur-sm font-mono text-xs sm:text-sm font-bold ${
+                  callDuration <= 300 ? 'bg-destructive/95 text-destructive-foreground animate-pulse' :
+                  callDuration <= 600 ? 'bg-yellow-500/95 text-black' :
+                  'bg-card/95'
+                } ${isTimerPaused ? 'opacity-60' : ''}`}>
+                  {isTimerPaused ? '⏸️' : '⏱️'} {formatTime(callDuration)}
+                </div>
+
+                <div className="flex gap-2">
+                  {isParticipant && !isJudge && (
+                    <>
+                      <Button
+                        onClick={callJudge}
+                        disabled={judgeCalled}
+                        variant="outline"
+                        size="sm"
+                        className="bg-purple-600/95 hover:bg-purple-700 text-white backdrop-blur-sm text-xs sm:text-sm"
+                        title="Chamar Juiz"
+                      >
+                        <Scale className="w-3 h-3 sm:w-4 sm:h-4" />
+                        {judgeCalled && <span className="ml-1 hidden sm:inline">✓</span>}
+                      </Button>
+                      <Button
+                        onClick={toggleTimerPause}
+                        variant="outline"
+                        size="sm"
+                        className="bg-card/95 backdrop-blur-sm text-xs sm:text-sm"
+                      >
+                        {isTimerPaused ? '▶️' : '⏸️'}
+                      </Button>
+                      <Button
+                        onClick={() => endDuel()}
+                        variant="outline"
+                        size="sm"
+                        className="bg-card/95 backdrop-blur-sm text-xs sm:text-sm"
+                      >
+                        Finalizar
+                      </Button>
+                      {!liveStreamUrl ? (
+                        <Button
+                          onClick={startLiveStream}
+                          variant="outline"
+                          size="sm"
+                          className="bg-green-600/95 hover:bg-green-700 text-white backdrop-blur-sm text-xs sm:text-sm"
+                        >
+                          Iniciar Transmissão
+                        </Button>
+                      ) : (
+                        <Button
+                          onClick={() => navigate(`/live/${id}`)}
+                          variant="outline"
+                          size="sm"
+                          className="bg-blue-600/95 hover:bg-blue-700 text-white backdrop-blur-sm text-xs sm:text-sm"
+                        >
+                          Assistir Ao Vivo
+                        </Button>
+                      )}
+                    </>
                   )}
-                </>
-              )}
-              <Button
-                onClick={handleLeave}
-                variant="destructive"
-                size="sm"
-                className="bg-destructive/95 backdrop-blur-sm text-xs sm:text-sm"
-              >
-                <PhoneOff className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
-                <span className="hidden sm:inline">Sair</span>
-              </Button>
-            </div>
+                  <Button
+                    onClick={handleLeave}
+                    variant="destructive"
+                    size="sm"
+                    className="bg-destructive/95 backdrop-blur-sm text-xs sm:text-sm"
+                  >
+                    <PhoneOff className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Sair</span>
+                  </Button>
+                </div>
+              </>
+            )}
+            <Button
+              onClick={() => setUiHidden(!uiHidden)}
+              variant="outline"
+              size="sm"
+              className="bg-card/95 backdrop-blur-sm text-xs sm:text-sm"
+              title={uiHidden ? "Mostrar UI" : "Ocultar UI"}
+            >
+              <EyeOff className="w-3 h-3 sm:w-4 sm:h-4" />
+            </Button>
           </div>
         </div>
       </main>
