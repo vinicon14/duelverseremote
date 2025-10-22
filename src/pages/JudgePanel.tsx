@@ -56,19 +56,30 @@ export default function JudgePanel() {
 
   const fetchCalls = async () => {
     try {
-      const { data, error } = await supabase
+      const { data: logs, error } = await supabase
         .from('judge_logs')
-        .select(`
-          *,
-          player:profiles(username),
-          judge:profiles(username),
-          match:live_duels(id, status)
-        `)
+        .select('*')
         .order('created_at', { ascending: false })
         .limit(50);
 
       if (error) throw error;
-      setCalls(data || []);
+
+      const callsWithDetails = await Promise.all(
+        logs.map(async (log) => {
+          const [player, judge] = await Promise.all([
+            supabase.from('profiles').select('username').eq('user_id', log.player_id).single(),
+            log.judge_id ? supabase.from('profiles').select('username').eq('user_id', log.judge_id).single() : Promise.resolve({ data: null })
+          ]);
+
+          return {
+            ...log,
+            player: player.data,
+            judge: judge.data
+          };
+        })
+      );
+
+      setCalls(callsWithDetails || []);
     } catch (error: any) {
       console.error('Error fetching calls:', error);
       toast({
@@ -157,7 +168,7 @@ export default function JudgePanel() {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
-        <main className="container mx-auto px-4 py-8">
+        <main className="container mx-auto px-4 py-8 pt-24">
           <div className="text-center">Carregando...</div>
         </main>
       </div>
@@ -168,7 +179,7 @@ export default function JudgePanel() {
     <div className="min-h-screen bg-background">
       <Navbar />
       
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-8 pt-24">
         <div className="max-w-6xl mx-auto space-y-6">
           <div className="text-center space-y-2">
             <h1 className="text-4xl font-bold gradient-text flex items-center justify-center gap-2">
