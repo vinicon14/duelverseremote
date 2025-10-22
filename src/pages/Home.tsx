@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
+import { DuelCoinsBalance } from "@/components/DuelCoinsBalance";
 
 export default function Home() {
   const navigate = useNavigate();
@@ -50,6 +51,11 @@ export default function Home() {
         {!isPro && (
           <GoogleAdBanner slot="1234567890" className="mb-6" />
         )}
+
+        {/* Saldo de DuelCoins */}
+        <div className="mb-6">
+          <DuelCoinsBalance />
+        </div>
 
         {/* Cards de Acesso Rápido */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
