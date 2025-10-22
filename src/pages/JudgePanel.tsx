@@ -33,7 +33,6 @@ export default function JudgePanel() {
     if (isJudge) {
       fetchCalls();
       
-      // Realtime para novas chamadas
       const channel = supabase
         .channel('judge-calls')
         .on(
@@ -61,8 +60,8 @@ export default function JudgePanel() {
         .from('judge_logs')
         .select(`
           *,
-          player:profiles!judge_logs_player_id_fkey(username),
-          judge:profiles!judge_logs_judge_id_fkey(username),
+          player:profiles(username),
+          judge:profiles(username),
           match:live_duels(id, status)
         `)
         .order('created_at', { ascending: false })
