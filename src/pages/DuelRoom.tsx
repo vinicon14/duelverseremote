@@ -1,9 +1,9 @@
 import { useEffect, useState, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { PhoneOff, Loader2 } from "lucide-react";
+import { PhoneOff, Loader2, Scale } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { DuelChat } from "@/components/DuelChat";
 import { FloatingCalculator } from "@/components/FloatingCalculator";
@@ -12,6 +12,7 @@ import { useBanCheck } from "@/hooks/useBanCheck";
 const DuelRoom = () => {
   useBanCheck(); // Proteger contra usuários banidos
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [duel, setDuel] = useState<any>(null);
@@ -22,11 +23,14 @@ const DuelRoom = () => {
   const [showTimeWarning, setShowTimeWarning] = useState(false);
   const [roomUrl, setRoomUrl] = useState<string>('');
   const [isTimerPaused, setIsTimerPaused] = useState(false);
+  const [judgeCalled, setJudgeCalled] = useState(false);
   const isTimerPausedRef = useRef(false);
   const callStartTime = useRef<number | null>(null);
   const timerInterval = useRef<NodeJS.Timeout | null>(null);
   const pausedTime = useRef<number>(0);
   const lastPauseTime = useRef<number>(0);
+  
+  const isJudge = searchParams.get('role') === 'judge';
 
   // Carrega dados do duelo e inicia timer
   useEffect(() => {
@@ -663,6 +667,78 @@ const DuelRoom = () => {
     }
   };
 
+  const callJudge = async () => {
+    if (!id || !currentUser || judgeCalled) return;
+
+    try {
+      const { error } = await supabase
+        .from('judge_logs')
+        .insert({
+          match_id: id,
+          player_id: currentUser.id
+        });
+
+      if (error) throw error;
+
+      setJudgeCalled(true);
+      toast({
+        title: "⚖️ Juiz chamado!",
+        description: "Um juiz será notificado e entrará na sala em breve",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao chamar juiz",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Verificar se já existe chamada de juiz para esta partida
+  useEffect(() => {
+    if (!id || !currentUser) return;
+
+    const checkJudgeCall = async () => {
+      const { data } = await supabase
+        .from('judge_logs')
+        .select('*')
+        .eq('match_id', id)
+        .in('status', ['pending', 'in_room'])
+        .maybeSingle();
+
+      if (data) {
+        setJudgeCalled(true);
+      }
+    };
+
+    checkJudgeCall();
+
+    // Realtime para chamadas de juiz
+    const channel = supabase
+      .channel(`judge-calls-${id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'judge_logs',
+          filter: `match_id=eq.${id}`
+        },
+        (payload) => {
+          if (payload.new && (payload.new as any).status !== 'resolved') {
+            setJudgeCalled(true);
+          } else if ((payload.new as any)?.status === 'resolved') {
+            setJudgeCalled(false);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [id, currentUser]);
+
   // Identificar quem é cada player
   const isPlayer1 = currentUser?.id === duel?.creator_id;
   const isPlayer2 = currentUser?.id === duel?.opponent_id;
@@ -704,8 +780,16 @@ const DuelRoom = () => {
 
           {/* Botão de Sair e Timer - Fixo no canto superior direito */}
           <div className="absolute top-2 sm:top-4 right-2 sm:right-4 z-50 flex flex-col sm:flex-row gap-2 items-end sm:items-center">
+            {/* Badge de juiz */}
+            {isJudge && (
+              <div className="px-2 sm:px-3 py-1 sm:py-2 rounded-lg backdrop-blur-sm text-xs sm:text-sm font-bold bg-purple-500/95 text-white flex items-center gap-1">
+                <Scale className="w-3 h-3 sm:w-4 sm:h-4" />
+                Juiz
+              </div>
+            )}
+            
             {/* Badge de modo espectador */}
-            {isSpectator && (
+            {isSpectator && !isJudge && (
               <div className="px-2 sm:px-3 py-1 sm:py-2 rounded-lg backdrop-blur-sm text-xs sm:text-sm font-bold bg-purple-500/95 text-white">
                 👁️ Espectador
               </div>
@@ -732,8 +816,19 @@ const DuelRoom = () => {
             </div>
             
             <div className="flex gap-2">
-              {isParticipant && (
+              {isParticipant && !isJudge && (
                 <>
+                  <Button
+                    onClick={callJudge}
+                    disabled={judgeCalled}
+                    variant="outline"
+                    size="sm"
+                    className="bg-purple-600/95 hover:bg-purple-700 text-white backdrop-blur-sm text-xs sm:text-sm"
+                    title="Chamar Juiz"
+                  >
+                    <Scale className="w-3 h-3 sm:w-4 sm:h-4" />
+                    {judgeCalled && <span className="ml-1 hidden sm:inline">✓</span>}
+                  </Button>
                   <Button
                     onClick={toggleTimerPause}
                     variant="outline"

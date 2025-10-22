@@ -1,10 +1,11 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Swords, Trophy, User, LogOut, Menu, Users, Zap, Shield, Store, Newspaper, Coins } from "lucide-react";
+import { Swords, Trophy, User, LogOut, Menu, Users, Zap, Shield, Store, Newspaper, Coins, Scale } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/hooks/useAdmin";
+import { useJudge } from "@/hooks/useJudge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,6 +21,7 @@ export const Navbar = () => {
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const { isAdmin } = useAdmin();
+  const { isJudge } = useJudge();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -121,6 +123,14 @@ export const Navbar = () => {
           <Button variant="ghost" className="text-foreground hover:text-primary">
             <Shield className="mr-2 h-4 w-4" />
             Admin
+          </Button>
+        </Link>
+      )}
+      {isJudge && (
+        <Link to="/judge-panel">
+          <Button variant="ghost" className="text-foreground hover:text-primary">
+            <Scale className="mr-2 h-4 w-4" />
+            Juiz
           </Button>
         </Link>
       )}

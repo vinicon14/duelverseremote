@@ -21,6 +21,7 @@ import TournamentDetail from "./pages/TournamentDetail";
 import Matchmaking from "./pages/Matchmaking";
 import Store from "./pages/Store";
 import DuelCoins from "./pages/DuelCoins";
+import JudgePanel from "./pages/JudgePanel";
 import News from "./pages/News";
 import NotFound from "./pages/NotFound";
 
@@ -42,8 +43,9 @@ const RouterContent = () => {
       <Route path="/tournaments" element={<Tournaments />} />
       <Route path="/tournaments/:id" element={<TournamentDetail />} />
       <Route path="/matchmaking" element={<Matchmaking />} />
-          <Route path="/duelcoins" element={<DuelCoins />} />
-          <Route path="/store" element={<Store />} />
+      <Route path="/duelcoins" element={<DuelCoins />} />
+      <Route path="/judge-panel" element={<JudgePanel />} />
+      <Route path="/store" element={<Store />} />
       <Route path="/news" element={<News />} />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />

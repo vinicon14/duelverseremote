@@ -217,6 +217,44 @@ export type Database = {
         }
         Relationships: []
       }
+      judge_logs: {
+        Row: {
+          created_at: string
+          id: string
+          judge_id: string | null
+          match_id: string
+          player_id: string
+          resolved_at: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          judge_id?: string | null
+          match_id: string
+          player_id: string
+          resolved_at?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          judge_id?: string | null
+          match_id?: string
+          player_id?: string
+          resolved_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "judge_logs_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "live_duels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       live_duels: {
         Row: {
           bet_amount: number
@@ -660,6 +698,10 @@ export type Database = {
         Args: { _user_id: string }
         Returns: boolean
       }
+      is_judge: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
       record_match_result: {
         Args: {
           p_bet_amount: number
@@ -688,7 +730,7 @@ export type Database = {
     }
     Enums: {
       account_type: "free" | "pro"
-      app_role: "admin" | "user"
+      app_role: "admin" | "user" | "judge"
       friend_request_status: "pending" | "accepted" | "rejected"
       game_status: "waiting" | "in_progress" | "finished"
     }
@@ -819,7 +861,7 @@ export const Constants = {
   public: {
     Enums: {
       account_type: ["free", "pro"],
-      app_role: ["admin", "user"],
+      app_role: ["admin", "user", "judge"],
       friend_request_status: ["pending", "accepted", "rejected"],
       game_status: ["waiting", "in_progress", "finished"],
     },
