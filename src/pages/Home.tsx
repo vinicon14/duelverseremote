@@ -4,7 +4,7 @@ import { Navbar } from "@/components/Navbar";
 import { AdBanner } from "@/components/AdBanner";
 import { GoogleAdBanner } from "@/components/GoogleAdBanner";
 import { useAccountType } from "@/hooks/useAccountType";
-import { Zap, Swords, Trophy } from "lucide-react";
+import { Zap, Swords, Trophy, Coins } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -13,10 +13,27 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 export default function Home() {
   const navigate = useNavigate();
   const [ads, setAds] = useState<any[]>([]);
+  const [profile, setProfile] = useState<any>(null);
   const { isPro } = useAccountType();
 
   useEffect(() => {
     fetchAds();
+    
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        fetchProfile(session.user.id);
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        fetchProfile(session.user.id);
+      } else {
+        setProfile(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -26,6 +43,18 @@ export default function Home() {
       fetchAds();
     }
   }, [isPro]);
+
+  const fetchProfile = async (userId: string) => {
+    const { data } = await supabase
+      .from('profiles')
+      .select('duelcoins')
+      .eq('user_id', userId)
+      .maybeSingle();
+    
+    if (data) {
+      setProfile(data);
+    }
+  };
 
   const fetchAds = async () => {
     const { data, error } = await supabase
@@ -52,7 +81,7 @@ export default function Home() {
         )}
 
         {/* Cards de Acesso Rápido */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <Card className="card-mystic hover:border-primary/60 transition-all cursor-pointer" onClick={() => navigate('/matchmaking')}>
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-lg">
@@ -90,7 +119,7 @@ export default function Home() {
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Trophy className="w-5 h-5 text-primary" />
                 Torneios
-              </CardTitle>
+              </al>CardTitle>
               <CardDescription>Competições oficiais</CardDescription>
             </CardHeader>
             <CardContent>
@@ -98,6 +127,21 @@ export default function Home() {
                 <Trophy className="w-4 h-4 mr-2" />
                 Ver Torneios
               </Button>
+            </CardContent>
+          </Card>
+          
+          <Card className="card-mystic hover:border-primary/60 transition-all cursor-pointer" onClick={() => navigate('/duelcoins')}>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Coins className="w-5 h-5 text-primary" />
+                DuelCoins
+              </CardTitle>
+              <CardDescription>Seu saldo de moedas</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="text-2xl font-bold text-center w-full">
+                    {profile ? new Intl.NumberFormat('pt-BR').format(profile.duelcoins) : '...'}
+                </div>
             </CardContent>
           </Card>
         </div>
