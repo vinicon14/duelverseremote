@@ -744,6 +744,33 @@ const DuelRoom = () => {
   const isPlayer2 = currentUser?.id === duel?.opponent_id;
   const isParticipant = isPlayer1 || isPlayer2;
   const isSpectator = currentUser && !isParticipant;
+  const [liveStreamUrl, setLiveStreamUrl] = useState<string | null>(null);
+
+  const startLiveStream = async () => {
+    if (!id) return;
+
+    try {
+      const { data, error } = await supabase.functions.invoke('create-live-room', {
+        body: { match_id: id },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      setLiveStreamUrl(data.roomUrl);
+      toast({
+        title: "🚀 Transmissão ao vivo iniciada!",
+        description: "A transmissão já está disponível para espectadores.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao iniciar a transmissão",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
   
   // Determinar o player atual de forma clara
   const currentUserPlayer: 'player1' | 'player2' | null = isPlayer1 ? 'player1' : (isPlayer2 ? 'player2' : null);
@@ -845,6 +872,25 @@ const DuelRoom = () => {
                   >
                     Finalizar
                   </Button>
+                  {!liveStreamUrl ? (
+                    <Button
+                      onClick={startLiveStream}
+                      variant="outline"
+                      size="sm"
+                      className="bg-green-600/95 hover:bg-green-700 text-white backdrop-blur-sm text-xs sm:text-sm"
+                    >
+                      Iniciar Transmissão
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={() => navigate(`/live/${id}`)}
+                      variant="outline"
+                      size="sm"
+                      className="bg-blue-600/95 hover:bg-blue-700 text-white backdrop-blur-sm text-xs sm:text-sm"
+                    >
+                      Assistir Ao Vivo
+                    </Button>
+                  )}
                 </>
               )}
               <Button
