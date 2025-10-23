@@ -1,0 +1,117 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    --background: 240 10% 8%;
+    --foreground: 45 100% 95%;
+
+    --card: 240 15% 12%;
+    --card-foreground: 45 100% 95%;
+
+    --popover: 240 15% 10%;
+    --popover-foreground: 45 100% 95%;
+
+    --primary: 270 80% 55%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 270 90% 70%;
+
+    --secondary: 45 95% 60%;
+    --secondary-foreground: 240 10% 8%;
+
+    --muted: 240 10% 20%;
+    --muted-foreground: 240 5% 65%;
+
+    --accent: 315 85% 60%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 85% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 240 15% 20%;
+    --input: 240 15% 18%;
+    --ring: 270 80% 55%;
+
+    --radius: 0.75rem;
+
+    /* Mystical gradients */
+    --gradient-mystic: linear-gradient(135deg, hsl(270 80% 55%) 0%, hsl(315 85% 60%) 100%);
+    --gradient-gold: linear-gradient(135deg, hsl(45 95% 60%) 0%, hsl(35 100% 55%) 100%);
+    --gradient-dark: linear-gradient(180deg, hsl(240 15% 12%) 0%, hsl(240 10% 8%) 100%);
+    
+    /* Shadows with glow */
+    --shadow-mystic: 0 10px 40px -10px hsl(270 80% 55% / 0.5);
+    --shadow-gold: 0 8px 32px -8px hsl(45 95% 60% / 0.4);
+    --shadow-elevated: 0 20px 60px -15px hsl(0 0% 0% / 0.7);
+    
+    /* Animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 10px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    @apply bg-background;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    @apply bg-primary/30 rounded-lg;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-primary/50;
+  }
+}
+
+@layer utilities {
+  .text-gradient-mystic {
+    @apply bg-clip-text text-transparent;
+    background-image: var(--gradient-mystic);
+  }
+  
+  .text-gradient-gold {
+    @apply bg-clip-text text-transparent;
+    background-image: var(--gradient-gold);
+  }
+  
+  .card-mystic {
+    @apply bg-card border border-primary/20;
+    background: linear-gradient(135deg, hsl(240 15% 12%) 0%, hsl(240 10% 10%) 100%);
+    box-shadow: 0 10px 40px -10px hsl(270 80% 55% / 0.5);
+  }
+  
+  .btn-mystic {
+    @apply relative overflow-hidden;
+    background: var(--gradient-mystic);
+    box-shadow: 0 10px 40px -10px hsl(270 80% 55% / 0.5);
+  }
+  
+  .btn-mystic::before {
+    content: '';
+    @apply absolute inset-0 opacity-0 transition-opacity;
+    background: linear-gradient(135deg, hsl(270 90% 70%) 0%, hsl(315 90% 70%) 100%);
+  }
+  
+  .btn-mystic:hover::before {
+    @apply opacity-100;
+  }
+}
