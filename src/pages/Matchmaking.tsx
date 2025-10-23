@@ -187,10 +187,18 @@ export default function Matchmaking() {
           async (payload) => {
             const newPlayer = payload.new as any;
             console.log('👤 New player joined queue:', newPlayer);
-            if (newPlayer.user_id !== session.user.id && newPlayer.status === 'waiting') {
+            // Prevenir race condition: apenas o jogador com o ID "menor" cria a partida.
+            // Isso garante que apenas uma chamada de função seja feita.
+            if (
+              newPlayer.user_id !== session.user.id &&
+              newPlayer.status === 'waiting' &&
+              session.user.id < newPlayer.user_id
+            ) {
               // Alguém novo entrou! Eu estava esperando (player1), ele é o player2
-              console.log('🎮 Match found! Creating match...');
+              console.log('🎮 My ID is smaller, I will create the match.');
               await createMatchAndRedirect(session.user.id, newPlayer.user_id, newPlayer.id, isRanked);
+            } else if (newPlayer.user_id !== session.user.id && newPlayer.status === 'waiting') {
+              console.log('👍 My ID is larger, waiting for the other player to initiate.');
             }
           }
         )
