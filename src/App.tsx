@@ -24,7 +24,6 @@ import DuelCoins from "./pages/DuelCoins";
 import JudgePanel from "./pages/JudgePanel";
 import FriendChat from "./pages/FriendChat";
 import News from "./pages/News";
-import LiveStream from "./pages/LiveStream";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,7 +38,6 @@ const RouterContent = () => {
       <Route path="/auth" element={<Auth />} />
       <Route path="/duels" element={<Duels />} />
       <Route path="/duel/:id" element={<DuelRoom />} />
-      <Route path="/live/:duelId" element={<LiveStream />} />
       <Route path="/profile" element={<Profile />} />
       <Route path="/ranking" element={<Ranking />} />
       <Route path="/friends" element={<Friends />} />

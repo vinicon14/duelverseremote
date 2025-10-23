@@ -187,18 +187,10 @@ export default function Matchmaking() {
           async (payload) => {
             const newPlayer = payload.new as any;
             console.log('👤 New player joined queue:', newPlayer);
-            // Prevenir race condition: apenas o jogador com o ID "menor" cria a partida.
-            // Isso garante que apenas uma chamada de função seja feita.
-            if (
-              newPlayer.user_id !== session.user.id &&
-              newPlayer.status === 'waiting' &&
-              session.user.id < newPlayer.user_id
-            ) {
+            if (newPlayer.user_id !== session.user.id && newPlayer.status === 'waiting') {
               // Alguém novo entrou! Eu estava esperando (player1), ele é o player2
-              console.log('🎮 My ID is smaller, I will create the match.');
+              console.log('🎮 Match found! Creating match...');
               await createMatchAndRedirect(session.user.id, newPlayer.user_id, newPlayer.id, isRanked);
-            } else if (newPlayer.user_id !== session.user.id && newPlayer.status === 'waiting') {
-              console.log('👍 My ID is larger, waiting for the other player to initiate.');
             }
           }
         )
@@ -273,34 +265,66 @@ export default function Matchmaking() {
 
   const createMatchAndRedirect = async (player1Id: string, player2Id: string, myQueueId: string, ranked: boolean) => {
     try {
-      console.log('🎮 Invoking create-match-from-queue function for', player1Id, 'and', player2Id);
+      console.log('🎮 Creating match between', player1Id, 'and', player2Id);
       
-      const { data, error } = await supabase.functions.invoke('create-match-from-queue', {
-        body: { player1Id, player2Id, isRanked: ranked },
-      });
+      // Obter IDs das entradas da fila de ambos jogadores
+      const { data: queueEntries } = await supabase
+        .from('matchmaking_queue')
+        .select('id')
+        .in('user_id', [player1Id, player2Id])
+        .eq('status', 'waiting');
 
-      if (error) throw new Error(error.message);
-      if (data.error) throw new Error(data.error);
+      const queueIdsToDelete = queueEntries?.map(entry => entry.id) || [myQueueId];
 
-      const { duelId } = data;
-      console.log('🎯 Match created, duel ID:', duelId);
+      console.log('📋 Queue IDs to process:', queueIdsToDelete);
 
-      // A função de borda agora lida com a atualização da fila para 'matched'.
-      // O frontend não precisa mais fazer isso.
+      // Criar duelo PRIMEIRO
+      const { data: duel, error } = await supabase
+        .from('live_duels')
+        .insert({
+          creator_id: player1Id,
+          opponent_id: player2Id,
+          room_name: `Match ${ranked ? 'Ranqueado' : 'Casual'}`,
+          status: 'in_progress',
+          is_ranked: ranked,
+          duration_minutes: 50,
+          started_at: new Date().toISOString()
+        })
+        .select()
+        .single();
 
-      // Pequeno atraso para garantir que o outro jogador tenha tempo de ser notificado
+      if (error) throw error;
+
+      console.log('🎯 Match created, duel ID:', duel.id);
+
+      // DEPOIS: Atualizar status para 'matched' para notificar o outro jogador
+      await supabase
+        .from('matchmaking_queue')
+        .update({ status: 'matched' })
+        .in('id', queueIdsToDelete);
+
+      console.log('✅ Updated queue entries to matched');
+
+      // Aguardar para dar tempo do outro usuário receber o evento e encontrar o duelo
       await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Limpar fila
+      await supabase
+        .from('matchmaking_queue')
+        .delete()
+        .in('id', queueIdsToDelete);
 
       await cleanup();
       
       toast.success("🎮 Match encontrado! Redirecionando...");
       
       // Navegar imediatamente
-      navigate(`/duel/${duelId}`);
+      navigate(`/duel/${duel.id}`);
     } catch (error: any) {
       console.error('❌ Error creating match:', error);
-      toast.error("Erro ao criar partida: " + error.message);
-      await cancelSearch(); // Usa cancelSearch para uma limpeza completa
+      toast.error("Erro ao criar partida");
+      await cleanup();
+      setSearching(false);
     }
   };
 

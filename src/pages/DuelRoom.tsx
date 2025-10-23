@@ -3,7 +3,7 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { PhoneOff, Loader2, Scale, Eye, EyeOff } from "lucide-react";
+import { PhoneOff, Loader2, Scale } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { DuelChat } from "@/components/DuelChat";
 import { FloatingCalculator } from "@/components/FloatingCalculator";
@@ -24,7 +24,6 @@ const DuelRoom = () => {
   const [roomUrl, setRoomUrl] = useState<string>('');
   const [isTimerPaused, setIsTimerPaused] = useState(false);
   const [judgeCalled, setJudgeCalled] = useState(false);
-  const [isUiHidden, setIsUiHidden] = useState(false);
   const isTimerPausedRef = useRef(false);
   const callStartTime = useRef<number | null>(null);
   const timerInterval = useRef<NodeJS.Timeout | null>(null);
@@ -807,61 +806,44 @@ const DuelRoom = () => {
               </div>
             )}
             
-            {!isUiHidden && (
-              <>
-                {/* Timer Display - Contagem Regressiva */}
-                <div className={`px-2 sm:px-4 py-1 sm:py-2 rounded-lg backdrop-blur-sm font-mono text-xs sm:text-sm font-bold ${
-                  callDuration <= 300 ? 'bg-destructive/95 text-destructive-foreground animate-pulse' :
-                  callDuration <= 600 ? 'bg-yellow-500/95 text-black' :
-                  'bg-card/95'
-                } ${isTimerPaused ? 'opacity-60' : ''}`}>
-                  {isTimerPaused ? '⏸️' : '⏱️'} {formatTime(callDuration)}
-                </div>
-              </>
-            )}
+            {/* Timer Display - Contagem Regressiva */}
+            <div className={`px-2 sm:px-4 py-1 sm:py-2 rounded-lg backdrop-blur-sm font-mono text-xs sm:text-sm font-bold ${
+              callDuration <= 300 ? 'bg-destructive/95 text-destructive-foreground animate-pulse' : 
+              callDuration <= 600 ? 'bg-yellow-500/95 text-black' : 
+              'bg-card/95'
+            } ${isTimerPaused ? 'opacity-60' : ''}`}>
+              {isTimerPaused ? '⏸️' : '⏱️'} {formatTime(callDuration)}
+            </div>
             
             <div className="flex gap-2">
               {isParticipant && !isJudge && (
                 <>
-                  {!isUiHidden && (
-                    <>
-                      <Button
-                        onClick={callJudge}
-                        disabled={judgeCalled}
-                        variant="outline"
-                        size="sm"
-                        className="bg-purple-600/95 hover:bg-purple-700 text-white backdrop-blur-sm text-xs sm:text-sm"
-                        title="Chamar Juiz"
-                      >
-                        <Scale className="w-3 h-3 sm:w-4 sm:h-4" />
-                        {judgeCalled && <span className="ml-1 hidden sm:inline">✓</span>}
-                      </Button>
-                      <Button
-                        onClick={toggleTimerPause}
-                        variant="outline"
-                        size="sm"
-                        className="bg-card/95 backdrop-blur-sm text-xs sm:text-sm"
-                      >
-                        {isTimerPaused ? '▶️' : '⏸️'}
-                      </Button>
-                      <Button
-                        onClick={() => endDuel()}
-                        variant="outline"
-                        size="sm"
-                        className="bg-card/95 backdrop-blur-sm text-xs sm:text-sm"
-                      >
-                        Finalizar
-                      </Button>
-                    </>
-                  )}
                   <Button
-                    onClick={() => setIsUiHidden(!isUiHidden)}
+                    onClick={callJudge}
+                    disabled={judgeCalled}
+                    variant="outline"
+                    size="sm"
+                    className="bg-purple-600/95 hover:bg-purple-700 text-white backdrop-blur-sm text-xs sm:text-sm"
+                    title="Chamar Juiz"
+                  >
+                    <Scale className="w-3 h-3 sm:w-4 sm:h-4" />
+                    {judgeCalled && <span className="ml-1 hidden sm:inline">✓</span>}
+                  </Button>
+                  <Button
+                    onClick={toggleTimerPause}
                     variant="outline"
                     size="sm"
                     className="bg-card/95 backdrop-blur-sm text-xs sm:text-sm"
-                    title={isUiHidden ? "Mostrar Controles" : "Ocultar Controles"}
                   >
-                    {isUiHidden ? <Eye className="w-3 h-3 sm:w-4 sm:h-4" /> : <EyeOff className="w-3 h-3 sm:w-4 sm:h-4" />}
+                    {isTimerPaused ? '▶️' : '⏸️'}
+                  </Button>
+                  <Button
+                    onClick={() => endDuel()}
+                    variant="outline"
+                    size="sm"
+                    className="bg-card/95 backdrop-blur-sm text-xs sm:text-sm"
+                  >
+                    Finalizar
                   </Button>
                 </>
               )}
