@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Navbar } from "@/components/Navbar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { Swords, Plus, Users, Clock } from "lucide-react";
+import { Swords, Plus, Users, Clock, Clapperboard } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useBanCheck } from "@/hooks/useBanCheck";
 import { AdPopup } from "@/components/AdPopup";
@@ -465,13 +465,23 @@ const Duels = () => {
                         )}
 
                         {duel.status === 'in_progress' && duel.opponent_id && (
-                          <Button
-                            onClick={() => navigate(`/duel/${duel.id}`)}
-                            className="w-full btn-mystic text-white"
-                          >
-                            <Users className="mr-2 h-4 w-4" />
-                            👁️ Assistir Duelo
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button
+                              onClick={() => navigate(`/duel/${duel.id}`)}
+                              className="w-full btn-mystic text-white"
+                              variant="outline"
+                            >
+                              <Users className="mr-2 h-4 w-4" />
+                              Assistir
+                            </Button>
+                            <Button
+                              onClick={() => navigate(`/live/${duel.id}`)}
+                              className="w-full btn-mystic text-white"
+                            >
+                              <Clapperboard className="mr-2 h-4 w-4" />
+                              Ao Vivo
+                            </Button>
+                          </div>
                         )}
                       </div>
                     </CardContent>
