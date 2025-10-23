@@ -206,41 +206,33 @@ export default function Matchmaking() {
             const updated = payload.new as any;
             console.log('📝 My queue entry updated:', updated);
             
-            // Se minha entrada foi marcada como matched por outro jogador
-            if (updated.status === 'matched') {
-              console.log('🎮 I was matched! Looking for duel...');
+            // Se minha entrada foi marcada como matched e tem um duel_id
+            if (updated.status === 'matched' && updated.duel_id) {
+              console.log('🎮 Match found with duel_id! Redirecting...');
               
-              // Tentar buscar o duelo algumas vezes (pode não estar criado ainda)
-              let attempts = 0;
-              const maxAttempts = 5;
-              let myDuel = null;
+              await cleanup();
+              toast.success("🎮 Match encontrado! Redirecionando...");
+              navigate(`/duel/${updated.duel_id}`);
+            } else if (updated.status === 'matched') {
+              // Fallback caso o duel_id não chegue por algum motivo, mas é improvável
+              console.warn('⚠️ Matched status received without duel_id. Attempting to find duel manually.');
+              // O código de busca manual pode ser mantido aqui como um fallback, mas
+              // a lógica principal agora depende do duel_id direto.
+              const { data } = await supabase
+                .from('live_duels')
+                .select('id')
+                .or(`opponent_id.eq.${session.user.id},creator_id.eq.${session.user.id}`)
+                .eq('status', 'in_progress')
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .single();
 
-              while (attempts < maxAttempts && !myDuel) {
-                const { data } = await supabase
-                  .from('live_duels')
-                  .select('id')
-                  .or(`opponent_id.eq.${session.user.id},creator_id.eq.${session.user.id}`)
-                  .eq('status', 'in_progress')
-                  .order('created_at', { ascending: false })
-                  .limit(1)
-                  .maybeSingle();
-
-                if (data) {
-                  myDuel = data;
-                  console.log('✅ Found my duel:', myDuel.id);
-                } else {
-                  attempts++;
-                  console.log(`🔍 Attempt ${attempts}/${maxAttempts} - Duel not found yet, retrying...`);
-                  await new Promise(resolve => setTimeout(resolve, 200));
-                }
-              }
-
-              if (myDuel) {
+              if (data) {
                 await cleanup();
                 toast.success("🎮 Match encontrado! Redirecionando...");
-                navigate(`/duel/${myDuel.id}`);
+                navigate(`/duel/${data.id}`);
               } else {
-                console.error('❌ Could not find duel after all attempts');
+                console.error('❌ Could not find duel after fallback.');
                 toast.error("Erro ao encontrar partida");
                 await cancelSearch();
               }
