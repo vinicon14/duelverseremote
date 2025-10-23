@@ -9,16 +9,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
+import { DuelCoinsBalance } from "@/components/DuelCoinsBalance";
 
 export default function Home() {
   const navigate = useNavigate();
   const [ads, setAds] = useState<any[]>([]);
-  const [duelcoinsBalance, setDuelcoinsBalance] = useState<number>(0);
   const { isPro } = useAccountType();
 
   useEffect(() => {
     fetchAds();
-    fetchDuelcoinsBalance();
   }, []);
 
   useEffect(() => {
@@ -42,21 +41,6 @@ export default function Home() {
     }
   };
 
-  const fetchDuelcoinsBalance = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
-
-    const { data } = await supabase
-      .from('profiles')
-      .select('duelcoins_balance')
-      .eq('user_id', session.user.id)
-      .single();
-
-    if (data) {
-      setDuelcoinsBalance(data.duelcoins_balance);
-    }
-  };
-
   return (
     <SidebarProvider defaultOpen>
       <div className="min-h-screen bg-background flex w-full">
@@ -69,26 +53,9 @@ export default function Home() {
         )}
 
         {/* Saldo de DuelCoins */}
-        <Card className="card-mystic mb-6">
-          <CardContent className="py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-full bg-yellow-500/20">
-                  <svg className="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 24 24">
-                    <circle cx="12" cy="12" r="10"/>
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Seu Saldo</p>
-                  <p className="text-2xl font-bold text-gradient-mystic">{duelcoinsBalance} DuelCoins</p>
-                </div>
-              </div>
-              <Button variant="outline" onClick={() => navigate('/duelcoins')}>
-                Ver Detalhes
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="mb-6">
+          <DuelCoinsBalance />
+        </div>
 
         {/* Cards de Acesso Rápido */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
