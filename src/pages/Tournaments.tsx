@@ -80,6 +80,22 @@ const Tournaments = () => {
       const tournament = tournaments.find(t => t.id === tournamentId);
       if (!tournament) return;
 
+      // Fetch user's duelcoins
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('duelcoins')
+        .eq('user_id', currentUser.id)
+        .single();
+
+      if (profile && profile.duelcoins < tournament.entry_fee) {
+        toast({
+          title: "DuelCoins insuficientes",
+          description: "Você não tem DuelCoins suficientes para pagar a taxa de inscrição.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       // Verificar se já está inscrito
       const { data: existingParticipant } = await supabase
         .from('tournament_participants')
@@ -106,16 +122,12 @@ const Tournaments = () => {
         return;
       }
 
-      // Inscrever no torneio
-      const { error } = await supabase
-        .from('tournament_participants')
-        .insert({
-          tournament_id: tournamentId,
-          user_id: currentUser.id,
-          status: 'registered'
-        });
+      // Call the edge function to join the tournament
+      const { error } = await supabase.functions.invoke("join-tournament-with-fee", {
+        body: { tournament_id: tournamentId },
+      });
 
-      if (error) throw error;
+      if (error) throw new Error(error.message);
 
       toast({
         title: "Inscrição realizada!",
