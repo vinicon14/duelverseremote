@@ -46,7 +46,17 @@ serve(async (req) => {
 
     if (duelError) throw duelError;
 
-    // Etapa 3: Atualizar as entradas da fila com o ID do duelo e status 'matched'
+    // Etapa 3: Inserir os jogadores na tabela 'players'
+    const { error: playersError } = await supabase
+      .from('players')
+      .insert([
+        { duel_id: duel.id, user_id: player1Id },
+        { duel_id: duel.id, user_id: player2Id }
+      ]);
+
+    if (playersError) throw playersError;
+
+    // Etapa 4: Atualizar as entradas da fila com o ID do duelo e status 'matched'
     await supabase
       .from('matchmaking_queue')
       .update({ status: 'matched', duel_id: duel.id })
