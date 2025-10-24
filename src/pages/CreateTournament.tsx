@@ -33,9 +33,8 @@ const CreateTournament = () => {
     }
 
     try {
-      const { data, error } = await supabase
-        .from("tournaments")
-        .insert({
+      const { data, error } = await supabase.functions.invoke("create-tournament-with-prize", {
+        body: {
           name: tournamentName,
           description: tournamentDescription,
           start_date: startDate,
@@ -43,11 +42,10 @@ const CreateTournament = () => {
           max_participants: maxParticipants,
           prize_pool: parseInt(prize, 10),
           entry_fee: entryFee,
-          created_by: user.id,
-        })
-        .select();
+        },
+      });
 
-      if (error) throw error;
+      if (error) throw new Error(error.message);
 
       toast({
         title: "Torneio criado!",

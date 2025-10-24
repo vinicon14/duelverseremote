@@ -34,15 +34,21 @@ def run(playwright):
     supabase: Client = create_client(supabase_url, supabase_key)
 
     # Create a new user
-    creator_email = f"creator{int(time.time())}@example.com"
+    email = f"testuser{int(time.time())}@example.com"
     password = "password"
-    supabase.auth.sign_up({"email": creator_email, "password": password})
-    creator_session = supabase.auth.sign_in_with_password({"email": creator_email, "password": password})
-    supabase.functions.invoke("set-pro-user", invoke_options={'body': {'user_id': creator_session.user.id}})
+    user = supabase.auth.sign_up({"email": email, "password": password})
 
+    # Log in as the new user
+    session = supabase.auth.sign_in_with_password({"email": email, "password": password})
+
+    # Set the user as a PRO
+    supabase.functions.invoke("set-pro-user", invoke_options={'body': {'user_id': session.user.id}})
 
     browser = playwright.chromium.launch()
     page = browser.new_page()
+
+    # Capture console output
+    page.on("console", lambda msg: print(f"Browser console: {msg.text}"))
 
     # Set the auth token in local storage
     page.goto("http://127.0.0.1:8080")
@@ -52,13 +58,13 @@ def run(playwright):
 
     # Create the session object in the format expected by the application
     session_data = {
-        "access_token": creator_session.session.access_token,
-        "refresh_token": creator_session.session.refresh_token,
+        "access_token": session.session.access_token,
+        "refresh_token": session.session.refresh_token,
         "user": {
-            "id": creator_session.user.id,
-            "email": creator_session.user.email,
-            "created_at": creator_session.user.created_at.isoformat(),
-            "updated_at": creator_session.user.updated_at.isoformat()
+            "id": session.user.id,
+            "email": session.user.email,
+            "created_at": session.user.created_at.isoformat(),
+            "updated_at": session.user.updated_at.isoformat()
         }
     }
 
@@ -84,33 +90,17 @@ def run(playwright):
     # Wait for the navigation back to the tournaments page
     expect(page).to_have_url("http://127.0.0.1:8080/tournaments")
 
-    # Log out
-    page.evaluate("localStorage.clear()")
+    # Get the href of the first tournament link
+    tournament_link = page.locator("a[href^='/tournaments/']").first
+    href = tournament_link.get_attribute("href")
+    tournament_id = href.split("/")[-1]
 
-    # Create a second user to join the tournament
-    joiner_email = f"joiner{int(time.time())}@example.com"
-    supabase.auth.sign_up({"email": joiner_email, "password": password})
-    joiner_session = supabase.auth.sign_in_with_password({"email": joiner_email, "password": password})
+    # Go to the tournament detail page
+    page.goto(f"http://127.0.0.1:8080/tournaments/{tournament_id}")
 
-    # Set the auth token for the second user
-    session_data = {
-        "access_token": joiner_session.session.access_token,
-        "refresh_token": joiner_session.session.refresh_token,
-        "user": {
-            "id": joiner_session.user.id,
-            "email": joiner_session.user.email,
-            "created_at": joiner_session.user.created_at.isoformat(),
-            "updated_at": joiner_session.user.updated_at.isoformat()
-        }
-    }
-    page.evaluate(f"localStorage.setItem('{local_storage_key}', '{json.dumps(session_data)}')")
+    # Wait for the page to load and then get the console log
+    page.wait_for_timeout(2000)
 
-    # Go to the tournaments page and join the tournament
-    page.goto("http://127.0.0.1:8080/tournaments")
-    page.locator("text=My Test Tournament").click()
-    page.get_by_role("button", name="Inscrever-se").click()
-
-    page.screenshot(path="jules-scratch/verification/verification.png")
     browser.close()
 
 with sync_playwright() as playwright:

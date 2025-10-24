@@ -39,6 +39,7 @@ interface Tournament {
   max_participants: number;
   prize_pool: number;
   start_date: string;
+  end_date: string;
   created_by: string;
   min_participants: number;
 }
