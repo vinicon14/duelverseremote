@@ -14,8 +14,10 @@ const CreateTournament = () => {
   const [tournamentName, setTournamentName] = useState("");
   const [tournamentDescription, setTournamentDescription] = useState("");
   const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [maxParticipants, setMaxParticipants] = useState(8);
   const [prize, setPrize] = useState("");
+  const [entryFee, setEntryFee] = useState(0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,9 +39,11 @@ const CreateTournament = () => {
           name: tournamentName,
           description: tournamentDescription,
           start_date: startDate,
+          end_date: endDate,
           max_participants: maxParticipants,
-          prize: prize,
-          creator_id: user.id,
+          prize_pool: parseInt(prize, 10),
+          entry_fee: entryFee,
+          created_by: user.id,
         })
         .select();
 
@@ -105,6 +109,18 @@ const CreateTournament = () => {
                   onChange={(e) => setStartDate(e.target.value)}
                   required
                 />
+                </div>
+                <div>
+                  <label htmlFor="endDate" className="block text-sm font-medium text-muted-foreground mb-2">
+                    Data de Fim
+                  </label>
+                  <Input
+                    id="endDate"
+                    type="datetime-local"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    required
+                  />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div>
@@ -132,6 +148,18 @@ const CreateTournament = () => {
                     placeholder="Ex: 100 DuelCoins"
                   />
                 </div>
+              </div>
+              <div>
+                <label htmlFor="entryFee" className="block text-sm font-medium text-muted-foreground mb-2">
+                  Taxa de Inscrição
+                </label>
+                <Input
+                  id="entryFee"
+                  type="number"
+                  value={entryFee}
+                  onChange={(e) => setEntryFee(parseInt(e.target.value, 10))}
+                  placeholder="Ex: 10 DuelCoins"
+                />
               </div>
               <div className="flex justify-end gap-4">
                 <Button type="button" variant="outline" onClick={() => navigate('/tournaments')}>
