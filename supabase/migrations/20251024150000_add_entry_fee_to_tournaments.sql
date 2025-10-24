@@ -1,2 +1,0 @@
-ALTER TABLE public.tournaments
-ADD COLUMN entry_fee INTEGER DEFAULT 0 NOT NULL;

@@ -8,75 +8,16 @@ import { useToast } from "@/components/ui/use-toast";
 import { Trophy, Users, Calendar, Coins, ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { User } from "@supabase/supabase-js";
-
-interface Match {
-  id: string;
-  round: number;
-  player1_id: string;
-  player2_id: string;
-  winner_id: string;
-  status: string;
-  player1: { username: string }[];
-  player2: { username: string }[];
-}
-
-interface Participant {
-  id: string;
-  user_id: string;
-  profiles: {
-    username: string;
-    points: number;
-  };
-  placement: number;
-}
-
-interface Tournament {
-  id: string;
-  name: string;
-  description: string;
-  status: string;
-  max_participants: number;
-  prize_pool: number;
-  start_date: string;
-  end_date: string;
-  created_by: string;
-  min_participants: number;
-}
 
 const TournamentDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [tournament, setTournament] = useState<Tournament | null>(null);
-  const [participants, setParticipants] = useState<Participant[]>([]);
-  const [matches, setMatches] = useState<Match[]>([]);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [tournament, setTournament] = useState<any>(null);
+  const [participants, setParticipants] = useState<any[]>([]);
+  const [matches, setMatches] = useState<any[]>([]);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-
-  const createLiveStream = async (matchId: string) => {
-    try {
-      const { data, error } = await supabase.functions.invoke("create-tournament-stream", {
-        body: { match_id: matchId },
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Transmissão criada!",
-        description: "Você será redirecionado em breve.",
-      });
-
-      navigate(`/stream/${data.stream.id}`);
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Ocorreu um erro desconhecido";
-      toast({
-        title: "Erro ao criar transmissão",
-        description: message,
-        variant: "destructive",
-      });
-    }
-  };
 
   useEffect(() => {
     checkAuth();
@@ -142,11 +83,10 @@ const TournamentDetail = () => {
 
       if (matchesError) throw matchesError;
       setMatches(matchesData || []);
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Ocorreu um erro desconhecido";
+    } catch (error: any) {
       toast({
         title: "Erro ao carregar torneio",
-        description: message,
+        description: error.message,
         variant: "destructive",
       });
     } finally {
@@ -184,11 +124,10 @@ const TournamentDetail = () => {
       });
 
       await fetchTournamentData();
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Ocorreu um erro desconhecido";
+    } catch (error: any) {
       toast({
         title: "Erro ao iniciar torneio",
-        description: message,
+        description: error.message,
         variant: "destructive",
       });
     }
@@ -378,15 +317,6 @@ const TournamentDetail = () => {
                                   {match.status === 'completed' && 'Concluído'}
                                 </Badge>
                               </div>
-                              {(currentUser?.id === match.player1_id || currentUser?.id === match.player2_id) && match.status !== 'completed' && (
-                                <Button
-                                  size="sm"
-                                  className="mt-2 w-full"
-                                  onClick={() => createLiveStream(match.id)}
-                                >
-                                  Criar Transmissão
-                                </Button>
-                              )}
                             </CardContent>
                           </Card>
                         ))}
