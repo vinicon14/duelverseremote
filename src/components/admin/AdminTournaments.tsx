@@ -4,13 +4,26 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, Calendar, Users } from "lucide-react";
+import { Trash2, Calendar, Users, Plus } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 export const AdminTournaments = () => {
   const [tournaments, setTournaments] = useState<any[]>([]);
   const { toast } = useToast();
+  const [isCreating, setIsCreating] = useState(false);
+  const [newTournament, setNewTournament] = useState({
+    name: '',
+    description: '',
+    max_participants: 64,
+    entry_fee: 100,
+    prize_pool: 1000,
+    start_time: '',
+  });
 
   useEffect(() => {
     fetchTournaments();
@@ -65,10 +78,93 @@ export const AdminTournaments = () => {
     return <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>;
   };
 
+  const handleCreateTournament = async () => {
+    if (!newTournament.name || !newTournament.start_time) {
+      toast({ title: "Nome e data de início são obrigatórios.", variant: "destructive" });
+      return;
+    }
+
+    setIsCreating(true);
+
+    try {
+      const { error } = await supabase.from('tournaments').insert({
+        ...newTournament,
+        start_time: new Date(newTournament.start_time).toISOString(),
+      });
+
+      if (error) throw error;
+
+      toast({ title: "Torneio criado com sucesso!" });
+      fetchTournaments();
+      setNewTournament({
+        name: '',
+        description: '',
+        max_participants: 64,
+        entry_fee: 100,
+        prize_pool: 1000,
+        start_time: '',
+      });
+      // Fechar dialog aqui se necessário
+    } catch (error: any) {
+      toast({ title: "Erro ao criar torneio", description: error.message, variant: "destructive" });
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setNewTournament(prev => ({ ...prev, [name]: value }));
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Gerenciar Torneios</h2>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Criar Novo Torneio
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Novo Torneio</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="name" className="text-right">Nome</Label>
+                <Input id="name" name="name" value={newTournament.name} onChange={handleInputChange} className="col-span-3" />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="description" className="text-right">Descrição</Label>
+                <Textarea id="description" name="description" value={newTournament.description} onChange={handleInputChange} className="col-span-3" />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="max_participants" className="text-right">Participantes</Label>
+                <Input id="max_participants" name="max_participants" type="number" value={newTournament.max_participants} onChange={handleInputChange} className="col-span-3" />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="entry_fee" className="text-right">Taxa (moedas)</Label>
+                <Input id="entry_fee" name="entry_fee" type="number" value={newTournament.entry_fee} onChange={handleInputChange} className="col-span-3" />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="prize_pool" className="text-right">Prêmio (moedas)</Label>
+                <Input id="prize_pool" name="prize_pool" type="number" value={newTournament.prize_pool} onChange={handleInputChange} className="col-span-3" />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="start_time" className="text-right">Data de Início</Label>
+                <Input id="start_time" name="start_time" type="datetime-local" value={newTournament.start_time} onChange={handleInputChange} className="col-span-3" />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button onClick={handleCreateTournament} disabled={isCreating}>
+                {isCreating ? "Criando..." : "Criar Torneio"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <div className="grid gap-4">

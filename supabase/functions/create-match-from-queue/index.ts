@@ -46,10 +46,10 @@ serve(async (req) => {
 
     if (duelError) throw duelError;
 
-    // Etapa 3: Atualizar as entradas da fila para 'matched'
+    // Etapa 3: Atualizar as entradas da fila para 'matched' e incluir o ID do duelo
     await supabase
       .from('matchmaking_queue')
-      .update({ status: 'matched' })
+      .update({ status: 'matched', duel_id: duel.id })
       .in('id', queueIds);
 
     return new Response(JSON.stringify({ duelId: duel.id }), {
