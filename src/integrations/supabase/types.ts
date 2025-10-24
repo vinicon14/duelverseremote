@@ -217,6 +217,61 @@ export type Database = {
         }
         Relationships: []
       }
+      judge_actions: {
+        Row: {
+          action_type: string
+          created_at: string | null
+          id: string
+          judge_id: string
+          match_id: string | null
+          notes: string | null
+          stream_id: string | null
+          target_user_id: string | null
+        }
+        Insert: {
+          action_type: string
+          created_at?: string | null
+          id?: string
+          judge_id: string
+          match_id?: string | null
+          notes?: string | null
+          stream_id?: string | null
+          target_user_id?: string | null
+        }
+        Update: {
+          action_type?: string
+          created_at?: string | null
+          id?: string
+          judge_id?: string
+          match_id?: string | null
+          notes?: string | null
+          stream_id?: string | null
+          target_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "judge_actions_judge_id_fkey"
+            columns: ["judge_id"]
+            isOneToOne: false
+            referencedRelation: "judges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "judge_actions_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "tournament_matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "judge_actions_stream_id_fkey"
+            columns: ["stream_id"]
+            isOneToOne: false
+            referencedRelation: "live_streams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       judge_logs: {
         Row: {
           created_at: string
@@ -251,6 +306,41 @@ export type Database = {
             columns: ["match_id"]
             isOneToOne: false
             referencedRelation: "live_duels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      judges: {
+        Row: {
+          active: boolean | null
+          assigned_match_id: string | null
+          created_at: string | null
+          id: string
+          total_matches_judged: number | null
+          user_id: string
+        }
+        Insert: {
+          active?: boolean | null
+          assigned_match_id?: string | null
+          created_at?: string | null
+          id?: string
+          total_matches_judged?: number | null
+          user_id: string
+        }
+        Update: {
+          active?: boolean | null
+          assigned_match_id?: string | null
+          created_at?: string | null
+          id?: string
+          total_matches_judged?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "judges_assigned_match_id_fkey"
+            columns: ["assigned_match_id"]
+            isOneToOne: false
+            referencedRelation: "tournament_matches"
             referencedColumns: ["id"]
           },
         ]
@@ -331,6 +421,107 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      live_streams: {
+        Row: {
+          created_at: string | null
+          daily_room_name: string
+          daily_room_url: string
+          ended_at: string | null
+          featured: boolean | null
+          id: string
+          match_id: string | null
+          recording_enabled: boolean | null
+          recording_url: string | null
+          started_at: string | null
+          status: string
+          tournament_id: string | null
+          viewers_count: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          daily_room_name: string
+          daily_room_url: string
+          ended_at?: string | null
+          featured?: boolean | null
+          id?: string
+          match_id?: string | null
+          recording_enabled?: boolean | null
+          recording_url?: string | null
+          started_at?: string | null
+          status?: string
+          tournament_id?: string | null
+          viewers_count?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          daily_room_name?: string
+          daily_room_url?: string
+          ended_at?: string | null
+          featured?: boolean | null
+          id?: string
+          match_id?: string | null
+          recording_enabled?: boolean | null
+          recording_url?: string | null
+          started_at?: string | null
+          status?: string
+          tournament_id?: string | null
+          viewers_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_streams_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "live_duels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_streams_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lives: {
+        Row: {
+          daily_room_url: string | null
+          finished_at: string | null
+          id: string
+          match_id: string | null
+          started_at: string | null
+          status: string | null
+          viewer_count: number | null
+        }
+        Insert: {
+          daily_room_url?: string | null
+          finished_at?: string | null
+          id?: string
+          match_id?: string | null
+          started_at?: string | null
+          status?: string | null
+          viewer_count?: number | null
+        }
+        Update: {
+          daily_room_url?: string | null
+          finished_at?: string | null
+          id?: string
+          match_id?: string | null
+          started_at?: string | null
+          status?: string | null
+          viewer_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lives_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "live_duels"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -454,6 +645,39 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          created_at: string | null
+          data: Json | null
+          id: string
+          message: string
+          read: boolean | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          data?: Json | null
+          id?: string
+          message: string
+          read?: boolean | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          data?: Json | null
+          id?: string
+          message?: string
+          read?: boolean | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       players: {
         Row: {
           duel_id: string
@@ -495,6 +719,33 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
         ]
+      }
+      private_messages: {
+        Row: {
+          created_at: string | null
+          id: string
+          message: string
+          read: boolean | null
+          receiver_id: string
+          sender_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          message: string
+          read?: boolean | null
+          receiver_id: string
+          sender_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          message?: string
+          read?: boolean | null
+          receiver_id?: string
+          sender_id?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -544,6 +795,70 @@ export type Database = {
         }
         Relationships: []
       }
+      redirects: {
+        Row: {
+          created_at: string | null
+          duel_id: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          duel_id?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          duel_id?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "redirects_duel_id_fkey"
+            columns: ["duel_id"]
+            isOneToOne: false
+            referencedRelation: "live_duels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stream_participants: {
+        Row: {
+          id: string
+          joined_at: string | null
+          left_at: string | null
+          role: string
+          stream_id: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          joined_at?: string | null
+          left_at?: string | null
+          role: string
+          stream_id: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          joined_at?: string | null
+          left_at?: string | null
+          role?: string
+          stream_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stream_participants_stream_id_fkey"
+            columns: ["stream_id"]
+            isOneToOne: false
+            referencedRelation: "live_streams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       system_settings: {
         Row: {
           created_at: string | null
@@ -568,45 +883,189 @@ export type Database = {
         }
         Relationships: []
       }
+      tournament_matches: {
+        Row: {
+          created_at: string | null
+          id: string
+          player1_id: string | null
+          player2_id: string | null
+          round: number
+          scheduled_at: string | null
+          status: string | null
+          tournament_id: string
+          winner_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          player1_id?: string | null
+          player2_id?: string | null
+          round: number
+          scheduled_at?: string | null
+          status?: string | null
+          tournament_id: string
+          winner_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          player1_id?: string | null
+          player2_id?: string | null
+          round?: number
+          scheduled_at?: string | null
+          status?: string | null
+          tournament_id?: string
+          winner_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournament_matches_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tournament_participants: {
+        Row: {
+          id: string
+          losses: number | null
+          registered_at: string | null
+          score: number | null
+          seed: number | null
+          status: string | null
+          tournament_id: string
+          user_id: string
+          wins: number | null
+        }
+        Insert: {
+          id?: string
+          losses?: number | null
+          registered_at?: string | null
+          score?: number | null
+          seed?: number | null
+          status?: string | null
+          tournament_id: string
+          user_id: string
+          wins?: number | null
+        }
+        Update: {
+          id?: string
+          losses?: number | null
+          registered_at?: string | null
+          score?: number | null
+          seed?: number | null
+          status?: string | null
+          tournament_id?: string
+          user_id?: string
+          wins?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournament_participants_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tournament_players: {
+        Row: {
+          created_at: string | null
+          id: string
+          status: string | null
+          tournament_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          status?: string | null
+          tournament_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          status?: string | null
+          tournament_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournament_players_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tournaments: {
         Row: {
           created_at: string
+          created_by: string | null
+          current_round: number | null
           description: string | null
           end_date: string
           entry_fee: number
+          entry_type: string | null
           id: string
           max_participants: number
+          min_participants: number | null
           name: string
           prize_pool: number
+          rules: string | null
           start_date: string
           status: string
           total_prize: number
+          total_rounds: number | null
+          tournament_type: string | null
+          type: string | null
         }
         Insert: {
           created_at?: string
+          created_by?: string | null
+          current_round?: number | null
           description?: string | null
           end_date: string
           entry_fee?: number
+          entry_type?: string | null
           id?: string
           max_participants: number
+          min_participants?: number | null
           name: string
           prize_pool?: number
+          rules?: string | null
           start_date: string
           status?: string
           total_prize?: number
+          total_rounds?: number | null
+          tournament_type?: string | null
+          type?: string | null
         }
         Update: {
           created_at?: string
+          created_by?: string | null
+          current_round?: number | null
           description?: string | null
           end_date?: string
           entry_fee?: number
+          entry_type?: string | null
           id?: string
           max_participants?: number
+          min_participants?: number | null
           name?: string
           prize_pool?: number
+          rules?: string | null
           start_date?: string
           status?: string
           total_prize?: number
+          total_rounds?: number | null
+          tournament_type?: string | null
+          type?: string | null
         }
         Relationships: []
       }
@@ -644,6 +1103,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_cleanup_orphaned_auth_users: {
+        Args: never
+        Returns: {
+          deleted_email: string
+          deleted_user_id: string
+          status: string
+        }[]
+      }
       admin_manage_duelcoins: {
         Args: {
           p_amount: number
@@ -653,17 +1120,25 @@ export type Database = {
         }
         Returns: Json
       }
-      cleanup_empty_duels: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
+      cleanup_empty_duels: { Args: never; Returns: undefined }
+      cleanup_expired_queue_entries: { Args: never; Returns: undefined }
+      cleanup_matchmaking_queue: { Args: never; Returns: undefined }
+      cleanup_orphaned_users: {
+        Args: never
+        Returns: {
+          deleted_count: number
+          deleted_emails: string[]
+        }[]
       }
-      cleanup_expired_queue_entries: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      cleanup_matchmaking_queue: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
+      create_notification: {
+        Args: {
+          p_data?: Json
+          p_message: string
+          p_title: string
+          p_type: string
+          p_user_id: string
+        }
+        Returns: string
       }
       get_leaderboard: {
         Args: { limit_count?: number }
@@ -694,13 +1169,14 @@ export type Database = {
         }
         Returns: boolean
       }
-      is_admin: {
-        Args: { _user_id: string }
-        Returns: boolean
-      }
-      is_judge: {
-        Args: { _user_id: string }
-        Returns: boolean
+      is_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_judge: { Args: { _user_id: string }; Returns: boolean }
+      matchmake: {
+        Args: { p_match_type: string; p_user_id: string }
+        Returns: {
+          duel_id: string
+          player_role: string
+        }[]
       }
       record_match_result: {
         Args: {
