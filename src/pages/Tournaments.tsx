@@ -152,10 +152,13 @@ const Tournaments = () => {
           </div>
 
           {canCreateTournament ? (
-            <Button className="btn-mystic text-white w-full sm:w-auto" disabled>
+            <Button
+              className="btn-mystic text-white w-full sm:w-auto"
+              onClick={() => navigate('/create-tournament')}
+            >
               <Plus className="mr-2 h-4 w-4" />
-              <span className="hidden sm:inline">Criar Torneio (Em breve)</span>
-              <span className="sm:hidden">Criar (Em breve)</span>
+              <span className="hidden sm:inline">Criar Torneio</span>
+              <span className="sm:hidden">Criar</span>
             </Button>
           ) : (
             <TooltipProvider>
