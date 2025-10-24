@@ -141,10 +141,15 @@ export default function Matchmaking() {
         .maybeSingle();
 
       if (waitingPlayers) {
-        // Match encontrado imediatamente!
-        // Eu sou o segundo jogador (player2), o outro estava esperando (player1)
-        await createMatchAndRedirect(waitingPlayers.user_id, session.user.id, waitingPlayers.id, isRanked);
-        return;
+        // Match found! The player with the smaller user ID creates the duel to avoid race conditions.
+        if (session.user.id < waitingPlayers.user_id) {
+          console.log('Match found! My ID is smaller, I will create the duel.');
+          await createMatchAndRedirect(session.user.id, waitingPlayers.user_id, waitingPlayers.id, isRanked);
+          return;
+        } else {
+          console.log('Match found! My ID is larger, the other player will create the duel.');
+          // Do nothing here; proceed to join the queue so the other player's listener can see us.
+        }
       }
 
       // Ninguém esperando, entrar na fila
@@ -188,9 +193,15 @@ export default function Matchmaking() {
             const newPlayer = payload.new as any;
             console.log('👤 New player joined queue:', newPlayer);
             if (newPlayer.user_id !== session.user.id && newPlayer.status === 'waiting') {
-              // Alguém novo entrou! Eu estava esperando (player1), ele é o player2
-              console.log('🎮 Match found! Creating match...');
-              await createMatchAndRedirect(session.user.id, newPlayer.user_id, newPlayer.id, isRanked);
+              // Match found! I was waiting (player1), the new player is player2.
+              // The player with the smaller user ID creates the duel.
+              if (session.user.id < newPlayer.user_id) {
+                console.log('🎮 Match found via listener! My ID is smaller, I will create the duel.');
+                await createMatchAndRedirect(session.user.id, newPlayer.user_id, newPlayer.id, isRanked);
+              } else {
+                console.log('🎮 Match found via listener! My ID is larger, the other player will create the duel.');
+                // The other player is responsible for creating the duel. I'll just wait for my queue status to be updated.
+              }
             }
           }
         )
