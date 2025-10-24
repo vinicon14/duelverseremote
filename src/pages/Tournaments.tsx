@@ -48,14 +48,17 @@ const Tournaments = () => {
     try {
       const { data, error } = await supabase
         .from('tournaments')
-        .select('*')
+        .select(`
+          *,
+          tournament_participants(count)
+        `)
         .order('start_date', { ascending: true });
 
       if (error) throw error;
 
       const tournamentsWithCount = data?.map(t => ({
         ...t,
-        participants: 0, // Count not implemented yet
+        participants: t.tournament_participants?.[0]?.count || 0,
       })) || [];
 
       setTournaments(tournamentsWithCount);
@@ -71,12 +74,62 @@ const Tournaments = () => {
   };
 
   const joinTournament = async (tournamentId: string) => {
-    // Tournament participants feature not yet implemented
-    toast({
-      title: "Em desenvolvimento",
-      description: "A inscrição em torneios ainda não está disponível",
-      variant: "destructive",
-    });
+    if (!currentUser) return;
+
+    try {
+      const tournament = tournaments.find(t => t.id === tournamentId);
+      if (!tournament) return;
+
+      // Verificar se já está inscrito
+      const { data: existingParticipant } = await supabase
+        .from('tournament_participants')
+        .select('id')
+        .eq('tournament_id', tournamentId)
+        .eq('user_id', currentUser.id)
+        .single();
+
+      if (existingParticipant) {
+        toast({
+          title: "Já inscrito",
+          description: "Você já está participando deste torneio",
+        });
+        return;
+      }
+
+      // Verificar se há vagas
+      if (tournament.participants >= tournament.max_participants) {
+        toast({
+          title: "Torneio cheio",
+          description: "Não há mais vagas disponíveis",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Inscrever no torneio
+      const { error } = await supabase
+        .from('tournament_participants')
+        .insert({
+          tournament_id: tournamentId,
+          user_id: currentUser.id,
+          status: 'registered'
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Inscrição realizada!",
+        description: "Você foi inscrito no torneio com sucesso",
+      });
+
+      fetchTournaments();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao se inscrever",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   const upcomingTournaments = tournaments.filter(t => t.status === 'upcoming');

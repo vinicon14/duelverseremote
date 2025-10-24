@@ -45,11 +45,44 @@ const TournamentDetail = () => {
       if (tournamentError) throw tournamentError;
       setTournament(tournamentData);
 
-      // Fetch participants - feature not yet implemented
-      setParticipants([]);
+      // Fetch participants
+      const { data: participantsData, error: participantsError } = await supabase
+        .from('tournament_participants')
+        .select(`
+          id,
+          user_id,
+          status,
+          score,
+          wins,
+          losses,
+          registered_at,
+          profiles!inner(username, points)
+        `)
+        .eq('tournament_id', id)
+        .order('score', { ascending: false });
 
-      // Fetch matches - feature not yet implemented  
-      setMatches([]);
+      if (participantsError) throw participantsError;
+      setParticipants(participantsData || []);
+
+      // Fetch matches
+      const { data: matchesData, error: matchesError } = await supabase
+        .from('tournament_matches')
+        .select(`
+          id,
+          round,
+          player1_id,
+          player2_id,
+          winner_id,
+          status,
+          scheduled_at,
+          player1:profiles!tournament_matches_player1_id_fkey(username, points),
+          player2:profiles!tournament_matches_player2_id_fkey(username, points)
+        `)
+        .eq('tournament_id', id)
+        .order('round', { ascending: true });
+
+      if (matchesError) throw matchesError;
+      setMatches(matchesData || []);
     } catch (error: any) {
       toast({
         title: "Erro ao carregar torneio",
@@ -62,24 +95,28 @@ const TournamentDetail = () => {
   };
 
   const startTournament = async () => {
-    if (!tournament || participants.length < 2) {
+    if (!tournament || participants.length < tournament.min_participants) {
       toast({
         title: "Participantes insuficientes",
-        description: "É necessário pelo menos 2 participantes para iniciar o torneio.",
+        description: `É necessário pelo menos ${tournament.min_participants} participantes para iniciar o torneio.`,
         variant: "destructive",
       });
       return;
     }
 
     try {
+      // Generate bracket
+      await generateBracket();
+
       // Update tournament status
       await supabase
         .from('tournaments')
-        .update({ status: 'active', start_time: new Date().toISOString() })
+        .update({ 
+          status: 'active', 
+          start_date: new Date().toISOString(),
+          current_round: 1
+        })
         .eq('id', id);
-
-      // Generate bracket
-      await generateBracket();
 
       toast({
         title: "Torneio iniciado!",
@@ -97,30 +134,48 @@ const TournamentDetail = () => {
   };
 
   const generateBracket = async () => {
-    const playerIds = participants.map(p => p.player_id);
+    const playerIds = participants.map(p => p.user_id);
     const totalRounds = Math.ceil(Math.log2(playerIds.length));
+    
+    // Embaralhar jogadores para randomizar o chaveamento
+    const shuffledPlayers = [...playerIds].sort(() => Math.random() - 0.5);
     
     // First round matches
     const matchesToCreate = [];
-    for (let i = 0; i < playerIds.length; i += 2) {
-      if (i + 1 < playerIds.length) {
+    for (let i = 0; i < shuffledPlayers.length; i += 2) {
+      if (i + 1 < shuffledPlayers.length) {
         matchesToCreate.push({
           tournament_id: id,
           round: 1,
-          match_number: Math.floor(i / 2) + 1,
-          player1_id: playerIds[i],
-          player2_id: playerIds[i + 1],
+          player1_id: shuffledPlayers[i],
+          player2_id: shuffledPlayers[i + 1],
           status: 'pending',
+        });
+      } else {
+        // Jogador sem par avança automaticamente (bye)
+        matchesToCreate.push({
+          tournament_id: id,
+          round: 1,
+          player1_id: shuffledPlayers[i],
+          player2_id: null,
+          winner_id: shuffledPlayers[i],
+          status: 'completed',
         });
       }
     }
 
-    // Tournament matches feature not yet implemented
-    toast({
-      title: "Em desenvolvimento",
-      description: "A geração de chaves ainda não está disponível",
-      variant: "destructive",
-    });
+    // Criar matches
+    const { error } = await supabase
+      .from('tournament_matches')
+      .insert(matchesToCreate);
+
+    if (error) throw error;
+
+    // Atualizar total de rounds no torneio
+    await supabase
+      .from('tournaments')
+      .update({ total_rounds: totalRounds })
+      .eq('id', id);
   };
 
   const getStatusColor = (status: string) => {
@@ -206,10 +261,10 @@ const TournamentDetail = () => {
                   </div>
                 </div>
 
-                {tournament.start_time && (
+                {tournament.start_date && (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Calendar className="w-4 h-4" />
-                    <span>Início: {new Date(tournament.start_time).toLocaleString()}</span>
+                    <span>Início: {new Date(tournament.start_date).toLocaleString()}</span>
                   </div>
                 )}
 
@@ -245,16 +300,16 @@ const TournamentDetail = () => {
                             <CardContent className="p-4">
                               <div className="flex items-center justify-between">
                                 <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <span className={match.winner_id === match.player1_id ? 'font-bold text-primary' : ''}>
-                                      {match.player1?.username || 'TBD'}
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <span className={match.winner_id === match.player2_id ? 'font-bold text-primary' : ''}>
-                                      {match.player2?.username || 'TBD'}
-                                    </span>
-                                  </div>
+                                   <div className="flex items-center gap-2 mb-2">
+                                     <span className={match.winner_id === match.player1_id ? 'font-bold text-primary' : ''}>
+                                       {match.player1?.[0]?.username || 'TBD'}
+                                     </span>
+                                   </div>
+                                   <div className="flex items-center gap-2">
+                                     <span className={match.winner_id === match.player2_id ? 'font-bold text-primary' : ''}>
+                                       {match.player2?.[0]?.username || 'TBD'}
+                                     </span>
+                                   </div>
                                 </div>
                                 <Badge variant={match.status === 'completed' ? 'default' : 'secondary'}>
                                   {match.status === 'pending' && 'Pendente'}
@@ -291,12 +346,12 @@ const TournamentDetail = () => {
                         <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
                           <span className="text-xs font-bold">{index + 1}</span>
                         </div>
-                        <div className="flex-1">
-                          <p className="font-medium">{participant.player?.username}</p>
-                          <p className="text-xs text-muted-foreground">
-                            ELO: {participant.player?.elo_rating || 1200}
-                          </p>
-                        </div>
+                         <div className="flex-1">
+                           <p className="font-medium">{participant.profiles?.username}</p>
+                           <p className="text-xs text-muted-foreground">
+                             Pontos: {participant.profiles?.points || 0}
+                           </p>
+                         </div>
                         {participant.placement && (
                           <Badge variant="outline">
                             {participant.placement}º
