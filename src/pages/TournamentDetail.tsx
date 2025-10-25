@@ -57,7 +57,7 @@ const TournamentDetail = () => {
           wins,
           losses,
           registered_at,
-          profile:profiles(username, points)
+          profile:profiles!user_id(username, points)
         `)
         .eq('tournament_id', id)
         .order('score', { ascending: false });
