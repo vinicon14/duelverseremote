@@ -17,6 +17,7 @@ import Profile from "./pages/Profile";
 import Ranking from "./pages/Ranking";
 import Friends from "./pages/Friends";
 import Tournaments from "./pages/Tournaments";
+import CreateTournament from "./pages/CreateTournament";
 import TournamentDetail from "./pages/TournamentDetail";
 import Matchmaking from "./pages/Matchmaking";
 import Store from "./pages/Store";
@@ -45,6 +46,7 @@ const RouterContent = () => {
       <Route path="/friends" element={<Friends />} />
       <Route path="/chat/:friendId" element={<FriendChat />} />
       <Route path="/tournaments" element={<Tournaments />} />
+      <Route path="/create-tournament" element={<CreateTournament />} />
       <Route path="/tournaments/:id" element={<TournamentDetail />} />
       <Route path="/matchmaking" element={<Matchmaking />} />
       <Route path="/duelcoins" element={<DuelCoins />} />
