@@ -44,10 +44,8 @@ export const StartStreamButton = ({ duelId, tournamentId, onStreamStarted }: Sta
     <Button
       onClick={startStream}
       disabled={loading}
-      className="btn-mystic text-white backdrop-blur-sm text-xs sm:text-sm"
+      className="btn-mystic text-white"
       variant="default"
-      size="sm"
-      title="Transmitir Tela"
     >
       {loading ? (
         <>
@@ -57,7 +55,7 @@ export const StartStreamButton = ({ duelId, tournamentId, onStreamStarted }: Sta
       ) : (
         <>
           <Video className="w-4 h-4 mr-2" />
-          Transmitir
+          Iniciar Transmissão
         </>
       )}
     </Button>

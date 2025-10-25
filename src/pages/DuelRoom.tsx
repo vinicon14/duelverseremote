@@ -9,7 +9,6 @@ import { DuelChat } from "@/components/DuelChat";
 import { FloatingCalculator } from "@/components/FloatingCalculator";
 import { StartStreamButton } from "@/components/StartStreamButton";
 import { useBanCheck } from "@/hooks/useBanCheck";
-import { useAccountType } from "@/hooks/useAccountType";
 
 const DuelRoom = () => {
   useBanCheck(); // Proteger contra usuários banidos
@@ -31,7 +30,6 @@ const DuelRoom = () => {
   const timerInterval = useRef<NodeJS.Timeout | null>(null);
   const pausedTime = useRef<number>(0);
   const lastPauseTime = useRef<number>(0);
-  const { isPro } = useAccountType();
   
   const isJudge = searchParams.get('role') === 'judge';
 
@@ -821,17 +819,15 @@ const DuelRoom = () => {
             <div className="flex gap-2">
               {isParticipant && !isJudge && (
                 <>
-                  {isPro && (
-                    <StartStreamButton
-                      duelId={id!}
-                      onStreamStarted={(streamId) => {
-                        toast({
-                          title: "Transmissão iniciada!",
-                          description: "Sua partida está sendo transmitida ao vivo.",
-                        });
-                      }}
-                    />
-                  )}
+                  <StartStreamButton 
+                    duelId={id!} 
+                    onStreamStarted={(streamId) => {
+                      toast({
+                        title: "Transmissão iniciada!",
+                        description: "Sua partida está sendo transmitida ao vivo.",
+                      });
+                    }}
+                  />
                   <Button
                     onClick={callJudge}
                     disabled={judgeCalled}

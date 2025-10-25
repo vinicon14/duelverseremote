@@ -57,7 +57,7 @@ const TournamentDetail = () => {
           wins,
           losses,
           registered_at,
-          profile:profiles!user_id(username, points)
+          profiles!inner(username, points)
         `)
         .eq('tournament_id', id)
         .order('score', { ascending: false });
@@ -209,35 +209,6 @@ const TournamentDetail = () => {
     }
   };
 
-  const handleSelectWinner = async (winnerId: string) => {
-    try {
-      const { error } = await supabase.functions.invoke(
-        'distribute-tournament-prize',
-        {
-          body: {
-            tournament_id: id,
-            winner_id: winnerId,
-          },
-        }
-      );
-
-      if (error) throw error;
-
-      toast({
-        title: "Torneio finalizado!",
-        description: "O prêmio foi distribuído para o vencedor.",
-      });
-
-      await fetchTournamentData();
-    } catch (error: any) {
-      toast({
-        title: "Erro ao finalizar torneio",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -326,18 +297,6 @@ const TournamentDetail = () => {
                   <Button
                     onClick={async () => {
                       try {
-                        const { error: chargeError } = await supabase.functions.invoke(
-                          'charge-tournament-entry-fee',
-                          {
-                            body: {
-                              tournament_id: id,
-                              user_id: currentUser?.id,
-                            },
-                          }
-                        );
-
-                        if (chargeError) throw chargeError;
-
                         const { error } = await supabase
                           .from('tournament_participants')
                           .insert({
@@ -393,29 +352,6 @@ const TournamentDetail = () => {
               </CardContent>
             </Card>
 
-            {/* Admin Panel for Winner Selection */}
-            {tournament.status === 'active' && tournament.created_by === currentUser?.id && (
-              <Card className="card-mystic">
-                <CardHeader>
-                  <CardTitle>Painel do Organizador</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="mb-4">Selecione o vencedor do torneio para distribuir o prêmio.</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {participants.map((p) => (
-                      <Button
-                        key={p.id}
-                        variant="outline"
-                        onClick={() => handleSelectWinner(p.user_id)}
-                      >
-                        {p.profile.username}
-                      </Button>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
             {/* Matches Bracket */}
             {matches.length > 0 && (
               <Card className="card-mystic">
@@ -438,12 +374,12 @@ const TournamentDetail = () => {
                                 <div className="flex-1">
                                    <div className="flex items-center gap-2 mb-2">
                                      <span className={match.winner_id === match.player1_id ? 'font-bold text-primary' : ''}>
-                                       {match.player1?.username || 'TBD'}
+                                       {match.player1?.[0]?.username || 'TBD'}
                                      </span>
                                    </div>
                                    <div className="flex items-center gap-2">
                                      <span className={match.winner_id === match.player2_id ? 'font-bold text-primary' : ''}>
-                                       {match.player2?.username || 'TBD'}
+                                       {match.player2?.[0]?.username || 'TBD'}
                                      </span>
                                    </div>
                                 </div>
@@ -483,9 +419,9 @@ const TournamentDetail = () => {
                           <span className="text-xs font-bold">{index + 1}</span>
                         </div>
                          <div className="flex-1">
-                           <p className="font-medium">{participant.profile?.username}</p>
+                           <p className="font-medium">{participant.profiles?.username}</p>
                            <p className="text-xs text-muted-foreground">
-                             Pontos: {participant.profile?.points || 0}
+                             Pontos: {participant.profiles?.points || 0}
                            </p>
                          </div>
                         {participant.placement && (
