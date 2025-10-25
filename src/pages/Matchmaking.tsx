@@ -266,11 +266,13 @@ export default function Matchmaking() {
   const createMatchAndRedirect = async (player1Id: string, player2Id: string, myQueueId: string, ranked: boolean) => {
     try {
       console.log('🎮 Creating match between', player1Id, 'and', player2Id);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
       
       // Obter IDs das entradas da fila de ambos jogadores
       const { data: queueEntries } = await supabase
         .from('matchmaking_queue')
-        .select('id')
+        .select('id, user_id')
         .in('user_id', [player1Id, player2Id])
         .eq('status', 'waiting');
 
@@ -298,6 +300,7 @@ export default function Matchmaking() {
       console.log('🎯 Match created, duel ID:', duel.id);
 
       // DEPOIS: Atualizar status para 'matched' para notificar o outro jogador
+      // Importante: atualizar ANTES de fazer cleanup para que o listener capture
       await supabase
         .from('matchmaking_queue')
         .update({ status: 'matched' })
@@ -305,21 +308,38 @@ export default function Matchmaking() {
 
       console.log('✅ Updated queue entries to matched');
 
-      // Aguardar para dar tempo do outro usuário receber o evento e encontrar o duelo
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Aguardar um pouco mais para garantir que o evento chegue ao outro jogador
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // Limpar fila
+      // Limpar fila apenas depois
       await supabase
         .from('matchmaking_queue')
         .delete()
         .in('id', queueIdsToDelete);
 
-      await cleanup();
+      console.log('🧹 Cleaned up queue entries');
+      
+      // Limpar local
+      if (timerInterval.current) {
+        clearInterval(timerInterval.current);
+      }
+      if (queueTimeout.current) {
+        clearTimeout(queueTimeout.current);
+      }
       
       toast.success("🎮 Match encontrado! Redirecionando...");
       
-      // Navegar imediatamente
+      // Aguardar um pouco antes de navegar para garantir que tudo foi processado
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Navegar para o duelo
       navigate(`/duel/${duel.id}`);
+      
+      // Limpar canal DEPOIS da navegação para não interromper listeners
+      if (queueChannel.current) {
+        await supabase.removeChannel(queueChannel.current);
+        queueChannel.current = null;
+      }
     } catch (error: any) {
       console.error('❌ Error creating match:', error);
       toast.error("Erro ao criar partida");
