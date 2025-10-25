@@ -436,7 +436,6 @@ const TournamentDetail = () => {
                             <CardContent className="p-4">
                               <div className="flex items-center justify-between">
                                 <div className="flex-1">
-                                <div className="flex-1">
                                    <div className="flex items-center gap-2 mb-2">
                                      <span className={match.winner_id === match.player1_id ? 'font-bold text-primary' : ''}>
                                        {match.player1?.username || 'TBD'}
