@@ -46,8 +46,8 @@ const Friends = () => {
         .from('friend_requests')
         .select(`
           *,
-          requester:profiles!friend_requests_sender_id_fkey(user_id, username, avatar_url),
-          addressee:profiles!friend_requests_receiver_id_fkey(user_id, username, avatar_url)
+          requester:profiles!friend_requests_sender_id_fkey(user_id, username, avatar_url, is_online, last_seen),
+          addressee:profiles!friend_requests_receiver_id_fkey(user_id, username, avatar_url, is_online, last_seen)
         `)
         .eq('status', 'accepted')
         .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`);
@@ -316,24 +316,35 @@ const Friends = () => {
                 </p>
               </Card>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {friends.map((friend) => (
                   <Card key={friend.user_id} className="card-mystic hover:border-primary/40 transition-all">
                     <CardContent className="py-6">
                       <div className="flex items-center gap-4">
-                        <Avatar className="w-16 h-16 border-2 border-primary/30">
-                          <AvatarImage src={friend.avatar_url || ""} />
-                          <AvatarFallback className="bg-primary/20 text-lg">
-                            {friend.username?.charAt(0).toUpperCase() || "U"}
-                          </AvatarFallback>
-                        </Avatar>
+                        <div className="relative">
+                          <Avatar className="w-16 h-16 border-2 border-primary/30">
+                            <AvatarImage src={friend.avatar_url || ""} />
+                            <AvatarFallback className="bg-primary/20 text-lg">
+                              {friend.username?.charAt(0).toUpperCase() || "U"}
+                            </AvatarFallback>
+                          </Avatar>
+                          {friend.is_online && (
+                            <div className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 border-2 border-background rounded-full" />
+                          )}
+                        </div>
 
                         <div className="flex-1">
-                          <h3 className="font-semibold text-lg text-gradient-mystic">
+                          <h3 className="font-semibold text-lg text-gradient-mystic flex items-center gap-2">
                             {friend.username}
+                            {friend.is_online && (
+                              <span className="text-xs text-green-500 font-normal">● Online</span>
+                            )}
                           </h3>
                           <p className="text-sm text-muted-foreground">
-                            ELO: {friend.elo_rating || 1500}
+                            {friend.is_online 
+                              ? 'Online agora' 
+                              : `Visto ${new Date(friend.last_seen).toLocaleDateString()}`
+                            }
                           </p>
                         </div>
 
@@ -347,6 +358,7 @@ const Friends = () => {
                           <Button
                             onClick={() => challengeFriend(friend.user_id)}
                             className="btn-mystic text-white"
+                            disabled={!friend.is_online}
                           >
                             <Swords className="w-4 h-4 mr-2" />
                             Desafiar

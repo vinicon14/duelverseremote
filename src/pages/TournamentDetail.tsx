@@ -8,6 +8,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Trophy, Users, Calendar, Coins, ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { StartStreamButton } from "@/components/StartStreamButton";
 
 const TournamentDetail = () => {
   const { id } = useParams();
@@ -83,6 +84,27 @@ const TournamentDetail = () => {
 
       if (matchesError) throw matchesError;
       setMatches(matchesData || []);
+      
+      // Setup realtime listener for tournament updates
+      const channel = supabase
+        .channel(`tournament-${id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'tournament_matches',
+            filter: `tournament_id=eq.${id}`
+          },
+          () => {
+            fetchTournamentData();
+          }
+        )
+        .subscribe();
+        
+      return () => {
+        supabase.removeChannel(channel);
+      };
     } catch (error: any) {
       toast({
         title: "Erro ao carregar torneio",
@@ -268,14 +290,64 @@ const TournamentDetail = () => {
                   </div>
                 )}
 
+                {/* Botão de participar se ainda não está inscrito */}
+                {tournament.status === 'upcoming' && 
+                 !participants.some(p => p.user_id === currentUser?.id) && 
+                 participants.length < tournament.max_participants && (
+                  <Button
+                    onClick={async () => {
+                      try {
+                        const { error } = await supabase
+                          .from('tournament_participants')
+                          .insert({
+                            tournament_id: id,
+                            user_id: currentUser?.id,
+                            status: 'registered'
+                          });
+
+                        if (error) throw error;
+
+                        toast({
+                          title: "Inscrito com sucesso!",
+                          description: "Você está participando deste torneio.",
+                        });
+
+                        await fetchTournamentData();
+                      } catch (error: any) {
+                        toast({
+                          title: "Erro ao se inscrever",
+                          description: error.message,
+                          variant: "destructive",
+                        });
+                      }
+                    }}
+                    className="w-full btn-mystic text-white"
+                  >
+                    Participar do Torneio
+                  </Button>
+                )}
+
                 {tournament.status === 'upcoming' && tournament.created_by === currentUser?.id && (
                   <Button
                     onClick={startTournament}
                     className="w-full btn-mystic text-white"
-                    disabled={participants.length < 2}
+                    disabled={participants.length < tournament.min_participants}
                   >
                     Iniciar Torneio
                   </Button>
+                )}
+                
+                {tournament.status === 'active' && matches.some(m => m.status === 'in_progress') && (
+                  <StartStreamButton
+                    duelId={matches.find(m => m.status === 'in_progress')?.id || ''}
+                    tournamentId={id}
+                    onStreamStarted={(streamId) => {
+                      toast({
+                        title: "Transmissão iniciada!",
+                        description: "O torneio está sendo transmitido ao vivo.",
+                      });
+                    }}
+                  />
                 )}
               </CardContent>
             </Card>
