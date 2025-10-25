@@ -16,10 +16,9 @@ interface TournamentCardProps {
     participants?: number;
   };
   onJoin?: (tournamentId: string) => void;
-  onNavigate: (tournamentId: string) => void;
 }
 
-export const TournamentCard = ({ tournament, onJoin, onNavigate }: TournamentCardProps) => {
+export const TournamentCard = ({ tournament, onJoin }: TournamentCardProps) => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'upcoming':
@@ -111,7 +110,7 @@ export const TournamentCard = ({ tournament, onJoin, onNavigate }: TournamentCar
             </Button>
             <Button
               variant="outline"
-              onClick={() => onNavigate(tournament.id)}
+              onClick={() => window.location.href = `/tournaments/${tournament.id}`}
               className="w-full"
             >
               Ver Detalhes
@@ -121,7 +120,7 @@ export const TournamentCard = ({ tournament, onJoin, onNavigate }: TournamentCar
 
         {tournament.status === 'active' && (
           <Button
-            onClick={() => onNavigate(tournament.id)}
+            onClick={() => window.location.href = `/tournaments/${tournament.id}`}
             variant="outline"
             className="w-full"
           >
@@ -131,7 +130,7 @@ export const TournamentCard = ({ tournament, onJoin, onNavigate }: TournamentCar
 
         {tournament.status === 'completed' && (
           <Button
-            onClick={() => onNavigate(tournament.id)}
+            onClick={() => window.location.href = `/tournaments/${tournament.id}`}
             variant="outline"
             className="w-full"
           >
