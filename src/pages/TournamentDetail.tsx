@@ -58,7 +58,7 @@ const TournamentDetail = () => {
           wins,
           losses,
           registered_at,
-          profiles!inner(username, points)
+          profiles:profiles!user_id(username, points)
         `)
         .eq('tournament_id', id)
         .order('score', { ascending: false });
@@ -292,86 +292,52 @@ const TournamentDetail = () => {
                 )}
 
                 {/* Botão de participar se ainda não está inscrito */}
-                {tournament.status === 'upcoming' && 
-                 tournament.created_by !== currentUser?.id &&
-                 !participants.some(p => p.user_id === currentUser?.id) && 
-                 participants.length < tournament.max_participants && (
-                  <Button
-                    onClick={async () => {
-                      try {
-                        // Verificar saldo
-                        const { data: profile } = await supabase
-                          .from('profiles')
-                          .select('duelcoins_balance')
-                          .eq('user_id', currentUser?.id)
-                          .single();
-
-                        if (!profile || profile.duelcoins_balance < tournament.entry_fee) {
-                          toast({
-                            title: "Saldo insuficiente",
-                            description: `Você precisa de ${tournament.entry_fee} DuelCoins para participar`,
-                            variant: "destructive",
-                          });
-                          return;
-                        }
-
-                        // Transferir DuelCoins
-                        if (tournament.entry_fee > 0) {
-                          const { data: transferResult, error: transferError } = await supabase.rpc('transfer_duelcoins', {
-                            p_receiver_id: tournament.created_by,
-                            p_amount: tournament.entry_fee
-                          });
-
-                          if (transferError) throw transferError;
-
-                          const result = transferResult as any;
-                          if (!result.success) {
+                {tournament.status === 'upcoming' &&
+                  tournament.created_by !== currentUser?.id &&
+                  !participants.some(p => p.user_id === currentUser?.id) &&
+                  participants.length < tournament.max_participants && (
+                    <Button
+                      onClick={async () => {
+                        try {
+                          if (tournament.created_by === currentUser?.id) {
                             toast({
-                              title: "Erro na transferência",
-                              description: result.message,
+                              title: "Você não pode se inscrever no seu próprio torneio.",
                               variant: "destructive",
                             });
                             return;
                           }
-                        }
 
-                        // Inscrever
-                        const { error } = await supabase
-                          .from('tournament_participants')
-                          .insert({
-                            tournament_id: id,
-                            user_id: currentUser?.id,
-                            status: 'registered'
+                          // Chamar a Edge Function para cobrar a taxa de inscrição
+                          const { data, error } = await supabase.functions.invoke('charge-tournament-entry-fee', {
+                            body: {
+                              tournament_id: id,
+                              participant_id: currentUser?.id,
+                            },
+                          })
+
+                          if (error || !data.success) {
+                            throw new Error(data.message || error.message);
+                          }
+
+                          toast({
+                            title: "Inscrito com sucesso!",
+                            description: `Você está participando! ${tournament.entry_fee} DuelCoins foram pagos.`,
                           });
 
-                        if (error) throw error;
-
-                        // Atualizar prize pool
-                        const newPrizePool = (tournament.prize_pool || 0) + tournament.entry_fee;
-                        await supabase
-                          .from('tournaments')
-                          .update({ prize_pool: newPrizePool })
-                          .eq('id', id);
-
-                        toast({
-                          title: "Inscrito com sucesso!",
-                          description: `Você está participando! ${tournament.entry_fee} DuelCoins transferidos.`,
-                        });
-
-                        await fetchTournamentData();
-                      } catch (error: any) {
-                        toast({
-                          title: "Erro ao se inscrever",
-                          description: error.message,
-                          variant: "destructive",
-                        });
-                      }
-                    }}
-                    className="w-full btn-mystic text-white"
-                  >
-                    Participar ({tournament.entry_fee} DuelCoins)
-                  </Button>
-                )}
+                          await fetchTournamentData();
+                        } catch (error: any) {
+                          toast({
+                            title: "Erro ao se inscrever",
+                            description: error.message,
+                            variant: "destructive",
+                          });
+                        }
+                      }}
+                      className="w-full btn-mystic text-white"
+                    >
+                      Participar ({tournament.entry_fee} DuelCoins)
+                    </Button>
+                  )}
 
                 {tournament.status === 'upcoming' && tournament.created_by === currentUser?.id && (
                   <Button

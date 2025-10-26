@@ -36,47 +36,21 @@ export const TournamentWinnerSelector = ({
 
     setLoading(true);
     try {
-      // Transferir prêmio para o vencedor
-      const { data: transferResult, error: transferError } = await supabase.rpc('transfer_duelcoins', {
-        p_receiver_id: selectedWinnerId,
-        p_amount: prizePool
-      });
+      // Chamar a Edge Function para distribuir o prêmio
+      const { data, error } = await supabase.functions.invoke('distribute-tournament-prize', {
+        body: {
+          tournament_id: tournamentId,
+          winner_id: selectedWinnerId,
+        },
+      })
 
-      if (transferError) throw transferError;
-
-      const result = transferResult as any;
-      if (!result.success) {
-        toast({
-          title: "Erro na transferência",
-          description: result.message,
-          variant: "destructive",
-        });
-        return;
+      if (error || !data.success) {
+        throw new Error(data.message || error.message);
       }
-
-      // Atualizar status do torneio
-      await supabase
-        .from('tournaments')
-        .update({ 
-          status: 'completed',
-          end_date: new Date().toISOString()
-        })
-        .eq('id', tournamentId);
-
-      // Registrar transação do prêmio
-      await supabase
-        .from('duelcoins_transactions')
-        .insert({
-          sender_id: creatorId,
-          receiver_id: selectedWinnerId,
-          amount: prizePool,
-          transaction_type: 'tournament_prize',
-          description: `Prêmio do torneio`
-        });
 
       toast({
         title: "Torneio finalizado!",
-        description: `O vencedor recebeu ${prizePool} DuelCoins de prêmio.`,
+        description: `O vencedor recebeu o prêmio de ${prizePool} DuelCoins.`,
       });
 
       onWinnerSelected();
