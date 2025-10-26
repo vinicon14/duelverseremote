@@ -73,10 +73,6 @@ const Tournaments = () => {
     }
   };
 
-  const handleNavigate = (tournamentId: string) => {
-    navigate(`/tournaments/${tournamentId}`);
-  };
-
   const joinTournament = async (tournamentId: string) => {
     if (!currentUser) return;
 
@@ -221,7 +217,6 @@ const Tournaments = () => {
                     key={tournament.id}
                     tournament={tournament}
                     onJoin={joinTournament}
-                    onNavigate={handleNavigate}
                   />
                 ))}
               </div>
@@ -240,7 +235,7 @@ const Tournaments = () => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {activeTournaments.map(tournament => (
-                  <TournamentCard key={tournament.id} tournament={tournament} onNavigate={handleNavigate} />
+                  <TournamentCard key={tournament.id} tournament={tournament} />
                 ))}
               </div>
             )}
@@ -258,7 +253,7 @@ const Tournaments = () => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {completedTournaments.map(tournament => (
-                  <TournamentCard key={tournament.id} tournament={tournament} onNavigate={handleNavigate} />
+                  <TournamentCard key={tournament.id} tournament={tournament} />
                 ))}
               </div>
             )}

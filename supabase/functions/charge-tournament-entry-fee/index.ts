@@ -1,58 +1,59 @@
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.44.2";
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.0.0'
+
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
 serve(async (req) => {
-  const { tournament_id, user_id } = await req.json();
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+  const { tournament_id, participant_id } = await req.json()
 
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-  );
+  try {
+    // 1. Get tournament details
+    const { data: tournament, error: tournamentError } = await supabase
+      .from('tournaments')
+      .select('entry_fee, created_by')
+      .eq('id', tournament_id)
+      .single()
 
-  const { data: tournament, error: tournamentError } = await supabase
-    .from("tournaments")
-    .select("entry_fee, created_by")
-    .eq("id", tournament_id)
-    .single();
+    if (tournamentError) throw tournamentError
+    if (!tournament) throw new Error('Tournament not found')
 
-  if (tournamentError) {
-    return new Response(JSON.stringify({ error: tournamentError.message }), {
+    const { entry_fee, created_by: creator_id } = tournament
+
+    // 2. Get participant's profile (and balance)
+    const { data: participantProfile, error: participantError } = await supabase
+      .from('profiles')
+      .select('duelcoins_balance')
+      .eq('user_id', participant_id)
+      .single()
+
+    if (participantError) throw participantError
+    if (!participantProfile) throw new Error('Participant profile not found')
+
+    // 3. Check balance
+    if (participantProfile.duelcoins_balance < entry_fee) {
+      throw new Error('Insufficient DuelCoins balance')
+    }
+
+    // 4. Perform the transaction
+    // Use an RPC call to ensure atomicity
+    const { error: rpcError } = await supabase.rpc('charge_entry_fee', {
+        p_amount: entry_fee,
+        p_sender_id: participant_id,
+        p_receiver_id: creator_id,
+        p_tournament_id: tournament_id,
+    })
+
+    if (rpcError) throw rpcError
+
+    return new Response(JSON.stringify({ success: true, message: 'Entry fee paid successfully' }), {
+      headers: { 'Content-Type': 'application/json' },
+    })
+  } catch (error) {
+    return new Response(JSON.stringify({ success: false, message: error.message }), {
+      headers: { 'Content-Type': 'application/json' },
       status: 500,
-    });
+    })
   }
-
-  const { data: user, error: userError } = await supabase
-    .from("profiles")
-    .select("duelcoins")
-    .eq("user_id", user_id)
-    .single();
-
-  if (userError) {
-    return new Response(JSON.stringify({ error: userError.message }), {
-      status: 500,
-    });
-  }
-
-  if (user.duelcoins < tournament.entry_fee) {
-    return new Response(JSON.stringify({ error: "Insufficient DuelCoins" }), {
-      status: 400,
-    });
-  }
-
-  const { error: debitError } = await supabase.rpc(
-    "transfer_duelcoins",
-    {
-      sender_id: user_id,
-      receiver_id: tournament.created_by,
-      amount: tournament.entry_fee,
-    },
-  );
-
-  if (debitError) {
-    return new Response(JSON.stringify({ error: debitError.message }), {
-      status: 500,
-    });
-  }
-
-  return new Response(null, { status: 204 });
-});
+})

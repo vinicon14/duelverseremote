@@ -26,22 +26,59 @@ serve(async (req) => {
       throw new Error('Não autorizado');
     }
 
+    // Verificar se é admin ou participante do duelo
+    const { duel_id, tournament_id, match_id, recording_enabled, featured } = await req.json();
+
+    let isAuthorized = false;
+
     // Verificar se é admin
     const { data: roleData } = await supabase
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
       .eq('role', 'admin')
-      .single();
+      .maybeSingle();
 
-    if (!roleData) {
-      throw new Error('Apenas administradores podem criar transmissões');
+    if (roleData) {
+      isAuthorized = true;
+    } else if (duel_id) {
+      // Verificar se é participante do duelo
+      const { data: duelData } = await supabase
+        .from('live_duels')
+        .select('creator_id, opponent_id')
+        .eq('id', duel_id)
+        .single();
+
+      if (duelData && (duelData.creator_id === user.id || duelData.opponent_id === user.id)) {
+        isAuthorized = true;
+      }
     }
 
-    const { tournament_id, match_id, recording_enabled, featured } = await req.json();
+    if (!isAuthorized) {
+      throw new Error('Não autorizado');
+    }
+
+    // Verificar se já existe uma stream ativa para este duel
+    if (duel_id) {
+      const { data: existingStream, error: checkError } = await supabase
+        .from('live_streams')
+        .select('id')
+        .eq('duel_id', duel_id)
+        .eq('status', 'active')
+        .maybeSingle();
+
+      if (checkError && checkError.code !== 'PGRST116') throw checkError;
+
+      if (existingStream) {
+        return new Response(
+          JSON.stringify({ error: 'Já existe uma transmissão ativa para este duelo' }),
+          { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
 
     // Criar sala Daily
-    const roomName = `duelverse_live_${match_id || tournament_id}_${Date.now()}`;
+    const roomName = `duelverse_live_${duel_id || match_id || tournament_id}_${Date.now()}`;
     
     const dailyResponse = await fetch("https://api.daily.co/v1/rooms", {
       method: "POST",
@@ -77,7 +114,8 @@ serve(async (req) => {
       .from('live_streams')
       .insert({
         tournament_id,
-        match_id,
+        match_id: match_id || duel_id,
+        duel_id: duel_id,
         daily_room_name: dailyRoom.name,
         daily_room_url: dailyRoom.url,
         recording_enabled,

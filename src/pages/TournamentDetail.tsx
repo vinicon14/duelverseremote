@@ -9,6 +9,7 @@ import { Trophy, Users, Calendar, Coins, ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { StartStreamButton } from "@/components/StartStreamButton";
+import { TournamentWinnerSelector } from "@/components/TournamentWinnerSelector";
 
 const TournamentDetail = () => {
   const { id } = useParams();
@@ -57,7 +58,7 @@ const TournamentDetail = () => {
           wins,
           losses,
           registered_at,
-          profile:profiles(username, points)
+          profiles:profiles!user_id(username, points)
         `)
         .eq('tournament_id', id)
         .order('score', { ascending: false });
@@ -209,35 +210,6 @@ const TournamentDetail = () => {
     }
   };
 
-  const handleSelectWinner = async (winnerId: string) => {
-    try {
-      const { error } = await supabase.functions.invoke(
-        'distribute-tournament-prize',
-        {
-          body: {
-            tournament_id: id,
-            winner_id: winnerId,
-          },
-        }
-      );
-
-      if (error) throw error;
-
-      toast({
-        title: "Torneio finalizado!",
-        description: "O prêmio foi distribuído para o vencedor.",
-      });
-
-      await fetchTournamentData();
-    } catch (error: any) {
-      toast({
-        title: "Erro ao finalizar torneio",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -320,53 +292,52 @@ const TournamentDetail = () => {
                 )}
 
                 {/* Botão de participar se ainda não está inscrito */}
-                {tournament.status === 'upcoming' && 
-                 !participants.some(p => p.user_id === currentUser?.id) && 
-                 participants.length < tournament.max_participants && (
-                  <Button
-                    onClick={async () => {
-                      try {
-                        const { error: chargeError } = await supabase.functions.invoke(
-                          'charge-tournament-entry-fee',
-                          {
+                {tournament.status === 'upcoming' &&
+                  tournament.created_by !== currentUser?.id &&
+                  !participants.some(p => p.user_id === currentUser?.id) &&
+                  participants.length < tournament.max_participants && (
+                    <Button
+                      onClick={async () => {
+                        try {
+                          if (tournament.created_by === currentUser?.id) {
+                            toast({
+                              title: "Você não pode se inscrever no seu próprio torneio.",
+                              variant: "destructive",
+                            });
+                            return;
+                          }
+
+                          // Chamar a Edge Function para cobrar a taxa de inscrição
+                          const { data, error } = await supabase.functions.invoke('charge-tournament-entry-fee', {
                             body: {
                               tournament_id: id,
-                              user_id: currentUser?.id,
+                              participant_id: currentUser?.id,
                             },
+                          })
+
+                          if (error || !data.success) {
+                            throw new Error(data.message || error.message);
                           }
-                        );
 
-                        if (chargeError) throw chargeError;
-
-                        const { error } = await supabase
-                          .from('tournament_participants')
-                          .insert({
-                            tournament_id: id,
-                            user_id: currentUser?.id,
-                            status: 'registered'
+                          toast({
+                            title: "Inscrito com sucesso!",
+                            description: `Você está participando! ${tournament.entry_fee} DuelCoins foram pagos.`,
                           });
 
-                        if (error) throw error;
-
-                        toast({
-                          title: "Inscrito com sucesso!",
-                          description: "Você está participando deste torneio.",
-                        });
-
-                        await fetchTournamentData();
-                      } catch (error: any) {
-                        toast({
-                          title: "Erro ao se inscrever",
-                          description: error.message,
-                          variant: "destructive",
-                        });
-                      }
-                    }}
-                    className="w-full btn-mystic text-white"
-                  >
-                    Participar do Torneio
-                  </Button>
-                )}
+                          await fetchTournamentData();
+                        } catch (error: any) {
+                          toast({
+                            title: "Erro ao se inscrever",
+                            description: error.message,
+                            variant: "destructive",
+                          });
+                        }
+                      }}
+                      className="w-full btn-mystic text-white"
+                    >
+                      Participar ({tournament.entry_fee} DuelCoins)
+                    </Button>
+                  )}
 
                 {tournament.status === 'upcoming' && tournament.created_by === currentUser?.id && (
                   <Button
@@ -378,43 +349,39 @@ const TournamentDetail = () => {
                   </Button>
                 )}
                 
-                {tournament.status === 'active' && matches.some(m => m.status === 'in_progress') && (
-                  <StartStreamButton
-                    duelId={matches.find(m => m.status === 'in_progress')?.id || ''}
-                    tournamentId={id}
-                    onStreamStarted={(streamId) => {
+                {tournament.status === 'active' && tournament.created_by === currentUser?.id && (
+                  <TournamentWinnerSelector
+                    tournamentId={id!}
+                    participants={participants}
+                    prizePool={tournament.prize_pool}
+                    creatorId={tournament.created_by}
+                    onWinnerSelected={() => {
+                      fetchTournamentData();
                       toast({
-                        title: "Transmissão iniciada!",
-                        description: "O torneio está sendo transmitido ao vivo.",
+                        title: "Torneio finalizado!",
+                        description: "O prêmio foi distribuído ao vencedor.",
+                      });
+                    }}
+                  />
+                )}
+                
+                {tournament.status === 'active' && tournament.created_by === currentUser?.id && (
+                  <TournamentWinnerSelector
+                    tournamentId={id!}
+                    participants={participants}
+                    prizePool={tournament.prize_pool}
+                    creatorId={tournament.created_by}
+                    onWinnerSelected={() => {
+                      fetchTournamentData();
+                      toast({
+                        title: "Torneio finalizado!",
+                        description: "O prêmio foi distribuído ao vencedor.",
                       });
                     }}
                   />
                 )}
               </CardContent>
             </Card>
-
-            {/* Admin Panel for Winner Selection */}
-            {tournament.status === 'active' && tournament.created_by === currentUser?.id && (
-              <Card className="card-mystic">
-                <CardHeader>
-                  <CardTitle>Painel do Organizador</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="mb-4">Selecione o vencedor do torneio para distribuir o prêmio.</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {participants.map((p) => (
-                      <Button
-                        key={p.id}
-                        variant="outline"
-                        onClick={() => handleSelectWinner(p.user_id)}
-                      >
-                        {p.profile.username}
-                      </Button>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
 
             {/* Matches Bracket */}
             {matches.length > 0 && (
@@ -438,12 +405,12 @@ const TournamentDetail = () => {
                                 <div className="flex-1">
                                    <div className="flex items-center gap-2 mb-2">
                                      <span className={match.winner_id === match.player1_id ? 'font-bold text-primary' : ''}>
-                                       {match.player1?.username || 'TBD'}
+                                       {match.player1?.[0]?.username || 'TBD'}
                                      </span>
                                    </div>
                                    <div className="flex items-center gap-2">
                                      <span className={match.winner_id === match.player2_id ? 'font-bold text-primary' : ''}>
-                                       {match.player2?.username || 'TBD'}
+                                       {match.player2?.[0]?.username || 'TBD'}
                                      </span>
                                    </div>
                                 </div>
@@ -483,9 +450,9 @@ const TournamentDetail = () => {
                           <span className="text-xs font-bold">{index + 1}</span>
                         </div>
                          <div className="flex-1">
-                           <p className="font-medium">{participant.profile?.username}</p>
+                           <p className="font-medium">{participant.profiles?.username}</p>
                            <p className="text-xs text-muted-foreground">
-                             Pontos: {participant.profile?.points || 0}
+                             Pontos: {participant.profiles?.points || 0}
                            </p>
                          </div>
                         {participant.placement && (
