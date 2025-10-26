@@ -8,7 +8,7 @@ import { Navbar } from "@/components/Navbar";
 import { DuelChat } from "@/components/DuelChat";
 import { FloatingCalculator } from "@/components/FloatingCalculator";
 import { StartStreamButton } from "@/components/StartStreamButton";
-import { HideElementsButton } from "@/components/HideElementsButton";
+import { HideTimerButton } from "@/components/HideTimerButton";
 import { useBanCheck } from "@/hooks/useBanCheck";
 
 const DuelRoom = () => {
@@ -26,7 +26,7 @@ const DuelRoom = () => {
   const [roomUrl, setRoomUrl] = useState<string>('');
   const [isTimerPaused, setIsTimerPaused] = useState(false);
   const [judgeCalled, setJudgeCalled] = useState(false);
-  const [elementsHidden, setElementsHidden] = useState(false);
+  const [timerHidden, setTimerHidden] = useState(false);
   const isTimerPausedRef = useRef(false);
   const callStartTime = useRef<number | null>(null);
   const timerInterval = useRef<NodeJS.Timeout | null>(null);
@@ -753,138 +753,127 @@ const DuelRoom = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {!elementsHidden && <Navbar />}
+      <Navbar />
       
       <main className="px-2 sm:px-4 pt-16 sm:pt-20 pb-2 sm:pb-4">
         <div className="h-[calc(100vh-80px)] sm:h-[calc(100vh-100px)] relative">
           {/* Video Call - Daily.co */}
-          {!elementsHidden && (
-            <div className="h-full w-full rounded-lg overflow-hidden bg-card shadow-2xl border border-primary/20">
-              {roomUrl ? (
-                <iframe
-                  src={roomUrl}
-                  allow="camera; microphone; fullscreen; speaker; display-capture; autoplay"
-                  className="w-full h-full"
-                  title="Daily.co Video Call"
-                  onLoad={() => console.log('Iframe loaded')}
-                  onError={(e) => console.error('Iframe error:', e)}
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <div className="text-center space-y-4">
-                    <Loader2 className="w-12 h-12 mx-auto text-primary animate-spin" />
-                    <div>
-                      <p className="text-muted-foreground mb-2">Carregando sala de vídeo...</p>
-                      <p className="text-xs text-muted-foreground">ID: {id}</p>
-                    </div>
+          <div className="h-full w-full rounded-lg overflow-hidden bg-card shadow-2xl border border-primary/20">
+            {roomUrl ? (
+              <iframe
+                src={roomUrl}
+                allow="camera; microphone; fullscreen; speaker; display-capture; autoplay"
+                className="w-full h-full"
+                title="Daily.co Video Call"
+                onLoad={() => console.log('Iframe loaded')}
+                onError={(e) => console.error('Iframe error:', e)}
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <div className="text-center space-y-4">
+                  <Loader2 className="w-12 h-12 mx-auto text-primary animate-spin" />
+                  <div>
+                    <p className="text-muted-foreground mb-2">Carregando sala de vídeo...</p>
+                    <p className="text-xs text-muted-foreground">ID: {id}</p>
                   </div>
                 </div>
-              )}
-            </div>
-          )}
+              </div>
+            )}
+          </div>
 
           {/* Botão de Sair e Timer - Fixo no canto superior direito */}
           <div className="absolute top-2 sm:top-4 right-2 sm:right-4 z-50 flex flex-col sm:flex-row gap-2 items-end sm:items-center">
-            {!elementsHidden && (
-              <>
-                {/* Badge de juiz */}
-                {isJudge && (
-                  <div className="px-2 sm:px-3 py-1 sm:py-2 rounded-lg backdrop-blur-sm text-xs sm:text-sm font-bold bg-purple-500/95 text-white flex items-center gap-1">
-                    <Scale className="w-3 h-3 sm:w-4 sm:h-4" />
-                    Juiz
-                  </div>
-                )}
-
-                {/* Badge de modo espectador */}
-                {isSpectator && !isJudge && (
-                  <div className="px-2 sm:px-3 py-1 sm:py-2 rounded-lg backdrop-blur-sm text-xs sm:text-sm font-bold bg-purple-500/95 text-white">
-                    👁️ Espectador
-                  </div>
-                )}
-
-                {/* Badge de Tipo de Partida */}
-                {duel && (
-                  <div className={`px-2 sm:px-3 py-1 sm:py-2 rounded-lg backdrop-blur-sm text-xs sm:text-sm font-bold ${
-                    duel.is_ranked
-                      ? 'bg-yellow-500/95 text-black'
-                      : 'bg-blue-500/95 text-white'
-                  }`}>
-                    {duel.is_ranked ? '🏆 Ranqueada' : '🎮 Casual'}
-                  </div>
-                )}
-
-                {/* Timer Display - Contagem Regressiva */}
-                <div className={`px-2 sm:px-4 py-1 sm:py-2 rounded-lg backdrop-blur-sm font-mono text-xs sm:text-sm font-bold ${
-                  callDuration <= 300 ? 'bg-destructive/95 text-destructive-foreground animate-pulse' :
-                  callDuration <= 600 ? 'bg-yellow-500/95 text-black' :
-                  'bg-card/95'
-                } ${isTimerPaused ? 'opacity-60' : ''}`}>
-                  {isTimerPaused ? '⏸️' : '⏱️'} {formatTime(callDuration)}
-                </div>
-              </>
+            {/* Badge de juiz */}
+            {isJudge && (
+              <div className="px-2 sm:px-3 py-1 sm:py-2 rounded-lg backdrop-blur-sm text-xs sm:text-sm font-bold bg-purple-500/95 text-white flex items-center gap-1">
+                <Scale className="w-3 h-3 sm:w-4 sm:h-4" />
+                Juiz
+              </div>
+            )}
+            
+            {/* Badge de modo espectador */}
+            {isSpectator && !isJudge && (
+              <div className="px-2 sm:px-3 py-1 sm:py-2 rounded-lg backdrop-blur-sm text-xs sm:text-sm font-bold bg-purple-500/95 text-white">
+                👁️ Espectador
+              </div>
+            )}
+            
+            {/* Badge de Tipo de Partida */}
+            {duel && (
+              <div className={`px-2 sm:px-3 py-1 sm:py-2 rounded-lg backdrop-blur-sm text-xs sm:text-sm font-bold ${
+                duel.is_ranked 
+                  ? 'bg-yellow-500/95 text-black' 
+                  : 'bg-blue-500/95 text-white'
+              }`}>
+                {duel.is_ranked ? '🏆 Ranqueada' : '🎮 Casual'}
+              </div>
+            )}
+            
+            {/* Timer Display - Contagem Regressiva */}
+            {!timerHidden && (
+              <div className={`px-2 sm:px-4 py-1 sm:py-2 rounded-lg backdrop-blur-sm font-mono text-xs sm:text-sm font-bold ${
+                callDuration <= 300 ? 'bg-destructive/95 text-destructive-foreground animate-pulse' : 
+                callDuration <= 600 ? 'bg-yellow-500/95 text-black' : 
+                'bg-card/95'
+              } ${isTimerPaused ? 'opacity-60' : ''}`}>
+                {isTimerPaused ? '⏸️' : '⏱️'} {formatTime(callDuration)}
+              </div>
             )}
             
             <div className="flex gap-1 sm:gap-2">
-              {/* O botão de Ocultar fica sempre visível para participantes */}
-              {isParticipant && !isJudge && <HideElementsButton onToggle={setElementsHidden} />}
-
-              {/* Todos os outros botões são agrupados e controlados por `elementsHidden` */}
-              {!elementsHidden && (
+              {isParticipant && !isJudge && (
                 <>
-                  {isParticipant && !isJudge && (
-                    <>
-                      <StartStreamButton
-                        duelId={id!}
-                        onStreamStarted={(streamId) => {
-                          toast({
-                            title: "Transmissão iniciada!",
-                            description: "Sua partida está sendo transmitida ao vivo.",
-                          });
-                        }}
-                      />
-                      <Button
-                        onClick={callJudge}
-                        disabled={judgeCalled}
-                        variant="outline"
-                        size="sm"
-                        className="bg-purple-600/95 hover:bg-purple-700 text-white backdrop-blur-sm text-xs sm:text-sm"
-                        title="Chamar Juiz"
-                      >
-                        <Scale className="w-3 h-3 sm:w-4 sm:h-4" />
-                        {judgeCalled && <span className="ml-1 hidden sm:inline">✓</span>}
-                      </Button>
-                      <Button
-                        onClick={toggleTimerPause}
-                        variant="outline"
-                        size="sm"
-                        className="bg-card/95 backdrop-blur-sm text-xs sm:text-sm"
-                        title={isTimerPaused ? "Retomar timer" : "Pausar timer"}
-                      >
-                        {isTimerPaused ? '▶️' : '⏸️'}
-                      </Button>
-                      <Button
-                        onClick={() => endDuel()}
-                        variant="outline"
-                        size="sm"
-                        className="bg-green-600/95 hover:bg-green-700 text-white backdrop-blur-sm text-xs sm:text-sm"
-                        title="Finalizar partida"
-                      >
-                        <span className="hidden sm:inline">Finalizar</span>
-                        <span className="sm:hidden">Fim</span>
-                      </Button>
-                    </>
-                  )}
+                  <StartStreamButton 
+                    duelId={id!} 
+                    onStreamStarted={(streamId) => {
+                      toast({
+                        title: "Transmissão iniciada!",
+                        description: "Sua partida está sendo transmitida ao vivo.",
+                      });
+                    }}
+                  />
+                  <HideTimerButton onToggle={setTimerHidden} />
                   <Button
-                    onClick={handleLeave}
-                    variant="destructive"
+                    onClick={callJudge}
+                    disabled={judgeCalled}
+                    variant="outline"
                     size="sm"
-                    className="bg-destructive/95 backdrop-blur-sm text-xs sm:text-sm"
+                    className="bg-purple-600/95 hover:bg-purple-700 text-white backdrop-blur-sm text-xs sm:text-sm"
+                    title="Chamar Juiz"
                   >
-                    <PhoneOff className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
-                    <span className="hidden sm:inline">Sair</span>
+                    <Scale className="w-3 h-3 sm:w-4 sm:h-4" />
+                    {judgeCalled && <span className="ml-1 hidden sm:inline">✓</span>}
+                  </Button>
+                  <Button
+                    onClick={toggleTimerPause}
+                    variant="outline"
+                    size="sm"
+                    className="bg-card/95 backdrop-blur-sm text-xs sm:text-sm"
+                    title={isTimerPaused ? "Retomar timer" : "Pausar timer"}
+                  >
+                    {isTimerPaused ? '▶️' : '⏸️'}
+                  </Button>
+                  <Button
+                    onClick={() => endDuel()}
+                    variant="outline"
+                    size="sm"
+                    className="bg-green-600/95 hover:bg-green-700 text-white backdrop-blur-sm text-xs sm:text-sm"
+                    title="Finalizar partida"
+                  >
+                    <span className="hidden sm:inline">Finalizar</span>
+                    <span className="sm:hidden">Fim</span>
                   </Button>
                 </>
               )}
+              <Button
+                onClick={handleLeave}
+                variant="destructive"
+                size="sm"
+                className="bg-destructive/95 backdrop-blur-sm text-xs sm:text-sm"
+              >
+                <PhoneOff className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Sair</span>
+              </Button>
             </div>
           </div>
         </div>
@@ -904,7 +893,7 @@ const DuelRoom = () => {
       )}
 
       {/* Chat Component */}
-      {!elementsHidden && currentUser && (
+      {currentUser && (
         <DuelChat duelId={id!} currentUserId={currentUser.id} />
       )}
     </div>

@@ -7,7 +7,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Users, Send } from "lucide-react";
 import DailyIframe from '@daily-co/daily-js';
-import { FloatingCalculator } from "@/components/FloatingCalculator";
 
 const StreamViewer = () => {
   const { streamId } = useParams();
@@ -18,9 +17,6 @@ const StreamViewer = () => {
   const [messageInput, setMessageInput] = useState("");
   const [viewersCount, setViewersCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [duel, setDuel] = useState<any>(null);
-  const [player1LP, setPlayer1LP] = useState(8000);
-  const [player2LP, setPlayer2LP] = useState(8000);
   const callFrameRef = useRef<any>(null);
   const iframeRef = useRef<HTMLDivElement>(null);
 
@@ -65,11 +61,6 @@ const StreamViewer = () => {
       setStream(data);
       await initializeDailyCall(data);
       
-      // Se a stream for de um duelo, buscar dados do duelo
-      if (data.duel_id) {
-        await fetchDuelData(data.duel_id);
-      }
-
       // Atualizar contador de viewers
       await supabase
         .from('live_streams')
@@ -85,54 +76,6 @@ const StreamViewer = () => {
       navigate('/live-streams');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchDuelData = async (duelId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('live_duels')
-        .select(`
-          *,
-          creator:profiles!live_duels_creator_id_fkey(username),
-          opponent:profiles!live_duels_opponent_id_fkey(username)
-        `)
-        .eq('id', duelId)
-        .single();
-
-      if (error) throw error;
-
-      setDuel(data);
-      setPlayer1LP(data.player1_lp);
-      setPlayer2LP(data.player2_lp);
-
-      // Setup realtime para LPs
-      const channel = supabase
-        .channel(`duel-lp-update-${duelId}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'live_duels',
-            filter: `id=eq.${duelId}`
-          },
-          (payload) => {
-            setPlayer1LP(payload.new.player1_lp);
-            setPlayer2LP(payload.new.player2_lp);
-          }
-        )
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
-
-    } catch (error: any) {
-      toast({
-        title: "Erro ao carregar dados do duelo",
-        description: error.message,
-      });
     }
   };
 
@@ -257,24 +200,11 @@ const StreamViewer = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-          <div className="lg:col-span-3 relative">
+          <div className="lg:col-span-3">
             <div 
               ref={iframeRef} 
               className="w-full aspect-video bg-black rounded-lg"
             />
-            {duel && (
-              <div className="absolute inset-0 pointer-events-none">
-                <FloatingCalculator
-                  player1Name={duel.creator?.username || 'Player 1'}
-                  player2Name={duel.opponent?.username || 'Player 2'}
-                  player1LP={player1LP}
-                  player2LP={player2LP}
-                  onUpdateLP={() => {}} // Read-only
-                  onSetLP={() => {}} // Read-only
-                  currentUserPlayer={null} // Viewer
-                />
-              </div>
-            )}
           </div>
 
           <Card className="card-mystic lg:col-span-1">
