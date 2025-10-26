@@ -429,6 +429,7 @@ export type Database = {
           created_at: string | null
           daily_room_name: string
           daily_room_url: string
+          duel_id: string | null
           ended_at: string | null
           featured: boolean | null
           id: string
@@ -444,6 +445,7 @@ export type Database = {
           created_at?: string | null
           daily_room_name: string
           daily_room_url: string
+          duel_id?: string | null
           ended_at?: string | null
           featured?: boolean | null
           id?: string
@@ -459,6 +461,7 @@ export type Database = {
           created_at?: string | null
           daily_room_name?: string
           daily_room_url?: string
+          duel_id?: string | null
           ended_at?: string | null
           featured?: boolean | null
           id?: string
@@ -471,6 +474,13 @@ export type Database = {
           viewers_count?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "live_streams_duel_id_fkey"
+            columns: ["duel_id"]
+            isOneToOne: false
+            referencedRelation: "live_duels"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "live_streams_match_id_fkey"
             columns: ["match_id"]

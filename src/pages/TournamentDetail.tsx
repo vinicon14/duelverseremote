@@ -9,6 +9,7 @@ import { Trophy, Users, Calendar, Coins, ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { StartStreamButton } from "@/components/StartStreamButton";
+import { TournamentWinnerSelector } from "@/components/TournamentWinnerSelector";
 
 const TournamentDetail = () => {
   const { id } = useParams();
@@ -292,11 +293,49 @@ const TournamentDetail = () => {
 
                 {/* Botão de participar se ainda não está inscrito */}
                 {tournament.status === 'upcoming' && 
+                 tournament.created_by !== currentUser?.id &&
                  !participants.some(p => p.user_id === currentUser?.id) && 
                  participants.length < tournament.max_participants && (
                   <Button
                     onClick={async () => {
                       try {
+                        // Verificar saldo
+                        const { data: profile } = await supabase
+                          .from('profiles')
+                          .select('duelcoins_balance')
+                          .eq('user_id', currentUser?.id)
+                          .single();
+
+                        if (!profile || profile.duelcoins_balance < tournament.entry_fee) {
+                          toast({
+                            title: "Saldo insuficiente",
+                            description: `Você precisa de ${tournament.entry_fee} DuelCoins para participar`,
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+
+                        // Transferir DuelCoins
+                        if (tournament.entry_fee > 0) {
+                          const { data: transferResult, error: transferError } = await supabase.rpc('transfer_duelcoins', {
+                            p_receiver_id: tournament.created_by,
+                            p_amount: tournament.entry_fee
+                          });
+
+                          if (transferError) throw transferError;
+
+                          const result = transferResult as any;
+                          if (!result.success) {
+                            toast({
+                              title: "Erro na transferência",
+                              description: result.message,
+                              variant: "destructive",
+                            });
+                            return;
+                          }
+                        }
+
+                        // Inscrever
                         const { error } = await supabase
                           .from('tournament_participants')
                           .insert({
@@ -307,9 +346,16 @@ const TournamentDetail = () => {
 
                         if (error) throw error;
 
+                        // Atualizar prize pool
+                        const newPrizePool = (tournament.prize_pool || 0) + tournament.entry_fee;
+                        await supabase
+                          .from('tournaments')
+                          .update({ prize_pool: newPrizePool })
+                          .eq('id', id);
+
                         toast({
                           title: "Inscrito com sucesso!",
-                          description: "Você está participando deste torneio.",
+                          description: `Você está participando! ${tournament.entry_fee} DuelCoins transferidos.`,
                         });
 
                         await fetchTournamentData();
@@ -323,7 +369,7 @@ const TournamentDetail = () => {
                     }}
                     className="w-full btn-mystic text-white"
                   >
-                    Participar do Torneio
+                    Participar ({tournament.entry_fee} DuelCoins)
                   </Button>
                 )}
 
@@ -337,14 +383,33 @@ const TournamentDetail = () => {
                   </Button>
                 )}
                 
-                {tournament.status === 'active' && matches.some(m => m.status === 'in_progress') && (
-                  <StartStreamButton
-                    duelId={matches.find(m => m.status === 'in_progress')?.id || ''}
-                    tournamentId={id}
-                    onStreamStarted={(streamId) => {
+                {tournament.status === 'active' && tournament.created_by === currentUser?.id && (
+                  <TournamentWinnerSelector
+                    tournamentId={id!}
+                    participants={participants}
+                    prizePool={tournament.prize_pool}
+                    creatorId={tournament.created_by}
+                    onWinnerSelected={() => {
+                      fetchTournamentData();
                       toast({
-                        title: "Transmissão iniciada!",
-                        description: "O torneio está sendo transmitido ao vivo.",
+                        title: "Torneio finalizado!",
+                        description: "O prêmio foi distribuído ao vencedor.",
+                      });
+                    }}
+                  />
+                )}
+                
+                {tournament.status === 'active' && tournament.created_by === currentUser?.id && (
+                  <TournamentWinnerSelector
+                    tournamentId={id!}
+                    participants={participants}
+                    prizePool={tournament.prize_pool}
+                    creatorId={tournament.created_by}
+                    onWinnerSelected={() => {
+                      fetchTournamentData();
+                      toast({
+                        title: "Torneio finalizado!",
+                        description: "O prêmio foi distribuído ao vencedor.",
                       });
                     }}
                   />
