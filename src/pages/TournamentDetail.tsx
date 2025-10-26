@@ -36,56 +36,19 @@ const TournamentDetail = () => {
 
   const fetchTournamentData = async () => {
     try {
-      // Fetch tournament
-      const { data: tournamentData, error: tournamentError } = await supabase
-        .from('tournaments')
-        .select('*')
-        .eq('id', id)
-        .single();
+      const { data, error } = await supabase
+        .rpc('get_tournament_details', {
+          tournament_id_param: id
+        });
 
-      if (tournamentError) throw tournamentError;
-      setTournament(tournamentData);
-
-      // Fetch participants
-      const { data: participantsData, error: participantsError } = await supabase
-        .from('tournament_participants')
-        .select(`
-          id,
-          user_id,
-          status,
-          score,
-          wins,
-          losses,
-          registered_at,
-          profile:profiles!user_id(username, points)
-        `)
-        .eq('tournament_id', id)
-        .order('score', { ascending: false });
-
-      if (participantsError) throw participantsError;
-      setParticipants(participantsData || []);
-
-      // Fetch matches
-      const { data: matchesData, error: matchesError } = await supabase
-        .from('tournament_matches')
-        .select(`
-          id,
-          round,
-          player1_id,
-          player2_id,
-          winner_id,
-          status,
-          scheduled_at,
-          player1:profiles!tournament_matches_player1_id_fkey(username, points),
-          player2:profiles!tournament_matches_player2_id_fkey(username, points)
-        `)
-        .eq('tournament_id', id)
-        .order('round', { ascending: true });
-
-      if (matchesError) throw matchesError;
-      setMatches(matchesData || []);
+      if (error) throw error;
       
-      // Setup realtime listener for tournament updates
+      if (data) {
+        setTournament(data);
+        setParticipants(data.participants || []);
+        setMatches(data.matches || []);
+      }
+
       const channel = supabase
         .channel(`tournament-${id}`)
         .on(
@@ -404,11 +367,11 @@ const TournamentDetail = () => {
                   <div className="grid grid-cols-2 gap-2">
                     {participants.map((p) => (
                       <Button
-                        key={p.id}
+                        key={p.user_id}
                         variant="outline"
                         onClick={() => handleSelectWinner(p.user_id)}
                       >
-                        {p.profile.username}
+                        {p.username}
                       </Button>
                     ))}
                   </div>
@@ -476,16 +439,16 @@ const TournamentDetail = () => {
               <CardContent>
                 <div className="space-y-3">
                   {participants.map((participant, index) => (
-                    <div key={participant.id}>
+                    <div key={participant.user_id}>
                       {index > 0 && <Separator className="my-3" />}
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
                           <span className="text-xs font-bold">{index + 1}</span>
                         </div>
                          <div className="flex-1">
-                           <p className="font-medium">{participant.profile?.username}</p>
+                           <p className="font-medium">{participant.username}</p>
                            <p className="text-xs text-muted-foreground">
-                             Pontos: {participant.profile?.points || 0}
+                             Pontos: {participant.points || 0}
                            </p>
                          </div>
                         {participant.placement && (
