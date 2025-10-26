@@ -825,64 +825,65 @@ const DuelRoom = () => {
             )}
             
             <div className="flex gap-1 sm:gap-2">
-              {!elementsHidden && isParticipant && !isJudge && (
-                <StartStreamButton
-                  duelId={id!}
-                  onStreamStarted={(streamId) => {
-                    toast({
-                      title: "Transmissão iniciada!",
-                      description: "Sua partida está sendo transmitida ao vivo.",
-                    });
-                  }}
-                />
-              )}
-
+              {/* O botão de Ocultar fica sempre visível para participantes */}
               {isParticipant && !isJudge && <HideElementsButton onToggle={setElementsHidden} />}
 
-              {!elementsHidden && isParticipant && !isJudge && (
+              {/* Todos os outros botões são agrupados e controlados por `elementsHidden` */}
+              {!elementsHidden && (
                 <>
+                  {isParticipant && !isJudge && (
+                    <>
+                      <StartStreamButton
+                        duelId={id!}
+                        onStreamStarted={(streamId) => {
+                          toast({
+                            title: "Transmissão iniciada!",
+                            description: "Sua partida está sendo transmitida ao vivo.",
+                          });
+                        }}
+                      />
+                      <Button
+                        onClick={callJudge}
+                        disabled={judgeCalled}
+                        variant="outline"
+                        size="sm"
+                        className="bg-purple-600/95 hover:bg-purple-700 text-white backdrop-blur-sm text-xs sm:text-sm"
+                        title="Chamar Juiz"
+                      >
+                        <Scale className="w-3 h-3 sm:w-4 sm:h-4" />
+                        {judgeCalled && <span className="ml-1 hidden sm:inline">✓</span>}
+                      </Button>
+                      <Button
+                        onClick={toggleTimerPause}
+                        variant="outline"
+                        size="sm"
+                        className="bg-card/95 backdrop-blur-sm text-xs sm:text-sm"
+                        title={isTimerPaused ? "Retomar timer" : "Pausar timer"}
+                      >
+                        {isTimerPaused ? '▶️' : '⏸️'}
+                      </Button>
+                      <Button
+                        onClick={() => endDuel()}
+                        variant="outline"
+                        size="sm"
+                        className="bg-green-600/95 hover:bg-green-700 text-white backdrop-blur-sm text-xs sm:text-sm"
+                        title="Finalizar partida"
+                      >
+                        <span className="hidden sm:inline">Finalizar</span>
+                        <span className="sm:hidden">Fim</span>
+                      </Button>
+                    </>
+                  )}
                   <Button
-                    onClick={callJudge}
-                    disabled={judgeCalled}
-                    variant="outline"
+                    onClick={handleLeave}
+                    variant="destructive"
                     size="sm"
-                    className="bg-purple-600/95 hover:bg-purple-700 text-white backdrop-blur-sm text-xs sm:text-sm"
-                    title="Chamar Juiz"
+                    className="bg-destructive/95 backdrop-blur-sm text-xs sm:text-sm"
                   >
-                    <Scale className="w-3 h-3 sm:w-4 sm:h-4" />
-                    {judgeCalled && <span className="ml-1 hidden sm:inline">✓</span>}
-                  </Button>
-                  <Button
-                    onClick={toggleTimerPause}
-                    variant="outline"
-                    size="sm"
-                    className="bg-card/95 backdrop-blur-sm text-xs sm:text-sm"
-                    title={isTimerPaused ? "Retomar timer" : "Pausar timer"}
-                  >
-                    {isTimerPaused ? '▶️' : '⏸️'}
-                  </Button>
-                  <Button
-                    onClick={() => endDuel()}
-                    variant="outline"
-                    size="sm"
-                    className="bg-green-600/95 hover:bg-green-700 text-white backdrop-blur-sm text-xs sm:text-sm"
-                    title="Finalizar partida"
-                  >
-                    <span className="hidden sm:inline">Finalizar</span>
-                    <span className="sm:hidden">Fim</span>
+                    <PhoneOff className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Sair</span>
                   </Button>
                 </>
-              )}
-              {!elementsHidden && (
-                <Button
-                  onClick={handleLeave}
-                  variant="destructive"
-                  size="sm"
-                  className="bg-destructive/95 backdrop-blur-sm text-xs sm:text-sm"
-                >
-                  <PhoneOff className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Sair</span>
-                </Button>
               )}
             </div>
           </div>
