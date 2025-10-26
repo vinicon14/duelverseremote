@@ -8,8 +8,8 @@ import { Navbar } from "@/components/Navbar";
 import { DuelChat } from "@/components/DuelChat";
 import { FloatingCalculator } from "@/components/FloatingCalculator";
 import { StartStreamButton } from "@/components/StartStreamButton";
-import { HideTimerButton } from "@/components/HideTimerButton";
 import { useBanCheck } from "@/hooks/useBanCheck";
+import { useAccountType } from "@/hooks/useAccountType";
 
 const DuelRoom = () => {
   useBanCheck(); // Proteger contra usuários banidos
@@ -26,12 +26,12 @@ const DuelRoom = () => {
   const [roomUrl, setRoomUrl] = useState<string>('');
   const [isTimerPaused, setIsTimerPaused] = useState(false);
   const [judgeCalled, setJudgeCalled] = useState(false);
-  const [timerHidden, setTimerHidden] = useState(false);
   const isTimerPausedRef = useRef(false);
   const callStartTime = useRef<number | null>(null);
   const timerInterval = useRef<NodeJS.Timeout | null>(null);
   const pausedTime = useRef<number>(0);
   const lastPauseTime = useRef<number>(0);
+  const { isPro } = useAccountType();
   
   const isJudge = searchParams.get('role') === 'judge';
 
@@ -810,29 +810,28 @@ const DuelRoom = () => {
             )}
             
             {/* Timer Display - Contagem Regressiva */}
-            {!timerHidden && (
-              <div className={`px-2 sm:px-4 py-1 sm:py-2 rounded-lg backdrop-blur-sm font-mono text-xs sm:text-sm font-bold ${
-                callDuration <= 300 ? 'bg-destructive/95 text-destructive-foreground animate-pulse' : 
-                callDuration <= 600 ? 'bg-yellow-500/95 text-black' : 
-                'bg-card/95'
-              } ${isTimerPaused ? 'opacity-60' : ''}`}>
-                {isTimerPaused ? '⏸️' : '⏱️'} {formatTime(callDuration)}
-              </div>
-            )}
+            <div className={`px-2 sm:px-4 py-1 sm:py-2 rounded-lg backdrop-blur-sm font-mono text-xs sm:text-sm font-bold ${
+              callDuration <= 300 ? 'bg-destructive/95 text-destructive-foreground animate-pulse' : 
+              callDuration <= 600 ? 'bg-yellow-500/95 text-black' : 
+              'bg-card/95'
+            } ${isTimerPaused ? 'opacity-60' : ''}`}>
+              {isTimerPaused ? '⏸️' : '⏱️'} {formatTime(callDuration)}
+            </div>
             
-            <div className="flex gap-1 sm:gap-2">
+            <div className="flex gap-2">
               {isParticipant && !isJudge && (
                 <>
-                  <StartStreamButton 
-                    duelId={id!} 
-                    onStreamStarted={(streamId) => {
-                      toast({
-                        title: "Transmissão iniciada!",
-                        description: "Sua partida está sendo transmitida ao vivo.",
-                      });
-                    }}
-                  />
-                  <HideTimerButton onToggle={setTimerHidden} />
+                  {isPro && (
+                    <StartStreamButton
+                      duelId={id!}
+                      onStreamStarted={(streamId) => {
+                        toast({
+                          title: "Transmissão iniciada!",
+                          description: "Sua partida está sendo transmitida ao vivo.",
+                        });
+                      }}
+                    />
+                  )}
                   <Button
                     onClick={callJudge}
                     disabled={judgeCalled}
@@ -849,7 +848,6 @@ const DuelRoom = () => {
                     variant="outline"
                     size="sm"
                     className="bg-card/95 backdrop-blur-sm text-xs sm:text-sm"
-                    title={isTimerPaused ? "Retomar timer" : "Pausar timer"}
                   >
                     {isTimerPaused ? '▶️' : '⏸️'}
                   </Button>
@@ -857,11 +855,9 @@ const DuelRoom = () => {
                     onClick={() => endDuel()}
                     variant="outline"
                     size="sm"
-                    className="bg-green-600/95 hover:bg-green-700 text-white backdrop-blur-sm text-xs sm:text-sm"
-                    title="Finalizar partida"
+                    className="bg-card/95 backdrop-blur-sm text-xs sm:text-sm"
                   >
-                    <span className="hidden sm:inline">Finalizar</span>
-                    <span className="sm:hidden">Fim</span>
+                    Finalizar
                   </Button>
                 </>
               )}
