@@ -23,7 +23,7 @@ export const HideElementsButton = ({ onToggle }: HideElementsButtonProps) => {
       className="bg-card/95 backdrop-blur-sm"
       title={hidden ? "Mostrar controles" : "Ocultar controles"}
     >
-      {hidden ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+      {hidden ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
     </Button>
   );
 };

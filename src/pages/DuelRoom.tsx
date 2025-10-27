@@ -34,6 +34,7 @@ const DuelRoom = () => {
   const lastPauseTime = useRef<number>(0);
   
   const isJudge = searchParams.get('role') === 'judge';
+  const [hideControls, setHideControls] = useState(false);
 
   // Carrega dados do duelo e inicia timer
   useEffect(() => {
@@ -753,39 +754,37 @@ const DuelRoom = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {!elementsHidden && <Navbar />}
+      {!hideControls && <Navbar />}
       
       <main className="px-2 sm:px-4 pt-16 sm:pt-20 pb-2 sm:pb-4">
         <div className="h-[calc(100vh-80px)] sm:h-[calc(100vh-100px)] relative">
-          {/* Video Call - Daily.co */}
-          {!elementsHidden && (
-            <div className="h-full w-full rounded-lg overflow-hidden bg-card shadow-2xl border border-primary/20">
-              {roomUrl ? (
-                <iframe
-                  src={roomUrl}
-                  allow="camera; microphone; fullscreen; speaker; display-capture; autoplay"
-                  className="w-full h-full"
-                  title="Daily.co Video Call"
-                  onLoad={() => console.log('Iframe loaded')}
-                  onError={(e) => console.error('Iframe error:', e)}
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <div className="text-center space-y-4">
-                    <Loader2 className="w-12 h-12 mx-auto text-primary animate-spin" />
-                    <div>
-                      <p className="text-muted-foreground mb-2">Carregando sala de vídeo...</p>
-                      <p className="text-xs text-muted-foreground">ID: {id}</p>
-                    </div>
+          {/* Video Call - Daily.co - SEMPRE VISÍVEL */}
+          <div className="h-full w-full rounded-lg overflow-hidden bg-card shadow-2xl border border-primary/20">
+            {roomUrl ? (
+              <iframe
+                src={roomUrl}
+                allow="camera; microphone; fullscreen; speaker; display-capture; autoplay"
+                className="w-full h-full"
+                title="Daily.co Video Call"
+                onLoad={() => console.log('Iframe loaded')}
+                onError={(e) => console.error('Iframe error:', e)}
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <div className="text-center space-y-4">
+                  <Loader2 className="w-12 h-12 mx-auto text-primary animate-spin" />
+                  <div>
+                    <p className="text-muted-foreground mb-2">Carregando sala de vídeo...</p>
+                    <p className="text-xs text-muted-foreground">ID: {id}</p>
                   </div>
                 </div>
-              )}
-            </div>
-          )}
+              </div>
+            )}
+          </div>
 
           {/* Botão de Sair e Timer - Fixo no canto superior direito */}
           <div className="absolute top-2 sm:top-4 right-2 sm:right-4 z-50 flex flex-col sm:flex-row gap-2 items-end sm:items-center">
-            {!elementsHidden && (
+            {!hideControls && (
               <>
                 {/* Badge de juiz */}
                 {isJudge && (
@@ -826,10 +825,10 @@ const DuelRoom = () => {
             
             <div className="flex gap-1 sm:gap-2">
               {/* O botão de Ocultar fica sempre visível para participantes */}
-              {isParticipant && !isJudge && <HideElementsButton onToggle={setElementsHidden} />}
+              {isParticipant && !isJudge && <HideElementsButton onToggle={setHideControls} />}
 
-              {/* Todos os outros botões são agrupados e controlados por `elementsHidden` */}
-              {!elementsHidden && (
+              {/* Todos os outros botões são agrupados e controlados por `hideControls` */}
+              {!hideControls && (
                 <>
                   {isParticipant && !isJudge && (
                     <>
@@ -904,7 +903,7 @@ const DuelRoom = () => {
       )}
 
       {/* Chat Component */}
-      {!elementsHidden && currentUser && (
+      {!hideControls && currentUser && (
         <DuelChat duelId={id!} currentUserId={currentUser.id} />
       )}
     </div>
