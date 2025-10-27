@@ -231,24 +231,13 @@ export default function Matchmaking() {
     }
   };
 
-  const createMatchAndRedirect = async (player1Id: string, player2Id: string, myQueueId: string, ranked: boolean) => {
+  const createMatchAndRedirect = async (player1Id: string, player2Id: string, queueIdToRemove: string, ranked: boolean) => {
     try {
       console.log('🎮 Creating match between', player1Id, 'and', player2Id);
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
-      
-      // Obter IDs das entradas da fila de ambos jogadores
-      const { data: queueEntries } = await supabase
-        .from('matchmaking_queue')
-        .select('id, user_id')
-        .in('user_id', [player1Id, player2Id])
-        .eq('status', 'waiting');
 
-      const queueIdsToDelete = queueEntries?.map(entry => entry.id) || [myQueueId];
-
-      console.log('📋 Queue IDs to process:', queueIdsToDelete);
-
-      // Criar duelo PRIMEIRO
+      // Criar duelo
       const { data: duel, error } = await supabase
         .from('live_duels')
         .insert({
@@ -267,47 +256,40 @@ export default function Matchmaking() {
 
       console.log('🎯 Match created, duel ID:', duel.id);
 
-      // DEPOIS: Atualizar status e DUEL_ID para notificar o outro jogador
-      // Importante: atualizar ANTES de fazer cleanup para que o listener capture
-      await supabase
+      // Atualizar AMBAS as entradas da fila com duel_id
+      const { data: allQueues } = await supabase
         .from('matchmaking_queue')
-        .update({ status: 'matched', duel_id: duel.id })
-        .in('id', queueIdsToDelete);
+        .select('id')
+        .in('user_id', [player1Id, player2Id])
+        .eq('status', 'waiting');
 
-      console.log('✅ Updated queue entries to matched with duel ID');
+      if (allQueues && allQueues.length > 0) {
+        // Atualizar para matched com duel_id
+        await supabase
+          .from('matchmaking_queue')
+          .update({ status: 'matched', duel_id: duel.id })
+          .in('id', allQueues.map(q => q.id));
 
-      // Aguardar um pouco mais para garantir que o evento chegue ao outro jogador
-      await new Promise(resolve => setTimeout(resolve, 1000));
+        console.log('✅ Updated both queue entries with duel ID');
 
-      // Limpar fila apenas depois
-      await supabase
-        .from('matchmaking_queue')
-        .delete()
-        .in('id', queueIdsToDelete);
+        // Aguardar para garantir propagação realtime
+        await new Promise(resolve => setTimeout(resolve, 500));
 
-      console.log('🧹 Cleaned up queue entries');
-      
+        // Deletar apenas depois
+        await supabase
+          .from('matchmaking_queue')
+          .delete()
+          .in('id', allQueues.map(q => q.id));
+      }
+
       // Limpar local
-      if (timerInterval.current) {
-        clearInterval(timerInterval.current);
-      }
-      if (queueTimeout.current) {
-        clearTimeout(queueTimeout.current);
-      }
+      await cleanup();
       
       toast.success("🎮 Match encontrado! Redirecionando...");
       
-      // Aguardar um pouco antes de navegar para garantir que tudo foi processado
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      // Navegar para o duelo
+      // Navegar
       navigate(`/duel/${duel.id}`);
       
-      // Limpar canal DEPOIS da navegação para não interromper listeners
-      if (queueChannel.current) {
-        await supabase.removeChannel(queueChannel.current);
-        queueChannel.current = null;
-      }
     } catch (error: any) {
       console.error('❌ Error creating match:', error);
       toast.error("Erro ao criar partida");

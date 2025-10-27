@@ -1,44 +1,126 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.0.0'
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
 
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
 serve(async (req) => {
-  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
-  const { tournament_id, winner_id } = await req.json()
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
 
   try {
-    // 1. Get tournament details
-    const { data: tournament, error: tournamentError } = await supabase
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      {
+        global: {
+          headers: { Authorization: req.headers.get('Authorization')! },
+        },
+      }
+    );
+
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+    if (userError || !user) {
+      throw new Error('Não autorizado');
+    }
+
+    const { tournament_id, winner_id } = await req.json();
+
+    // Buscar torneio
+    const { data: tournament, error: tournamentError } = await supabaseClient
       .from('tournaments')
-      .select('prize_pool, created_by, status')
+      .select('*, created_by, prize_pool')
       .eq('id', tournament_id)
-      .single()
+      .single();
 
-    if (tournamentError) throw tournamentError
-    if (!tournament) throw new Error('Tournament not found')
-    if (tournament.status === 'completed') throw new Error('Tournament is already completed')
+    if (tournamentError || !tournament) {
+      throw new Error('Torneio não encontrado');
+    }
 
-    const { prize_pool, created_by: creator_id } = tournament
+    // Verificar se é o criador do torneio
+    if (tournament.created_by !== user.id) {
+      throw new Error('Apenas o criador pode finalizar o torneio');
+    }
 
-    // 2. Use an RPC call to ensure atomicity
-    const { error: rpcError } = await supabase.rpc('distribute_prize', {
-        p_tournament_id: tournament_id,
-        p_winner_id: winner_id,
-        p_creator_id: creator_id,
-        p_prize_pool: prize_pool
-    })
+    // Verificar se o vencedor é um participante
+    const { data: winner, error: winnerError } = await supabaseClient
+      .from('tournament_participants')
+      .select('user_id')
+      .eq('tournament_id', tournament_id)
+      .eq('user_id', winner_id)
+      .single();
 
-    if (rpcError) throw rpcError
+    if (winnerError || !winner) {
+      throw new Error('Vencedor não é um participante válido');
+    }
 
-    return new Response(JSON.stringify({ success: true, message: 'Prize distributed successfully' }), {
-      headers: { 'Content-Type': 'application/json' },
-    })
-  } catch (error) {
-    return new Response(JSON.stringify({ success: false, message: error.message }), {
-      headers: { 'Content-Type': 'application/json' },
-      status: 500,
-    })
+    // Transferir prize pool para o vencedor
+    if (tournament.prize_pool > 0) {
+      const { data: winnerProfile } = await supabaseClient
+        .from('profiles')
+        .select('duelcoins_balance')
+        .eq('user_id', winner_id)
+        .single();
+
+      if (!winnerProfile) {
+        throw new Error('Perfil do vencedor não encontrado');
+      }
+
+      // Adicionar ao vencedor
+      const { error: addError } = await supabaseClient
+        .from('profiles')
+        .update({ duelcoins_balance: winnerProfile.duelcoins_balance + tournament.prize_pool })
+        .eq('user_id', winner_id);
+
+      if (addError) throw addError;
+
+      // Registrar transação
+      const { error: txError } = await supabaseClient
+        .from('duelcoins_transactions')
+        .insert({
+          sender_id: null,
+          receiver_id: winner_id,
+          amount: tournament.prize_pool,
+          transaction_type: 'tournament_prize',
+          description: `Prêmio do torneio ${tournament.name}`
+        });
+
+      if (txError) throw txError;
+    }
+
+    // Atualizar status do torneio
+    const { error: updateError } = await supabaseClient
+      .from('tournaments')
+      .update({ 
+        status: 'completed',
+        prize_pool: 0 // Zerar prize pool após distribuição
+      })
+      .eq('id', tournament_id);
+
+    if (updateError) throw updateError;
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        message: 'Prêmio distribuído com sucesso!'
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+
+  } catch (error: any) {
+    console.error('Error:', error);
+    return new Response(
+      JSON.stringify({
+        success: false,
+        message: error.message
+      }),
+      {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
+    );
   }
-})
+});

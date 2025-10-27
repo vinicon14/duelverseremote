@@ -299,19 +299,12 @@ const TournamentDetail = () => {
                     <Button
                       onClick={async () => {
                         try {
-                          if (tournament.created_by === currentUser?.id) {
-                            toast({
-                              title: "Você não pode se inscrever no seu próprio torneio.",
-                              variant: "destructive",
-                            });
-                            return;
-                          }
-
+                          setLoading(true);
+                          
                           // Chamar a Edge Function para cobrar a taxa de inscrição
                           const { data, error } = await supabase.functions.invoke('charge-tournament-entry-fee', {
                             body: {
                               tournament_id: id,
-                              participant_id: currentUser?.id,
                             },
                           })
 
@@ -331,11 +324,14 @@ const TournamentDetail = () => {
                             description: error.message,
                             variant: "destructive",
                           });
+                        } finally {
+                          setLoading(false);
                         }
                       }}
                       className="w-full btn-mystic text-white"
+                      disabled={loading}
                     >
-                      Participar ({tournament.entry_fee} DuelCoins)
+                      {loading ? "Processando..." : `Participar (${tournament.entry_fee} DuelCoins)`}
                     </Button>
                   )}
 

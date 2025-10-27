@@ -20,10 +20,10 @@ export const HideElementsButton = ({ onToggle }: HideElementsButtonProps) => {
       onClick={toggle}
       variant="outline"
       size="sm"
-      className="bg-card/95 backdrop-blur-sm text-xs sm:text-sm"
-      title={hidden ? "Mostrar elementos" : "Ocultar elementos"}
+      className="bg-card/95 backdrop-blur-sm"
+      title={hidden ? "Mostrar controles" : "Ocultar controles"}
     >
-      {hidden ? <EyeOff className="w-3 h-3 sm:w-4 sm:h-4" /> : <Eye className="w-3 h-3 sm:w-4 sm:h-4" />}
+      {hidden ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
     </Button>
   );
 };

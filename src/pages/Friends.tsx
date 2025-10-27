@@ -222,19 +222,13 @@ const Friends = () => {
         return;
       }
 
-      // Perguntar se quer ranqueada ou casual
-      const isRanked = window.confirm(
-        "Escolha o tipo de partida:\n\n" +
-        "OK = Ranqueada (vale pontos)\n" +
-        "Cancelar = Casual (não vale pontos)"
-      );
-
+      // Partidas entre amigos são sempre casuais
       const { data: duelData, error: duelError } = await supabase
         .from('live_duels')
         .insert({
           creator_id: currentUser.id,
           status: 'waiting',
-          is_ranked: isRanked,
+          is_ranked: false, // Sempre casual entre amigos
         })
         .select()
         .single();
@@ -257,7 +251,7 @@ const Friends = () => {
 
       toast({
         title: "Desafio enviado!",
-        description: `Convite ${isRanked ? 'ranqueado' : 'casual'} enviado para seu amigo.`,
+        description: "Convite casual enviado para seu amigo.",
       });
 
       navigate(`/duel/${duelData.id}`);

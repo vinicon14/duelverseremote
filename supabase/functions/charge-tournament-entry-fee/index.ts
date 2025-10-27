@@ -1,59 +1,150 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.0.0'
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
 
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
 serve(async (req) => {
-  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
-  const { tournament_id, participant_id } = await req.json()
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
 
   try {
-    // 1. Get tournament details
-    const { data: tournament, error: tournamentError } = await supabase
-      .from('tournaments')
-      .select('entry_fee, created_by')
-      .eq('id', tournament_id)
-      .single()
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      {
+        global: {
+          headers: { Authorization: req.headers.get('Authorization')! },
+        },
+      }
+    );
 
-    if (tournamentError) throw tournamentError
-    if (!tournament) throw new Error('Tournament not found')
-
-    const { entry_fee, created_by: creator_id } = tournament
-
-    // 2. Get participant's profile (and balance)
-    const { data: participantProfile, error: participantError } = await supabase
-      .from('profiles')
-      .select('duelcoins_balance')
-      .eq('user_id', participant_id)
-      .single()
-
-    if (participantError) throw participantError
-    if (!participantProfile) throw new Error('Participant profile not found')
-
-    // 3. Check balance
-    if (participantProfile.duelcoins_balance < entry_fee) {
-      throw new Error('Insufficient DuelCoins balance')
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+    if (userError || !user) {
+      throw new Error('Não autorizado');
     }
 
-    // 4. Perform the transaction
-    // Use an RPC call to ensure atomicity
-    const { error: rpcError } = await supabase.rpc('charge_entry_fee', {
-        p_amount: entry_fee,
-        p_sender_id: participant_id,
-        p_receiver_id: creator_id,
-        p_tournament_id: tournament_id,
-    })
+    const { tournament_id } = await req.json();
 
-    if (rpcError) throw rpcError
+    // Buscar torneio
+    const { data: tournament, error: tournamentError } = await supabaseClient
+      .from('tournaments')
+      .select('*, created_by, entry_fee, prize_pool, max_participants')
+      .eq('id', tournament_id)
+      .single();
 
-    return new Response(JSON.stringify({ success: true, message: 'Entry fee paid successfully' }), {
-      headers: { 'Content-Type': 'application/json' },
-    })
-  } catch (error) {
-    return new Response(JSON.stringify({ success: false, message: error.message }), {
-      headers: { 'Content-Type': 'application/json' },
-      status: 500,
-    })
+    if (tournamentError || !tournament) {
+      throw new Error('Torneio não encontrado');
+    }
+
+    // Verificar se o usuário é o criador
+    if (tournament.created_by === user.id) {
+      throw new Error('O criador do torneio não pode participar');
+    }
+
+    // Verificar se já está inscrito
+    const { data: existingParticipant } = await supabaseClient
+      .from('tournament_participants')
+      .select('id')
+      .eq('tournament_id', tournament_id)
+      .eq('user_id', user.id)
+      .single();
+
+    if (existingParticipant) {
+      throw new Error('Você já está inscrito neste torneio');
+    }
+
+    // Contar participantes
+    const { count } = await supabaseClient
+      .from('tournament_participants')
+      .select('*', { count: 'exact', head: true })
+      .eq('tournament_id', tournament_id);
+
+    if (count && count >= tournament.max_participants) {
+      throw new Error('Torneio lotado');
+    }
+
+    // Buscar perfil do usuário
+    const { data: profile, error: profileError } = await supabaseClient
+      .from('profiles')
+      .select('duelcoins_balance')
+      .eq('user_id', user.id)
+      .single();
+
+    if (profileError || !profile) {
+      throw new Error('Perfil não encontrado');
+    }
+
+    // Verificar saldo
+    if (profile.duelcoins_balance < tournament.entry_fee) {
+      throw new Error('Saldo insuficiente de DuelCoins');
+    }
+
+    // Transferir DuelCoins do participante para o prize pool
+    if (tournament.entry_fee > 0) {
+      // Remover do participante
+      const { error: deductError } = await supabaseClient
+        .from('profiles')
+        .update({ duelcoins_balance: profile.duelcoins_balance - tournament.entry_fee })
+        .eq('user_id', user.id);
+
+      if (deductError) throw deductError;
+
+      // Adicionar ao prize pool
+      const { error: prizeError } = await supabaseClient
+        .from('tournaments')
+        .update({ prize_pool: tournament.prize_pool + tournament.entry_fee })
+        .eq('id', tournament_id);
+
+      if (prizeError) throw prizeError;
+
+      // Registrar transação
+      const { error: txError } = await supabaseClient
+        .from('duelcoins_transactions')
+        .insert({
+          sender_id: user.id,
+          receiver_id: tournament.created_by,
+          amount: tournament.entry_fee,
+          transaction_type: 'tournament_entry',
+          description: `Taxa de inscrição no torneio ${tournament.name}`
+        });
+
+      if (txError) throw txError;
+    }
+
+    // Inscrever no torneio
+    const { error: participantError } = await supabaseClient
+      .from('tournament_participants')
+      .insert({
+        tournament_id,
+        user_id: user.id,
+        status: 'registered'
+      });
+
+    if (participantError) throw participantError;
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        message: 'Inscrição realizada com sucesso!'
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+
+  } catch (error: any) {
+    console.error('Error:', error);
+    return new Response(
+      JSON.stringify({
+        success: false,
+        message: error.message
+      }),
+      {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
+    );
   }
-})
+});
