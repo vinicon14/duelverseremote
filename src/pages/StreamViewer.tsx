@@ -106,7 +106,7 @@ const StreamViewer = () => {
       setPlayer1LP(data.player1_lp);
       setPlayer2LP(data.player2_lp);
 
-      // Setup realtime para LPs
+      // Setup realtime para LPs e status do duelo
       const channel = supabase
         .channel(`duel-lp-update-${duelId}`)
         .on(
@@ -120,6 +120,17 @@ const StreamViewer = () => {
           (payload) => {
             setPlayer1LP(payload.new.player1_lp);
             setPlayer2LP(payload.new.player2_lp);
+            
+            // Se o duelo terminou, encerrar stream
+            if (payload.new.status === 'finished') {
+              toast({
+                title: "Duelo finalizado",
+                description: "A transmissão será encerrada",
+              });
+              setTimeout(() => {
+                navigate('/live-streams');
+              }, 3000);
+            }
           }
         )
         .subscribe();
@@ -145,10 +156,11 @@ const StreamViewer = () => {
 
       if (error) throw error;
 
-      // Criar call frame
+      // Criar call frame no container
       if (iframeRef.current) {
         callFrameRef.current = DailyIframe.createFrame(iframeRef.current, {
-          showLeaveButton: true,
+          showLeaveButton: false,
+          showFullscreenButton: true,
           iframeStyle: {
             width: '100%',
             height: '100%',
@@ -157,8 +169,9 @@ const StreamViewer = () => {
           },
         });
 
+        // Join na sala com o token
         await callFrameRef.current.join({
-          url: data.room_url,
+          url: streamData.daily_room_url,
           token: data.token,
           userName: 'Espectador',
           startVideoOff: true,
