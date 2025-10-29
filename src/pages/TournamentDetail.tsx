@@ -353,26 +353,6 @@ const TournamentDetail = () => {
                     creatorId={tournament.created_by}
                     onWinnerSelected={() => {
                       fetchTournamentData();
-                      toast({
-                        title: "Torneio finalizado!",
-                        description: "O prêmio foi distribuído ao vencedor.",
-                      });
-                    }}
-                  />
-                )}
-                
-                {tournament.status === 'active' && tournament.created_by === currentUser?.id && (
-                  <TournamentWinnerSelector
-                    tournamentId={id!}
-                    participants={participants}
-                    prizePool={tournament.prize_pool}
-                    creatorId={tournament.created_by}
-                    onWinnerSelected={() => {
-                      fetchTournamentData();
-                      toast({
-                        title: "Torneio finalizado!",
-                        description: "O prêmio foi distribuído ao vencedor.",
-                      });
                     }}
                   />
                 )}

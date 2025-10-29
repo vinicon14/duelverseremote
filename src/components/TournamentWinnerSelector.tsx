@@ -36,21 +36,20 @@ export const TournamentWinnerSelector = ({
 
     setLoading(true);
     try {
-      // Chamar a Edge Function para distribuir o prêmio
       const { data, error } = await supabase.functions.invoke('distribute-tournament-prize', {
         body: {
           tournament_id: tournamentId,
           winner_id: selectedWinnerId,
         },
-      })
+      });
 
-      if (error || !data.success) {
-        throw new Error(data.message || error.message);
+      if (error || !data?.success) {
+        throw new Error(data?.message || error?.message || 'Erro ao finalizar torneio');
       }
 
       toast({
         title: "Torneio finalizado!",
-        description: `O vencedor recebeu o prêmio de ${prizePool} DuelCoins.`,
+        description: `O vencedor recebeu ${prizePool} DuelCoins de prêmio!`,
       });
 
       onWinnerSelected();

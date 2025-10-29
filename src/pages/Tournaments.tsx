@@ -77,58 +77,30 @@ const Tournaments = () => {
     if (!currentUser) return;
 
     try {
-      const tournament = tournaments.find(t => t.id === tournamentId);
-      if (!tournament) return;
+      setLoading(true);
+      
+      const { data, error } = await supabase.functions.invoke('charge-tournament-entry-fee', {
+        body: { tournament_id: tournamentId },
+      });
 
-      // Verificar se já está inscrito
-      const { data: existingParticipant } = await supabase
-        .from('tournament_participants')
-        .select('id')
-        .eq('tournament_id', tournamentId)
-        .eq('user_id', currentUser.id)
-        .single();
-
-      if (existingParticipant) {
-        toast({
-          title: "Já inscrito",
-          description: "Você já está participando deste torneio",
-        });
-        return;
+      if (error || !data?.success) {
+        throw new Error(data?.message || error?.message || 'Erro ao se inscrever');
       }
-
-      // Verificar se há vagas
-      if (tournament.participants >= tournament.max_participants) {
-        toast({
-          title: "Torneio cheio",
-          description: "Não há mais vagas disponíveis",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Inscrever no torneio
-      const { error } = await supabase
-        .from('tournament_participants')
-        .insert({
-          tournament_id: tournamentId,
-          user_id: currentUser.id,
-          status: 'registered'
-        });
-
-      if (error) throw error;
 
       toast({
         title: "Inscrição realizada!",
-        description: "Você foi inscrito no torneio com sucesso",
+        description: data.message,
       });
 
-      fetchTournaments();
+      await fetchTournaments();
     } catch (error: any) {
       toast({
         title: "Erro ao se inscrever",
         description: error.message,
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   };
 

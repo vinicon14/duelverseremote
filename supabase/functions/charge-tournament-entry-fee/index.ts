@@ -14,7 +14,7 @@ serve(async (req) => {
   try {
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
       {
         global: {
           headers: { Authorization: req.headers.get('Authorization')! },
@@ -32,7 +32,7 @@ serve(async (req) => {
     // Buscar torneio
     const { data: tournament, error: tournamentError } = await supabaseClient
       .from('tournaments')
-      .select('*, created_by, entry_fee, prize_pool, max_participants')
+      .select('*')
       .eq('id', tournament_id)
       .single();
 
@@ -40,9 +40,14 @@ serve(async (req) => {
       throw new Error('Torneio não encontrado');
     }
 
-    // Verificar se o usuário é o criador
+    // Verificar se o torneio está aberto para inscrições
+    if (tournament.status !== 'upcoming') {
+      throw new Error('Este torneio não está aberto para inscrições');
+    }
+
+    // Verificar se não é o criador tentando se inscrever
     if (tournament.created_by === user.id) {
-      throw new Error('O criador do torneio não pode participar');
+      throw new Error('O criador do torneio não pode se inscrever');
     }
 
     // Verificar se já está inscrito
@@ -64,39 +69,37 @@ serve(async (req) => {
       .eq('tournament_id', tournament_id);
 
     if (count && count >= tournament.max_participants) {
-      throw new Error('Torneio lotado');
+      throw new Error('Torneio está cheio');
     }
 
-    // Buscar perfil do usuário
-    const { data: profile, error: profileError } = await supabaseClient
-      .from('profiles')
-      .select('duelcoins_balance')
-      .eq('user_id', user.id)
-      .single();
-
-    if (profileError || !profile) {
-      throw new Error('Perfil não encontrado');
-    }
-
-    // Verificar saldo
-    if (profile.duelcoins_balance < tournament.entry_fee) {
-      throw new Error('Saldo insuficiente de DuelCoins');
-    }
-
-    // Transferir DuelCoins do participante para o prize pool
+    // Verificar saldo se houver taxa
     if (tournament.entry_fee > 0) {
-      // Remover do participante
-      const { error: deductError } = await supabaseClient
+      const { data: userProfile } = await supabaseClient
         .from('profiles')
-        .update({ duelcoins_balance: profile.duelcoins_balance - tournament.entry_fee })
+        .select('duelcoins_balance')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!userProfile || userProfile.duelcoins_balance < tournament.entry_fee) {
+        throw new Error('Saldo insuficiente de DuelCoins');
+      }
+
+      // Debitar taxa do usuário
+      const { error: debitError } = await supabaseClient
+        .from('profiles')
+        .update({ 
+          duelcoins_balance: userProfile.duelcoins_balance - tournament.entry_fee 
+        })
         .eq('user_id', user.id);
 
-      if (deductError) throw deductError;
+      if (debitError) throw debitError;
 
-      // Adicionar ao prize pool
+      // Adicionar taxa ao prize pool
       const { error: prizeError } = await supabaseClient
         .from('tournaments')
-        .update({ prize_pool: tournament.prize_pool + tournament.entry_fee })
+        .update({ 
+          prize_pool: tournament.prize_pool + tournament.entry_fee 
+        })
         .eq('id', tournament_id);
 
       if (prizeError) throw prizeError;
@@ -106,20 +109,20 @@ serve(async (req) => {
         .from('duelcoins_transactions')
         .insert({
           sender_id: user.id,
-          receiver_id: tournament.created_by,
+          receiver_id: null,
           amount: tournament.entry_fee,
           transaction_type: 'tournament_entry',
-          description: `Taxa de inscrição no torneio ${tournament.name}`
+          description: `Taxa de inscrição do torneio: ${tournament.name}`
         });
 
       if (txError) throw txError;
     }
 
-    // Inscrever no torneio
+    // Inscrever participante
     const { error: participantError } = await supabaseClient
       .from('tournament_participants')
       .insert({
-        tournament_id,
+        tournament_id: tournament_id,
         user_id: user.id,
         status: 'registered'
       });
@@ -129,7 +132,9 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        message: 'Inscrição realizada com sucesso!'
+        message: tournament.entry_fee > 0 
+          ? `Inscrição realizada! ${tournament.entry_fee} DuelCoins debitados.`
+          : 'Inscrição realizada com sucesso!'
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

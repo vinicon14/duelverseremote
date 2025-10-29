@@ -14,7 +14,7 @@ serve(async (req) => {
   try {
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
       {
         global: {
           headers: { Authorization: req.headers.get('Authorization')! },
@@ -32,7 +32,7 @@ serve(async (req) => {
     // Buscar torneio
     const { data: tournament, error: tournamentError } = await supabaseClient
       .from('tournaments')
-      .select('*, created_by, prize_pool')
+      .select('*')
       .eq('id', tournament_id)
       .single();
 
@@ -40,15 +40,23 @@ serve(async (req) => {
       throw new Error('Torneio não encontrado');
     }
 
-    // Verificar se é o criador do torneio
-    if (tournament.created_by !== user.id) {
-      throw new Error('Apenas o criador pode finalizar o torneio');
+    // Verificar se é o criador ou admin
+    const { data: isAdmin } = await supabaseClient
+      .rpc('is_admin', { _user_id: user.id });
+
+    if (tournament.created_by !== user.id && !isAdmin) {
+      throw new Error('Apenas o criador ou admin pode finalizar o torneio');
+    }
+
+    // Verificar se torneio está ativo
+    if (tournament.status !== 'active') {
+      throw new Error('Apenas torneios ativos podem ser finalizados');
     }
 
     // Verificar se o vencedor é um participante
     const { data: winner, error: winnerError } = await supabaseClient
       .from('tournament_participants')
-      .select('user_id')
+      .select('*')
       .eq('tournament_id', tournament_id)
       .eq('user_id', winner_id)
       .single();
@@ -72,7 +80,9 @@ serve(async (req) => {
       // Adicionar ao vencedor
       const { error: addError } = await supabaseClient
         .from('profiles')
-        .update({ duelcoins_balance: winnerProfile.duelcoins_balance + tournament.prize_pool })
+        .update({ 
+          duelcoins_balance: winnerProfile.duelcoins_balance + tournament.prize_pool 
+        })
         .eq('user_id', winner_id);
 
       if (addError) throw addError;
@@ -85,7 +95,7 @@ serve(async (req) => {
           receiver_id: winner_id,
           amount: tournament.prize_pool,
           transaction_type: 'tournament_prize',
-          description: `Prêmio do torneio ${tournament.name}`
+          description: `Prêmio do torneio: ${tournament.name}`
         });
 
       if (txError) throw txError;
@@ -96,7 +106,8 @@ serve(async (req) => {
       .from('tournaments')
       .update({ 
         status: 'completed',
-        prize_pool: 0 // Zerar prize pool após distribuição
+        end_date: new Date().toISOString(),
+        prize_pool: 0
       })
       .eq('id', tournament_id);
 
