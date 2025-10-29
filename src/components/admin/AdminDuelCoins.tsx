@@ -17,6 +17,7 @@ export const AdminDuelCoins = () => {
   const [reason, setReason] = useState("");
   const [loading, setLoading] = useState(false);
   const [transactions, setTransactions] = useState<any[]>([]);
+  const [userTransactions, setUserTransactions] = useState<any[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -27,18 +28,96 @@ export const AdminDuelCoins = () => {
     try {
       const { data, error } = await supabase
         .from('duelcoins_transactions')
-        .select(`
-          *,
-          sender:sender_id(username),
-          receiver:receiver_id(username)
-        `)
+        .select('*')
         .order('created_at', { ascending: false })
         .limit(50);
 
       if (error) throw error;
-      setTransactions(data || []);
+
+      // Buscar usernames
+      const transactionsWithUsers = await Promise.all(
+        (data || []).map(async (transaction) => {
+          let senderUsername = 'Sistema';
+          let receiverUsername = 'Sistema';
+
+          if (transaction.sender_id) {
+            const { data: senderData } = await supabase
+              .from('profiles')
+              .select('username')
+              .eq('user_id', transaction.sender_id)
+              .maybeSingle();
+            if (senderData) senderUsername = senderData.username;
+          }
+
+          if (transaction.receiver_id) {
+            const { data: receiverData } = await supabase
+              .from('profiles')
+              .select('username')
+              .eq('user_id', transaction.receiver_id)
+              .maybeSingle();
+            if (receiverData) receiverUsername = receiverData.username;
+          }
+
+          return {
+            ...transaction,
+            sender: { username: senderUsername },
+            receiver: { username: receiverUsername }
+          };
+        })
+      );
+
+      setTransactions(transactionsWithUsers);
     } catch (error) {
       console.error('Error fetching transactions:', error);
+    }
+  };
+
+  const fetchUserTransactions = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('duelcoins_transactions')
+        .select('*')
+        .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+
+      // Buscar usernames
+      const transactionsWithUsers = await Promise.all(
+        (data || []).map(async (transaction) => {
+          let senderUsername = 'Sistema';
+          let receiverUsername = 'Sistema';
+
+          if (transaction.sender_id) {
+            const { data: senderData } = await supabase
+              .from('profiles')
+              .select('username')
+              .eq('user_id', transaction.sender_id)
+              .maybeSingle();
+            if (senderData) senderUsername = senderData.username;
+          }
+
+          if (transaction.receiver_id) {
+            const { data: receiverData } = await supabase
+              .from('profiles')
+              .select('username')
+              .eq('user_id', transaction.receiver_id)
+              .maybeSingle();
+            if (receiverData) receiverUsername = receiverData.username;
+          }
+
+          return {
+            ...transaction,
+            sender: { username: senderUsername },
+            receiver: { username: receiverUsername }
+          };
+        })
+      );
+
+      setUserTransactions(transactionsWithUsers);
+    } catch (error) {
+      console.error('Error fetching user transactions:', error);
     }
   };
 
@@ -64,16 +143,25 @@ export const AdminDuelCoins = () => {
           title: "Usuário não encontrado",
           variant: "destructive"
         });
+        setSelectedUser(null);
+        setUserTransactions([]);
         return;
       }
 
       setSelectedUser(data);
+      fetchUserTransactions(data.user_id);
+      toast({
+        title: "Usuário encontrado",
+        description: `${data.username} - ${data.duelcoins_balance} DuelCoins`
+      });
     } catch (error) {
       console.error('Error searching user:', error);
       toast({
         title: "Erro ao buscar usuário",
         variant: "destructive"
       });
+      setSelectedUser(null);
+      setUserTransactions([]);
     }
   };
 
@@ -118,9 +206,12 @@ export const AdminDuelCoins = () => {
           : selectedUser.duelcoins_balance - parseInt(amount);
         
         setSelectedUser({ ...selectedUser, duelcoins_balance: newBalance });
-        setAmount("");
-        setReason("");
-        fetchRecentTransactions();
+                        setAmount("");
+                        setReason("");
+                        fetchRecentTransactions();
+                        if (selectedUser) {
+                          fetchUserTransactions(selectedUser.user_id);
+                        }
       } else {
         toast({
           title: "Erro",
@@ -266,6 +357,57 @@ export const AdminDuelCoins = () => {
               )}
             </CardContent>
           </Card>
+
+          {selectedUser && userTransactions.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Histórico de {selectedUser.username}</CardTitle>
+                <CardDescription>
+                  Últimas 50 transações deste usuário
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Data</TableHead>
+                        <TableHead>Tipo</TableHead>
+                        <TableHead>De</TableHead>
+                        <TableHead>Para</TableHead>
+                        <TableHead className="text-right">Valor</TableHead>
+                        <TableHead>Descrição</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {userTransactions.map((tx) => (
+                        <TableRow key={tx.id}>
+                          <TableCell className="text-xs">
+                            {formatDate(tx.created_at)}
+                          </TableCell>
+                          <TableCell>
+                            {getTransactionBadge(tx.transaction_type)}
+                          </TableCell>
+                          <TableCell>
+                            {tx.sender?.username || 'Sistema'}
+                          </TableCell>
+                          <TableCell>
+                            {tx.receiver?.username || 'Sistema'}
+                          </TableCell>
+                          <TableCell className="text-right font-bold text-yellow-500">
+                            {tx.amount} <Coins className="w-3 h-3 inline" />
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground max-w-xs truncate">
+                            {tx.description}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="history">
@@ -306,10 +448,10 @@ export const AdminDuelCoins = () => {
                             {getTransactionBadge(tx.transaction_type)}
                           </TableCell>
                           <TableCell>
-                            {tx.sender?.username || '-'}
+                            {tx.sender?.username || 'Sistema'}
                           </TableCell>
                           <TableCell>
-                            {tx.receiver?.username || '-'}
+                            {tx.receiver?.username || 'Sistema'}
                           </TableCell>
                           <TableCell className="text-right font-bold text-yellow-500">
                             {tx.amount} <Coins className="w-3 h-3 inline" />

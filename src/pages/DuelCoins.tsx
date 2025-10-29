@@ -41,19 +41,52 @@ export default function DuelCoins() {
     try {
       const { data, error } = await supabase
         .from('duelcoins_transactions')
-        .select(`
-          *,
-          sender:sender_id(username),
-          receiver:receiver_id(username)
-        `)
+        .select('*')
         .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
         .order('created_at', { ascending: false })
-        .limit(20);
+        .limit(50);
 
       if (error) throw error;
-      setTransactions(data || []);
+
+      // Buscar usernames separadamente
+      const transactionsWithUsers = await Promise.all(
+        (data || []).map(async (transaction) => {
+          let senderUsername = 'Sistema';
+          let receiverUsername = 'Sistema';
+
+          if (transaction.sender_id) {
+            const { data: senderData } = await supabase
+              .from('profiles')
+              .select('username')
+              .eq('user_id', transaction.sender_id)
+              .maybeSingle();
+            if (senderData) senderUsername = senderData.username;
+          }
+
+          if (transaction.receiver_id) {
+            const { data: receiverData } = await supabase
+              .from('profiles')
+              .select('username')
+              .eq('user_id', transaction.receiver_id)
+              .maybeSingle();
+            if (receiverData) receiverUsername = receiverData.username;
+          }
+
+          return {
+            ...transaction,
+            sender: { username: senderUsername },
+            receiver: { username: receiverUsername }
+          };
+        })
+      );
+
+      setTransactions(transactionsWithUsers);
     } catch (error) {
       console.error('Error fetching transactions:', error);
+      toast({
+        title: "Erro ao carregar histórico",
+        variant: "destructive"
+      });
     }
   };
 
