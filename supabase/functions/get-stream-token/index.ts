@@ -66,6 +66,26 @@ serve(async (req) => {
     }
 
     // Criar token Daily
+    const tokenProperties: any = {
+      room_name: stream.daily_room_name,
+      user_name: user.email?.split('@')[0] || 'User',
+      is_owner: permissions.canAdmin,
+      exp: Math.floor(Date.now() / 1000) + 3600, // 1h
+    };
+
+    // Configurações específicas por role
+    if (role === 'viewer') {
+      // Viewers podem ver e ouvir, mas não transmitir
+      tokenProperties.start_video_off = true;
+      tokenProperties.start_audio_off = true;
+      tokenProperties.enable_screenshare = false;
+    } else {
+      // Players e outros podem transmitir
+      tokenProperties.enable_screenshare = permissions.canSend;
+      tokenProperties.start_video_off = false;
+      tokenProperties.start_audio_off = false;
+    }
+
     const tokenResponse = await fetch(`https://api.daily.co/v1/meeting-tokens`, {
       method: "POST",
       headers: {
@@ -73,15 +93,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        properties: {
-          room_name: stream.daily_room_name,
-          user_name: user.email?.split('@')[0] || 'User',
-          is_owner: permissions.canAdmin,
-          enable_screenshare: permissions.canSend,
-          start_video_off: role === 'viewer',
-          start_audio_off: role === 'viewer',
-          exp: Math.floor(Date.now() / 1000) + 3600, // 1h
-        },
+        properties: tokenProperties,
       }),
     });
 

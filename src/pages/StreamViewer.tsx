@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Users, Send } from "lucide-react";
+import { ArrowLeft, Users, Send, Share2 } from "lucide-react";
 import DailyIframe from '@daily-co/daily-js';
 import { FloatingCalculator } from "@/components/FloatingCalculator";
 
@@ -150,6 +150,7 @@ const StreamViewer = () => {
   const initializeDailyCall = async (streamData: any) => {
     try {
       // Obter token de viewer
+      const { data: { user } } = await supabase.auth.getUser();
       const { data, error } = await supabase.functions.invoke('get-stream-token', {
         body: { stream_id: streamId, role: 'viewer' }
       });
@@ -161,6 +162,7 @@ const StreamViewer = () => {
         callFrameRef.current = DailyIframe.createFrame(iframeRef.current, {
           showLeaveButton: false,
           showFullscreenButton: true,
+          showParticipantsBar: false,
           iframeStyle: {
             width: '100%',
             height: '100%',
@@ -169,27 +171,38 @@ const StreamViewer = () => {
           },
         });
 
-        // Join na sala com o token
+        // Join na sala com o token - espectador não transmite áudio/vídeo
         await callFrameRef.current.join({
           url: streamData.daily_room_url,
           token: data.token,
-          userName: 'Espectador',
+          userName: user?.email?.split('@')[0] || 'Espectador',
           startVideoOff: true,
           startAudioOff: true,
         });
 
+        // Garantir que o espectador não transmita áudio/vídeo
+        await callFrameRef.current.setLocalAudio(false);
+        await callFrameRef.current.setLocalVideo(false);
+
+        console.log('✅ Conectado à live como espectador');
+
         // Event listeners
-        callFrameRef.current.on('participant-joined', () => {
+        callFrameRef.current.on('participant-joined', (event: any) => {
+          console.log('👤 Participante entrou:', event.participant.user_name);
           updateViewersCount();
         });
 
-        callFrameRef.current.on('participant-left', () => {
+        callFrameRef.current.on('participant-left', (event: any) => {
+          console.log('👤 Participante saiu:', event.participant.user_name);
           updateViewersCount();
         });
 
         callFrameRef.current.on('left-meeting', () => {
           navigate('/live-streams');
         });
+
+        // Atualizar contador inicial
+        updateViewersCount();
       }
     } catch (error: any) {
       console.error('Erro ao inicializar Daily:', error);
@@ -240,6 +253,38 @@ const StreamViewer = () => {
     navigate('/live-streams');
   };
 
+  const shareStream = async () => {
+    const streamUrl = `${window.location.origin}/stream/${streamId}`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Assista esta live no DuelVerse!',
+          text: 'Venha assistir esta transmissão ao vivo!',
+          url: streamUrl,
+        });
+      } catch (error) {
+        // Usuário cancelou ou erro
+        console.log('Compartilhamento cancelado');
+      }
+    } else {
+      // Fallback: copiar para clipboard
+      try {
+        await navigator.clipboard.writeText(streamUrl);
+        toast({
+          title: "Link copiado!",
+          description: "O link da live foi copiado para a área de transferência",
+        });
+      } catch (error) {
+        toast({
+          title: "Erro ao copiar",
+          description: "Não foi possível copiar o link",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -254,7 +299,7 @@ const StreamViewer = () => {
   return (
     <div className="min-h-screen bg-background p-4">
       <div className="max-w-7xl mx-auto">
-        <div className="flex items-center gap-4 mb-4">
+        <div className="flex items-center gap-4 mb-4 flex-wrap">
           <Button onClick={leaveStream} variant="outline" size="sm">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Voltar
@@ -267,6 +312,10 @@ const StreamViewer = () => {
             <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
             <span className="font-semibold">AO VIVO</span>
           </div>
+          <Button onClick={shareStream} variant="secondary" size="sm">
+            <Share2 className="w-4 h-4 mr-2" />
+            Compartilhar
+          </Button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
