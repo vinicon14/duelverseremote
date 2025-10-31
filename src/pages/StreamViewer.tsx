@@ -165,6 +165,9 @@ const StreamViewer = () => {
           showFullscreenButton: true,
           showParticipantsBar: true,
           iframeStyle: {
+            position: 'absolute',
+            top: '0',
+            left: '0',
             width: '100%',
             height: '100%',
             border: 'none',
@@ -172,7 +175,7 @@ const StreamViewer = () => {
           },
         });
 
-        // Join na sala com o token
+        // Join na sala com o token - viewer não transmite mas recebe vídeo/áudio
         await callFrameRef.current.join({
           url: streamData.daily_room_url,
           token: data.token,
@@ -314,22 +317,26 @@ const StreamViewer = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-          <div className="lg:col-span-3 relative">
-            <div 
-              ref={iframeRef} 
-              className="w-full aspect-video bg-black rounded-lg"
-            />
-            {duel && showCalculator && (
-              <FloatingCalculator
-                player1Name={duel.creator?.username || 'Player 1'}
-                player2Name={duel.opponent?.username || 'Player 2'}
-                player1LP={player1LP}
-                player2LP={player2LP}
-                onUpdateLP={() => {}} // Read-only
-                onSetLP={() => {}} // Read-only
-                currentUserPlayer={null} // Viewer
-                onClose={() => setShowCalculator(false)}
+          <div className="lg:col-span-3">
+            <div className="relative w-full aspect-video bg-black rounded-lg overflow-hidden">
+              <div 
+                ref={iframeRef} 
+                className="absolute inset-0 w-full h-full"
               />
+            </div>
+            {duel && showCalculator && (
+              <div className="mt-4">
+                <FloatingCalculator
+                  player1Name={duel.creator?.username || 'Player 1'}
+                  player2Name={duel.opponent?.username || 'Player 2'}
+                  player1LP={player1LP}
+                  player2LP={player2LP}
+                  onUpdateLP={() => {}} // Read-only
+                  onSetLP={() => {}} // Read-only
+                  currentUserPlayer={null} // Viewer
+                  onClose={() => setShowCalculator(false)}
+                />
+              </div>
             )}
           </div>
 
