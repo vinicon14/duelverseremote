@@ -12,6 +12,7 @@ interface FloatingCalculatorProps {
   onUpdateLP: (player: 'player1' | 'player2', amount: number) => void;
   onSetLP: (player: 'player1' | 'player2', value: number) => void;
   currentUserPlayer?: 'player1' | 'player2' | null;
+  onClose?: () => void;
 }
 
 export const FloatingCalculator = ({
@@ -22,6 +23,7 @@ export const FloatingCalculator = ({
   onUpdateLP,
   onSetLP,
   currentUserPlayer = null,
+  onClose,
 }: FloatingCalculatorProps) => {
   // Posição inicial adaptada ao tamanho da tela
   const [position, setPosition] = useState(() => {
@@ -164,6 +166,16 @@ export const FloatingCalculator = ({
             >
               {isMinimized ? <Maximize2 className="w-3 h-3" /> : <Minimize2 className="w-3 h-3" />}
             </Button>
+            {onClose && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 w-6 p-0"
+                onClick={onClose}
+              >
+                <X className="w-3 h-3" />
+              </Button>
+            )}
           </div>
         </div>
 

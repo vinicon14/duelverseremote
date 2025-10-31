@@ -21,6 +21,7 @@ const StreamViewer = () => {
   const [duel, setDuel] = useState<any>(null);
   const [player1LP, setPlayer1LP] = useState(8000);
   const [player2LP, setPlayer2LP] = useState(8000);
+  const [showCalculator, setShowCalculator] = useState(true);
   const callFrameRef = useRef<any>(null);
   const iframeRef = useRef<HTMLDivElement>(null);
 
@@ -162,7 +163,7 @@ const StreamViewer = () => {
         callFrameRef.current = DailyIframe.createFrame(iframeRef.current, {
           showLeaveButton: false,
           showFullscreenButton: true,
-          showParticipantsBar: false,
+          showParticipantsBar: true,
           iframeStyle: {
             width: '100%',
             height: '100%',
@@ -171,18 +172,12 @@ const StreamViewer = () => {
           },
         });
 
-        // Join na sala com o token - espectador não transmite áudio/vídeo
+        // Join na sala com o token
         await callFrameRef.current.join({
           url: streamData.daily_room_url,
           token: data.token,
           userName: user?.email?.split('@')[0] || 'Espectador',
-          startVideoOff: true,
-          startAudioOff: true,
         });
-
-        // Garantir que o espectador não transmita áudio/vídeo
-        await callFrameRef.current.setLocalAudio(false);
-        await callFrameRef.current.setLocalVideo(false);
 
         console.log('✅ Conectado à live como espectador');
 
@@ -324,18 +319,17 @@ const StreamViewer = () => {
               ref={iframeRef} 
               className="w-full aspect-video bg-black rounded-lg"
             />
-            {duel && (
-              <div className="absolute inset-0 pointer-events-none">
-                <FloatingCalculator
-                  player1Name={duel.creator?.username || 'Player 1'}
-                  player2Name={duel.opponent?.username || 'Player 2'}
-                  player1LP={player1LP}
-                  player2LP={player2LP}
-                  onUpdateLP={() => {}} // Read-only
-                  onSetLP={() => {}} // Read-only
-                  currentUserPlayer={null} // Viewer
-                />
-              </div>
+            {duel && showCalculator && (
+              <FloatingCalculator
+                player1Name={duel.creator?.username || 'Player 1'}
+                player2Name={duel.opponent?.username || 'Player 2'}
+                player1LP={player1LP}
+                player2LP={player2LP}
+                onUpdateLP={() => {}} // Read-only
+                onSetLP={() => {}} // Read-only
+                currentUserPlayer={null} // Viewer
+                onClose={() => setShowCalculator(false)}
+              />
             )}
           </div>
 
