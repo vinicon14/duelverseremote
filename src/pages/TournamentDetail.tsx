@@ -57,14 +57,30 @@ const TournamentDetail = () => {
           score,
           wins,
           losses,
-          registered_at,
-          profiles:profiles!user_id(username, points)
+          registered_at
         `)
         .eq('tournament_id', id)
         .order('score', { ascending: false });
 
       if (participantsError) throw participantsError;
-      setParticipants(participantsData || []);
+
+      // Fetch profiles separately and join manually
+      const participantsWithProfiles = await Promise.all(
+        (participantsData || []).map(async (participant) => {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('username, points')
+            .eq('user_id', participant.user_id)
+            .maybeSingle();
+          
+          return {
+            ...participant,
+            profiles: profile
+          };
+        })
+      );
+
+      setParticipants(participantsWithProfiles);
 
       // Fetch matches
       const { data: matchesData, error: matchesError } = await supabase
@@ -293,7 +309,6 @@ const TournamentDetail = () => {
 
                 {/* Botão de participar se ainda não está inscrito */}
                 {tournament.status === 'upcoming' &&
-                  tournament.created_by !== currentUser?.id &&
                   !participants.some(p => p.user_id === currentUser?.id) &&
                   participants.length < tournament.max_participants && (
                     <Button
@@ -426,7 +441,7 @@ const TournamentDetail = () => {
                           <span className="text-xs font-bold">{index + 1}</span>
                         </div>
                          <div className="flex-1">
-                           <p className="font-medium">{participant.profiles?.username}</p>
+                           <p className="font-medium">{participant.profiles?.username || 'Usuário'}</p>
                            <p className="text-xs text-muted-foreground">
                              Pontos: {participant.profiles?.points || 0}
                            </p>

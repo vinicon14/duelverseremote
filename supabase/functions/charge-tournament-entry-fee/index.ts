@@ -45,11 +45,6 @@ serve(async (req) => {
       throw new Error('Este torneio não está aberto para inscrições');
     }
 
-    // Verificar se não é o criador tentando se inscrever
-    if (tournament.created_by === user.id) {
-      throw new Error('O criador do torneio não pode se inscrever');
-    }
-
     // Verificar se já está inscrito
     const { data: existingParticipant } = await supabaseClient
       .from('tournament_participants')
