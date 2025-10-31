@@ -309,6 +309,7 @@ const TournamentDetail = () => {
 
                 {/* Botão de participar se ainda não está inscrito */}
                 {tournament.status === 'upcoming' &&
+                  tournament.created_by !== currentUser?.id &&
                   !participants.some(p => p.user_id === currentUser?.id) &&
                   participants.length < tournament.max_participants && (
                     <Button
