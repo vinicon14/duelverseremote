@@ -92,15 +92,46 @@ const TournamentDetail = () => {
           player2_id,
           winner_id,
           status,
-          scheduled_at,
-          player1:profiles!tournament_matches_player1_id_fkey(username, points),
-          player2:profiles!tournament_matches_player2_id_fkey(username, points)
+          scheduled_at
         `)
         .eq('tournament_id', id)
         .order('round', { ascending: true });
 
       if (matchesError) throw matchesError;
-      setMatches(matchesData || []);
+
+      // Fetch profiles for each match player
+      const matchesWithProfiles = await Promise.all(
+        (matchesData || []).map(async (match) => {
+          let player1Profile = null;
+          let player2Profile = null;
+
+          if (match.player1_id) {
+            const { data: p1 } = await supabase
+              .from('profiles')
+              .select('username, points')
+              .eq('user_id', match.player1_id)
+              .maybeSingle();
+            player1Profile = p1;
+          }
+
+          if (match.player2_id) {
+            const { data: p2 } = await supabase
+              .from('profiles')
+              .select('username, points')
+              .eq('user_id', match.player2_id)
+              .maybeSingle();
+            player2Profile = p2;
+          }
+
+          return {
+            ...match,
+            player1: player1Profile ? [player1Profile] : [],
+            player2: player2Profile ? [player2Profile] : []
+          };
+        })
+      );
+
+      setMatches(matchesWithProfiles);
       
       // Setup realtime listener for tournament updates
       const channel = supabase
