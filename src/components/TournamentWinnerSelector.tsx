@@ -29,13 +29,15 @@ export const TournamentWinnerSelector = ({
     if (!selectedWinnerId) {
       toast({
         title: "Selecione um vencedor",
+        description: "Escolha o vencedor antes de finalizar",
         variant: "destructive",
       });
       return;
     }
 
-    setLoading(true);
     try {
+      setLoading(true);
+
       const { data, error } = await supabase.functions.invoke('distribute-tournament-prize', {
         body: {
           tournament_id: tournamentId,
@@ -43,19 +45,17 @@ export const TournamentWinnerSelector = ({
         },
       });
 
-      if (error || !data?.success) {
-        throw new Error(data?.message || error?.message || 'Erro ao finalizar torneio');
-      }
+      if (error) throw new Error(error.message);
+      if (!data.success) throw new Error(data.message);
 
       toast({
-        title: "Torneio finalizado!",
-        description: `O vencedor recebeu ${prizePool} DuelCoins de prêmio!`,
+        title: "Sucesso!",
+        description: data.message,
       });
-
       onWinnerSelected();
     } catch (error: any) {
       toast({
-        title: "Erro ao finalizar torneio",
+        title: "Não foi possível finalizar",
         description: error.message,
         variant: "destructive",
       });

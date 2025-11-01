@@ -24,10 +24,20 @@ serve(async (req) => {
 
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
     if (userError || !user) {
-      throw new Error('Não autorizado');
+      return new Response(
+        JSON.stringify({ success: false, message: 'Não autorizado' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const { tournament_id, winner_id } = await req.json();
+
+    if (!tournament_id || !winner_id) {
+      return new Response(
+        JSON.stringify({ success: false, message: 'Dados incompletos' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Buscar torneio
     const { data: tournament, error: tournamentError } = await supabaseClient
@@ -37,7 +47,10 @@ serve(async (req) => {
       .single();
 
     if (tournamentError || !tournament) {
-      throw new Error('Torneio não encontrado');
+      return new Response(
+        JSON.stringify({ success: false, message: 'Torneio não encontrado' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Verificar se é o criador ou admin
@@ -45,12 +58,18 @@ serve(async (req) => {
       .rpc('is_admin', { _user_id: user.id });
 
     if (tournament.created_by !== user.id && !isAdmin) {
-      throw new Error('Apenas o criador ou admin pode finalizar o torneio');
+      return new Response(
+        JSON.stringify({ success: false, message: 'Apenas o criador ou admin pode finalizar o torneio' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Verificar se torneio está ativo
     if (tournament.status !== 'active') {
-      throw new Error('Apenas torneios ativos podem ser finalizados');
+      return new Response(
+        JSON.stringify({ success: false, message: 'Apenas torneios ativos podem ser finalizados' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Verificar se o vencedor é um participante
@@ -62,33 +81,37 @@ serve(async (req) => {
       .single();
 
     if (winnerError || !winner) {
-      throw new Error('Vencedor não é um participante válido');
+      return new Response(
+        JSON.stringify({ success: false, message: 'Vencedor não é um participante válido' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Transferir prize pool para o vencedor
     if (tournament.prize_pool > 0) {
       const { data: winnerProfile } = await supabaseClient
         .from('profiles')
-        .select('duelcoins_balance')
+        .select('duelcoins_balance, username')
         .eq('user_id', winner_id)
         .single();
 
       if (!winnerProfile) {
-        throw new Error('Perfil do vencedor não encontrado');
+        return new Response(
+          JSON.stringify({ success: false, message: 'Perfil do vencedor não encontrado' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
 
-      // Adicionar ao vencedor
-      const { error: addError } = await supabaseClient
+      // Adicionar prêmio ao vencedor
+      await supabaseClient
         .from('profiles')
         .update({ 
           duelcoins_balance: winnerProfile.duelcoins_balance + tournament.prize_pool 
         })
         .eq('user_id', winner_id);
 
-      if (addError) throw addError;
-
       // Registrar transação
-      const { error: txError } = await supabaseClient
+      await supabaseClient
         .from('duelcoins_transactions')
         .insert({
           sender_id: null,
@@ -97,41 +120,35 @@ serve(async (req) => {
           transaction_type: 'tournament_prize',
           description: `Prêmio do torneio: ${tournament.name}`
         });
-
-      if (txError) throw txError;
     }
 
     // Atualizar status do torneio
-    const { error: updateError } = await supabaseClient
+    await supabaseClient
       .from('tournaments')
       .update({ 
         status: 'completed',
-        end_date: new Date().toISOString(),
-        prize_pool: 0
+        end_date: new Date().toISOString()
       })
       .eq('id', tournament_id);
-
-    if (updateError) throw updateError;
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: 'Prêmio distribuído com sucesso!'
+        message: tournament.prize_pool > 0 
+          ? `Prêmio de ${tournament.prize_pool} DuelCoins distribuído com sucesso!`
+          : 'Torneio finalizado com sucesso!'
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error: any) {
-    console.error('Error:', error);
+    console.error('Error in distribute-tournament-prize:', error);
     return new Response(
       JSON.stringify({
         success: false,
-        message: error.message
+        message: 'Erro ao distribuir prêmio. Tente novamente.'
       }),
-      {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });

@@ -37,7 +37,6 @@ const TournamentDetail = () => {
 
   const fetchTournamentData = async () => {
     try {
-      // Fetch tournament
       const { data: tournamentData, error: tournamentError } = await supabase
         .from('tournaments')
         .select('*')
@@ -47,24 +46,14 @@ const TournamentDetail = () => {
       if (tournamentError) throw tournamentError;
       setTournament(tournamentData);
 
-      // Fetch participants
       const { data: participantsData, error: participantsError } = await supabase
         .from('tournament_participants')
-        .select(`
-          id,
-          user_id,
-          status,
-          score,
-          wins,
-          losses,
-          registered_at
-        `)
+        .select('id, user_id, status, score, wins, losses, registered_at')
         .eq('tournament_id', id)
         .order('score', { ascending: false });
 
       if (participantsError) throw participantsError;
 
-      // Fetch profiles separately and join manually
       const participantsWithProfiles = await Promise.all(
         (participantsData || []).map(async (participant) => {
           const { data: profile } = await supabase
@@ -73,90 +62,48 @@ const TournamentDetail = () => {
             .eq('user_id', participant.user_id)
             .maybeSingle();
           
-          return {
-            ...participant,
-            profiles: profile
-          };
+          return { ...participant, profiles: profile };
         })
       );
 
       setParticipants(participantsWithProfiles);
 
-      // Fetch matches
       const { data: matchesData, error: matchesError } = await supabase
         .from('tournament_matches')
-        .select(`
-          id,
-          round,
-          player1_id,
-          player2_id,
-          winner_id,
-          status,
-          scheduled_at
-        `)
+        .select('id, round, player1_id, player2_id, winner_id, status, scheduled_at')
         .eq('tournament_id', id)
         .order('round', { ascending: true });
 
       if (matchesError) throw matchesError;
 
-      // Fetch profiles for each match player
       const matchesWithProfiles = await Promise.all(
         (matchesData || []).map(async (match) => {
-          let player1Profile = null;
-          let player2Profile = null;
-
-          if (match.player1_id) {
-            const { data: p1 } = await supabase
-              .from('profiles')
-              .select('username, points')
-              .eq('user_id', match.player1_id)
-              .maybeSingle();
-            player1Profile = p1;
-          }
-
-          if (match.player2_id) {
-            const { data: p2 } = await supabase
-              .from('profiles')
-              .select('username, points')
-              .eq('user_id', match.player2_id)
-              .maybeSingle();
-            player2Profile = p2;
-          }
+          const [p1, p2] = await Promise.all([
+            match.player1_id ? supabase.from('profiles').select('username, points').eq('user_id', match.player1_id).maybeSingle() : null,
+            match.player2_id ? supabase.from('profiles').select('username, points').eq('user_id', match.player2_id).maybeSingle() : null
+          ]);
 
           return {
             ...match,
-            player1: player1Profile ? [player1Profile] : [],
-            player2: player2Profile ? [player2Profile] : []
+            player1: p1?.data ? [p1.data] : [],
+            player2: p2?.data ? [p2.data] : []
           };
         })
       );
 
       setMatches(matchesWithProfiles);
       
-      // Setup realtime listener for tournament updates
       const channel = supabase
         .channel(`tournament-${id}`)
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'tournament_matches',
-            filter: `tournament_id=eq.${id}`
-          },
-          () => {
-            fetchTournamentData();
-          }
-        )
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'tournament_matches', filter: `tournament_id=eq.${id}` }, fetchTournamentData)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'tournament_participants', filter: `tournament_id=eq.${id}` }, fetchTournamentData)
         .subscribe();
         
-      return () => {
-        supabase.removeChannel(channel);
-      };
+      return () => supabase.removeChannel(channel);
     } catch (error: any) {
       toast({
-        title: "Erro ao carregar torneio",
-        description: error.message,
+        title: "Erro ao carregar dados",
+        description: "Tente atualizar a página",
         variant: "destructive",
       });
     } finally {
@@ -338,7 +285,6 @@ const TournamentDetail = () => {
                   </div>
                 )}
 
-                {/* Botão de participar se ainda não está inscrito */}
                 {tournament.status === 'upcoming' &&
                   tournament.created_by !== currentUser?.id &&
                   !participants.some(p => p.user_id === currentUser?.id) &&
@@ -348,26 +294,22 @@ const TournamentDetail = () => {
                         try {
                           setLoading(true);
                           
-                          // Chamar a Edge Function para cobrar a taxa de inscrição
                           const { data, error } = await supabase.functions.invoke('charge-tournament-entry-fee', {
-                            body: {
-                              tournament_id: id,
-                            },
-                          })
+                            body: { tournament_id: id },
+                          });
 
-                          if (error || !data.success) {
-                            throw new Error(data.message || error.message);
-                          }
+                          if (error) throw new Error(error.message);
+                          if (!data.success) throw new Error(data.message);
 
                           toast({
-                            title: "Inscrito com sucesso!",
-                            description: `Você está participando! ${tournament.entry_fee} DuelCoins foram pagos.`,
+                            title: "Sucesso!",
+                            description: data.message,
                           });
 
                           await fetchTournamentData();
                         } catch (error: any) {
                           toast({
-                            title: "Erro ao se inscrever",
+                            title: "Não foi possível se inscrever",
                             description: error.message,
                             variant: "destructive",
                           });
@@ -378,7 +320,7 @@ const TournamentDetail = () => {
                       className="w-full btn-mystic text-white"
                       disabled={loading}
                     >
-                      {loading ? "Processando..." : `Participar (${tournament.entry_fee} DuelCoins)`}
+                      {loading ? "Processando..." : tournament.entry_fee > 0 ? `Participar (${tournament.entry_fee} DuelCoins)` : 'Participar Gratuitamente'}
                     </Button>
                   )}
 
