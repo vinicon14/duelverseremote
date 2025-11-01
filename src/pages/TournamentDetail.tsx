@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { StartStreamButton } from "@/components/StartStreamButton";
 import { TournamentWinnerSelector } from "@/components/TournamentWinnerSelector";
+import { MatchResultSelector } from "@/components/MatchResultSelector";
 
 const TournamentDetail = () => {
   const { id } = useParams();
@@ -366,7 +367,7 @@ const TournamentDetail = () => {
                         {matches.filter(m => m.round === round).map(match => (
                           <Card key={match.id} className="bg-background/50">
                             <CardContent className="p-4">
-                              <div className="flex items-center justify-between">
+                              <div className="flex items-center justify-between gap-4">
                                 <div className="flex-1">
                                    <div className="flex items-center gap-2 mb-2">
                                      <span className={match.winner_id === match.player1_id ? 'font-bold text-primary' : ''}>
@@ -379,11 +380,25 @@ const TournamentDetail = () => {
                                      </span>
                                    </div>
                                 </div>
-                                <Badge variant={match.status === 'completed' ? 'default' : 'secondary'}>
-                                  {match.status === 'pending' && 'Pendente'}
-                                  {match.status === 'in_progress' && 'Em Andamento'}
-                                  {match.status === 'completed' && 'Concluído'}
-                                </Badge>
+                                <div className="flex items-center gap-2">
+                                  <Badge variant={match.status === 'completed' ? 'default' : 'secondary'}>
+                                    {match.status === 'pending' && 'Pendente'}
+                                    {match.status === 'in_progress' && 'Em Andamento'}
+                                    {match.status === 'completed' && 'Concluído'}
+                                  </Badge>
+                                  {tournament.status === 'active' &&
+                                    tournament.created_by === currentUser?.id &&
+                                    match.status === 'pending' &&
+                                    match.player1?.[0] &&
+                                    match.player2?.[0] && (
+                                      <MatchResultSelector
+                                        matchId={match.id}
+                                        player1={{ id: match.player1_id!, username: match.player1[0].username }}
+                                        player2={{ id: match.player2_id!, username: match.player2[0].username }}
+                                        onResultReported={fetchTournamentData}
+                                      />
+                                    )}
+                                </div>
                               </div>
                             </CardContent>
                           </Card>
