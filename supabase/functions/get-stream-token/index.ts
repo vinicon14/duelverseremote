@@ -75,15 +75,19 @@ serve(async (req) => {
 
     // Configurações específicas por role
     if (role === 'viewer') {
-      // Viewers podem ver e ouvir, mas não transmitir
+      // Viewers NÃO transmitem seu próprio vídeo/áudio, mas RECEBEM de todos
       tokenProperties.start_video_off = true;
       tokenProperties.start_audio_off = true;
       tokenProperties.enable_screenshare = false;
+      // Garantir que viewers possam receber streams
+      tokenProperties.enable_prejoin_ui = false;
+      tokenProperties.enable_network_ui = false;
     } else {
       // Players e outros podem transmitir
       tokenProperties.enable_screenshare = permissions.canSend;
       tokenProperties.start_video_off = false;
       tokenProperties.start_audio_off = false;
+      tokenProperties.enable_prejoin_ui = false;
     }
 
     const tokenResponse = await fetch(`https://api.daily.co/v1/meeting-tokens`, {

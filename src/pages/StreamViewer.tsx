@@ -182,12 +182,39 @@ const StreamViewer = () => {
           userName: user?.email?.split('@')[0] || 'Espectador',
         });
 
-        console.log('✅ Conectado à live como espectador');
+        // Configurar para viewer: não transmitir, mas receber áudio e vídeo de todos
+        await callFrameRef.current.setLocalAudio(false);
+        await callFrameRef.current.setLocalVideo(false);
+        
+        // Garantir que estamos recebendo todos os streams remotos
+        const participants = callFrameRef.current.participants();
+        Object.keys(participants).forEach((participantId) => {
+          if (participantId !== 'local') {
+            callFrameRef.current.updateParticipant(participantId, {
+              setSubscribedTracks: {
+                audio: true,
+                video: true,
+              },
+            });
+          }
+        });
+
+        console.log('✅ Conectado à live como espectador (recebendo áudio e vídeo)');
 
         // Event listeners
         callFrameRef.current.on('participant-joined', (event: any) => {
           console.log('👤 Participante entrou:', event.participant.user_name);
           updateViewersCount();
+          
+          // Garantir que recebemos streams do novo participante
+          if (event.participant.session_id !== callFrameRef.current.participants().local.session_id) {
+            callFrameRef.current.updateParticipant(event.participant.session_id, {
+              setSubscribedTracks: {
+                audio: true,
+                video: true,
+              },
+            });
+          }
         });
 
         callFrameRef.current.on('participant-left', (event: any) => {
@@ -310,7 +337,11 @@ const StreamViewer = () => {
             <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
             <span className="font-semibold">AO VIVO</span>
           </div>
-          <Button onClick={shareStream} variant="secondary" size="sm">
+          <Button 
+            onClick={shareStream} 
+            className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white font-semibold shadow-lg"
+            size="sm"
+          >
             <Share2 className="w-4 h-4 mr-2" />
             Compartilhar
           </Button>
