@@ -80,20 +80,46 @@ serve(async (req) => {
       throw updateError;
     }
 
-    // Update participant stats
+    // Update participant stats - winner gets +1 win and +3 points
     const loser_id = winner_id === match.player1_id ? match.player2_id : match.player1_id;
 
-    await supabase
+    // Get current stats for winner
+    const { data: winnerData } = await supabase
       .from('tournament_participants')
-      .update({ wins: supabase.rpc('increment', { x: 1 }) })
+      .select('wins, score')
       .eq('tournament_id', match.tournament_id)
-      .eq('user_id', winner_id);
+      .eq('user_id', winner_id)
+      .single();
 
-    await supabase
+    if (winnerData) {
+      await supabase
+        .from('tournament_participants')
+        .update({ 
+          wins: winnerData.wins + 1,
+          score: (winnerData.score || 0) + 3  // 3 points per win
+        })
+        .eq('tournament_id', match.tournament_id)
+        .eq('user_id', winner_id);
+    }
+
+    // Get current stats for loser
+    const { data: loserData } = await supabase
       .from('tournament_participants')
-      .update({ losses: supabase.rpc('increment', { x: 1 }) })
+      .select('losses, score')
       .eq('tournament_id', match.tournament_id)
-      .eq('user_id', loser_id);
+      .eq('user_id', loser_id)
+      .single();
+
+    if (loserData) {
+      await supabase
+        .from('tournament_participants')
+        .update({ 
+          losses: loserData.losses + 1,
+          score: loserData.score || 0  // Loser keeps same score
+        })
+        .eq('tournament_id', match.tournament_id)
+        .eq('user_id', loser_id);
+    }
 
     // Check if all matches in current round are completed
     const { data: roundMatches } = await supabase
