@@ -66,15 +66,32 @@ export default function MatchGallery() {
       setLoading(true);
       const { data, error } = await supabase
         .from('match_recordings')
-        .select(`
-          *,
-          profiles!match_recordings_user_id_fkey(username, avatar_url)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      setRecordings(data as any);
+      // Buscar perfis dos usuários separadamente
+      if (data && data.length > 0) {
+        const userIds = [...new Set(data.map((r: any) => r.user_id))];
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('user_id, username, avatar_url')
+          .in('user_id', userIds);
+
+        // Combinar dados
+        const recordingsWithProfiles = data.map((recording: any) => ({
+          ...recording,
+          profiles: profilesData?.find((p: any) => p.user_id === recording.user_id) || {
+            username: 'Usuário',
+            avatar_url: null,
+          },
+        }));
+
+        setRecordings(recordingsWithProfiles as any);
+      } else {
+        setRecordings([]);
+      }
     } catch (error: any) {
       console.error('Erro ao carregar gravações:', error);
       toast({
