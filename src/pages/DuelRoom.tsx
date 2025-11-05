@@ -7,7 +7,7 @@ import { PhoneOff, Loader2, Scale } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { DuelChat } from "@/components/DuelChat";
 import { FloatingCalculator } from "@/components/FloatingCalculator";
-import { StartStreamButton } from "@/components/StartStreamButton";
+import { RecordMatchButton } from "@/components/RecordMatchButton";
 import { HideElementsButton } from "@/components/HideElementsButton";
 import { useBanCheck } from "@/hooks/useBanCheck";
 
@@ -852,15 +852,7 @@ const DuelRoom = () => {
                 <>
                   {isParticipant && !isJudge && (
                     <>
-                      <StartStreamButton
-                        duelId={id!}
-                        onStreamStarted={(streamId) => {
-                          toast({
-                            title: "Transmissão iniciada!",
-                            description: "Sua partida está sendo transmitida ao vivo.",
-                          });
-                        }}
-                      />
+                      <RecordMatchButton duelId={id!} />
                       <Button
                         onClick={callJudge}
                         disabled={judgeCalled}

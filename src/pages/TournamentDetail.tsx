@@ -8,7 +8,6 @@ import { useToast } from "@/components/ui/use-toast";
 import { Trophy, Users, Calendar, Coins, ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { StartStreamButton } from "@/components/StartStreamButton";
 import { TournamentWinnerSelector } from "@/components/TournamentWinnerSelector";
 import { MatchResultSelector } from "@/components/MatchResultSelector";
 

@@ -590,6 +590,59 @@ export type Database = {
           },
         ]
       }
+      match_recordings: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          duel_id: string | null
+          duration: number | null
+          file_size: number | null
+          id: string
+          thumbnail_url: string | null
+          title: string
+          tournament_id: string | null
+          user_id: string
+          video_url: string
+          views: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          duel_id?: string | null
+          duration?: number | null
+          file_size?: number | null
+          id?: string
+          thumbnail_url?: string | null
+          title: string
+          tournament_id?: string | null
+          user_id: string
+          video_url: string
+          views?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          duel_id?: string | null
+          duration?: number | null
+          file_size?: number | null
+          id?: string
+          thumbnail_url?: string | null
+          title?: string
+          tournament_id?: string | null
+          user_id?: string
+          video_url?: string
+          views?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_recordings_duel_id_fkey"
+            columns: ["duel_id"]
+            isOneToOne: false
+            referencedRelation: "live_duels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       matchmaking_queue: {
         Row: {
           expires_at: string

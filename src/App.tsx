@@ -24,8 +24,7 @@ import Store from "./pages/Store";
 import DuelCoins from "./pages/DuelCoins";
 import JudgePanel from "./pages/JudgePanel";
 import FriendChat from "./pages/FriendChat";
-import LiveStreams from "./pages/LiveStreams";
-import StreamViewer from "./pages/StreamViewer";
+import MatchGallery from "./pages/MatchGallery";
 import News from "./pages/News";
 import NotFound from "./pages/NotFound";
 
@@ -53,8 +52,7 @@ const RouterContent = () => {
       <Route path="/judge-panel" element={<JudgePanel />} />
       <Route path="/store" element={<Store />} />
       <Route path="/news" element={<News />} />
-      <Route path="/live-streams" element={<LiveStreams />} />
-      <Route path="/stream/:streamId" element={<StreamViewer />} />
+      <Route path="/gallery" element={<MatchGallery />} />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
     </Routes>
