@@ -492,25 +492,7 @@ const DuelRoom = () => {
         })
         .eq('id', id);
 
-      // Encerrar stream associada, se existir
-      try {
-        const { data: activeStream } = await supabase
-          .from('live_streams')
-          .select('id')
-          .eq('duel_id', id)
-          .eq('status', 'active')
-          .single();
-
-        if (activeStream) {
-          await supabase.functions.invoke('end-live-stream', {
-            body: { stream_id: activeStream.id }
-          });
-          console.log('🎥 Stream encerrada automaticamente');
-        }
-      } catch (streamError: any) {
-        console.error('Erro ao encerrar stream:', streamError);
-        // Não bloquear o fim do duelo se houver erro na stream
-      }
+      // Código de encerramento de stream removido (sistema de lives foi desativado)
 
       // SEMPRE registrar histórico se houver ambos os jogadores (mesmo empate)
       if (duel?.id && duel?.creator_id && duel?.opponent_id) {

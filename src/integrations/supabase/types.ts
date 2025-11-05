@@ -263,13 +263,6 @@ export type Database = {
             referencedRelation: "tournament_matches"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "judge_actions_stream_id_fkey"
-            columns: ["stream_id"]
-            isOneToOne: false
-            referencedRelation: "live_streams"
-            referencedColumns: ["id"]
-          },
         ]
       }
       judge_logs: {
@@ -421,79 +414,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["user_id"]
-          },
-        ]
-      }
-      live_streams: {
-        Row: {
-          created_at: string | null
-          daily_room_name: string
-          daily_room_url: string
-          duel_id: string | null
-          ended_at: string | null
-          featured: boolean | null
-          id: string
-          match_id: string | null
-          recording_enabled: boolean | null
-          recording_url: string | null
-          started_at: string | null
-          status: string
-          tournament_id: string | null
-          viewers_count: number | null
-        }
-        Insert: {
-          created_at?: string | null
-          daily_room_name: string
-          daily_room_url: string
-          duel_id?: string | null
-          ended_at?: string | null
-          featured?: boolean | null
-          id?: string
-          match_id?: string | null
-          recording_enabled?: boolean | null
-          recording_url?: string | null
-          started_at?: string | null
-          status?: string
-          tournament_id?: string | null
-          viewers_count?: number | null
-        }
-        Update: {
-          created_at?: string | null
-          daily_room_name?: string
-          daily_room_url?: string
-          duel_id?: string | null
-          ended_at?: string | null
-          featured?: boolean | null
-          id?: string
-          match_id?: string | null
-          recording_enabled?: boolean | null
-          recording_url?: string | null
-          started_at?: string | null
-          status?: string
-          tournament_id?: string | null
-          viewers_count?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "live_streams_duel_id_fkey"
-            columns: ["duel_id"]
-            isOneToOne: false
-            referencedRelation: "live_duels"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "live_streams_match_id_fkey"
-            columns: ["match_id"]
-            isOneToOne: false
-            referencedRelation: "live_duels"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "live_streams_tournament_id_fkey"
-            columns: ["tournament_id"]
-            isOneToOne: false
-            referencedRelation: "tournaments"
-            referencedColumns: ["id"]
           },
         ]
       }
@@ -883,41 +803,6 @@ export type Database = {
             columns: ["duel_id"]
             isOneToOne: false
             referencedRelation: "live_duels"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      stream_participants: {
-        Row: {
-          id: string
-          joined_at: string | null
-          left_at: string | null
-          role: string
-          stream_id: string
-          user_id: string
-        }
-        Insert: {
-          id?: string
-          joined_at?: string | null
-          left_at?: string | null
-          role: string
-          stream_id: string
-          user_id: string
-        }
-        Update: {
-          id?: string
-          joined_at?: string | null
-          left_at?: string | null
-          role?: string
-          stream_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "stream_participants_stream_id_fkey"
-            columns: ["stream_id"]
-            isOneToOne: false
-            referencedRelation: "live_streams"
             referencedColumns: ["id"]
           },
         ]
