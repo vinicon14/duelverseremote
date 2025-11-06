@@ -4,8 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
-import { Video, Eye, Calendar, Trash2, Loader2 } from "lucide-react";
+import { Video, Eye, Calendar, Trash2, Loader2, Globe, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useBanCheck } from "@/hooks/useBanCheck";
@@ -31,6 +32,7 @@ interface Recording {
   file_size: number | null;
   created_at: string;
   views: number;
+  is_public: boolean;
   profiles: {
     username: string;
     avatar_url: string | null;
@@ -46,6 +48,7 @@ export default function MatchGallery() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [updatingPublic, setUpdatingPublic] = useState<string | null>(null);
 
   useEffect(() => {
     checkAuth();
@@ -153,6 +156,36 @@ export default function MatchGallery() {
     }
   };
 
+  const togglePublicStatus = async (recordingId: string, currentStatus: boolean) => {
+    setUpdatingPublic(recordingId);
+    try {
+      const { error } = await supabase
+        .from('match_recordings')
+        .update({ is_public: !currentStatus })
+        .eq('id', recordingId);
+
+      if (error) throw error;
+
+      toast({
+        title: currentStatus ? "Gravação privada" : "Gravação pública",
+        description: currentStatus 
+          ? "Agora apenas você pode assistir esta gravação."
+          : "Agora todos podem assistir esta gravação.",
+      });
+
+      fetchRecordings();
+    } catch (error: any) {
+      console.error('Erro ao atualizar:', error);
+      toast({
+        title: "Erro ao atualizar",
+        description: error.message || "Não foi possível atualizar a privacidade.",
+        variant: "destructive",
+      });
+    } finally {
+      setUpdatingPublic(null);
+    }
+  };
+
   const formatFileSize = (bytes: number | null) => {
     if (!bytes) return 'N/A';
     const mb = bytes / (1024 * 1024);
@@ -227,6 +260,11 @@ export default function MatchGallery() {
                       <CardTitle className="text-lg truncate">{recording.title}</CardTitle>
                       <CardDescription className="flex items-center gap-2 mt-1">
                         <span className="truncate">{recording.profiles.username}</span>
+                        {recording.is_public ? (
+                          <Globe className="w-3 h-3" />
+                        ) : (
+                          <Lock className="w-3 h-3" />
+                        )}
                       </CardDescription>
                     </div>
                     {currentUser?.id === recording.user_id && (
@@ -266,6 +304,29 @@ export default function MatchGallery() {
                   {recording.file_size && (
                     <div className="text-xs text-muted-foreground">
                       Tamanho: {formatFileSize(recording.file_size)}
+                    </div>
+                  )}
+
+                  {currentUser?.id === recording.user_id && (
+                    <div className="flex items-center justify-between pt-3 border-t">
+                      <div className="flex items-center gap-2 text-sm">
+                        {recording.is_public ? (
+                          <>
+                            <Globe className="w-4 h-4 text-primary" />
+                            <span>Pública</span>
+                          </>
+                        ) : (
+                          <>
+                            <Lock className="w-4 h-4" />
+                            <span>Privada</span>
+                          </>
+                        )}
+                      </div>
+                      <Switch
+                        checked={recording.is_public}
+                        onCheckedChange={() => togglePublicStatus(recording.id, recording.is_public)}
+                        disabled={updatingPublic === recording.id}
+                      />
                     </div>
                   )}
                 </CardContent>

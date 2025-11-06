@@ -1,8 +1,9 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Video, Square, Loader2 } from "lucide-react";
+import { Video, Square, Loader2, Lock, Globe } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useAccountType } from "@/hooks/useAccountType";
 import {
   Dialog,
   DialogContent,
@@ -14,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 
 interface RecordMatchButtonProps {
   duelId: string;
@@ -22,24 +24,65 @@ interface RecordMatchButtonProps {
 
 export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonProps) => {
   const { toast } = useToast();
+  const { isPro, loading: accountLoading } = useAccountType();
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [isPublic, setIsPublic] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const videoBlob = useRef<Blob | null>(null);
 
+  // Cleanup ao desmontar componente
+  useEffect(() => {
+    return () => {
+      // Remover classe e parar gravação ao desmontar
+      document.body.classList.remove('recording-active');
+      if (mediaRecorderRef.current && isRecording) {
+        mediaRecorderRef.current.stop();
+      }
+    };
+  }, [isRecording]);
+
   const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: true,
-        audio: true,
+    if (!isPro) {
+      toast({
+        title: "Recurso PRO",
+        description: "Apenas usuários PRO podem gravar partidas.",
+        variant: "destructive",
       });
+      return;
+    }
+
+    try {
+      // Detectar se é mobile para usar configurações otimizadas
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      
+      const displayMediaOptions: any = {
+        video: {
+          displaySurface: "browser",
+          width: { ideal: isMobile ? 720 : 1280 },
+          height: { ideal: isMobile ? 1280 : 720 },
+          frameRate: { ideal: isMobile ? 15 : 30 }
+        },
+        audio: true,
+      };
+
+      const stream = await navigator.mediaDevices.getDisplayMedia(displayMediaOptions);
+
+      // Determinar melhor codec disponível
+      let mimeType = 'video/webm;codecs=vp8,opus';
+      if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')) {
+        mimeType = 'video/webm;codecs=vp9,opus';
+      } else if (MediaRecorder.isTypeSupported('video/webm;codecs=h264,opus')) {
+        mimeType = 'video/webm;codecs=h264,opus';
+      }
 
       const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'video/webm;codecs=vp8,opus',
+        mimeType,
+        videoBitsPerSecond: isMobile ? 1500000 : 2500000, // Menor bitrate para mobile
       });
 
       mediaRecorderRef.current = mediaRecorder;
@@ -61,8 +104,18 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
         setShowSaveDialog(true);
       };
 
+      // Detectar se o usuário parou a gravação pelo navegador
+      stream.getVideoTracks()[0].addEventListener('ended', () => {
+        if (isRecording) {
+          stopRecording();
+        }
+      });
+
       mediaRecorder.start();
       setIsRecording(true);
+
+      // Adicionar classe ao body para indicar gravação ativa
+      document.body.classList.add('recording-active');
 
       toast({
         title: "🔴 Gravação iniciada",
@@ -70,9 +123,17 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
       });
     } catch (error: any) {
       console.error('Erro ao iniciar gravação:', error);
+      
+      let errorMessage = "Não foi possível iniciar a gravação da tela.";
+      if (error.name === 'NotAllowedError') {
+        errorMessage = "Você precisa permitir o compartilhamento de tela.";
+      } else if (error.name === 'NotSupportedError') {
+        errorMessage = "Seu navegador não suporta gravação de tela.";
+      }
+      
       toast({
         title: "Erro ao gravar",
-        description: "Não foi possível iniciar a gravação da tela.",
+        description: errorMessage,
         variant: "destructive",
       });
     }
@@ -82,6 +143,9 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
+      
+      // Remover classe do body
+      document.body.classList.remove('recording-active');
     }
   };
 
@@ -129,6 +193,7 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
           description: description.trim() || null,
           video_url: publicUrl,
           file_size: videoBlob.current.size,
+          is_public: isPublic,
         });
 
       if (dbError) throw dbError;
@@ -141,6 +206,7 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
       setShowSaveDialog(false);
       setTitle("");
       setDescription("");
+      setIsPublic(false);
       videoBlob.current = null;
     } catch (error: any) {
       console.error('Erro ao salvar gravação:', error);
@@ -159,11 +225,35 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
     setShowSaveDialog(false);
     setTitle("");
     setDescription("");
+    setIsPublic(false);
+    
+    // Remover classe do body caso ainda esteja
+    document.body.classList.remove('recording-active');
+    
     toast({
       title: "Gravação descartada",
       description: "A gravação foi descartada.",
     });
   };
+
+  if (accountLoading) {
+    return null;
+  }
+
+  if (!isPro) {
+    return (
+      <Button
+        variant="outline"
+        size="sm"
+        className="gap-2"
+        disabled
+        title="Recurso exclusivo para usuários PRO"
+      >
+        <Video className="w-4 h-4" />
+        Gravar Partida (PRO)
+      </Button>
+    );
+  }
 
   return (
     <>
@@ -219,6 +309,30 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
                 onChange={(e) => setDescription(e.target.value)}
                 disabled={isProcessing}
                 rows={3}
+              />
+            </div>
+
+            <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+              <div className="flex items-center gap-3">
+                {isPublic ? (
+                  <Globe className="w-4 h-4 text-primary" />
+                ) : (
+                  <Lock className="w-4 h-4 text-muted-foreground" />
+                )}
+                <div>
+                  <Label htmlFor="public-toggle" className="cursor-pointer">
+                    Gravação pública
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    {isPublic ? "Todos podem assistir" : "Apenas você pode assistir"}
+                  </p>
+                </div>
+              </div>
+              <Switch
+                id="public-toggle"
+                checked={isPublic}
+                onCheckedChange={setIsPublic}
+                disabled={isProcessing}
               />
             </div>
           </div>

@@ -20,7 +20,8 @@ export const HideElementsButton = ({ onToggle }: HideElementsButtonProps) => {
       onClick={toggle}
       variant="outline"
       size="sm"
-      className="bg-card/95 backdrop-blur-sm"
+      className="bg-card/95 backdrop-blur-sm recording-safe-hide-button"
+      data-recording-safe="true"
       title={hidden ? "Mostrar controles" : "Ocultar controles"}
     >
       {hidden ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}

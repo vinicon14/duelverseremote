@@ -518,6 +518,7 @@ export type Database = {
           duration: number | null
           file_size: number | null
           id: string
+          is_public: boolean
           thumbnail_url: string | null
           title: string
           tournament_id: string | null
@@ -532,6 +533,7 @@ export type Database = {
           duration?: number | null
           file_size?: number | null
           id?: string
+          is_public?: boolean
           thumbnail_url?: string | null
           title: string
           tournament_id?: string | null
@@ -546,6 +548,7 @@ export type Database = {
           duration?: number | null
           file_size?: number | null
           id?: string
+          is_public?: boolean
           thumbnail_url?: string | null
           title?: string
           tournament_id?: string | null
