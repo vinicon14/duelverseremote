@@ -834,6 +834,30 @@ export type Database = {
         }
         Relationships: []
       }
+      tournament_chat_messages: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          tournament_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          tournament_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          tournament_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       tournament_matches: {
         Row: {
           created_at: string | null

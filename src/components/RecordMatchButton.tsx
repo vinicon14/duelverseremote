@@ -56,9 +56,22 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
       return;
     }
 
+    // Detectar se é mobile
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    
+    // Verificar se a API de gravação está disponível
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+      toast({
+        title: "Não suportado",
+        description: isMobile 
+          ? "A gravação de tela não é suportada em dispositivos móveis. Use um computador para gravar suas partidas."
+          : "Seu navegador não suporta gravação de tela.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
-      // Detectar se é mobile para usar configurações otimizadas
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
       
       const displayMediaOptions: any = {
         video: {

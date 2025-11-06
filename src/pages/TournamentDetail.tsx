@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { TournamentWinnerSelector } from "@/components/TournamentWinnerSelector";
 import { MatchResultSelector } from "@/components/MatchResultSelector";
+import { TournamentChat } from "@/components/TournamentChat";
 
 const TournamentDetail = () => {
   const { id } = useParams();
@@ -249,9 +250,9 @@ const TournamentDetail = () => {
           Voltar
         </Button>
 
-        <div className="grid gap-6 md:grid-cols-3">
+        <div className="grid gap-6 lg:grid-cols-3">
           {/* Tournament Info */}
-          <div className="md:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-6">
             <Card className="card-mystic">
               <CardHeader>
                 <div className="flex items-start justify-between">
@@ -410,8 +411,9 @@ const TournamentDetail = () => {
             )}
           </div>
 
-          {/* Participants List */}
-          <div>
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {/* Participants List */}
             <Card className="card-mystic">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -450,6 +452,11 @@ const TournamentDetail = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Tournament Chat */}
+            <div className="h-[500px]">
+              <TournamentChat tournamentId={id!} />
+            </div>
           </div>
         </div>
       </main>
