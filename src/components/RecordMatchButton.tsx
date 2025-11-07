@@ -4,6 +4,7 @@ import { Video, Square, Loader2, Lock, Globe } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAccountType } from "@/hooks/useAccountType";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Dialog,
   DialogContent,
@@ -25,6 +26,7 @@ interface RecordMatchButtonProps {
 export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonProps) => {
   const { toast } = useToast();
   const { isPro, loading: accountLoading } = useAccountType();
+  const isMobile = useIsMobile();
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
@@ -250,6 +252,11 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
   };
 
   if (accountLoading) {
+    return null;
+  }
+
+  // Não mostrar o botão em dispositivos móveis
+  if (isMobile) {
     return null;
   }
 

@@ -287,11 +287,20 @@ const TournamentDetail = () => {
                 )}
 
                 {tournament.status === 'upcoming' &&
-                  tournament.created_by !== currentUser?.id &&
                   !participants.some(p => p.user_id === currentUser?.id) &&
                   participants.length < tournament.max_participants && (
                     <Button
                       onClick={async () => {
+                        // Verificar se o usuário é o criador do torneio
+                        if (tournament.created_by === currentUser?.id) {
+                          toast({
+                            title: "Não permitido",
+                            description: "Você não pode se inscrever no seu próprio torneio",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+
                         try {
                           setLoading(true);
                           
