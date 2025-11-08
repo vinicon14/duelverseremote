@@ -16,6 +16,9 @@ export default defineConfig(({ mode }) => ({
     VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["favicon.png", "robots.txt"],
+      devOptions: {
+        enabled: true,
+      },
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
         runtimeCaching: [

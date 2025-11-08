@@ -64,8 +64,11 @@ export const usePushNotifications = () => {
     }
 
     try {
+      console.log('🔔 Iniciando subscrição de notificações...');
+      
       // Request notification permission
       const permission = await Notification.requestPermission();
+      console.log('📋 Permissão:', permission);
       
       if (permission !== 'granted') {
         toast({
@@ -76,40 +79,53 @@ export const usePushNotifications = () => {
         return false;
       }
 
-      // Register service worker
-      const registration = await navigator.serviceWorker.register('/sw.js');
-      await navigator.serviceWorker.ready;
+      // Wait for service worker to be ready (PWA auto-registers it)
+      console.log('⏳ Aguardando service worker...');
+      const registration = await navigator.serviceWorker.ready;
+      console.log('✅ Service worker pronto:', registration);
 
-      // Generate VAPID public key (you'll need to generate this)
-      // For now using a placeholder - you need to generate real VAPID keys
+      // VAPID public key
       const vapidPublicKey = 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U';
       const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
 
       // Subscribe to push notifications
+      console.log('📲 Criando subscrição push...');
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: convertedVapidKey,
       });
+      console.log('✅ Subscrição criada:', subscription.endpoint);
 
       // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
       
-      if (!user) {
-        throw new Error('User not authenticated');
+      if (userError || !user) {
+        console.error('❌ Erro ao obter usuário:', userError);
+        throw new Error('Você precisa estar autenticado para ativar notificações');
       }
+
+      console.log('👤 Usuário autenticado:', user.id);
 
       // Save subscription to database
       const subscriptionJson = subscription.toJSON();
+      console.log('💾 Salvando subscrição no banco...');
+      
       const { error } = await supabase
         .from('push_subscriptions')
         .upsert({
           user_id: user.id,
           endpoint: subscription.endpoint,
           keys: subscriptionJson.keys,
+        }, {
+          onConflict: 'user_id,endpoint'
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erro ao salvar subscrição:', error);
+        throw error;
+      }
 
+      console.log('✅ Subscrição salva com sucesso!');
       setIsSubscribed(true);
       
       toast({
@@ -119,10 +135,21 @@ export const usePushNotifications = () => {
 
       return true;
     } catch (error) {
-      console.error('Error subscribing to push notifications:', error);
+      console.error('❌ Erro ao ativar notificações:', error);
+      
+      let errorMessage = "Não foi possível ativar as notificações";
+      
+      if (error instanceof Error) {
+        if (error.message.includes('autenticado')) {
+          errorMessage = error.message;
+        } else if (error.message.includes('subscription')) {
+          errorMessage = "Erro ao criar subscrição push. Tente novamente.";
+        }
+      }
+      
       toast({
         title: "Erro",
-        description: "Não foi possível ativar as notificações",
+        description: errorMessage,
         variant: "destructive",
       });
       return false;

@@ -1,47 +1,51 @@
-// Service Worker for Push Notifications
+// Custom Service Worker for Push Notifications
+// This extends the auto-generated PWA service worker
+
 self.addEventListener('install', (event) => {
-  console.log('Service Worker installing...');
+  console.log('✅ Service Worker instalado');
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
-  console.log('Service Worker activating...');
-  event.waitUntil(clients.claim());
+  console.log('✅ Service Worker ativado');
+  event.waitUntil(self.clients.claim());
 });
 
 // Handle push notifications
 self.addEventListener('push', (event) => {
-  console.log('Push notification received:', event);
+  console.log('📩 Push notification recebida:', event);
   
-  let data = {
+  let notificationData = {
     title: 'Duelverse',
     body: 'Nova notificação',
     icon: '/favicon.png',
     badge: '/favicon.png',
+    data: {},
   };
 
   if (event.data) {
     try {
       const payload = event.data.json();
-      data = {
-        title: payload.title || data.title,
-        body: payload.body || data.body,
-        icon: payload.icon || data.icon,
-        badge: payload.badge || data.badge,
-        data: payload.data || {},
+      notificationData = {
+        title: payload.title || notificationData.title,
+        body: payload.body || notificationData.body,
+        icon: payload.icon || notificationData.icon,
+        badge: payload.badge || notificationData.badge,
+        data: payload.data || notificationData.data,
       };
+      console.log('📋 Payload:', notificationData);
     } catch (e) {
-      console.error('Error parsing push data:', e);
+      console.error('❌ Erro ao fazer parse do payload:', e);
     }
   }
 
-  const promiseChain = self.registration.showNotification(data.title, {
-    body: data.body,
-    icon: data.icon,
-    badge: data.badge,
-    data: data.data,
-    vibrate: [200, 100, 200],
+  const promiseChain = self.registration.showNotification(notificationData.title, {
+    body: notificationData.body,
+    icon: notificationData.icon,
+    badge: notificationData.badge,
+    data: notificationData.data,
     requireInteraction: false,
+    tag: 'duelverse-notification',
   });
 
   event.waitUntil(promiseChain);
@@ -49,24 +53,27 @@ self.addEventListener('push', (event) => {
 
 // Handle notification clicks
 self.addEventListener('notificationclick', (event) => {
-  console.log('Notification clicked:', event);
+  console.log('🖱️ Notificação clicada:', event);
   event.notification.close();
 
   const urlToOpen = event.notification.data?.url || '/';
+  console.log('🔗 Abrindo URL:', urlToOpen);
 
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true })
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then((windowClients) => {
         // Check if there's already a window open
         for (let i = 0; i < windowClients.length; i++) {
           const client = windowClients[i];
-          if (client.url === urlToOpen && 'focus' in client) {
+          if (client.url.includes(urlToOpen) && 'focus' in client) {
+            console.log('✅ Focando janela existente');
             return client.focus();
           }
         }
         // If no window is open, open a new one
-        if (clients.openWindow) {
-          return clients.openWindow(urlToOpen);
+        if (self.clients.openWindow) {
+          console.log('🆕 Abrindo nova janela');
+          return self.clients.openWindow(urlToOpen);
         }
       })
   );
