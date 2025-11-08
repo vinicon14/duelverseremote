@@ -28,6 +28,7 @@ import FriendChat from "./pages/FriendChat";
 import MatchGallery from "./pages/MatchGallery";
 import News from "./pages/News";
 import NotFound from "./pages/NotFound";
+import InstallApp from "./pages/InstallApp";
 
 const queryClient = new QueryClient();
 
@@ -54,6 +55,7 @@ const RouterContent = () => {
       <Route path="/store" element={<Store />} />
       <Route path="/news" element={<News />} />
       <Route path="/gallery" element={<MatchGallery />} />
+      <Route path="/install" element={<InstallApp />} />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
     </Routes>
