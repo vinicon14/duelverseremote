@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
       user_id: userId,
       type: data?.type || 'general',
       title,
-      body,
+      message: body,
       data,
     });
 
