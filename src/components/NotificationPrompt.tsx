@@ -1,14 +1,12 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Bell, X, Download } from "lucide-react";
+import { Bell, X } from "lucide-react";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
-import { useNavigate } from "react-router-dom";
 
 export const NotificationPrompt = () => {
   const [showPrompt, setShowPrompt] = useState(false);
   const { isSupported, isSubscribed, loading, subscribe } = usePushNotifications();
-  const navigate = useNavigate();
 
   useEffect(() => {
     // Check if user has already been prompted
@@ -41,11 +39,6 @@ export const NotificationPrompt = () => {
     setShowPrompt(false);
   };
 
-  const handleInstall = () => {
-    navigate('/install');
-    handleDismiss();
-  };
-
   if (!showPrompt) return null;
 
   return (
@@ -62,26 +55,20 @@ export const NotificationPrompt = () => {
           </Button>
           <div className="flex items-center gap-2">
             <Bell className="h-5 w-5 text-primary" />
-            <CardTitle className="text-base">Notificações e App</CardTitle>
+            <CardTitle className="text-base">Ative as Notificações</CardTitle>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <CardDescription>
-            Receba notificações mesmo com o app fechado! Instale o Duelverse na sua tela inicial.
+            Receba notificações de mensagens, convites para duelos, notícias e torneios diretamente no seu dispositivo!
           </CardDescription>
-          <div className="flex flex-col gap-2">
-            <Button onClick={handleInstall} className="w-full">
-              <Download className="mr-2 h-4 w-4" />
-              Instalar App
+          <div className="flex gap-2">
+            <Button onClick={handleSubscribe} className="flex-1">
+              Ativar
             </Button>
-            <div className="flex gap-2">
-              <Button onClick={handleSubscribe} variant="outline" className="flex-1">
-                Só notificações
-              </Button>
-              <Button variant="ghost" onClick={handleDismiss} size="sm">
-                Depois
-              </Button>
-            </div>
+            <Button variant="outline" onClick={handleDismiss}>
+              Agora não
+            </Button>
           </div>
         </CardContent>
       </Card>
