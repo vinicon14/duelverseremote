@@ -8,7 +8,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from '@supabase/supabase-js';
 import { DuelInviteNotification } from "@/components/DuelInviteNotification";
 import { NotificationPrompt } from "@/components/NotificationPrompt";
-import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 import Home from "./pages/Home";
 import Landing from "./pages/Landing";
 import Admin from "./pages/Admin";
@@ -29,6 +28,7 @@ import FriendChat from "./pages/FriendChat";
 import MatchGallery from "./pages/MatchGallery";
 import News from "./pages/News";
 import NotFound from "./pages/NotFound";
+import InstallApp from "./pages/InstallApp";
 
 const queryClient = new QueryClient();
 
@@ -55,6 +55,7 @@ const RouterContent = () => {
       <Route path="/store" element={<Store />} />
       <Route path="/news" element={<News />} />
       <Route path="/gallery" element={<MatchGallery />} />
+      <Route path="/install" element={<InstallApp />} />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
     </Routes>
@@ -87,7 +88,6 @@ const AppContent = () => {
 
   return (
     <BrowserRouter>
-      <PWAInstallPrompt />
       <DuelInviteNotification currentUserId={user?.id} />
       <NotificationPrompt />
       <RouterContent />
