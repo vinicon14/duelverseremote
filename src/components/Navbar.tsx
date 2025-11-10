@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { NotificationBell } from "@/components/NotificationBell";
+import { NotificationCenter } from "@/components/NotificationCenter";
 import { OnlineUsersCounter } from "@/components/OnlineUsersCounter";
 
 export const Navbar = () => {
@@ -162,7 +162,7 @@ export const Navbar = () => {
         <div className="hidden md:flex items-center space-x-2 shrink-0">
           <OnlineUsersCounter />
           
-          {user && <NotificationBell userId={user.id} />}
+          {user && <NotificationCenter userId={user.id} />}
           
           {user ? (
             <DropdownMenu>

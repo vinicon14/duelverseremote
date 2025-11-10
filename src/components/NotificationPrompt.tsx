@@ -9,21 +9,33 @@ export const NotificationPrompt = () => {
   const { isSupported, isSubscribed, loading, subscribe } = usePushNotifications();
 
   useEffect(() => {
-    // Check if user has already been prompted
     const hasBeenPrompted = localStorage.getItem('notification-prompted');
+    const pwaInstalled = localStorage.getItem('pwa-installed');
     
-    // Show prompt if:
-    // - Notifications are supported
-    // - User is not subscribed
-    // - User hasn't been prompted before
-    if (isSupported && !isSubscribed && !hasBeenPrompted && !loading) {
-      // Show prompt after 5 seconds
+    // Só mostrar se PWA foi instalado ou após evento de instalação
+    const handlePWAInstalled = () => {
+      if (isSupported && !isSubscribed && !hasBeenPrompted && !loading) {
+        // Mostrar prompt 2 segundos após instalação
+        setTimeout(() => {
+          setShowPrompt(true);
+        }, 2000);
+      }
+    };
+
+    // Se PWA já está instalado, verificar após 5 segundos
+    if (pwaInstalled && isSupported && !isSubscribed && !hasBeenPrompted && !loading) {
       const timer = setTimeout(() => {
         setShowPrompt(true);
       }, 5000);
-
       return () => clearTimeout(timer);
     }
+
+    // Escutar evento de instalação do PWA
+    window.addEventListener('pwa-installed', handlePWAInstalled);
+
+    return () => {
+      window.removeEventListener('pwa-installed', handlePWAInstalled);
+    };
   }, [isSupported, isSubscribed, loading]);
 
   const handleSubscribe = async () => {
