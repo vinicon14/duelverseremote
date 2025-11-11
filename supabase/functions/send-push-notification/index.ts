@@ -32,13 +32,50 @@ interface NotificationRequest {
 }
 
 Deno.serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { 
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      } 
+    });
+  }
+
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  };
+
   try {
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { userId, title, body, data } = await req.json() as NotificationRequest;
+    // Parse body
+    let body;
+    try {
+      const text = await req.text();
+      console.log('📦 Request body:', text);
+      body = text ? JSON.parse(text) : {};
+    } catch (e) {
+      console.error('❌ Error parsing body:', e);
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { userId, title, body: message, data } = body as NotificationRequest;
+
+    if (!userId || !title || !message) {
+      return new Response(
+        JSON.stringify({ error: 'Missing required fields: userId, title, body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     console.log('📲 Sending push notification to user:', userId);
 
@@ -68,14 +105,14 @@ Deno.serve(async (req) => {
       user_id: userId,
       type: data?.type || 'general',
       title,
-      message: body,
+      message: message,
       data,
     });
 
     // Prepare payload
     const payload = JSON.stringify({
       title,
-      body,
+      body: message,
       icon: '/favicon.png',
       badge: '/favicon.png',
       data: data || {},
@@ -122,14 +159,14 @@ Deno.serve(async (req) => {
         sent: successCount,
         total: subscriptions.length,
       }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
     console.error('❌ Error in send-push-notification:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
       JSON.stringify({ error: errorMessage }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });

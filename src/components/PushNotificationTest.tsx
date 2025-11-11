@@ -22,16 +22,24 @@ export const PushNotificationTest = () => {
         throw new Error('Usuário não autenticado');
       }
 
-      const { error } = await supabase.functions.invoke('send-push-notification', {
-        body: {
+      console.log('👤 User ID:', user.id);
+      console.log('📤 Enviando para edge function...');
+
+      const { data, error } = await supabase.functions.invoke('send-push-notification', {
+        body: JSON.stringify({
           userId: user.id,
           title: 'Teste de Notificação Push',
           body: 'Se você está vendo isso, as notificações push estão funcionando! 🎉',
           data: { type: 'test', url: '/profile' }
-        }
+        })
       });
 
-      if (error) throw error;
+      console.log('📥 Resposta:', data);
+
+      if (error) {
+        console.error('❌ Erro da edge function:', error);
+        throw error;
+      }
 
       toast({
         title: "Notificação enviada!",
