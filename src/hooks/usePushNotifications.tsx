@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { canUsePushNotifications } from "@/utils/platformDetection";
 
 const VAPID_PUBLIC_KEY = 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U';
 
@@ -8,30 +9,40 @@ export const usePushNotifications = () => {
   const [isSupported, setIsSupported] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [platformMessage, setPlatformMessage] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     const checkSupport = async () => {
       console.log('🔍 Verificando suporte a notificações...');
-      console.log('Notification:', 'Notification' in window);
-      console.log('serviceWorker:', 'serviceWorker' in navigator);
-      console.log('PushManager:', 'PushManager' in window);
       
-      const supported = 'Notification' in window && 
-                       'serviceWorker' in navigator && 
-                       'PushManager' in window;
+      const { supported, reason } = canUsePushNotifications();
+      console.log('📱 Plataforma suportada:', supported);
+      if (reason) console.log('⚠️ Motivo:', reason);
       
-      console.log('✅ Suportado:', supported);
       setIsSupported(supported);
+      setPlatformMessage(reason);
       
       if (supported) {
-        // Aguardar o service worker estar pronto
         try {
-          const registration = await navigator.serviceWorker.register('/sw.js');
-          console.log('✅ Service Worker registrado:', registration);
+          // Registrar service worker se ainda não estiver registrado
+          let registration = await navigator.serviceWorker.getRegistration('/sw.js');
+          
+          if (!registration) {
+            console.log('📝 Registrando Service Worker...');
+            registration = await navigator.serviceWorker.register('/sw.js', {
+              scope: '/',
+              updateViaCache: 'none'
+            });
+            console.log('✅ Service Worker registrado');
+          } else {
+            console.log('✅ Service Worker já registrado');
+          }
+          
           await checkSubscriptionStatus();
         } catch (error) {
-          console.error('❌ Erro ao registrar Service Worker:', error);
+          console.error('❌ Erro com Service Worker:', error);
+          setPlatformMessage('Erro ao registrar service worker');
         }
       }
       setLoading(false);
@@ -210,5 +221,6 @@ export const usePushNotifications = () => {
     loading,
     subscribe,
     unsubscribe,
+    platformMessage,
   };
 };

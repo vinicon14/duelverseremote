@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 
 export const PushNotificationTest = () => {
-  const { isSupported, isSubscribed, loading, subscribe, unsubscribe } = usePushNotifications();
+  const { isSupported, isSubscribed, loading, subscribe, unsubscribe, platformMessage } = usePushNotifications();
   const { toast } = useToast();
   const [testing, setTesting] = useState(false);
 
@@ -49,7 +49,24 @@ export const PushNotificationTest = () => {
     }
   };
 
-  if (!isSupported || loading) return null;
+  if (loading) return null;
+
+  // Se não for suportado, mostrar mensagem explicativa
+  if (!isSupported) {
+    return (
+      <Card className="card-mystic mb-6 border-yellow-500/20">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Bell className="h-5 w-5 text-yellow-500" />
+            <span className="text-gradient-mystic">Notificações Push</span>
+          </CardTitle>
+          <CardDescription className="text-yellow-600 dark:text-yellow-400">
+            ⚠️ {platformMessage || "Notificações push não estão disponíveis neste dispositivo"}
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
 
   return (
     <Card className="card-mystic mb-6">
