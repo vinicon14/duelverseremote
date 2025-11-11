@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Send } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { notifyNewMessage } from "@/utils/pushNotifications";
 
 export default function FriendChat() {
   const { friendId } = useParams();
@@ -147,6 +148,17 @@ export default function FriendChat() {
 
       setNewMessage("");
       await fetchMessages();
+
+      // Enviar notificação push para o destinatário
+      const { data: senderProfile } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('user_id', currentUser.id)
+        .single();
+
+      if (senderProfile?.username) {
+        await notifyNewMessage(friendId, senderProfile.username);
+      }
     } catch (error: any) {
       toast({
         title: "Erro ao enviar mensagem",
