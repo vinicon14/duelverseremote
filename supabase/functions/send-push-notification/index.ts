@@ -1,28 +1,9 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import * as webpush from 'https://esm.sh/web-push@3.6.7?target=deno';
 
-const VAPID_PUBLIC_KEY = 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U';
-const VAPID_PRIVATE_KEY = Deno.env.get('VAPID_PRIVATE_KEY') || '';
-
-console.log('🔑 Verificando chave VAPID...');
-console.log('Private key length:', VAPID_PRIVATE_KEY.length);
-
-if (!VAPID_PRIVATE_KEY || VAPID_PRIVATE_KEY.length < 20) {
-  console.error('❌ VAPID_PRIVATE_KEY não configurada corretamente!');
-}
-
-// Configure VAPID details
-try {
-  webpush.setVapidDetails(
-    'mailto:admin@duelverse.app',
-    VAPID_PUBLIC_KEY,
-    VAPID_PRIVATE_KEY
-  );
-  console.log('✅ VAPID configurado com sucesso');
-} catch (error) {
-  console.error('❌ Erro ao configurar VAPID:', error);
-  throw error;
-}
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
 interface NotificationRequest {
   userId: string;
@@ -34,19 +15,8 @@ interface NotificationRequest {
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { 
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      } 
-    });
+    return new Response(null, { headers: corsHeaders });
   }
-
-  const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  };
 
   try {
     const supabaseClient = createClient(
@@ -94,7 +64,7 @@ Deno.serve(async (req) => {
       console.log('No subscriptions found for user:', userId);
       return new Response(
         JSON.stringify({ message: 'No subscriptions found for user' }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -110,46 +80,73 @@ Deno.serve(async (req) => {
     });
 
     // Prepare payload
-    const payload = JSON.stringify({
+    const payload = {
       title,
       body: message,
       icon: '/favicon.png',
       badge: '/favicon.png',
       data: data || {},
-    });
+    };
 
-    // Send push notification to all user's devices
-    const promises = subscriptions.map(async (sub) => {
-      try {
-        const pushSubscription = {
-          endpoint: sub.endpoint,
-          keys: sub.keys as { p256dh: string; auth: string },
-        };
+    // Send push notification to all user's devices using native fetch
+    const results = await Promise.allSettled(
+      subscriptions.map(async (sub) => {
+        try {
+          // Extract FCM token from endpoint
+          const endpoint = sub.endpoint;
+          const fcmMatch = endpoint.match(/fcm\/send\/([^:]+:[^/]+)/);
+          
+          if (!fcmMatch) {
+            console.log('❌ Invalid FCM endpoint:', endpoint.substring(0, 50) + '...');
+            return false;
+          }
 
-        console.log('Sending to endpoint:', sub.endpoint.substring(0, 50) + '...');
+          const fcmToken = fcmMatch[1];
+          console.log('📤 Sending to FCM token:', fcmToken.substring(0, 20) + '...');
 
-        await webpush.sendNotification(pushSubscription, payload);
-        
-        console.log('✅ Push sent successfully');
-        return true;
-      } catch (error) {
-        console.error('❌ Error sending push to device:', error);
-        
-        // If subscription is invalid (410 Gone or 404 Not Found), delete it
-        if (error instanceof Error && (error.message.includes('410') || error.message.includes('404'))) {
-          console.log('Deleting invalid subscription:', sub.id);
-          await supabaseClient
-            .from('push_subscriptions')
-            .delete()
-            .eq('id', sub.id);
+          // Send directly to FCM
+          const fcmResponse = await fetch(
+            'https://fcm.googleapis.com/fcm/send',
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'key=' + (Deno.env.get('FCM_SERVER_KEY') || ''),
+              },
+              body: JSON.stringify({
+                to: fcmToken,
+                notification: payload,
+                data: payload.data,
+              }),
+            }
+          );
+
+          if (!fcmResponse.ok) {
+            const errorText = await fcmResponse.text();
+            console.error('❌ FCM error:', errorText);
+            
+            // Delete invalid subscription
+            if (fcmResponse.status === 404 || fcmResponse.status === 410) {
+              console.log('Deleting invalid subscription:', sub.id);
+              await supabaseClient
+                .from('push_subscriptions')
+                .delete()
+                .eq('id', sub.id);
+            }
+            
+            return false;
+          }
+
+          console.log('✅ Push sent successfully');
+          return true;
+        } catch (error) {
+          console.error('❌ Error sending push:', error);
+          return false;
         }
-        
-        return false;
-      }
-    });
+      })
+    );
 
-    const results = await Promise.all(promises);
-    const successCount = results.filter(r => r).length;
+    const successCount = results.filter((r) => r.status === 'fulfilled' && r.value).length;
 
     console.log(`📊 Results: ${successCount}/${subscriptions.length} sent successfully`);
 
