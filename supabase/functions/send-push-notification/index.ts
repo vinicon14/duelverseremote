@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import webpush from 'https://esm.sh/web-push@3.6.7';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -79,68 +80,59 @@ Deno.serve(async (req) => {
       data,
     });
 
+    // Configure web-push with VAPID keys
+    const vapidPublicKey = 'BKyagl1H5LT1x55xY8YfIbKZFRKN9DT7g8eV-lrDHJxQ3pGwGz5wXFpPe8x-AY3w7XCzkVsG7r-LQxvY_Nv8R0w';
+    const vapidPrivateKey = Deno.env.get('VAPID_PRIVATE_KEY');
+    
+    if (!vapidPrivateKey) {
+      throw new Error('VAPID_PRIVATE_KEY not configured');
+    }
+
+    webpush.setVapidDetails(
+      'mailto:noreply@duelverse.app',
+      vapidPublicKey,
+      vapidPrivateKey
+    );
+
     // Prepare payload
-    const payload = {
+    const payload = JSON.stringify({
       title,
       body: message,
       icon: '/favicon.png',
       badge: '/favicon.png',
       data: data || {},
-    };
+    });
 
-    // Send push notification to all user's devices using native fetch
+    // Send push notification to all user's devices
     const results = await Promise.allSettled(
       subscriptions.map(async (sub) => {
         try {
-          // Extract FCM token from endpoint
-          const endpoint = sub.endpoint;
-          const fcmMatch = endpoint.match(/fcm\/send\/([^:]+:[^/]+)/);
-          
-          if (!fcmMatch) {
-            console.log('❌ Invalid FCM endpoint:', endpoint.substring(0, 50) + '...');
-            return false;
-          }
+          console.log('📤 Sending to endpoint:', sub.endpoint.substring(0, 50) + '...');
 
-          const fcmToken = fcmMatch[1];
-          console.log('📤 Sending to FCM token:', fcmToken.substring(0, 20) + '...');
+          const pushSubscription = {
+            endpoint: sub.endpoint,
+            keys: {
+              p256dh: sub.keys.p256dh,
+              auth: sub.keys.auth,
+            },
+          };
 
-          // Send directly to FCM
-          const fcmResponse = await fetch(
-            'https://fcm.googleapis.com/fcm/send',
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'key=' + (Deno.env.get('FCM_SERVER_KEY') || ''),
-              },
-              body: JSON.stringify({
-                to: fcmToken,
-                notification: payload,
-                data: payload.data,
-              }),
-            }
-          );
-
-          if (!fcmResponse.ok) {
-            const errorText = await fcmResponse.text();
-            console.error('❌ FCM error:', errorText);
-            
-            // Delete invalid subscription
-            if (fcmResponse.status === 404 || fcmResponse.status === 410) {
-              console.log('Deleting invalid subscription:', sub.id);
-              await supabaseClient
-                .from('push_subscriptions')
-                .delete()
-                .eq('id', sub.id);
-            }
-            
-            return false;
-          }
+          await webpush.sendNotification(pushSubscription, payload);
 
           console.log('✅ Push sent successfully');
           return true;
-        } catch (error) {
+        } catch (error: any) {
           console.error('❌ Error sending push:', error);
+          
+          // Delete invalid subscription
+          if (error.statusCode === 404 || error.statusCode === 410 || error.statusCode === 401) {
+            console.log('🗑️ Deleting invalid subscription:', sub.id);
+            await supabaseClient
+              .from('push_subscriptions')
+              .delete()
+              .eq('id', sub.id);
+          }
+          
           return false;
         }
       })
