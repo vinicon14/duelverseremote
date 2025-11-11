@@ -1,11 +1,11 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { setVapidDetails, sendNotification } from 'https://esm.sh/web-push@3.6.7';
+import * as webpush from 'https://esm.sh/web-push@3.6.7?target=deno';
 
 const VAPID_PUBLIC_KEY = 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U';
 const VAPID_PRIVATE_KEY = Deno.env.get('VAPID_PRIVATE_KEY') || '';
 
 // Configure VAPID details
-setVapidDetails(
+webpush.setVapidDetails(
   'mailto:admin@duelverse.app',
   VAPID_PUBLIC_KEY,
   VAPID_PRIVATE_KEY
@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
 
         console.log('Sending to endpoint:', sub.endpoint.substring(0, 50) + '...');
 
-        await sendNotification(pushSubscription, payload);
+        await webpush.sendNotification(pushSubscription, payload);
         
         console.log('✅ Push sent successfully');
         return true;
