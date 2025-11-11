@@ -65,38 +65,57 @@ export const usePushNotifications = () => {
     try {
       console.log('🔔 Solicitando permissão para notificações...');
       
-      const permission = await Notification.requestPermission();
-      console.log('📋 Permissão:', permission);
-      
-      if (permission !== 'granted') {
-        toast({
-          title: "Permissão negada",
-          description: "Você precisa permitir notificações para recebê-las",
-          variant: "destructive",
-        });
-        return false;
+      // Verificar se já temos permissão
+      if (Notification.permission === 'granted') {
+        console.log('✅ Já temos permissão');
+      } else {
+        const permission = await Notification.requestPermission();
+        console.log('📋 Permissão obtida:', permission);
+        
+        if (permission !== 'granted') {
+          toast({
+            title: "Permissão negada",
+            description: "Você precisa permitir notificações para recebê-las",
+            variant: "destructive",
+          });
+          return false;
+        }
       }
 
-      console.log('✅ Permissão concedida! Registrando subscrição...');
-
+      console.log('🔧 Aguardando Service Worker...');
       const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-      });
+      console.log('✅ Service Worker pronto');
 
-      console.log('📝 Subscrição criada:', subscription);
+      // Verificar se já existe subscrição
+      let subscription = await registration.pushManager.getSubscription();
+      console.log('📋 Subscrição existente?', !!subscription);
+
+      if (!subscription) {
+        console.log('📝 Criando nova subscrição...');
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+        });
+        console.log('✅ Subscrição criada:', subscription.endpoint.substring(0, 50) + '...');
+      }
 
       // Salvar subscrição no banco de dados
+      console.log('💾 Salvando no banco de dados...');
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
         throw new Error('Usuário não autenticado');
       }
 
+      console.log('👤 User ID:', user.id);
+
       const subscriptionJson = subscription.toJSON();
+      console.log('📦 Subscription data:', {
+        endpoint: subscription.endpoint.substring(0, 50) + '...',
+        hasKeys: !!subscriptionJson.keys
+      });
       
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('push_subscriptions')
         .upsert({
           user_id: user.id,
@@ -104,26 +123,31 @@ export const usePushNotifications = () => {
           keys: subscriptionJson.keys,
         }, {
           onConflict: 'endpoint'
-        });
+        })
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erro ao salvar:', error);
+        throw error;
+      }
 
-      console.log('✅ Subscrição salva no banco de dados');
+      console.log('✅ Subscrição salva no banco:', data);
       
       setIsSubscribed(true);
       
       toast({
-        title: "Notificações ativadas",
+        title: "Notificações ativadas!",
         description: "Você receberá notificações mesmo com o app fechado",
       });
 
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Erro ao ativar notificações:', error);
+      console.error('Stack:', error.stack);
       
       toast({
         title: "Erro",
-        description: "Não foi possível ativar as notificações",
+        description: error.message || "Não foi possível ativar as notificações",
         variant: "destructive",
       });
       return false;
