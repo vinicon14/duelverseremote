@@ -138,31 +138,46 @@ export const usePushNotifications = () => {
       console.log('👤 User ID:', user.id);
 
       const subscriptionJson = subscription.toJSON();
-      console.log('📦 Subscription JSON:', subscriptionJson);
+      console.log('📦 Subscription JSON completo:', JSON.stringify(subscriptionJson, null, 2));
       console.log('📦 Endpoint:', subscription.endpoint);
-      console.log('📦 Keys:', subscriptionJson.keys);
+      console.log('📦 Keys:', JSON.stringify(subscriptionJson.keys, null, 2));
       
-      console.log('🚀 Executando upsert...');
+      // Tentar deletar subscrição antiga primeiro
+      console.log('🗑️ Deletando subscrições antigas do usuário...');
+      const { error: deleteError } = await supabase
+        .from('push_subscriptions')
+        .delete()
+        .eq('user_id', user.id);
+      
+      if (deleteError) {
+        console.warn('⚠️ Erro ao deletar subscrições antigas:', deleteError);
+      } else {
+        console.log('✅ Subscrições antigas deletadas');
+      }
+      
+      // Inserir nova subscrição
+      console.log('🚀 Inserindo nova subscrição...');
       const { data, error } = await supabase
         .from('push_subscriptions')
-        .upsert({
+        .insert({
           user_id: user.id,
           endpoint: subscription.endpoint,
           keys: subscriptionJson.keys,
-        }, {
-          onConflict: 'endpoint'
         })
-        .select();
+        .select()
+        .single();
 
-      console.log('📊 Resultado do upsert:', { data, error });
+      console.log('📊 Resultado da inserção:', JSON.stringify({ data, error }, null, 2));
 
       if (error) {
         console.error('❌ Erro ao salvar subscrição:', error);
-        console.error('❌ Detalhes do erro:', JSON.stringify(error, null, 2));
+        console.error('❌ Código do erro:', error.code);
+        console.error('❌ Mensagem do erro:', error.message);
+        console.error('❌ Detalhes completos:', JSON.stringify(error, null, 2));
         throw error;
       }
 
-      console.log('✅ Subscrição salva no banco:', data);
+      console.log('✅ Subscrição salva no banco com sucesso! ID:', data?.id);
       
       setIsSubscribed(true);
       
