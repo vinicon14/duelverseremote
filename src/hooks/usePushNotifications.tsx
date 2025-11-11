@@ -12,13 +12,27 @@ export const usePushNotifications = () => {
 
   useEffect(() => {
     const checkSupport = async () => {
+      console.log('🔍 Verificando suporte a notificações...');
+      console.log('Notification:', 'Notification' in window);
+      console.log('serviceWorker:', 'serviceWorker' in navigator);
+      console.log('PushManager:', 'PushManager' in window);
+      
       const supported = 'Notification' in window && 
                        'serviceWorker' in navigator && 
                        'PushManager' in window;
+      
+      console.log('✅ Suportado:', supported);
       setIsSupported(supported);
       
       if (supported) {
-        await checkSubscriptionStatus();
+        // Aguardar o service worker estar pronto
+        try {
+          const registration = await navigator.serviceWorker.register('/sw.js');
+          console.log('✅ Service Worker registrado:', registration);
+          await checkSubscriptionStatus();
+        } catch (error) {
+          console.error('❌ Erro ao registrar Service Worker:', error);
+        }
       }
       setLoading(false);
     };
