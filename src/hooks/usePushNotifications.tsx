@@ -131,17 +131,18 @@ export const usePushNotifications = () => {
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
+        console.error('❌ Usuário não autenticado!');
         throw new Error('Usuário não autenticado');
       }
 
       console.log('👤 User ID:', user.id);
 
       const subscriptionJson = subscription.toJSON();
-      console.log('📦 Subscription data:', {
-        endpoint: subscription.endpoint.substring(0, 50) + '...',
-        hasKeys: !!subscriptionJson.keys
-      });
+      console.log('📦 Subscription JSON:', subscriptionJson);
+      console.log('📦 Endpoint:', subscription.endpoint);
+      console.log('📦 Keys:', subscriptionJson.keys);
       
+      console.log('🚀 Executando upsert...');
       const { data, error } = await supabase
         .from('push_subscriptions')
         .upsert({
@@ -153,8 +154,11 @@ export const usePushNotifications = () => {
         })
         .select();
 
+      console.log('📊 Resultado do upsert:', { data, error });
+
       if (error) {
-        console.error('❌ Erro ao salvar:', error);
+        console.error('❌ Erro ao salvar subscrição:', error);
+        console.error('❌ Detalhes do erro:', JSON.stringify(error, null, 2));
         throw error;
       }
 
