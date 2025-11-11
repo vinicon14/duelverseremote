@@ -4,11 +4,30 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Bell, X, Download } from "lucide-react";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 export const NotificationPrompt = () => {
   const [showPrompt, setShowPrompt] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const { isSupported, isSubscribed, loading, subscribe } = usePushNotifications();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Check authentication status
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setIsAuthenticated(!!session);
+    };
+
+    checkAuth();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthenticated(!!session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     // Check if user has already been prompted
@@ -16,9 +35,10 @@ export const NotificationPrompt = () => {
     
     // Show prompt if:
     // - Notifications are supported
+    // - User is authenticated
     // - User is not subscribed
     // - User hasn't been prompted before
-    if (isSupported && !isSubscribed && !hasBeenPrompted && !loading) {
+    if (isSupported && isAuthenticated && !isSubscribed && !hasBeenPrompted && !loading) {
       // Show prompt after 5 seconds
       const timer = setTimeout(() => {
         setShowPrompt(true);
@@ -26,7 +46,7 @@ export const NotificationPrompt = () => {
 
       return () => clearTimeout(timer);
     }
-  }, [isSupported, isSubscribed, loading]);
+  }, [isSupported, isAuthenticated, isSubscribed, loading]);
 
   const handleSubscribe = async () => {
     const success = await subscribe();

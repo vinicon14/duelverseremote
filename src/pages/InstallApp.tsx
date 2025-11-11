@@ -1,20 +1,37 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, Smartphone, Check, Bell } from "lucide-react";
+import { Download, Smartphone, Check, Bell, LogIn } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function InstallApp() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isInstallable, setIsInstallable] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { isSupported, isSubscribed, subscribe } = usePushNotifications();
   const { toast } = useToast();
 
   useEffect(() => {
+    // Check authentication status
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setIsAuthenticated(!!session);
+      setLoading(false);
+    };
+
+    checkAuth();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthenticated(!!session);
+    });
+
     // Check if already installed
     if (window.matchMedia("(display-mode: standalone)").matches) {
       setIsInstalled(true);
@@ -31,6 +48,7 @@ export default function InstallApp() {
 
     return () => {
       window.removeEventListener("beforeinstallprompt", handler);
+      subscription.unsubscribe();
     };
   }, []);
 
@@ -134,7 +152,23 @@ export default function InstallApp() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {isSubscribed ? (
+              {!isAuthenticated ? (
+                <div className="space-y-3">
+                  <div className="p-4 bg-muted rounded-lg">
+                    <p className="text-sm text-muted-foreground">
+                      Para ativar as notificações push, você precisa fazer login primeiro.
+                    </p>
+                  </div>
+                  <Button 
+                    onClick={() => navigate('/auth')} 
+                    className="w-full" 
+                    size="lg"
+                  >
+                    <LogIn className="mr-2 h-5 w-5" />
+                    Fazer Login
+                  </Button>
+                </div>
+              ) : isSubscribed ? (
                 <div className="flex items-center gap-2 p-4 bg-primary/10 rounded-lg">
                   <Check className="h-5 w-5 text-primary" />
                   <span className="text-sm">Notificações ativadas!</span>
