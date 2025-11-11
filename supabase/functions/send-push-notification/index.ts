@@ -48,20 +48,32 @@ Deno.serve(async (req) => {
     }
 
     console.log('📲 Sending push notification to user:', userId);
+    console.log('📲 UserId type:', typeof userId);
 
     // Get user's push subscriptions
+    console.log('🔍 Querying push_subscriptions for user_id:', userId);
     const { data: subscriptions, error: subsError } = await supabaseClient
       .from('push_subscriptions')
       .select('*')
       .eq('user_id', userId);
 
+    console.log('📊 Query result - error:', subsError);
+    console.log('📊 Query result - data:', JSON.stringify(subscriptions));
+
     if (subsError) {
-      console.error('Error fetching subscriptions:', subsError);
+      console.error('❌ Error fetching subscriptions:', subsError);
       throw subsError;
     }
 
     if (!subscriptions || subscriptions.length === 0) {
-      console.log('No subscriptions found for user:', userId);
+      console.log('⚠️ No subscriptions found for user:', userId);
+      
+      // Tentar também com cast explícito para UUID
+      const { data: subsCheck } = await supabaseClient
+        .from('push_subscriptions')
+        .select('count');
+      console.log('📊 Total subscriptions in table:', subsCheck);
+      
       return new Response(
         JSON.stringify({ message: 'No subscriptions found for user' }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
