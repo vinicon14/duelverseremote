@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Trophy, Swords, TrendingUp, Calendar } from "lucide-react";
 import { AvatarUpload } from "@/components/AvatarUpload";
+import { PushNotificationTest } from "@/components/PushNotificationTest";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -134,6 +135,9 @@ const Profile = () => {
       <Navbar />
       
       <main className="container mx-auto px-4 pt-20 sm:pt-24 pb-12">
+        {/* Push Notification Test */}
+        <PushNotificationTest />
+
         {/* Profile Header */}
         <Card className="card-mystic mb-6 sm:mb-8">
           <CardContent className="pt-4 sm:pt-6">

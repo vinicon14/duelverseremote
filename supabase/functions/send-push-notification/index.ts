@@ -4,12 +4,25 @@ import * as webpush from 'https://esm.sh/web-push@3.6.7?target=deno';
 const VAPID_PUBLIC_KEY = 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U';
 const VAPID_PRIVATE_KEY = Deno.env.get('VAPID_PRIVATE_KEY') || '';
 
+console.log('🔑 Verificando chave VAPID...');
+console.log('Private key length:', VAPID_PRIVATE_KEY.length);
+
+if (!VAPID_PRIVATE_KEY || VAPID_PRIVATE_KEY.length < 20) {
+  console.error('❌ VAPID_PRIVATE_KEY não configurada corretamente!');
+}
+
 // Configure VAPID details
-webpush.setVapidDetails(
-  'mailto:admin@duelverse.app',
-  VAPID_PUBLIC_KEY,
-  VAPID_PRIVATE_KEY
-);
+try {
+  webpush.setVapidDetails(
+    'mailto:admin@duelverse.app',
+    VAPID_PUBLIC_KEY,
+    VAPID_PRIVATE_KEY
+  );
+  console.log('✅ VAPID configurado com sucesso');
+} catch (error) {
+  console.error('❌ Erro ao configurar VAPID:', error);
+  throw error;
+}
 
 interface NotificationRequest {
   userId: string;
