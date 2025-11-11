@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from '@supabase/supabase-js';
 import { DuelInviteNotification } from "@/components/DuelInviteNotification";
 import { NotificationPrompt } from "@/components/NotificationPrompt";
+import { useRealtimeNotifications } from "@/hooks/useRealtimeNotifications";
 import Home from "./pages/Home";
 import Landing from "./pages/Landing";
 import Admin from "./pages/Admin";
@@ -65,6 +66,9 @@ const RouterContent = () => {
 const AppContent = () => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+
+  // Enable realtime notifications
+  useRealtimeNotifications(user?.id);
 
   useEffect(() => {
     // Set up auth state listener FIRST
