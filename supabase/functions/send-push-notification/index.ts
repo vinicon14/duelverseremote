@@ -1,5 +1,4 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import webpush from 'https://esm.sh/web-push@3.6.7';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -80,59 +79,83 @@ Deno.serve(async (req) => {
       data,
     });
 
-    // Configure web-push with VAPID keys
-    const vapidPublicKey = 'BKyagl1H5LT1x55xY8YfIbKZFRKN9DT7g8eV-lrDHJxQ3pGwGz5wXFpPe8x-AY3w7XCzkVsG7r-LQxvY_Nv8R0w';
-    const vapidPrivateKey = Deno.env.get('VAPID_PRIVATE_KEY');
-    
-    if (!vapidPrivateKey) {
-      throw new Error('VAPID_PRIVATE_KEY not configured');
+    // Prepare payload for FCM
+    const fcmPayload = {
+      notification: {
+        title,
+        body: message,
+        icon: '/favicon.png',
+        badge: '/favicon.png',
+      },
+      data: data || {},
+    };
+
+    const fcmServerKey = Deno.env.get('FCM_SERVER_KEY');
+    if (!fcmServerKey) {
+      throw new Error('FCM_SERVER_KEY not configured');
     }
 
-    webpush.setVapidDetails(
-      'mailto:noreply@duelverse.app',
-      vapidPublicKey,
-      vapidPrivateKey
-    );
-
-    // Prepare payload
-    const payload = JSON.stringify({
-      title,
-      body: message,
-      icon: '/favicon.png',
-      badge: '/favicon.png',
-      data: data || {},
-    });
+    console.log('📤 Sending via FCM to', subscriptions.length, 'devices');
 
     // Send push notification to all user's devices
     const results = await Promise.allSettled(
       subscriptions.map(async (sub) => {
         try {
-          console.log('📤 Sending to endpoint:', sub.endpoint.substring(0, 50) + '...');
+          // Extract FCM token from endpoint
+          // Format: https://fcm.googleapis.com/fcm/send/{token}
+          const match = sub.endpoint.match(/\/fcm\/send\/(.+)$/);
+          
+          if (!match) {
+            console.error('❌ Not an FCM endpoint:', sub.endpoint.substring(0, 50));
+            return false;
+          }
 
-          const pushSubscription = {
-            endpoint: sub.endpoint,
-            keys: {
-              p256dh: sub.keys.p256dh,
-              auth: sub.keys.auth,
-            },
-          };
+          const fcmToken = match[1];
+          console.log('📤 Sending to FCM token:', fcmToken.substring(0, 30) + '...');
 
-          await webpush.sendNotification(pushSubscription, payload);
+          // Send to FCM using legacy API (works with FCM_SERVER_KEY)
+          const fcmResponse = await fetch(
+            'https://fcm.googleapis.com/fcm/send',
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `key=${fcmServerKey}`,
+              },
+              body: JSON.stringify({
+                to: fcmToken,
+                ...fcmPayload,
+              }),
+            }
+          );
 
-          console.log('✅ Push sent successfully');
+          const responseText = await fcmResponse.text();
+          
+          if (!fcmResponse.ok) {
+            console.error('❌ FCM error:', fcmResponse.status, responseText);
+            
+            // Delete invalid subscription
+            if (fcmResponse.status === 404 || fcmResponse.status === 410 || responseText.includes('NotRegistered')) {
+              console.log('🗑️ Deleting invalid subscription:', sub.id);
+              await supabaseClient
+                .from('push_subscriptions')
+                .delete()
+                .eq('id', sub.id);
+            }
+            
+            return false;
+          }
+
+          const responseData = JSON.parse(responseText);
+          if (responseData.failure === 1) {
+            console.error('❌ FCM delivery failed:', responseData);
+            return false;
+          }
+
+          console.log('✅ Push sent successfully via FCM');
           return true;
         } catch (error: any) {
           console.error('❌ Error sending push:', error);
-          
-          // Delete invalid subscription
-          if (error.statusCode === 404 || error.statusCode === 410 || error.statusCode === 401) {
-            console.log('🗑️ Deleting invalid subscription:', sub.id);
-            await supabaseClient
-              .from('push_subscriptions')
-              .delete()
-              .eq('id', sub.id);
-          }
-          
           return false;
         }
       })
