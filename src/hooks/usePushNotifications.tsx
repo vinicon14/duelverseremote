@@ -79,9 +79,11 @@ export const usePushNotifications = () => {
 
   const subscribe = async () => {
     console.log('🎬 INÍCIO DO SUBSCRIBE');
+    alert('🎬 Iniciando ativação de notificações push...');
     
     if (!isSupported) {
       console.error('❌ Plataforma não suportada');
+      alert('❌ Plataforma não suportada');
       toast({
         title: "Não suportado",
         description: "Seu navegador não suporta notificações push",
@@ -93,6 +95,7 @@ export const usePushNotifications = () => {
     try {
       console.log('🔔 Solicitando permissão para notificações...');
       console.log('📋 Permissão atual:', Notification.permission);
+      alert(`📋 Permissão atual: ${Notification.permission}`);
       
       // Verificar se já temos permissão
       if (Notification.permission === 'granted') {
@@ -168,6 +171,8 @@ export const usePushNotifications = () => {
       
       // Inserir nova subscrição
       console.log('🚀 Inserindo nova subscrição...');
+      alert('🚀 Tentando salvar no banco de dados...');
+      
       const { data, error } = await supabase
         .from('push_subscriptions')
         .insert({
@@ -185,10 +190,12 @@ export const usePushNotifications = () => {
         console.error('❌ Código do erro:', error.code);
         console.error('❌ Mensagem do erro:', error.message);
         console.error('❌ Detalhes completos:', JSON.stringify(error, null, 2));
+        alert(`❌ ERRO AO SALVAR: ${error.message}\nCódigo: ${error.code}`);
         throw error;
       }
 
       console.log('✅ Subscrição salva no banco com sucesso! ID:', data?.id);
+      alert(`✅ SUCESSO! Subscrição salva com ID: ${data?.id}`);
       
       setIsSubscribed(true);
       console.log('🎉 Estado atualizado: isSubscribed = true');
