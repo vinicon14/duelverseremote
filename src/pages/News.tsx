@@ -18,15 +18,41 @@ export default function News() {
   }, []);
 
   const fetchNews = async () => {
-    const { data, error } = await supabase
-      .from('news')
-      .select('*, author:profiles!news_author_id_fkey(username)')
-      .order('created_at', { ascending: false });
+    try {
+      console.log('📰 Buscando notícias...');
+      
+      const { data, error } = await supabase
+        .from('news')
+        .select(`
+          *,
+          author:profiles!news_author_id_fkey(username)
+        `)
+        .order('created_at', { ascending: false });
 
-    if (!error && data) {
-      setNews(data);
+      console.log('📥 Notícias recebidas:', data);
+      console.log('❌ Erro:', error);
+
+      if (error) {
+        console.error('Erro ao buscar notícias:', error);
+        // Tentar buscar sem o join se houver erro
+        const { data: simpleData, error: simpleError } = await supabase
+          .from('news')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (!simpleError && simpleData) {
+          console.log('✅ Notícias carregadas sem join:', simpleData);
+          setNews(simpleData);
+        }
+      } else if (data) {
+        console.log('✅ Notícias carregadas:', data.length);
+        setNews(data);
+      }
+    } catch (error) {
+      console.error('❌ Erro inesperado:', error);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
