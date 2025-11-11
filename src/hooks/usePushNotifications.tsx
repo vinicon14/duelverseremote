@@ -78,7 +78,10 @@ export const usePushNotifications = () => {
   };
 
   const subscribe = async () => {
+    console.log('🎬 INÍCIO DO SUBSCRIBE');
+    
     if (!isSupported) {
+      console.error('❌ Plataforma não suportada');
       toast({
         title: "Não suportado",
         description: "Seu navegador não suporta notificações push",
@@ -89,15 +92,18 @@ export const usePushNotifications = () => {
 
     try {
       console.log('🔔 Solicitando permissão para notificações...');
+      console.log('📋 Permissão atual:', Notification.permission);
       
       // Verificar se já temos permissão
       if (Notification.permission === 'granted') {
         console.log('✅ Já temos permissão');
       } else {
+        console.log('❓ Pedindo permissão...');
         const permission = await Notification.requestPermission();
         console.log('📋 Permissão obtida:', permission);
         
         if (permission !== 'granted') {
+          console.error('❌ Permissão negada pelo usuário');
           toast({
             title: "Permissão negada",
             description: "Você precisa permitir notificações para recebê-las",
@@ -109,21 +115,26 @@ export const usePushNotifications = () => {
 
       console.log('🔧 Aguardando Service Worker...');
       const registration = await navigator.serviceWorker.ready;
-      console.log('✅ Service Worker pronto');
+      console.log('✅ Service Worker pronto:', registration.scope);
 
       // Verificar se já existe subscrição
+      console.log('🔍 Verificando subscrição existente...');
       let subscription = await registration.pushManager.getSubscription();
       console.log('📋 Subscrição existente?', !!subscription);
 
       if (!subscription) {
         console.log('📝 Criando nova subscrição...');
+        console.log('🔑 VAPID Key:', VAPID_PUBLIC_KEY.substring(0, 20) + '...');
+        
         subscription = await registration.pushManager.subscribe({
           userVisibleOnly: true,
           applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
         });
-        console.log('✅ Subscrição criada:', subscription.endpoint.substring(0, 50) + '...');
+        console.log('✅ Subscrição criada!');
+        console.log('📍 Endpoint:', subscription.endpoint.substring(0, 50) + '...');
       } else {
         console.log('♻️ Reutilizando subscrição existente');
+        console.log('📍 Endpoint:', subscription.endpoint.substring(0, 50) + '...');
       }
 
       // SEMPRE salvar/atualizar subscrição no banco de dados
@@ -180,16 +191,20 @@ export const usePushNotifications = () => {
       console.log('✅ Subscrição salva no banco com sucesso! ID:', data?.id);
       
       setIsSubscribed(true);
+      console.log('🎉 Estado atualizado: isSubscribed = true');
       
       toast({
         title: "Notificações ativadas!",
         description: "Você receberá notificações mesmo com o app fechado",
       });
 
+      console.log('✅ SUBSCRIBE CONCLUÍDO COM SUCESSO');
       return true;
     } catch (error: any) {
-      console.error('❌ Erro ao ativar notificações:', error);
-      console.error('Stack:', error.stack);
+      console.error('❌ ERRO NO SUBSCRIBE:', error);
+      console.error('❌ Nome do erro:', error.name);
+      console.error('❌ Mensagem:', error.message);
+      console.error('❌ Stack:', error.stack);
       
       toast({
         title: "Erro",
