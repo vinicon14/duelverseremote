@@ -79,15 +79,16 @@ Deno.serve(async (req) => {
       data,
     });
 
-    // Prepare payload for FCM
+    // Prepare payload for FCM - usando APENAS data para funcionar com app fechado
+    // O service worker vai processar e mostrar a notificação
     const fcmPayload = {
-      notification: {
+      data: {
         title,
         body: message,
         icon: '/favicon.png',
         badge: '/favicon.png',
+        ...data,
       },
-      data: data || {},
     };
 
     const fcmServerKey = Deno.env.get('FCM_SERVER_KEY');

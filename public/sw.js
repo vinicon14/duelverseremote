@@ -11,7 +11,7 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(self.clients.claim());
 });
 
-// Handle push notifications
+// Handle push notifications - Processa data messages do FCM
 self.addEventListener('push', (event) => {
   console.log('📩 Push notification recebida:', event);
   
@@ -25,17 +25,25 @@ self.addEventListener('push', (event) => {
 
   if (event.data) {
     try {
+      // FCM envia os dados no formato { data: { ... } }
       const payload = event.data.json();
+      console.log('📦 Payload recebido:', payload);
+      
+      // Extrai os dados do campo 'data' do FCM
+      const data = payload.data || payload;
+      
       notificationData = {
-        title: payload.title || notificationData.title,
-        body: payload.body || notificationData.body,
-        icon: payload.icon || notificationData.icon,
-        badge: payload.badge || notificationData.badge,
-        data: payload.data || notificationData.data,
+        title: data.title || notificationData.title,
+        body: data.body || notificationData.body,
+        icon: data.icon || notificationData.icon,
+        badge: data.badge || notificationData.badge,
+        data: data,
       };
-      console.log('📋 Payload:', notificationData);
+      console.log('📋 Notificação processada:', notificationData);
     } catch (e) {
       console.error('❌ Erro ao fazer parse do payload:', e);
+      // Tenta usar o texto direto
+      notificationData.body = event.data.text();
     }
   }
 
@@ -46,6 +54,7 @@ self.addEventListener('push', (event) => {
     data: notificationData.data,
     requireInteraction: false,
     tag: 'duelverse-notification',
+    vibrate: [200, 100, 200],
   });
 
   event.waitUntil(promiseChain);
