@@ -8,7 +8,6 @@ import { useToast } from "@/components/ui/use-toast";
 import { Trophy, Swords, TrendingUp, Calendar } from "lucide-react";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { PushNotificationTest } from "@/components/PushNotificationTest";
-import { PushNotificationDebug } from "@/components/PushNotificationDebug";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -138,7 +137,6 @@ const Profile = () => {
       <main className="container mx-auto px-4 pt-20 sm:pt-24 pb-12">
         {/* Push Notification Test */}
           <PushNotificationTest />
-          <PushNotificationDebug />
 
         {/* Profile Header */}
         <Card className="card-mystic mb-6 sm:mb-8">

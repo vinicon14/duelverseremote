@@ -122,9 +122,11 @@ export const usePushNotifications = () => {
           applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
         });
         console.log('✅ Subscrição criada:', subscription.endpoint.substring(0, 50) + '...');
+      } else {
+        console.log('♻️ Reutilizando subscrição existente');
       }
 
-      // Salvar subscrição no banco de dados
+      // SEMPRE salvar/atualizar subscrição no banco de dados
       console.log('💾 Salvando no banco de dados...');
       const { data: { user } } = await supabase.auth.getUser();
       
