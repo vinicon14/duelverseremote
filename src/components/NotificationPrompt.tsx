@@ -2,14 +2,14 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bell, X, Download } from "lucide-react";
-import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { useBrowserNotifications } from "@/hooks/useBrowserNotifications";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
 export const NotificationPrompt = () => {
   const [showPrompt, setShowPrompt] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const { isSupported, isSubscribed, loading, subscribe } = usePushNotifications();
+  const { isSupported, hasPermission, loading, requestPermission } = useBrowserNotifications();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -36,9 +36,9 @@ export const NotificationPrompt = () => {
     // Show prompt if:
     // - Notifications are supported
     // - User is authenticated
-    // - User is not subscribed
+    // - User doesn't have permission
     // - User hasn't been prompted before
-    if (isSupported && isAuthenticated && !isSubscribed && !hasBeenPrompted && !loading) {
+    if (isSupported && isAuthenticated && !hasPermission && !hasBeenPrompted && !loading) {
       // Show prompt after 5 seconds
       const timer = setTimeout(() => {
         setShowPrompt(true);
@@ -46,10 +46,10 @@ export const NotificationPrompt = () => {
 
       return () => clearTimeout(timer);
     }
-  }, [isSupported, isAuthenticated, isSubscribed, loading]);
+  }, [isSupported, isAuthenticated, hasPermission, loading]);
 
   const handleSubscribe = async () => {
-    const success = await subscribe();
+    const success = await requestPermission();
     if (success) {
       localStorage.setItem('notification-prompted', 'true');
       setShowPrompt(false);

@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useBrowserNotifications } from "./useBrowserNotifications";
 
 interface NotificationData {
   id: string;
@@ -12,13 +13,10 @@ interface NotificationData {
 }
 
 export const useRealtimeNotifications = (userId: string | undefined) => {
-  useEffect(() => {
-    if (!userId) return;
+  const { hasPermission, showNotification } = useBrowserNotifications();
 
-    // Check if notifications are supported and permission is granted
-    const hasPermission = 'Notification' in window && Notification.permission === 'granted';
-    
-    if (!hasPermission) return;
+  useEffect(() => {
+    if (!userId || !hasPermission) return;
 
     console.log('👂 Setting up realtime notifications listener');
 
@@ -37,13 +35,10 @@ export const useRealtimeNotifications = (userId: string | undefined) => {
           const notification = payload.new as NotificationData;
           console.log('🔔 New notification received:', notification);
 
-          // Show browser notification
+          // Show browser notification if app is not visible
           if (document.hidden) {
-            // Only show notification if app is not visible
-            new Notification(notification.title, {
+            showNotification(notification.title, {
               body: notification.message,
-              icon: '/favicon.png',
-              badge: '/favicon.png',
               tag: notification.id,
               data: notification.data,
             });
@@ -56,5 +51,5 @@ export const useRealtimeNotifications = (userId: string | undefined) => {
       console.log('👋 Cleaning up notifications listener');
       supabase.removeChannel(channel);
     };
-  }, [userId]);
+  }, [userId, hasPermission, showNotification]);
 };

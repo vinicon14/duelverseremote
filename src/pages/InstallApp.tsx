@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Download, Smartphone, Check, Bell, LogIn } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { useBrowserNotifications } from "@/hooks/useBrowserNotifications";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -14,7 +14,7 @@ export default function InstallApp() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const { isSupported, isSubscribed, subscribe } = usePushNotifications();
+  const { isSupported, hasPermission, requestPermission } = useBrowserNotifications();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -78,11 +78,11 @@ export default function InstallApp() {
   };
 
   const handleEnableNotifications = async () => {
-    const success = await subscribe();
+    const success = await requestPermission();
     if (success) {
       toast({
         title: "Notificações ativadas!",
-        description: "Você receberá notificações mesmo com o app fechado",
+        description: "Você receberá notificações enquanto o app estiver aberto",
       });
     }
   };
@@ -168,7 +168,7 @@ export default function InstallApp() {
                     Fazer Login
                   </Button>
                 </div>
-              ) : isSubscribed ? (
+              ) : hasPermission ? (
                 <div className="flex items-center gap-2 p-4 bg-primary/10 rounded-lg">
                   <Check className="h-5 w-5 text-primary" />
                   <span className="text-sm">Notificações ativadas!</span>

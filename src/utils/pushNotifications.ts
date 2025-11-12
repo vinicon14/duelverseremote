@@ -7,41 +7,39 @@ interface SendNotificationParams {
   data?: Record<string, any>;
 }
 
-export const sendPushNotification = async ({
+export const sendNotification = async ({
   userId,
   title,
   body,
   data,
 }: SendNotificationParams) => {
   try {
-    const { data: result, error } = await supabase.functions.invoke(
-      'send-push-notification',
-      {
-        body: {
-          userId,
-          title,
-          body,
-          data,
-        },
-      }
-    );
+    const { error } = await supabase
+      .from('notifications')
+      .insert({
+        user_id: userId,
+        type: data?.type || 'general',
+        title,
+        message: body,
+        data,
+      });
 
     if (error) {
-      console.error('Error sending push notification:', error);
+      console.error('Error saving notification:', error);
       return false;
     }
 
-    console.log('Push notification sent:', result);
+    console.log('Notification saved:', { userId, title });
     return true;
   } catch (error) {
-    console.error('Error invoking push notification function:', error);
+    console.error('Error sending notification:', error);
     return false;
   }
 };
 
 // Helper functions for specific notification types
 export const notifyNewMessage = async (userId: string, senderName: string) => {
-  return sendPushNotification({
+  return sendNotification({
     userId,
     title: 'Nova Mensagem',
     body: `${senderName} enviou uma mensagem`,
@@ -53,7 +51,7 @@ export const notifyNewMessage = async (userId: string, senderName: string) => {
 };
 
 export const notifyNewDuelInvite = async (userId: string, inviterName: string) => {
-  return sendPushNotification({
+  return sendNotification({
     userId,
     title: 'Convite para Duelo',
     body: `${inviterName} convidou você para um duelo!`,
@@ -65,7 +63,7 @@ export const notifyNewDuelInvite = async (userId: string, inviterName: string) =
 };
 
 export const notifyNewNews = async (userId: string, newsTitle: string) => {
-  return sendPushNotification({
+  return sendNotification({
     userId,
     title: 'Nova Notícia',
     body: newsTitle,
@@ -77,7 +75,7 @@ export const notifyNewNews = async (userId: string, newsTitle: string) => {
 };
 
 export const notifyTournamentStart = async (userId: string, tournamentName: string) => {
-  return sendPushNotification({
+  return sendNotification({
     userId,
     title: 'Torneio Começando',
     body: `O torneio "${tournamentName}" está começando!`,
@@ -93,7 +91,7 @@ export const notifyTournamentMessage = async (
   senderName: string,
   tournamentName: string
 ) => {
-  return sendPushNotification({
+  return sendNotification({
     userId,
     title: `Chat do Torneio`,
     body: `${senderName} enviou uma mensagem no torneio "${tournamentName}"`,
