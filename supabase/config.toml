@@ -1,8 +1,5 @@
 project_id = "xxttwzewtqxvpgefggah"
 
-[functions.send-push-notification]
-verify_jwt = false
-
 [functions.admin-delete-user]
 verify_jwt = true
 
