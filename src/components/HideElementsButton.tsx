@@ -17,6 +17,7 @@ export const HideElementsButton = ({ onToggle }: HideElementsButtonProps) => {
 
   return (
     <Button
+      type="button"
       onClick={toggle}
       variant="outline"
       size="sm"
