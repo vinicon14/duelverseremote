@@ -2,12 +2,20 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bell, BellOff, Send } from "lucide-react";
 import { useBrowserNotifications } from "@/hooks/useBrowserNotifications";
+import { useToast } from "@/components/ui/use-toast";
 
 export const BrowserNotificationTest = () => {
   const { isSupported, hasPermission, loading, requestPermission, showNotification } = useBrowserNotifications();
+  const { toast } = useToast();
 
   const handleTestNotification = () => {
     console.log('🧪 Test notification button clicked');
+    
+    toast({
+      title: "Enviando notificação...",
+      description: "Se você tem permissão, uma notificação do browser aparecerá",
+    });
+    
     showNotification('Teste de Notificação', {
       body: 'Se você está vendo isso, as notificações estão funcionando! 🎉',
       tag: 'test-notification',
@@ -43,6 +51,12 @@ export const BrowserNotificationTest = () => {
           {hasPermission 
             ? "✅ Ativas - Você receberá notificações enquanto o app estiver aberto"
             : "⚠️ Desativadas - Ative para receber notificações"}
+          {hasPermission && (
+            <div className="mt-2 text-xs text-muted-foreground">
+              ⚠️ Em dispositivos móveis, notificações do browser podem não funcionar como esperado. 
+              Para melhor experiência, instale o app como PWA.
+            </div>
+          )}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col sm:flex-row gap-2">
