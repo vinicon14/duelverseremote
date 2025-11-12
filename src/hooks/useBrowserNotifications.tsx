@@ -63,16 +63,27 @@ export const useBrowserNotifications = () => {
   };
 
   const showNotification = (title: string, options?: NotificationOptions) => {
-    if (!isSupported || !hasPermission) return;
+    console.log('📱 showNotification called:', { title, isSupported, hasPermission });
+    
+    if (!isSupported) {
+      console.warn('⚠️ Notifications not supported');
+      return;
+    }
+    
+    if (!hasPermission) {
+      console.warn('⚠️ No notification permission');
+      return;
+    }
     
     try {
-      new Notification(title, {
+      const notification = new Notification(title, {
         icon: '/favicon.png',
         badge: '/favicon.png',
         ...options,
       });
+      console.log('✅ Notification created:', notification);
     } catch (error) {
-      console.error('Error showing notification:', error);
+      console.error('❌ Error showing notification:', error);
     }
   };
 

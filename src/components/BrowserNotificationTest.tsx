@@ -7,6 +7,7 @@ export const BrowserNotificationTest = () => {
   const { isSupported, hasPermission, loading, requestPermission, showNotification } = useBrowserNotifications();
 
   const handleTestNotification = () => {
+    console.log('🧪 Test notification button clicked');
     showNotification('Teste de Notificação', {
       body: 'Se você está vendo isso, as notificações estão funcionando! 🎉',
       tag: 'test-notification',

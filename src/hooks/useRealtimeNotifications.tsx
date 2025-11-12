@@ -16,7 +16,17 @@ export const useRealtimeNotifications = (userId: string | undefined) => {
   const { hasPermission, showNotification } = useBrowserNotifications();
 
   useEffect(() => {
-    if (!userId || !hasPermission) return;
+    console.log('🔍 useRealtimeNotifications:', { userId, hasPermission });
+    
+    if (!userId) {
+      console.log('⚠️ No userId, skipping notification setup');
+      return;
+    }
+    
+    if (!hasPermission) {
+      console.log('⚠️ No notification permission, skipping setup');
+      return;
+    }
 
     console.log('👂 Setting up realtime notifications listener');
 
