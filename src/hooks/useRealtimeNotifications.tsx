@@ -35,14 +35,12 @@ export const useRealtimeNotifications = (userId: string | undefined) => {
           const notification = payload.new as NotificationData;
           console.log('🔔 New notification received:', notification);
 
-          // Show browser notification if app is not visible
-          if (document.hidden) {
-            showNotification(notification.title, {
-              body: notification.message,
-              tag: notification.id,
-              data: notification.data,
-            });
-          }
+          // Always show browser notification
+          showNotification(notification.title, {
+            body: notification.message,
+            tag: notification.id,
+            data: notification.data,
+          });
         }
       )
       .subscribe();
