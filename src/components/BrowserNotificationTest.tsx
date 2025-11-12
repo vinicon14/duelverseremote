@@ -8,18 +8,51 @@ export const BrowserNotificationTest = () => {
   const { isSupported, hasPermission, loading, requestPermission, showNotification } = useBrowserNotifications();
   const { toast } = useToast();
 
-  const handleTestNotification = () => {
+  const handleTestNotification = async () => {
     console.log('🧪 Test notification button clicked');
+    console.log('📱 Notification support:', 'Notification' in window);
+    console.log('🔑 Permission status:', Notification.permission);
     
-    toast({
-      title: "Enviando notificação...",
-      description: "Se você tem permissão, uma notificação do browser aparecerá",
-    });
+    if (!('Notification' in window)) {
+      toast({
+        title: "Não suportado",
+        description: "Seu navegador não suporta notificações",
+        variant: "destructive",
+      });
+      return;
+    }
     
-    showNotification('Teste de Notificação', {
-      body: 'Se você está vendo isso, as notificações estão funcionando! 🎉',
-      tag: 'test-notification',
-    });
+    if (Notification.permission !== 'granted') {
+      toast({
+        title: "Sem permissão",
+        description: "Por favor, ative as notificações primeiro",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      console.log('✅ Attempting to create notification...');
+      const notification = new Notification('Teste de Notificação', {
+        body: 'Se você está vendo isso, as notificações estão funcionando! 🎉',
+        icon: '/favicon.png',
+        tag: 'test-notification',
+      });
+      
+      console.log('✅ Notification created:', notification);
+      
+      toast({
+        title: "Notificação enviada!",
+        description: "Verifique se apareceu uma notificação do navegador",
+      });
+    } catch (error) {
+      console.error('❌ Error creating notification:', error);
+      toast({
+        title: "Erro ao criar notificação",
+        description: error instanceof Error ? error.message : "Erro desconhecido",
+        variant: "destructive",
+      });
+    }
   };
 
   if (loading) return null;
