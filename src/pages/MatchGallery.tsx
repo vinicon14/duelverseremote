@@ -4,7 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
-import { Video, Eye, Calendar, Trash2, Loader2, Globe, Lock } from "lucide-react";
+import { Video, Eye, Calendar, Trash2, Loader2, Globe, Lock, Share2 } from "lucide-react";
+import { ShareVideoButton } from "@/components/ShareVideoButton";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { formatDistanceToNow } from "date-fns";
@@ -267,16 +268,23 @@ export default function MatchGallery() {
                         )}
                       </CardDescription>
                     </div>
-                    {currentUser?.id === recording.user_id && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="flex-shrink-0"
-                        onClick={() => setDeleteId(recording.id)}
-                      >
-                        <Trash2 className="w-4 h-4 text-destructive" />
-                      </Button>
-                    )}
+                    <div className="flex gap-1">
+                      <ShareVideoButton
+                        videoId={recording.id}
+                        videoTitle={recording.title}
+                        videoDescription={recording.description || undefined}
+                      />
+                      {currentUser?.id === recording.user_id && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="flex-shrink-0"
+                          onClick={() => setDeleteId(recording.id)}
+                        >
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </CardHeader>
 

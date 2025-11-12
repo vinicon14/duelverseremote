@@ -826,15 +826,19 @@ const DuelRoom = () => {
             )}
             
             <div className="flex gap-1 sm:gap-2">
-              {/* O botão de Ocultar fica sempre visível para participantes */}
-              {isParticipant && !isJudge && <HideElementsButton onToggle={setHideControls} />}
+              {/* O botão de Ocultar e Gravar ficam sempre visíveis para participantes */}
+              {isParticipant && !isJudge && (
+                <>
+                  <HideElementsButton onToggle={setHideControls} />
+                  <RecordMatchButton duelId={id!} />
+                </>
+              )}
 
-              {/* Todos os outros botões são agrupados e controlados por `hideControls` */}
+              {/* Todos os outros botões são controlados por `hideControls` */}
               {!hideControls && (
                 <>
                   {isParticipant && !isJudge && (
                     <>
-                      <RecordMatchButton duelId={id!} />
                       <Button
                         onClick={callJudge}
                         disabled={judgeCalled}
