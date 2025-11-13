@@ -46,10 +46,15 @@ export default function VideoShare() {
   };
 
   const fetchRecording = async () => {
-    if (!id) return;
+    if (!id) {
+      console.error('❌ No video ID provided');
+      navigate('/match-gallery');
+      return;
+    }
 
     try {
       setLoading(true);
+      console.log('🔍 Fetching video with ID:', id);
       
       // Buscar gravação
       const { data: recordingData, error: recordingError } = await supabase
@@ -58,9 +63,16 @@ export default function VideoShare() {
         .eq('id', id)
         .maybeSingle();
 
-      if (recordingError) throw recordingError;
+      console.log('📹 Recording data:', recordingData);
+      console.log('❌ Recording error:', recordingError);
+
+      if (recordingError) {
+        console.error('Database error:', recordingError);
+        throw recordingError;
+      }
 
       if (!recordingData) {
+        console.error('❌ No recording found with ID:', id);
         toast({
           title: "Vídeo não encontrado",
           description: "Este vídeo não existe ou foi removido.",
@@ -69,6 +81,11 @@ export default function VideoShare() {
         navigate('/match-gallery');
         return;
       }
+
+      // Verificar se o vídeo é público ou se o usuário atual é o dono
+      console.log('🔐 Video is_public:', recordingData.is_public);
+      console.log('👤 Video owner:', recordingData.user_id);
+      console.log('👤 Current user:', currentUser?.id);
 
       // Buscar perfil do usuário
       const { data: profileData } = await supabase
