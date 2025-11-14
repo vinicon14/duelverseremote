@@ -33,13 +33,25 @@ export const BrowserNotificationTest = () => {
     
     try {
       console.log('✅ Attempting to create notification...');
-      const notification = new Notification('Teste de Notificação', {
-        body: 'Se você está vendo isso, as notificações estão funcionando! 🎉',
-        icon: '/favicon.png',
-        tag: 'test-notification',
-      });
       
-      console.log('✅ Notification created:', notification);
+      // Try to use Service Worker notification (for PWA)
+      if ('serviceWorker' in navigator) {
+        const registration = await navigator.serviceWorker.ready;
+        await registration.showNotification('Teste de Notificação', {
+          body: 'Se você está vendo isso, as notificações estão funcionando! 🎉',
+          icon: '/favicon.png',
+          tag: 'test-notification',
+        });
+        console.log('✅ Service Worker notification shown');
+      } else {
+        // Fallback to regular notification
+        const notification = new Notification('Teste de Notificação', {
+          body: 'Se você está vendo isso, as notificações estão funcionando! 🎉',
+          icon: '/favicon.png',
+          tag: 'test-notification',
+        });
+        console.log('✅ Regular notification created:', notification);
+      }
       
       toast({
         title: "Notificação enviada!",
