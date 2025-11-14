@@ -171,29 +171,10 @@ export default function Matchmaking() {
       setQueueId(queueEntry.id);
       fetchQueueStats();
 
-      // Setup realtime listener para:
-      // 1. Novos jogadores entrando na fila
-      // 2. Updates na própria entrada (quando matched)
+      // Setup realtime listener APENAS para updates na própria entrada (quando matched)
+      // NÃO criar duel ao detectar INSERT - apenas o que entra por último cria
       queueChannel.current = supabase
         .channel(`matchmaking_${session.user.id}_${Date.now()}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'matchmaking_queue',
-            filter: `match_type=eq.${matchType}`
-          },
-          async (payload) => {
-            const newPlayer = payload.new as any;
-            console.log('👤 New player joined queue:', newPlayer);
-            if (newPlayer.user_id !== session.user.id && newPlayer.status === 'waiting') {
-              // Alguém novo entrou! Eu estava esperando (player1), ele é o player2
-              console.log('🎮 Match found! Creating match...');
-              await createMatchAndRedirect(session.user.id, newPlayer.user_id, newPlayer.id, isRanked);
-            }
-          }
-        )
         .on(
           'postgres_changes',
           {
@@ -237,6 +218,22 @@ export default function Matchmaking() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
+      // Verificar se já não foi criado um duel (evitar duplicação)
+      const { data: existingQueues } = await supabase
+        .from('matchmaking_queue')
+        .select('status, duel_id')
+        .in('user_id', [player1Id, player2Id])
+        .eq('status', 'matched')
+        .not('duel_id', 'is', null);
+
+      if (existingQueues && existingQueues.length > 0) {
+        console.log('🎯 Match already created, joining existing duel:', existingQueues[0].duel_id);
+        await cleanup();
+        toast.success("🎮 Match encontrado! Redirecionando...");
+        navigate(`/duel/${existingQueues[0].duel_id}`);
+        return;
+      }
+
       // Criar duelo
       const { data: duel, error } = await supabase
         .from('live_duels')
@@ -252,9 +249,12 @@ export default function Matchmaking() {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error creating duel:', error);
+        throw error;
+      }
 
-      console.log('🎯 Match created, duel ID:', duel.id);
+      console.log('🎯 Match created successfully, duel ID:', duel.id);
 
       // Atualizar AMBAS as entradas da fila com duel_id
       const { data: allQueues } = await supabase
@@ -264,35 +264,41 @@ export default function Matchmaking() {
         .eq('status', 'waiting');
 
       if (allQueues && allQueues.length > 0) {
+        console.log(`📝 Updating ${allQueues.length} queue entries with duel ID`);
+        
         // Atualizar para matched com duel_id
-        await supabase
+        const { error: updateError } = await supabase
           .from('matchmaking_queue')
           .update({ status: 'matched', duel_id: duel.id })
           .in('id', allQueues.map(q => q.id));
 
-        console.log('✅ Updated both queue entries with duel ID');
+        if (updateError) {
+          console.error('Error updating queue entries:', updateError);
+        } else {
+          console.log('✅ Updated both queue entries with duel ID');
+        }
 
-        // Aguardar para garantir propagação realtime
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Aguardar propagação realtime
+        await new Promise(resolve => setTimeout(resolve, 800));
 
-        // Deletar apenas depois
+        // Deletar entradas da fila
         await supabase
           .from('matchmaking_queue')
           .delete()
           .in('id', allQueues.map(q => q.id));
       }
 
-      // Limpar local
+      // Limpar recursos locais
       await cleanup();
       
       toast.success("🎮 Match encontrado! Redirecionando...");
       
-      // Navegar
+      // Navegar para o duel
       navigate(`/duel/${duel.id}`);
       
     } catch (error: any) {
       console.error('❌ Error creating match:', error);
-      toast.error("Erro ao criar partida");
+      toast.error("Erro ao criar partida: " + (error.message || 'Erro desconhecido'));
       await cleanup();
       setSearching(false);
     }

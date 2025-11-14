@@ -568,6 +568,7 @@ export type Database = {
       }
       matchmaking_queue: {
         Row: {
+          duel_id: string | null
           expires_at: string
           id: string
           joined_at: string
@@ -576,6 +577,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          duel_id?: string | null
           expires_at: string
           id?: string
           joined_at?: string
@@ -584,6 +586,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          duel_id?: string | null
           expires_at?: string
           id?: string
           joined_at?: string
@@ -591,7 +594,15 @@ export type Database = {
           status?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "matchmaking_queue_duel_id_fkey"
+            columns: ["duel_id"]
+            isOneToOne: false
+            referencedRelation: "live_duels"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       news: {
         Row: {
