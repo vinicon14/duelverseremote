@@ -62,7 +62,7 @@ export const useBrowserNotifications = () => {
     }
   };
 
-  const showNotification = (title: string, options?: NotificationOptions) => {
+  const showNotification = async (title: string, options?: NotificationOptions) => {
     console.log('📱 showNotification called:', { title, isSupported, hasPermission });
     
     if (!isSupported) {
@@ -76,12 +76,25 @@ export const useBrowserNotifications = () => {
     }
     
     try {
+      // Try to use Service Worker notification (for PWA)
+      if ('serviceWorker' in navigator) {
+        const registration = await navigator.serviceWorker.ready;
+        await registration.showNotification(title, {
+          icon: '/favicon.png',
+          badge: '/favicon.png',
+          ...options,
+        });
+        console.log('✅ Service Worker notification shown');
+        return;
+      }
+      
+      // Fallback to regular notification
       const notification = new Notification(title, {
         icon: '/favicon.png',
         badge: '/favicon.png',
         ...options,
       });
-      console.log('✅ Notification created:', notification);
+      console.log('✅ Regular notification created:', notification);
     } catch (error) {
       console.error('❌ Error showing notification:', error);
     }
