@@ -56,10 +56,20 @@ export default function VideoShare() {
       setLoading(true);
       console.log('🔍 Fetching video with ID:', id);
       
-      // Buscar gravação
+      // Buscar sessão atual
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user?.id;
+      
+      // Buscar gravação com perfil do criador
       const { data: recordingData, error: recordingError } = await supabase
         .from('match_recordings')
-        .select('*')
+        .select(`
+          *,
+          profiles:user_id (
+            username,
+            avatar_url
+          )
+        `)
         .eq('id', id)
         .maybeSingle();
 
@@ -68,43 +78,45 @@ export default function VideoShare() {
 
       if (recordingError) {
         console.error('Database error:', recordingError);
-        throw recordingError;
-      }
-
-      if (!recordingData) {
-        console.error('❌ No recording found with ID:', id);
         toast({
-          title: "Vídeo não encontrado",
-          description: "Este vídeo não existe ou foi removido.",
+          title: "Erro ao acessar vídeo",
+          description: "Você não tem permissão para visualizar este vídeo.",
           variant: "destructive",
         });
         navigate('/match-gallery');
         return;
       }
 
-      // Verificar se o vídeo é público ou se o usuário atual é o dono
-      console.log('🔐 Video is_public:', recordingData.is_public);
-      console.log('👤 Video owner:', recordingData.user_id);
-      console.log('👤 Current user:', currentUser?.id);
+      if (!recordingData) {
+        console.error('❌ No recording found with ID:', id);
+        toast({
+          title: "Vídeo não encontrado",
+          description: "Este vídeo não existe, foi removido ou é privado.",
+          variant: "destructive",
+        });
+        navigate('/match-gallery');
+        return;
+      }
 
-      // Buscar perfil do usuário
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('user_id, username, avatar_url')
-        .eq('user_id', recordingData.user_id)
-        .single();
+      // VALIDAÇÃO DE SEGURANÇA: Verificar se o vídeo é privado
+      if (!recordingData.is_public) {
+        // Se o vídeo é privado, só o dono pode ver
+        if (!userId || userId !== recordingData.user_id) {
+          console.error('🔒 Acesso negado: vídeo privado');
+          toast({
+            title: "Acesso negado",
+            description: "Este vídeo é privado e você não tem permissão para visualizá-lo.",
+            variant: "destructive",
+          });
+          navigate('/match-gallery');
+          return;
+        }
+      }
 
-      const recordingWithProfile = {
-        ...recordingData,
-        profiles: profileData || {
-          username: 'Usuário',
-          avatar_url: null,
-        },
-      };
+      console.log('✅ Acesso permitido ao vídeo');
+      setRecording(recordingData as any);
 
-      setRecording(recordingWithProfile as any);
-
-      // Incrementar visualizações
+      // Incrementar visualizações apenas se o acesso for permitido
       await supabase
         .from('match_recordings')
         .update({ views: (recordingData.views || 0) + 1 })
