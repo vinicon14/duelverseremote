@@ -60,16 +60,10 @@ export default function VideoShare() {
       const { data: { session } } = await supabase.auth.getSession();
       const userId = session?.user?.id;
       
-      // Buscar gravação com perfil do criador
+      // Buscar gravação sem join para evitar problemas com RLS
       const { data: recordingData, error: recordingError } = await supabase
         .from('match_recordings')
-        .select(`
-          *,
-          profiles:user_id (
-            username,
-            avatar_url
-          )
-        `)
+        .select('*')
         .eq('id', id)
         .maybeSingle();
 
@@ -114,7 +108,23 @@ export default function VideoShare() {
       }
 
       console.log('✅ Acesso permitido ao vídeo');
-      setRecording(recordingData as any);
+      
+      // Buscar perfil do criador separadamente (público para todos)
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('username, avatar_url')
+        .eq('user_id', recordingData.user_id)
+        .single();
+
+      const recordingWithProfile = {
+        ...recordingData,
+        profiles: profileData || {
+          username: 'Usuário',
+          avatar_url: null,
+        },
+      };
+
+      setRecording(recordingWithProfile as any);
 
       // Incrementar visualizações apenas se o acesso for permitido
       await supabase
