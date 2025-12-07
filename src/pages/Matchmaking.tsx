@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -9,30 +9,67 @@ import { toast } from "sonner";
 import { useBanCheck } from "@/hooks/useBanCheck";
 
 export default function Matchmaking() {
-  useBanCheck(); // Proteger contra usuários banidos
+  useBanCheck();
   const navigate = useNavigate();
   const [searching, setSearching] = useState(false);
-  const [queueId, setQueueId] = useState<string | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [playersInQueue, setPlayersInQueue] = useState(0);
   const [isRanked, setIsRanked] = useState(true);
+  
   const currentUserId = useRef<string | null>(null);
   const timerInterval = useRef<NodeJS.Timeout | null>(null);
   const queueChannel = useRef<any>(null);
   const queueTimeout = useRef<NodeJS.Timeout | null>(null);
+  const isRedirecting = useRef(false);
+  const queueEntryId = useRef<string | null>(null);
+
+  const cleanup = useCallback(async () => {
+    console.log('🧹 Cleaning up matchmaking...');
+    
+    if (queueChannel.current) {
+      await supabase.removeChannel(queueChannel.current);
+      queueChannel.current = null;
+    }
+    
+    if (timerInterval.current) {
+      clearInterval(timerInterval.current);
+      timerInterval.current = null;
+    }
+    
+    if (queueTimeout.current) {
+      clearTimeout(queueTimeout.current);
+      queueTimeout.current = null;
+    }
+    
+    // Deletar entrada da fila se existir
+    if (queueEntryId.current) {
+      await supabase
+        .from('matchmaking_queue')
+        .delete()
+        .eq('id', queueEntryId.current);
+      queueEntryId.current = null;
+    }
+  }, []);
 
   useEffect(() => {
-    checkAuth();
-    fetchQueueStats();
+    const init = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        navigate("/auth");
+        return;
+      }
+      currentUserId.current = session.user.id;
+      fetchQueueStats();
+    };
+    
+    init();
 
-    // Limpar entrada da fila ao desmontar ou recarregar página
     const cleanupOnUnload = async () => {
       if (currentUserId.current) {
         await supabase
           .from('matchmaking_queue')
           .delete()
-          .eq('user_id', currentUserId.current)
-          .eq('status', 'waiting');
+          .eq('user_id', currentUserId.current);
       }
     };
 
@@ -44,47 +81,24 @@ export default function Matchmaking() {
       window.removeEventListener('pagehide', cleanupOnUnload);
       cleanup();
     };
-  }, []);
+  }, [cleanup, navigate]);
 
   useEffect(() => {
     if (searching) {
       timerInterval.current = setInterval(() => {
         setElapsedTime(prev => prev + 1);
       }, 1000);
-
-      return () => {
-        if (timerInterval.current) {
-          clearInterval(timerInterval.current);
-        }
-      };
     } else {
       setElapsedTime(0);
     }
+    
+    return () => {
+      if (timerInterval.current) {
+        clearInterval(timerInterval.current);
+        timerInterval.current = null;
+      }
+    };
   }, [searching]);
-
-  const cleanup = async () => {
-    if (queueChannel.current) {
-      await supabase.removeChannel(queueChannel.current);
-    }
-    if (timerInterval.current) {
-      clearInterval(timerInterval.current);
-    }
-    if (queueTimeout.current) {
-      clearTimeout(queueTimeout.current);
-    }
-    if (queueId) {
-      await supabase.from('matchmaking_queue').delete().eq('id', queueId);
-    }
-  };
-
-  const checkAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      navigate("/auth");
-      return;
-    }
-    currentUserId.current = session.user.id;
-  };
 
   const fetchQueueStats = async () => {
     try {
@@ -98,6 +112,22 @@ export default function Matchmaking() {
     }
   };
 
+  const redirectToDuel = useCallback(async (duelId: string) => {
+    if (isRedirecting.current) {
+      console.log('⚠️ Already redirecting, skipping...');
+      return;
+    }
+    
+    isRedirecting.current = true;
+    console.log('🎮 Redirecting to duel:', duelId);
+    
+    await cleanup();
+    setSearching(false);
+    
+    toast.success("🎮 Match encontrado! Redirecionando...");
+    navigate(`/duel/${duelId}`);
+  }, [cleanup, navigate]);
+
   const joinQueue = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -107,17 +137,20 @@ export default function Matchmaking() {
         return;
       }
 
-      // Limpar qualquer entrada antiga do usuário primeiro
+      const userId = session.user.id;
+      isRedirecting.current = false;
+
+      // Limpar qualquer entrada antiga do usuário
       await supabase
         .from('matchmaking_queue')
         .delete()
-        .eq('user_id', session.user.id);
+        .eq('user_id', userId);
 
       // Verificar se já está em duelo
       const { data: existingDuels } = await supabase
         .from("live_duels")
         .select("id")
-        .or(`creator_id.eq.${session.user.id},opponent_id.eq.${session.user.id}`)
+        .or(`creator_id.eq.${userId},opponent_id.eq.${userId}`)
         .in("status", ["waiting", "in_progress"]);
 
       if (existingDuels && existingDuels.length > 0) {
@@ -129,30 +162,31 @@ export default function Matchmaking() {
       setSearching(true);
       const matchType = isRanked ? 'ranked' : 'casual';
 
-      // Primeiro, verificar se há alguém esperando
-      const { data: waitingPlayers } = await supabase
+      // Verificar se há alguém esperando na fila
+      const { data: waitingPlayer } = await supabase
         .from('matchmaking_queue')
         .select('id, user_id')
         .eq('match_type', matchType)
         .eq('status', 'waiting')
-        .neq('user_id', session.user.id)
+        .neq('user_id', userId)
         .gt('expires_at', new Date().toISOString())
+        .order('joined_at', { ascending: true })
         .limit(1)
         .maybeSingle();
 
-      if (waitingPlayers) {
-        // Match encontrado imediatamente!
-        // Eu sou o segundo jogador (player2), o outro estava esperando (player1)
-        await createMatchAndRedirect(waitingPlayers.user_id, session.user.id, waitingPlayers.id, isRanked);
+      if (waitingPlayer) {
+        // Match encontrado! Eu sou o segundo jogador
+        console.log('✅ Found waiting player:', waitingPlayer.user_id);
+        await createMatch(waitingPlayer.user_id, userId, waitingPlayer.id, isRanked);
         return;
       }
 
-      // Ninguém esperando, entrar na fila
-      const expiresAt = new Date(Date.now() + 30000).toISOString(); // 30 segundos
+      // Ninguém esperando - entrar na fila
+      const expiresAt = new Date(Date.now() + 60000).toISOString(); // 60 segundos
       const { data: queueEntry, error: queueError } = await supabase
         .from('matchmaking_queue')
         .insert({
-          user_id: session.user.id,
+          user_id: userId,
           match_type: matchType,
           expires_at: expiresAt,
           status: 'waiting'
@@ -167,14 +201,14 @@ export default function Matchmaking() {
         return;
       }
 
-      console.log('✅ Joined queue:', queueEntry);
-      setQueueId(queueEntry.id);
+      console.log('✅ Joined queue:', queueEntry.id);
+      queueEntryId.current = queueEntry.id;
       fetchQueueStats();
 
-      // Setup realtime listener APENAS para updates na própria entrada (quando matched)
-      // NÃO criar duel ao detectar INSERT - apenas o que entra por último cria
+      // Listener para quando minha entrada for atualizada com duel_id
+      const channelName = `matchmaking_${userId}_${Date.now()}`;
       queueChannel.current = supabase
-        .channel(`matchmaking_${session.user.id}_${Date.now()}`)
+        .channel(channelName)
         .on(
           'postgres_changes',
           {
@@ -185,57 +219,53 @@ export default function Matchmaking() {
           },
           async (payload) => {
             const updated = payload.new as any;
-            console.log('📝 My queue entry updated:', updated);
+            console.log('📝 Queue entry updated:', updated);
             
-            // Se minha entrada foi marcada como matched e tem um duel_id
             if (updated.status === 'matched' && updated.duel_id) {
-              console.log('🎮 I was matched! Duel ID:', updated.duel_id);
-              await cleanup();
-              toast.success("🎮 Match encontrado! Redirecionando...");
-              navigate(`/duel/${updated.duel_id}`);
+              console.log('🎮 Match found via realtime! Duel:', updated.duel_id);
+              await redirectToDuel(updated.duel_id);
             }
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          console.log('📡 Queue channel status:', status);
+        });
 
-      // Timeout de 30 segundos
+      // Timeout de 60 segundos
       queueTimeout.current = setTimeout(async () => {
-        console.log('⏱️ Queue timeout reached');
+        console.log('⏱️ Queue timeout');
         await cancelSearch();
-        toast.error("Nenhum oponente encontrado. Tente novamente ou crie uma sala.");
-      }, 30000);
+        toast.error("Nenhum oponente encontrado. Tente novamente.");
+      }, 60000);
 
     } catch (error: any) {
       console.error("Error in joinQueue:", error);
-      toast.error("Erro inesperado: " + error.message);
+      toast.error("Erro: " + error.message);
       setSearching(false);
     }
   };
 
-  const createMatchAndRedirect = async (player1Id: string, player2Id: string, queueIdToRemove: string, ranked: boolean) => {
+  const createMatch = async (player1Id: string, player2Id: string, player1QueueId: string, ranked: boolean) => {
     try {
-      console.log('🎮 Creating match between', player1Id, 'and', player2Id);
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      console.log('🎮 Creating match:', player1Id, 'vs', player2Id);
 
-      // Verificar se já não foi criado um duel (evitar duplicação)
-      const { data: existingQueues } = await supabase
+      // Verificar se já existe match para esses jogadores
+      const { data: existingMatch } = await supabase
         .from('matchmaking_queue')
-        .select('status, duel_id')
-        .in('user_id', [player1Id, player2Id])
+        .select('duel_id')
+        .eq('user_id', player1Id)
         .eq('status', 'matched')
-        .not('duel_id', 'is', null);
+        .not('duel_id', 'is', null)
+        .maybeSingle();
 
-      if (existingQueues && existingQueues.length > 0) {
-        console.log('🎯 Match already created, joining existing duel:', existingQueues[0].duel_id);
-        await cleanup();
-        toast.success("🎮 Match encontrado! Redirecionando...");
-        navigate(`/duel/${existingQueues[0].duel_id}`);
+      if (existingMatch?.duel_id) {
+        console.log('⚠️ Match already exists:', existingMatch.duel_id);
+        await redirectToDuel(existingMatch.duel_id);
         return;
       }
 
       // Criar duelo
-      const { data: duel, error } = await supabase
+      const { data: duel, error: duelError } = await supabase
         .from('live_duels')
         .insert({
           creator_id: player1Id,
@@ -249,74 +279,50 @@ export default function Matchmaking() {
         .select()
         .single();
 
-      if (error) {
-        console.error('Error creating duel:', error);
-        throw error;
+      if (duelError) {
+        console.error('Error creating duel:', duelError);
+        throw duelError;
       }
 
-      console.log('🎯 Match created successfully, duel ID:', duel.id);
+      console.log('✅ Duel created:', duel.id);
 
-      // Atualizar AMBAS as entradas da fila com duel_id
-      const { data: allQueues } = await supabase
+      // Atualizar entrada do player1 (que estava esperando) com o duel_id
+      const { error: updateError } = await supabase
         .from('matchmaking_queue')
-        .select('id')
-        .in('user_id', [player1Id, player2Id])
-        .eq('status', 'waiting');
+        .update({ 
+          status: 'matched', 
+          duel_id: duel.id 
+        })
+        .eq('id', player1QueueId);
 
-      if (allQueues && allQueues.length > 0) {
-        console.log(`📝 Updating ${allQueues.length} queue entries with duel ID`);
-        
-        // Atualizar para matched com duel_id
-        const { error: updateError } = await supabase
-          .from('matchmaking_queue')
-          .update({ status: 'matched', duel_id: duel.id })
-          .in('id', allQueues.map(q => q.id));
-
-        if (updateError) {
-          console.error('Error updating queue entries:', updateError);
-        } else {
-          console.log('✅ Updated both queue entries with duel ID');
-        }
-
-        // Aguardar propagação realtime
-        await new Promise(resolve => setTimeout(resolve, 800));
-
-        // Deletar entradas da fila
-        await supabase
-          .from('matchmaking_queue')
-          .delete()
-          .in('id', allQueues.map(q => q.id));
+      if (updateError) {
+        console.error('Error updating queue entry:', updateError);
+      } else {
+        console.log('✅ Updated player1 queue entry');
       }
 
-      // Limpar recursos locais
-      await cleanup();
-      
-      toast.success("🎮 Match encontrado! Redirecionando...");
-      
-      // Navegar para o duel
-      navigate(`/duel/${duel.id}`);
-      
+      // Pequeno delay para garantir propagação do realtime
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Redirecionar player2 (eu)
+      await redirectToDuel(duel.id);
+
     } catch (error: any) {
       console.error('❌ Error creating match:', error);
-      toast.error("Erro ao criar partida: " + (error.message || 'Erro desconhecido'));
+      toast.error("Erro ao criar partida");
       await cleanup();
       setSearching(false);
     }
   };
 
   const cancelSearch = async () => {
-    try {
-      if (queueId) {
-        await supabase.from('matchmaking_queue').delete().eq('id', queueId);
-      }
-      await cleanup();
-      setSearching(false);
-      setQueueId(null);
-      setElapsedTime(0);
-      toast.info("Busca cancelada");
-    } catch (error) {
-      console.error('Error canceling search:', error);
-    }
+    console.log('❌ Canceling search...');
+    await cleanup();
+    setSearching(false);
+    setElapsedTime(0);
+    isRedirecting.current = false;
+    toast.info("Busca cancelada");
+    fetchQueueStats();
   };
 
   const formatTime = (seconds: number) => {
@@ -324,6 +330,8 @@ export default function Matchmaking() {
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
+
+  const remainingTime = Math.max(0, 60 - elapsedTime);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-primary/5">
@@ -333,7 +341,7 @@ export default function Matchmaking() {
         <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6">
           <div className="text-center space-y-2">
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold gradient-text">Matchmaking</h1>
-            <p className="text-sm sm:text-base text-muted-foreground">Find your next opponent</p>
+            <p className="text-sm sm:text-base text-muted-foreground">Encontre seu próximo oponente</p>
           </div>
 
           <Card className="card-mystic p-4 sm:p-8">
@@ -342,7 +350,7 @@ export default function Matchmaking() {
                 <div className="flex items-center gap-2">
                   <Users className="h-5 w-5 text-primary" />
                   <span className="text-sm text-muted-foreground">
-                    Players in queue: <span className="font-bold text-foreground">{playersInQueue}</span>
+                    Jogadores na fila: <span className="font-bold text-foreground">{playersInQueue}</span>
                   </span>
                 </div>
               </div>
@@ -400,16 +408,19 @@ export default function Matchmaking() {
                     <h3 className="text-lg sm:text-xl font-semibold mb-2">Procurando Oponente...</h3>
                     <div className="flex items-center justify-center gap-2 text-sm sm:text-base text-muted-foreground">
                       <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
-                      <span>Tempo decorrido: {formatTime(elapsedTime)}</span>
+                      <span>Tempo: {formatTime(elapsedTime)}</span>
                     </div>
                   </div>
 
                   <div className="space-y-2">
                     <div className="h-2 bg-secondary rounded-full overflow-hidden">
-                      <div className="h-full bg-gradient-primary animate-pulse" style={{ width: "60%" }} />
+                      <div 
+                        className="h-full bg-gradient-primary transition-all duration-1000" 
+                        style={{ width: `${(elapsedTime / 60) * 100}%` }} 
+                      />
                     </div>
                     <p className="text-xs text-center text-muted-foreground">
-                      Procurando oponente... {30 - elapsedTime}s restantes
+                      {remainingTime}s restantes
                     </p>
                   </div>
 
@@ -430,19 +441,19 @@ export default function Matchmaking() {
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li className="flex items-start gap-2">
                 <span className="text-primary mt-0.5">•</span>
-                <span>Pareamos jogadores com ELO similar (inicialmente ±200 pontos)</span>
+                <span>Você será pareado com jogadores buscando o mesmo tipo de partida</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-primary mt-0.5">•</span>
-                <span>A busca expande gradualmente para encontrar oponentes mais rápido</span>
+                <span>A busca expira em 60 segundos se nenhum oponente for encontrado</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-primary mt-0.5">•</span>
-                <span>Notificação instantânea quando uma partida é encontrada</span>
+                <span>Você será redirecionado automaticamente quando encontrar um match</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-primary mt-0.5">•</span>
-                <span>Seu ELO será atualizado após cada partida</span>
+                <span>Partidas ranqueadas afetam seus pontos no ranking</span>
               </li>
             </ul>
           </Card>
