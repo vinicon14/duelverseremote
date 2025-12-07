@@ -3,16 +3,19 @@ import { supabase } from '@/integrations/supabase/client';
 
 export const useOnlineStatus = () => {
   const channelRef = useRef<any>(null);
+  const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
+
     const setupPresence = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       
-      if (!session?.user) return;
+      if (!session?.user || !isMounted) return;
 
       const userId = session.user.id;
-      
-      // Atualizar status no banco
+
+      // Atualizar status como online no banco
       await supabase
         .from('profiles')
         .update({
@@ -21,26 +24,50 @@ export const useOnlineStatus = () => {
         })
         .eq('user_id', userId);
 
-      // Configurar presença em tempo real
-      channelRef.current = supabase.channel('online-users');
+      // Usar o mesmo canal compartilhado do contador de usuários online
+      const channelName = 'room:online';
       
-      // Rastrear presença do usuário
-      await channelRef.current
+      channelRef.current = supabase.channel(channelName);
+
+      channelRef.current
         .on('presence', { event: 'sync' }, () => {
-          const state = channelRef.current.presenceState();
-          console.log('Usuários online:', Object.keys(state).length);
+          const state = channelRef.current?.presenceState() || {};
+          console.log('📊 Online users:', Object.keys(state).length);
+        })
+        .on('presence', { event: 'join' }, ({ key, newPresences }: any) => {
+          console.log('👋 User joined:', key);
+        })
+        .on('presence', { event: 'leave' }, async ({ key, leftPresences }: any) => {
+          console.log('👋 User left:', key);
+          // Quando um usuário sai, marcar como offline no banco
+          if (leftPresences && leftPresences.length > 0) {
+            const leftUserId = leftPresences[0]?.user_id;
+            if (leftUserId) {
+              await supabase
+                .from('profiles')
+                .update({
+                  is_online: false,
+                  last_seen: new Date().toISOString(),
+                })
+                .eq('user_id', leftUserId);
+            }
+          }
         })
         .subscribe(async (status: string) => {
-          if (status === 'SUBSCRIBED') {
+          console.log('📡 Presence channel status:', status);
+          if (status === 'SUBSCRIBED' && channelRef.current) {
             await channelRef.current.track({
               user_id: userId,
               online_at: new Date().toISOString(),
             });
+            console.log('✅ Presence tracked for user:', userId);
           }
         });
 
-      // Heartbeat a cada 15 segundos
-      const heartbeat = setInterval(async () => {
+      // Heartbeat a cada 30 segundos para manter o status atualizado
+      heartbeatRef.current = setInterval(async () => {
+        if (!isMounted) return;
+        
         await supabase
           .from('profiles')
           .update({
@@ -48,9 +75,9 @@ export const useOnlineStatus = () => {
             last_seen: new Date().toISOString(),
           })
           .eq('user_id', userId);
-      }, 15000);
+      }, 30000);
 
-      // Cleanup ao sair
+      // Cleanup ao sair da página
       const handleBeforeUnload = async () => {
         await supabase
           .from('profiles')
@@ -67,28 +94,22 @@ export const useOnlineStatus = () => {
       return () => {
         window.removeEventListener('beforeunload', handleBeforeUnload);
         window.removeEventListener('pagehide', handleBeforeUnload);
-        clearInterval(heartbeat);
-        
-        if (channelRef.current) {
-          channelRef.current.untrack();
-          supabase.removeChannel(channelRef.current);
-        }
-        
-        // Marcar como offline
-        supabase
-          .from('profiles')
-          .update({
-            is_online: false,
-            last_seen: new Date().toISOString(),
-          })
-          .eq('user_id', userId);
       };
     };
 
-    const cleanup = setupPresence();
-    
+    setupPresence();
+
     return () => {
-      cleanup.then((fn) => fn && fn());
+      isMounted = false;
+      
+      if (heartbeatRef.current) {
+        clearInterval(heartbeatRef.current);
+      }
+      
+      if (channelRef.current) {
+        channelRef.current.untrack();
+        supabase.removeChannel(channelRef.current);
+      }
     };
   }, []);
 };

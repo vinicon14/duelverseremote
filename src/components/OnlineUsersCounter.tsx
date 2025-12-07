@@ -8,40 +8,43 @@ export const OnlineUsersCounter = () => {
   const channelRef = useRef<any>(null);
 
   useEffect(() => {
+    let isMounted = true;
+
     const initPresence = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       
-      if (!session) {
+      if (!session || !isMounted) {
         setOnlineCount(0);
         return;
       }
 
-      // Create a shared presence channel that all users join
+      // Usar o mesmo canal compartilhado para todos os usuários
       const channelName = 'room:online';
       
       channelRef.current = supabase.channel(channelName);
 
       channelRef.current
         .on('presence', { event: 'sync' }, () => {
+          if (!isMounted || !channelRef.current) return;
+          
           const state = channelRef.current.presenceState();
           const count = Object.keys(state).length;
           console.log('✅ Online users synced:', count);
           setOnlineCount(count);
         })
         .on('presence', { event: 'join' }, ({ key, newPresences }: any) => {
-          console.log('👋 User joined:', key, newPresences);
+          console.log('👋 User joined:', key);
         })
         .on('presence', { event: 'leave' }, ({ key, leftPresences }: any) => {
-          console.log('👋 User left:', key, leftPresences);
+          console.log('👋 User left:', key);
         })
         .subscribe(async (status: string) => {
-          console.log('📡 Channel status:', status);
-          if (status === 'SUBSCRIBED') {
-            const presenceStatus = await channelRef.current.track({
+          console.log('📡 Counter channel status:', status);
+          if (status === 'SUBSCRIBED' && channelRef.current) {
+            await channelRef.current.track({
               user_id: session.user.id,
               online_at: new Date().toISOString(),
             });
-            console.log('📍 Presence tracked:', presenceStatus);
           }
         });
     };
@@ -49,9 +52,11 @@ export const OnlineUsersCounter = () => {
     initPresence();
 
     return () => {
+      isMounted = false;
       if (channelRef.current) {
         channelRef.current.untrack();
         supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
       }
     };
   }, []);
