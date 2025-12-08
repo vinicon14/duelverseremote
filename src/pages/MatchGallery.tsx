@@ -237,7 +237,10 @@ export default function MatchGallery() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {recordings.map((recording) => (
               <Card key={recording.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                <div className="aspect-video bg-muted relative">
+                <div 
+                  className="aspect-video bg-muted relative cursor-pointer"
+                  onClick={() => navigate(`/video/${recording.id}`)}
+                >
                   <video
                     src={recording.video_url}
                     className="w-full h-full object-cover"
@@ -247,7 +250,6 @@ export default function MatchGallery() {
                     <Button
                       size="lg"
                       className="gap-2"
-                      onClick={() => window.open(recording.video_url, '_blank')}
                     >
                       <Eye className="w-5 h-5" />
                       Assistir

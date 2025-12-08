@@ -48,7 +48,7 @@ export default function VideoShare() {
   const fetchRecording = async () => {
     if (!id) {
       console.error('❌ No video ID provided');
-      navigate('/match-gallery');
+      navigate('/gallery');
       return;
     }
 
@@ -60,7 +60,7 @@ export default function VideoShare() {
       const { data: { session } } = await supabase.auth.getSession();
       const userId = session?.user?.id;
       
-      // Buscar gravação sem join para evitar problemas com RLS
+      // Buscar gravação - RLS permite ver vídeos públicos ou próprios
       const { data: recordingData, error: recordingError } = await supabase
         .from('match_recordings')
         .select('*')
@@ -68,7 +68,6 @@ export default function VideoShare() {
         .maybeSingle();
 
       console.log('📹 Recording data:', recordingData);
-      console.log('❌ Recording error:', recordingError);
 
       if (recordingError) {
         console.error('Database error:', recordingError);
@@ -77,7 +76,7 @@ export default function VideoShare() {
           description: "Você não tem permissão para visualizar este vídeo.",
           variant: "destructive",
         });
-        navigate('/match-gallery');
+        navigate('/gallery');
         return;
       }
 
@@ -88,7 +87,7 @@ export default function VideoShare() {
           description: "Este vídeo não existe, foi removido ou é privado.",
           variant: "destructive",
         });
-        navigate('/match-gallery');
+        navigate('/gallery');
         return;
       }
 
@@ -97,12 +96,8 @@ export default function VideoShare() {
         // Se o vídeo é privado, só o dono pode ver
         if (!userId || userId !== recordingData.user_id) {
           console.error('🔒 Acesso negado: vídeo privado');
-          toast({
-            title: "Acesso negado",
-            description: "Este vídeo é privado e você não tem permissão para visualizá-lo.",
-            variant: "destructive",
-          });
-          navigate('/match-gallery');
+          setRecording(null);
+          setLoading(false);
           return;
         }
       }
@@ -126,11 +121,10 @@ export default function VideoShare() {
 
       setRecording(recordingWithProfile as any);
 
-      // Incrementar visualizações apenas se o acesso for permitido
-      await supabase
-        .from('match_recordings')
-        .update({ views: (recordingData.views || 0) + 1 })
-        .eq('id', id);
+      // Incrementar visualizações usando função RPC segura
+      if (recordingData.is_public) {
+        await supabase.rpc('increment_video_views', { video_id: id });
+      }
 
     } catch (error: any) {
       console.error('Erro ao carregar vídeo:', error);
@@ -139,7 +133,7 @@ export default function VideoShare() {
         description: "Não foi possível carregar o vídeo.",
         variant: "destructive",
       });
-      navigate('/match-gallery');
+      navigate('/gallery');
     } finally {
       setLoading(false);
     }
@@ -159,13 +153,6 @@ export default function VideoShare() {
   }
 
   if (!recording) {
-    return null;
-  }
-
-  // Verificar se o usuário tem permissão para visualizar
-  const canView = recording.is_public || currentUser?.id === recording.user_id;
-
-  if (!canView) {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
@@ -178,7 +165,7 @@ export default function VideoShare() {
                 Este vídeo é privado e você não tem permissão para visualizá-lo.
               </p>
               <Button
-                onClick={() => navigate('/match-gallery')}
+                onClick={() => navigate('/gallery')}
                 className="mt-4"
               >
                 Voltar para a Galeria

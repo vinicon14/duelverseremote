@@ -1155,6 +1155,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_video_views: { Args: { video_id: string }; Returns: undefined }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_judge: { Args: { _user_id: string }; Returns: boolean }
       matchmake: {
