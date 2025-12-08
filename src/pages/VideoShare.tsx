@@ -91,18 +91,8 @@ export default function VideoShare() {
         return;
       }
 
-      // VALIDAÇÃO DE SEGURANÇA: Verificar se o vídeo é privado
-      if (!recordingData.is_public) {
-        // Se o vídeo é privado, só o dono pode ver
-        if (!userId || userId !== recordingData.user_id) {
-          console.error('🔒 Acesso negado: vídeo privado');
-          setRecording(null);
-          setLoading(false);
-          return;
-        }
-      }
-
-      console.log('✅ Acesso permitido ao vídeo');
+      // Vídeos podem ser acessados por qualquer pessoa com o link
+      console.log('✅ Acesso permitido ao vídeo (link sharing)');
       
       // Buscar perfil do criador separadamente (público para todos)
       const { data: profileData } = await supabase
@@ -121,10 +111,8 @@ export default function VideoShare() {
 
       setRecording(recordingWithProfile as any);
 
-      // Incrementar visualizações usando função RPC segura
-      if (recordingData.is_public) {
-        await supabase.rpc('increment_video_views', { video_id: id });
-      }
+      // Incrementar visualizações para qualquer vídeo
+      await supabase.rpc('increment_video_views', { video_id: id });
 
     } catch (error: any) {
       console.error('Erro ao carregar vídeo:', error);
