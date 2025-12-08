@@ -18,36 +18,28 @@ export default function Matchmaking() {
   
   const currentUserId = useRef<string | null>(null);
   const timerInterval = useRef<NodeJS.Timeout | null>(null);
-  const queueChannel = useRef<any>(null);
-  const queueTimeout = useRef<NodeJS.Timeout | null>(null);
+  const pollingInterval = useRef<NodeJS.Timeout | null>(null);
   const isRedirecting = useRef(false);
-  const queueEntryId = useRef<string | null>(null);
 
   const cleanup = useCallback(async () => {
     console.log('🧹 Cleaning up matchmaking...');
-    
-    if (queueChannel.current) {
-      await supabase.removeChannel(queueChannel.current);
-      queueChannel.current = null;
-    }
     
     if (timerInterval.current) {
       clearInterval(timerInterval.current);
       timerInterval.current = null;
     }
     
-    if (queueTimeout.current) {
-      clearTimeout(queueTimeout.current);
-      queueTimeout.current = null;
+    if (pollingInterval.current) {
+      clearInterval(pollingInterval.current);
+      pollingInterval.current = null;
     }
     
-    // Deletar entrada da fila se existir
-    if (queueEntryId.current) {
+    // Remover da fila
+    if (currentUserId.current) {
       await supabase
         .from('matchmaking_queue')
         .delete()
-        .eq('id', queueEntryId.current);
-      queueEntryId.current = null;
+        .eq('user_id', currentUserId.current);
     }
   }, []);
 
@@ -64,21 +56,7 @@ export default function Matchmaking() {
     
     init();
 
-    const cleanupOnUnload = async () => {
-      if (currentUserId.current) {
-        await supabase
-          .from('matchmaking_queue')
-          .delete()
-          .eq('user_id', currentUserId.current);
-      }
-    };
-
-    window.addEventListener('beforeunload', cleanupOnUnload);
-    window.addEventListener('pagehide', cleanupOnUnload);
-
     return () => {
-      window.removeEventListener('beforeunload', cleanupOnUnload);
-      window.removeEventListener('pagehide', cleanupOnUnload);
       cleanup();
     };
   }, [cleanup, navigate]);
@@ -128,6 +106,51 @@ export default function Matchmaking() {
     navigate(`/duel/${duelId}`);
   }, [cleanup, navigate]);
 
+  const checkForRedirect = useCallback(async () => {
+    if (!currentUserId.current || isRedirecting.current) return;
+
+    try {
+      // Verificar tabela de redirects
+      const { data: redirect } = await supabase
+        .from('redirects')
+        .select('duel_id')
+        .eq('user_id', currentUserId.current)
+        .not('duel_id', 'is', null)
+        .maybeSingle();
+
+      if (redirect?.duel_id) {
+        console.log('🎮 Found redirect to duel:', redirect.duel_id);
+        
+        // Deletar redirect
+        await supabase
+          .from('redirects')
+          .delete()
+          .eq('user_id', currentUserId.current);
+        
+        await redirectToDuel(redirect.duel_id);
+        return true;
+      }
+
+      // Verificar na fila se foi matched
+      const { data: queueEntry } = await supabase
+        .from('matchmaking_queue')
+        .select('duel_id, status')
+        .eq('user_id', currentUserId.current)
+        .maybeSingle();
+
+      if (queueEntry?.status === 'matched' && queueEntry?.duel_id) {
+        console.log('🎮 Found match in queue:', queueEntry.duel_id);
+        await redirectToDuel(queueEntry.duel_id);
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      console.error('Error checking redirect:', error);
+      return false;
+    }
+  }, [redirectToDuel]);
+
   const joinQueue = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -138,11 +161,18 @@ export default function Matchmaking() {
       }
 
       const userId = session.user.id;
+      currentUserId.current = userId;
       isRedirecting.current = false;
 
       // Limpar qualquer entrada antiga do usuário
       await supabase
         .from('matchmaking_queue')
+        .delete()
+        .eq('user_id', userId);
+
+      // Limpar redirects antigos
+      await supabase
+        .from('redirects')
         .delete()
         .eq('user_id', userId);
 
@@ -162,155 +192,60 @@ export default function Matchmaking() {
       setSearching(true);
       const matchType = isRanked ? 'ranked' : 'casual';
 
-      // Verificar se há alguém esperando na fila
-      const { data: waitingPlayer } = await supabase
-        .from('matchmaking_queue')
-        .select('id, user_id')
-        .eq('match_type', matchType)
-        .eq('status', 'waiting')
-        .neq('user_id', userId)
-        .gt('expires_at', new Date().toISOString())
-        .order('joined_at', { ascending: true })
-        .limit(1)
-        .maybeSingle();
-
-      if (waitingPlayer) {
-        // Match encontrado! Eu sou o segundo jogador
-        console.log('✅ Found waiting player:', waitingPlayer.user_id);
-        await createMatch(waitingPlayer.user_id, userId, waitingPlayer.id, isRanked);
-        return;
-      }
-
-      // Ninguém esperando - entrar na fila
-      const expiresAt = new Date(Date.now() + 60000).toISOString(); // 60 segundos
-      const { data: queueEntry, error: queueError } = await supabase
-        .from('matchmaking_queue')
-        .insert({
-          user_id: userId,
-          match_type: matchType,
-          expires_at: expiresAt,
-          status: 'waiting'
-        })
-        .select()
-        .single();
-
-      if (queueError) {
-        console.error('Error joining queue:', queueError);
-        toast.error("Erro ao entrar na fila");
-        setSearching(false);
-        return;
-      }
-
-      console.log('✅ Joined queue:', queueEntry.id);
-      queueEntryId.current = queueEntry.id;
-      fetchQueueStats();
-
-      // Listener para quando minha entrada for atualizada com duel_id
-      const channelName = `matchmaking_${userId}_${Date.now()}`;
-      queueChannel.current = supabase
-        .channel(channelName)
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'matchmaking_queue',
-            filter: `id=eq.${queueEntry.id}`
-          },
-          async (payload) => {
-            const updated = payload.new as any;
-            console.log('📝 Queue entry updated:', updated);
-            
-            if (updated.status === 'matched' && updated.duel_id) {
-              console.log('🎮 Match found via realtime! Duel:', updated.duel_id);
-              await redirectToDuel(updated.duel_id);
-            }
-          }
-        )
-        .subscribe((status) => {
-          console.log('📡 Queue channel status:', status);
+      console.log('🔍 Calling matchmake function...');
+      
+      // Usar a função RPC do banco de dados
+      const { data: matchResult, error: matchError } = await supabase
+        .rpc('matchmake', { 
+          p_match_type: matchType, 
+          p_user_id: userId 
         });
 
+      if (matchError) {
+        console.error('Matchmake error:', matchError);
+        throw matchError;
+      }
+
+      console.log('📊 Matchmake result:', matchResult);
+
+      if (matchResult && matchResult.length > 0) {
+        const result = matchResult[0];
+        
+        if (result.player_role === 'matched' && result.duel_id) {
+          // Match encontrado! Redirecionar imediatamente
+          console.log('✅ Immediate match found:', result.duel_id);
+          await redirectToDuel(result.duel_id);
+          return;
+        }
+      }
+
+      // Estamos na fila de espera - iniciar polling
+      console.log('⏳ Waiting in queue, starting polling...');
+      fetchQueueStats();
+
+      // Polling a cada 2 segundos para verificar se foi matched
+      pollingInterval.current = setInterval(async () => {
+        const found = await checkForRedirect();
+        if (found) {
+          if (pollingInterval.current) {
+            clearInterval(pollingInterval.current);
+            pollingInterval.current = null;
+          }
+        }
+      }, 2000);
+
       // Timeout de 60 segundos
-      queueTimeout.current = setTimeout(async () => {
-        console.log('⏱️ Queue timeout');
-        await cancelSearch();
-        toast.error("Nenhum oponente encontrado. Tente novamente.");
+      setTimeout(async () => {
+        if (searching && !isRedirecting.current) {
+          console.log('⏱️ Queue timeout');
+          await cancelSearch();
+          toast.error("Nenhum oponente encontrado. Tente novamente.");
+        }
       }, 60000);
 
     } catch (error: any) {
       console.error("Error in joinQueue:", error);
       toast.error("Erro: " + error.message);
-      setSearching(false);
-    }
-  };
-
-  const createMatch = async (player1Id: string, player2Id: string, player1QueueId: string, ranked: boolean) => {
-    try {
-      console.log('🎮 Creating match:', player1Id, 'vs', player2Id);
-
-      // Verificar se já existe match para esses jogadores
-      const { data: existingMatch } = await supabase
-        .from('matchmaking_queue')
-        .select('duel_id')
-        .eq('user_id', player1Id)
-        .eq('status', 'matched')
-        .not('duel_id', 'is', null)
-        .maybeSingle();
-
-      if (existingMatch?.duel_id) {
-        console.log('⚠️ Match already exists:', existingMatch.duel_id);
-        await redirectToDuel(existingMatch.duel_id);
-        return;
-      }
-
-      // Criar duelo
-      const { data: duel, error: duelError } = await supabase
-        .from('live_duels')
-        .insert({
-          creator_id: player1Id,
-          opponent_id: player2Id,
-          room_name: `Match ${ranked ? 'Ranqueado' : 'Casual'}`,
-          status: 'in_progress',
-          is_ranked: ranked,
-          duration_minutes: 50,
-          started_at: new Date().toISOString()
-        })
-        .select()
-        .single();
-
-      if (duelError) {
-        console.error('Error creating duel:', duelError);
-        throw duelError;
-      }
-
-      console.log('✅ Duel created:', duel.id);
-
-      // Atualizar entrada do player1 (que estava esperando) com o duel_id
-      const { error: updateError } = await supabase
-        .from('matchmaking_queue')
-        .update({ 
-          status: 'matched', 
-          duel_id: duel.id 
-        })
-        .eq('id', player1QueueId);
-
-      if (updateError) {
-        console.error('Error updating queue entry:', updateError);
-      } else {
-        console.log('✅ Updated player1 queue entry');
-      }
-
-      // Pequeno delay para garantir propagação do realtime
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Redirecionar player2 (eu)
-      await redirectToDuel(duel.id);
-
-    } catch (error: any) {
-      console.error('❌ Error creating match:', error);
-      toast.error("Erro ao criar partida");
-      await cleanup();
       setSearching(false);
     }
   };
