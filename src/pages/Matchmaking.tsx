@@ -4,9 +4,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Navbar } from "@/components/Navbar";
-import { Loader2, Swords, Users, Clock } from "lucide-react";
+import { Loader2, Swords, Users, Clock, Video, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { useBanCheck } from "@/hooks/useBanCheck";
+
+interface MatchData {
+  duelId: string;
+  opponentName?: string;
+}
 
 export default function Matchmaking() {
   useBanCheck();
@@ -15,6 +20,7 @@ export default function Matchmaking() {
   const [elapsedTime, setElapsedTime] = useState(0);
   const [playersInQueue, setPlayersInQueue] = useState(0);
   const [isRanked, setIsRanked] = useState(true);
+  const [matchFound, setMatchFound] = useState<MatchData | null>(null);
   
   const currentUserId = useRef<string | null>(null);
   const timerInterval = useRef<NodeJS.Timeout | null>(null);
@@ -34,14 +40,14 @@ export default function Matchmaking() {
       pollingInterval.current = null;
     }
     
-    // Remover da fila
-    if (currentUserId.current) {
+    // Remover da fila apenas se não encontrou match
+    if (currentUserId.current && !matchFound) {
       await supabase
         .from('matchmaking_queue')
         .delete()
         .eq('user_id', currentUserId.current);
     }
-  }, []);
+  }, [matchFound]);
 
   useEffect(() => {
     const init = async () => {
@@ -62,11 +68,11 @@ export default function Matchmaking() {
   }, [cleanup, navigate]);
 
   useEffect(() => {
-    if (searching) {
+    if (searching && !matchFound) {
       timerInterval.current = setInterval(() => {
         setElapsedTime(prev => prev + 1);
       }, 1000);
-    } else {
+    } else if (!searching) {
       setElapsedTime(0);
     }
     
@@ -76,7 +82,7 @@ export default function Matchmaking() {
         timerInterval.current = null;
       }
     };
-  }, [searching]);
+  }, [searching, matchFound]);
 
   const fetchQueueStats = async () => {
     try {
@@ -90,21 +96,74 @@ export default function Matchmaking() {
     }
   };
 
-  const redirectToDuel = useCallback(async (duelId: string) => {
+  const getOpponentInfo = async (duelId: string) => {
+    try {
+      const { data: duel } = await supabase
+        .from('live_duels')
+        .select('creator_id, opponent_id')
+        .eq('id', duelId)
+        .single();
+      
+      if (duel) {
+        const opponentId = duel.creator_id === currentUserId.current 
+          ? duel.opponent_id 
+          : duel.creator_id;
+        
+        if (opponentId) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('username')
+            .eq('user_id', opponentId)
+            .single();
+          
+          return profile?.username || 'Oponente';
+        }
+      }
+      return 'Oponente';
+    } catch {
+      return 'Oponente';
+    }
+  };
+
+  const handleMatchFound = useCallback(async (duelId: string) => {
     if (isRedirecting.current) {
-      console.log('⚠️ Already redirecting, skipping...');
+      console.log('⚠️ Already processing match, skipping...');
       return;
     }
     
     isRedirecting.current = true;
-    console.log('🎮 Redirecting to duel:', duelId);
+    console.log('🎮 Match found:', duelId);
     
-    await cleanup();
+    // Parar polling e timer
+    if (pollingInterval.current) {
+      clearInterval(pollingInterval.current);
+      pollingInterval.current = null;
+    }
+    if (timerInterval.current) {
+      clearInterval(timerInterval.current);
+      timerInterval.current = null;
+    }
+    
+    // Limpar entrada da fila
+    if (currentUserId.current) {
+      await supabase
+        .from('matchmaking_queue')
+        .delete()
+        .eq('user_id', currentUserId.current);
+        
+      await supabase
+        .from('redirects')
+        .delete()
+        .eq('user_id', currentUserId.current);
+    }
+    
+    // Buscar informações do oponente
+    const opponentName = await getOpponentInfo(duelId);
+    
     setSearching(false);
-    
-    toast.success("🎮 Match encontrado! Redirecionando...");
-    navigate(`/duel/${duelId}`);
-  }, [cleanup, navigate]);
+    setMatchFound({ duelId, opponentName });
+    toast.success("🎮 Match encontrado!");
+  }, []);
 
   const checkForRedirect = useCallback(async () => {
     if (!currentUserId.current || isRedirecting.current) return;
@@ -120,14 +179,7 @@ export default function Matchmaking() {
 
       if (redirect?.duel_id) {
         console.log('🎮 Found redirect to duel:', redirect.duel_id);
-        
-        // Deletar redirect
-        await supabase
-          .from('redirects')
-          .delete()
-          .eq('user_id', currentUserId.current);
-        
-        await redirectToDuel(redirect.duel_id);
+        await handleMatchFound(redirect.duel_id);
         return true;
       }
 
@@ -140,7 +192,7 @@ export default function Matchmaking() {
 
       if (queueEntry?.status === 'matched' && queueEntry?.duel_id) {
         console.log('🎮 Found match in queue:', queueEntry.duel_id);
-        await redirectToDuel(queueEntry.duel_id);
+        await handleMatchFound(queueEntry.duel_id);
         return true;
       }
 
@@ -149,7 +201,7 @@ export default function Matchmaking() {
       console.error('Error checking redirect:', error);
       return false;
     }
-  }, [redirectToDuel]);
+  }, [handleMatchFound]);
 
   const joinQueue = async () => {
     try {
@@ -163,6 +215,7 @@ export default function Matchmaking() {
       const userId = session.user.id;
       currentUserId.current = userId;
       isRedirecting.current = false;
+      setMatchFound(null);
 
       // Limpar qualquer entrada antiga do usuário
       await supabase
@@ -212,9 +265,9 @@ export default function Matchmaking() {
         const result = matchResult[0];
         
         if (result.player_role === 'matched' && result.duel_id) {
-          // Match encontrado! Redirecionar imediatamente
+          // Match encontrado! Mostrar tela de match
           console.log('✅ Immediate match found:', result.duel_id);
-          await redirectToDuel(result.duel_id);
+          await handleMatchFound(result.duel_id);
           return;
         }
       }
@@ -234,14 +287,14 @@ export default function Matchmaking() {
         }
       }, 2000);
 
-      // Timeout de 60 segundos
+      // Timeout de 120 segundos (2 minutos)
       setTimeout(async () => {
-        if (searching && !isRedirecting.current) {
+        if (searching && !isRedirecting.current && !matchFound) {
           console.log('⏱️ Queue timeout');
           await cancelSearch();
           toast.error("Nenhum oponente encontrado. Tente novamente.");
         }
-      }, 60000);
+      }, 120000);
 
     } catch (error: any) {
       console.error("Error in joinQueue:", error);
@@ -252,12 +305,36 @@ export default function Matchmaking() {
 
   const cancelSearch = async () => {
     console.log('❌ Canceling search...');
-    await cleanup();
+    
+    if (timerInterval.current) {
+      clearInterval(timerInterval.current);
+      timerInterval.current = null;
+    }
+    
+    if (pollingInterval.current) {
+      clearInterval(pollingInterval.current);
+      pollingInterval.current = null;
+    }
+    
+    if (currentUserId.current) {
+      await supabase
+        .from('matchmaking_queue')
+        .delete()
+        .eq('user_id', currentUserId.current);
+    }
+    
     setSearching(false);
     setElapsedTime(0);
+    setMatchFound(null);
     isRedirecting.current = false;
     toast.info("Busca cancelada");
     fetchQueueStats();
+  };
+
+  const joinDuel = () => {
+    if (matchFound?.duelId) {
+      navigate(`/duel/${matchFound.duelId}`);
+    }
   };
 
   const formatTime = (seconds: number) => {
@@ -266,7 +343,7 @@ export default function Matchmaking() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const remainingTime = Math.max(0, 60 - elapsedTime);
+  const remainingTime = Math.max(0, 120 - elapsedTime);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-primary/5">
@@ -275,22 +352,67 @@ export default function Matchmaking() {
       <main className="container mx-auto px-4 pt-20 sm:pt-24 pb-12">
         <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6">
           <div className="text-center space-y-2">
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold gradient-text">Matchmaking</h1>
-            <p className="text-sm sm:text-base text-muted-foreground">Encontre seu próximo oponente</p>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold gradient-text">
+              {matchFound ? 'Match Encontrado!' : 'Matchmaking'}
+            </h1>
+            <p className="text-sm sm:text-base text-muted-foreground">
+              {matchFound ? 'Seu oponente está pronto' : 'Encontre seu próximo oponente'}
+            </p>
           </div>
 
           <Card className="card-mystic p-4 sm:p-8">
             <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Users className="h-5 w-5 text-primary" />
-                  <span className="text-sm text-muted-foreground">
-                    Jogadores na fila: <span className="font-bold text-foreground">{playersInQueue}</span>
-                  </span>
+              {!matchFound && (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-5 w-5 text-primary" />
+                    <span className="text-sm text-muted-foreground">
+                      Jogadores na fila: <span className="font-bold text-foreground">{playersInQueue}</span>
+                    </span>
+                  </div>
                 </div>
-              </div>
+              )}
 
-              {!searching ? (
+              {/* Estado: Match Encontrado */}
+              {matchFound && (
+                <div className="space-y-6">
+                  <div className="text-center py-6 sm:py-8">
+                    <div className="relative inline-block">
+                      <CheckCircle2 className="h-16 w-16 sm:h-20 sm:w-20 mx-auto mb-4 text-green-500" />
+                      <div className="absolute inset-0 h-16 w-16 sm:h-20 sm:w-20 mx-auto rounded-full bg-green-500/20 animate-ping" />
+                    </div>
+                    <h3 className="text-xl sm:text-2xl font-bold mb-2 text-green-500">
+                      Oponente Encontrado!
+                    </h3>
+                    <p className="text-lg text-foreground font-semibold mb-2">
+                      vs {matchFound.opponentName}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Clique no botão abaixo para entrar na chamada de vídeo
+                    </p>
+                  </div>
+
+                  <Button 
+                    onClick={joinDuel}
+                    className="w-full btn-mystic"
+                    size="lg"
+                  >
+                    <Video className="mr-2 h-5 w-5" />
+                    Entrar na Chamada de Vídeo
+                  </Button>
+
+                  <Button 
+                    onClick={cancelSearch}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              )}
+
+              {/* Estado: Não buscando */}
+              {!searching && !matchFound && (
                 <div className="space-y-4">
                   <div className="text-center py-6 sm:py-8">
                     <Swords className="h-12 w-12 sm:h-16 sm:w-16 mx-auto mb-4 text-primary animate-pulse" />
@@ -336,14 +458,20 @@ export default function Matchmaking() {
                     Buscar Partida {isRanked ? 'Ranqueada' : 'Casual'}
                   </Button>
                 </div>
-              ) : (
+              )}
+
+              {/* Estado: Buscando */}
+              {searching && !matchFound && (
                 <div className="space-y-4">
                   <div className="text-center py-6 sm:py-8">
                     <Loader2 className="h-12 w-12 sm:h-16 sm:w-16 mx-auto mb-4 text-primary animate-spin" />
-                    <h3 className="text-lg sm:text-xl font-semibold mb-2">Procurando Oponente...</h3>
+                    <h3 className="text-lg sm:text-xl font-semibold mb-2">Aguardando no Lobby...</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Esperando outro jogador entrar na fila
+                    </p>
                     <div className="flex items-center justify-center gap-2 text-sm sm:text-base text-muted-foreground">
                       <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
-                      <span>Tempo: {formatTime(elapsedTime)}</span>
+                      <span>Tempo de espera: {formatTime(elapsedTime)}</span>
                     </div>
                   </div>
 
@@ -351,11 +479,11 @@ export default function Matchmaking() {
                     <div className="h-2 bg-secondary rounded-full overflow-hidden">
                       <div 
                         className="h-full bg-gradient-primary transition-all duration-1000" 
-                        style={{ width: `${(elapsedTime / 60) * 100}%` }} 
+                        style={{ width: `${(elapsedTime / 120) * 100}%` }} 
                       />
                     </div>
                     <p className="text-xs text-center text-muted-foreground">
-                      {remainingTime}s restantes
+                      {remainingTime}s restantes antes do timeout
                     </p>
                   </div>
 
@@ -364,34 +492,36 @@ export default function Matchmaking() {
                     variant="outline"
                     className="w-full"
                   >
-                    Cancelar Busca
+                    Sair do Lobby
                   </Button>
                 </div>
               )}
             </div>
           </Card>
 
-          <Card className="card-mystic p-6">
-            <h3 className="font-semibold mb-4">Como Funciona o Matchmaking</h3>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li className="flex items-start gap-2">
-                <span className="text-primary mt-0.5">•</span>
-                <span>Você será pareado com jogadores buscando o mesmo tipo de partida</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-primary mt-0.5">•</span>
-                <span>A busca expira em 60 segundos se nenhum oponente for encontrado</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-primary mt-0.5">•</span>
-                <span>Você será redirecionado automaticamente quando encontrar um match</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-primary mt-0.5">•</span>
-                <span>Partidas ranqueadas afetam seus pontos no ranking</span>
-              </li>
-            </ul>
-          </Card>
+          {!matchFound && (
+            <Card className="card-mystic p-6">
+              <h3 className="font-semibold mb-4">Como Funciona o Lobby</h3>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li className="flex items-start gap-2">
+                  <span className="text-primary mt-0.5">1.</span>
+                  <span>Clique em "Buscar Partida" para entrar no lobby de espera</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary mt-0.5">2.</span>
+                  <span>Aguarde até outro jogador também entrar no lobby</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary mt-0.5">3.</span>
+                  <span>Quando o match for encontrado, clique no botão para entrar na chamada</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary mt-0.5">4.</span>
+                  <span>O lobby expira em 2 minutos se nenhum oponente for encontrado</span>
+                </li>
+              </ul>
+            </Card>
+          )}
         </div>
       </main>
     </div>
