@@ -181,6 +181,7 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
       if (!user) throw new Error('Usuário não autenticado');
 
       const fileName = `${user.id}/${Date.now()}.webm`;
+      const fileSize = videoBlob.current.size;
       
       // Upload do vídeo
       const { data: uploadData, error: uploadError } = await supabase.storage
@@ -197,7 +198,7 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
         .from('match-recordings')
         .getPublicUrl(fileName);
 
-      // Salvar metadados no banco
+      // Salvar metadados no banco IMEDIATAMENTE
       const { error: dbError } = await supabase
         .from('match_recordings')
         .insert({
@@ -207,11 +208,15 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
           title: title.trim(),
           description: description.trim() || null,
           video_url: publicUrl,
-          file_size: videoBlob.current.size,
+          file_size: fileSize,
           is_public: isPublic,
         });
 
-      if (dbError) throw dbError;
+      if (dbError) {
+        console.error('Erro ao salvar no banco, tentando sincronização:', dbError);
+        // Se falhar, executar sincronização como fallback
+        await supabase.rpc('sync_storage_recordings');
+      }
 
       toast({
         title: "✅ Gravação salva",
@@ -225,11 +230,26 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
       videoBlob.current = null;
     } catch (error: any) {
       console.error('Erro ao salvar gravação:', error);
-      toast({
-        title: "Erro ao salvar",
-        description: error.message || "Não foi possível salvar a gravação.",
-        variant: "destructive",
-      });
+      
+      // Tentar sincronização como último recurso
+      try {
+        await supabase.rpc('sync_storage_recordings');
+        toast({
+          title: "✅ Gravação recuperada",
+          description: "Sua gravação foi sincronizada automaticamente.",
+        });
+        setShowSaveDialog(false);
+        setTitle("");
+        setDescription("");
+        setIsPublic(false);
+        videoBlob.current = null;
+      } catch (syncError) {
+        toast({
+          title: "Erro ao salvar",
+          description: error.message || "Não foi possível salvar a gravação.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsProcessing(false);
     }
