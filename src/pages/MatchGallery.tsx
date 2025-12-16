@@ -68,6 +68,14 @@ export default function MatchGallery() {
   const fetchRecordings = async () => {
     try {
       setLoading(true);
+      
+      // Sincronizar gravações do storage com o banco de dados automaticamente
+      try {
+        await supabase.rpc('sync_storage_recordings');
+      } catch {
+        // Ignorar erro silenciosamente - a sincronização é apenas um fallback
+      }
+      
       const { data, error } = await supabase
         .from('match_recordings')
         .select('*')

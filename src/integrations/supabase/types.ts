@@ -1186,6 +1186,7 @@ export type Database = {
           username: string
         }[]
       }
+      sync_storage_recordings: { Args: never; Returns: undefined }
       transfer_duelcoins: {
         Args: { p_amount: number; p_receiver_id: string }
         Returns: Json
