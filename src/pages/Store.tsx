@@ -28,13 +28,13 @@ export default function Store() {
         const emailSetting = data.find(s => s.key === 'support_email');
         const urlSetting = data.find(s => s.key === 'store_url');
         
-        setSupportEmail(emailSetting?.value || 'suporte@duelverse.online');
-        setStoreUrl(urlSetting?.value || 'https://loja.duelverse.online');
+        setSupportEmail(emailSetting?.value || 'suporte@duelverse.free.nf');
+        setStoreUrl(urlSetting?.value || 'https://loja.duelverse.free.nf');
       }
     } catch (error) {
       console.error('Error fetching settings:', error);
-      setSupportEmail('suporte@duelverse.online');
-      setStoreUrl('https://loja.duelverse.online');
+      setSupportEmail('suporte@duelverse.free.nf');
+      setStoreUrl('https://loja.duelverse.free.nf');
     }
   };
 

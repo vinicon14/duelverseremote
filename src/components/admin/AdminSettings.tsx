@@ -133,7 +133,7 @@ export const AdminSettings = () => {
             <Input
               id="store-url"
               type="url"
-              placeholder="https://loja.duelverse.online"
+              placeholder="https://loja.duelverse.free.nf"
               value={storeUrl}
               onChange={(e) => setStoreUrl(e.target.value)}
             />
