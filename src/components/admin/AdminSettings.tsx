@@ -133,7 +133,7 @@ export const AdminSettings = () => {
             <Input
               id="store-url"
               type="url"
-              placeholder="https://loja.duelverse.free.nf"
+              placeholder="https://loja.duelverseonline.vercel.app"
               value={storeUrl}
               onChange={(e) => setStoreUrl(e.target.value)}
             />
