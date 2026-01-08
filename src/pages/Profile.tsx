@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/Navbar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { Trophy, Swords, TrendingUp, Calendar } from "lucide-react";
+import { Trophy, Swords, Star, Calendar } from "lucide-react";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { BrowserNotificationTest } from "@/components/BrowserNotificationTest";
 
@@ -163,8 +163,8 @@ const Profile = () => {
                     <span className="text-sm sm:text-base font-semibold">Nível {profile?.level || 1}</span>
                   </div>
                   <div className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg bg-primary/10">
-                    <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-                    <span className="text-sm sm:text-base font-semibold">ELO: {profile?.elo_rating || 1500}</span>
+                    <Star className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+                    <span className="text-sm sm:text-base font-semibold">{profile?.points || 0} Pontos</span>
                   </div>
                 </div>
               </div>
