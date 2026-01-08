@@ -84,13 +84,6 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["user_id"]
           },
-          {
-            foreignKeyName: "chat_messages_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "public_profiles"
-            referencedColumns: ["user_id"]
-          },
         ]
       }
       duel_invites: {
@@ -195,24 +188,10 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
           {
-            foreignKeyName: "friend_requests_receiver_id_fkey"
-            columns: ["receiver_id"]
-            isOneToOne: false
-            referencedRelation: "public_profiles"
-            referencedColumns: ["user_id"]
-          },
-          {
             foreignKeyName: "friend_requests_sender_id_fkey"
             columns: ["sender_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "friend_requests_sender_id_fkey"
-            columns: ["sender_id"]
-            isOneToOne: false
-            referencedRelation: "public_profiles"
             referencedColumns: ["user_id"]
           },
         ]
@@ -423,29 +402,8 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
           {
-            foreignKeyName: "live_duels_creator_id_fkey"
-            columns: ["creator_id"]
-            isOneToOne: false
-            referencedRelation: "public_profiles"
-            referencedColumns: ["user_id"]
-          },
-          {
             foreignKeyName: "live_duels_opponent_id_fkey"
             columns: ["opponent_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "live_duels_opponent_id_fkey"
-            columns: ["opponent_id"]
-            isOneToOne: false
-            referencedRelation: "public_profiles"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "live_duels_winner_id_fkey"
-            columns: ["winner_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["user_id"]
@@ -454,7 +412,7 @@ export type Database = {
             foreignKeyName: "live_duels_winner_id_fkey"
             columns: ["winner_id"]
             isOneToOne: false
-            referencedRelation: "public_profiles"
+            referencedRelation: "profiles"
             referencedColumns: ["user_id"]
           },
         ]
@@ -537,29 +495,8 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
           {
-            foreignKeyName: "match_history_player1_id_fkey"
-            columns: ["player1_id"]
-            isOneToOne: false
-            referencedRelation: "public_profiles"
-            referencedColumns: ["user_id"]
-          },
-          {
             foreignKeyName: "match_history_player2_id_fkey"
             columns: ["player2_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "match_history_player2_id_fkey"
-            columns: ["player2_id"]
-            isOneToOne: false
-            referencedRelation: "public_profiles"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "match_history_winner_id_fkey"
-            columns: ["winner_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["user_id"]
@@ -568,7 +505,7 @@ export type Database = {
             foreignKeyName: "match_history_winner_id_fkey"
             columns: ["winner_id"]
             isOneToOne: false
-            referencedRelation: "public_profiles"
+            referencedRelation: "profiles"
             referencedColumns: ["user_id"]
           },
         ]
@@ -703,13 +640,6 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["user_id"]
           },
-          {
-            foreignKeyName: "news_author_id_fkey"
-            columns: ["author_id"]
-            isOneToOne: false
-            referencedRelation: "public_profiles"
-            referencedColumns: ["user_id"]
-          },
         ]
       }
       notifications: {
@@ -783,13 +713,6 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "players_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "public_profiles"
             referencedColumns: ["user_id"]
           },
         ]
@@ -1159,44 +1082,11 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["user_id"]
           },
-          {
-            foreignKeyName: "user_roles_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "public_profiles"
-            referencedColumns: ["user_id"]
-          },
         ]
       }
     }
     Views: {
-      public_profiles: {
-        Row: {
-          avatar_url: string | null
-          losses: number | null
-          points: number | null
-          user_id: string | null
-          username: string | null
-          wins: number | null
-        }
-        Insert: {
-          avatar_url?: string | null
-          losses?: number | null
-          points?: number | null
-          user_id?: string | null
-          username?: string | null
-          wins?: number | null
-        }
-        Update: {
-          avatar_url?: string | null
-          losses?: number | null
-          points?: number | null
-          user_id?: string | null
-          username?: string | null
-          wins?: number | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       admin_cleanup_orphaned_auth_users: {
