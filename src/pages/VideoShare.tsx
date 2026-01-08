@@ -48,7 +48,7 @@ export default function VideoShare() {
   const fetchRecording = async () => {
     if (!id) {
       console.error('❌ No video ID provided');
-      navigate('/gallery');
+      navigate('/match-gallery');
       return;
     }
 
@@ -60,59 +60,61 @@ export default function VideoShare() {
       const { data: { session } } = await supabase.auth.getSession();
       const userId = session?.user?.id;
       
-      // Buscar gravação - RLS permite ver vídeos públicos ou próprios
+      // Primeiro tentar via RLS normal (vídeos públicos ou próprios)
       const { data: recordingData, error: recordingError } = await supabase
         .from('match_recordings')
         .select('*')
         .eq('id', id)
         .maybeSingle();
 
-      console.log('📹 Recording data:', recordingData);
+      console.log('📹 Recording data via RLS:', recordingData);
 
-      if (recordingError) {
-        console.error('Database error:', recordingError);
-        toast({
-          title: "Erro ao acessar vídeo",
-          description: "Você não tem permissão para visualizar este vídeo.",
-          variant: "destructive",
-        });
-        navigate('/gallery');
+      // Se encontrou via RLS, usar esses dados
+      if (recordingData) {
+        console.log('✅ Acesso permitido ao vídeo (RLS)');
+        
+        // Buscar perfil do criador
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('username, avatar_url')
+          .eq('user_id', recordingData.user_id)
+          .single();
+
+        const recordingWithProfile = {
+          ...recordingData,
+          profiles: profileData || {
+            username: 'Usuário',
+            avatar_url: null,
+          },
+        };
+
+        setRecording(recordingWithProfile as any);
+
+        // Incrementar visualizações
+        await supabase.rpc('increment_video_views', { video_id: id });
         return;
       }
 
-      if (!recordingData) {
-        console.error('❌ No recording found with ID:', id);
+      // Se não encontrou via RLS, tentar via edge function (para vídeos privados com link)
+      console.log('🔗 Tentando acesso via link compartilhado...');
+      
+      const { data: edgeFunctionData, error: edgeFunctionError } = await supabase.functions.invoke('get-video-by-link', {
+        body: { videoId: id }
+      });
+
+      if (edgeFunctionError || !edgeFunctionData?.data) {
+        console.error('❌ Video not found:', edgeFunctionError);
         toast({
           title: "Vídeo não encontrado",
-          description: "Este vídeo não existe, foi removido ou é privado.",
+          description: "Este vídeo não existe ou foi removido.",
           variant: "destructive",
         });
-        navigate('/gallery');
+        navigate('/match-gallery');
         return;
       }
 
-      // Vídeos podem ser acessados por qualquer pessoa com o link
-      console.log('✅ Acesso permitido ao vídeo (link sharing)');
-      
-      // Buscar perfil do criador separadamente (público para todos)
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('username, avatar_url')
-        .eq('user_id', recordingData.user_id)
-        .single();
-
-      const recordingWithProfile = {
-        ...recordingData,
-        profiles: profileData || {
-          username: 'Usuário',
-          avatar_url: null,
-        },
-      };
-
-      setRecording(recordingWithProfile as any);
-
-      // Incrementar visualizações para qualquer vídeo
-      await supabase.rpc('increment_video_views', { video_id: id });
+      console.log('✅ Acesso permitido ao vídeo (link compartilhado)');
+      setRecording(edgeFunctionData.data as any);
 
     } catch (error: any) {
       console.error('Erro ao carregar vídeo:', error);
@@ -121,7 +123,7 @@ export default function VideoShare() {
         description: "Não foi possível carregar o vídeo.",
         variant: "destructive",
       });
-      navigate('/gallery');
+      navigate('/match-gallery');
     } finally {
       setLoading(false);
     }
