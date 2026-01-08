@@ -36,6 +36,7 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const videoBlob = useRef<Blob | null>(null);
+  const micStreamRef = useRef<MediaStream | null>(null);
 
   // Cleanup ao desmontar componente
   useEffect(() => {
@@ -44,6 +45,10 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
       document.body.classList.remove('recording-active');
       if (mediaRecorderRef.current && isRecording) {
         mediaRecorderRef.current.stop();
+      }
+      // Parar stream do microfone
+      if (micStreamRef.current) {
+        micStreamRef.current.getTracks().forEach(track => track.stop());
       }
     };
   }, [isRecording]);
@@ -82,10 +87,53 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
           height: { ideal: isMobile ? 1280 : 720 },
           frameRate: { ideal: isMobile ? 15 : 30 }
         },
-        audio: true,
+        audio: true, // Áudio do sistema/tab
       };
 
-      const stream = await navigator.mediaDevices.getDisplayMedia(displayMediaOptions);
+      const displayStream = await navigator.mediaDevices.getDisplayMedia(displayMediaOptions);
+
+      // Capturar áudio do microfone
+      let micStream: MediaStream | null = null;
+      try {
+        micStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          }
+        });
+        micStreamRef.current = micStream;
+      } catch (micError) {
+        console.log('Microfone não disponível, gravando apenas tela:', micError);
+        toast({
+          title: "Aviso",
+          description: "Microfone não disponível. Gravando apenas a tela.",
+        });
+      }
+
+      // Combinar streams de vídeo e áudio
+      const audioContext = new AudioContext();
+      const destination = audioContext.createMediaStreamDestination();
+      
+      // Adicionar áudio do display (sistema/tab) se disponível
+      const displayAudioTracks = displayStream.getAudioTracks();
+      if (displayAudioTracks.length > 0) {
+        const displayAudioStream = new MediaStream(displayAudioTracks);
+        const displayAudioSource = audioContext.createMediaStreamSource(displayAudioStream);
+        displayAudioSource.connect(destination);
+      }
+
+      // Adicionar áudio do microfone se disponível
+      if (micStream) {
+        const micAudioSource = audioContext.createMediaStreamSource(micStream);
+        micAudioSource.connect(destination);
+      }
+
+      // Criar stream combinado: vídeo da tela + áudio combinado
+      const combinedStream = new MediaStream([
+        ...displayStream.getVideoTracks(),
+        ...destination.stream.getAudioTracks(),
+      ]);
 
       // Determinar melhor codec disponível
       let mimeType = 'video/webm;codecs=vp8,opus';
@@ -95,9 +143,9 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
         mimeType = 'video/webm;codecs=h264,opus';
       }
 
-      const mediaRecorder = new MediaRecorder(stream, {
+      const mediaRecorder = new MediaRecorder(combinedStream, {
         mimeType,
-        videoBitsPerSecond: isMobile ? 1500000 : 2500000, // Menor bitrate para mobile
+        videoBitsPerSecond: isMobile ? 1500000 : 2500000,
       });
 
       mediaRecorderRef.current = mediaRecorder;
@@ -114,13 +162,19 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
         videoBlob.current = blob;
         
         // Parar todas as tracks do stream
-        stream.getTracks().forEach(track => track.stop());
+        combinedStream.getTracks().forEach(track => track.stop());
+        displayStream.getTracks().forEach(track => track.stop());
+        if (micStreamRef.current) {
+          micStreamRef.current.getTracks().forEach(track => track.stop());
+          micStreamRef.current = null;
+        }
+        audioContext.close();
         
         setShowSaveDialog(true);
       };
 
       // Detectar se o usuário parou a gravação pelo navegador
-      stream.getVideoTracks()[0].addEventListener('ended', () => {
+      displayStream.getVideoTracks()[0].addEventListener('ended', () => {
         if (isRecording) {
           stopRecording();
         }
