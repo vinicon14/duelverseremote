@@ -1,7 +1,7 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Video, Square, Loader2, Lock, Globe } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import { Video, Square, Loader2, Lock, Globe, Mic, MicOff } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAccountType } from "@/hooks/useAccountType";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -33,10 +33,52 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [isPublic, setIsPublic] = useState(false);
+  const [micLevel, setMicLevel] = useState(0);
+  const [hasMic, setHasMic] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const videoBlob = useRef<Blob | null>(null);
   const micStreamRef = useRef<MediaStream | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+
+  // Função para monitorar nível do microfone
+  const startMicMonitoring = useCallback((micStream: MediaStream) => {
+    const audioContext = new AudioContext();
+    audioContextRef.current = audioContext;
+    
+    const analyser = audioContext.createAnalyser();
+    analyserRef.current = analyser;
+    analyser.fftSize = 256;
+    
+    const source = audioContext.createMediaStreamSource(micStream);
+    source.connect(analyser);
+    
+    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+    
+    const updateLevel = () => {
+      if (!analyserRef.current) return;
+      
+      analyserRef.current.getByteFrequencyData(dataArray);
+      const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
+      const normalizedLevel = Math.min(100, (average / 128) * 100);
+      setMicLevel(normalizedLevel);
+      
+      animationFrameRef.current = requestAnimationFrame(updateLevel);
+    };
+    
+    updateLevel();
+  }, []);
+
+  const stopMicMonitoring = useCallback(() => {
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+    setMicLevel(0);
+    setHasMic(false);
+  }, []);
 
   // Cleanup ao desmontar componente
   useEffect(() => {
@@ -50,8 +92,9 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
       if (micStreamRef.current) {
         micStreamRef.current.getTracks().forEach(track => track.stop());
       }
+      stopMicMonitoring();
     };
-  }, [isRecording]);
+  }, [isRecording, stopMicMonitoring]);
 
   const startRecording = async () => {
     if (!isPro) {
@@ -134,6 +177,10 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
         const micAudioSource = audioContext.createMediaStreamSource(micStream);
         micAudioSource.connect(destination);
         console.log('✅ Microfone conectado à gravação');
+        
+        // Iniciar monitoramento do nível do microfone
+        setHasMic(true);
+        startMicMonitoring(micStream);
       }
 
       // Criar stream combinado: vídeo da tela + áudio combinado
@@ -176,6 +223,9 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
           micStreamRef.current = null;
         }
         audioContext.close();
+        
+        // Parar monitoramento do microfone
+        stopMicMonitoring();
         
         setShowSaveDialog(true);
       };
@@ -222,6 +272,9 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
       
       // Remover classe do body
       document.body.classList.remove('recording-active');
+      
+      // Parar monitoramento
+      stopMicMonitoring();
     }
   };
 
@@ -369,15 +422,54 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
           Gravar Partida
         </Button>
       ) : (
-        <Button
-          onClick={stopRecording}
-          variant="destructive"
-          size="sm"
-          className="gap-2 animate-pulse"
-        >
-          <Square className="w-4 h-4 fill-current" />
-          Parar Gravação
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* Indicador de nível do microfone */}
+          <div className="flex items-center gap-1.5 px-2 py-1 bg-background/80 rounded-md border">
+            {hasMic ? (
+              <>
+                <Mic className="w-3.5 h-3.5 text-green-500" />
+                <div className="flex items-end gap-0.5 h-4">
+                  {[...Array(5)].map((_, i) => {
+                    const threshold = (i + 1) * 20;
+                    const isActive = micLevel >= threshold;
+                    return (
+                      <div
+                        key={i}
+                        className={`w-1 rounded-full transition-all duration-75 ${
+                          isActive 
+                            ? micLevel > 60 
+                              ? 'bg-green-500' 
+                              : micLevel > 30 
+                                ? 'bg-yellow-500' 
+                                : 'bg-green-400'
+                            : 'bg-muted-foreground/30'
+                        }`}
+                        style={{ 
+                          height: `${(i + 1) * 3 + 4}px`,
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              <>
+                <MicOff className="w-3.5 h-3.5 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">Sem mic</span>
+              </>
+            )}
+          </div>
+          
+          <Button
+            onClick={stopRecording}
+            variant="destructive"
+            size="sm"
+            className="gap-2 animate-pulse"
+          >
+            <Square className="w-4 h-4 fill-current" />
+            Parar Gravação
+          </Button>
+        </div>
       )}
 
       <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
