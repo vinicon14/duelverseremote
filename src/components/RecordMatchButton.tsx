@@ -76,25 +76,45 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
       cancelAnimationFrame(animationFrameRef.current);
       animationFrameRef.current = null;
     }
+
+    analyserRef.current = null;
+
+    if (audioContextRef.current) {
+      try {
+        audioContextRef.current.close();
+      } catch {
+        // ignore
+      }
+      audioContextRef.current = null;
+    }
+
     setMicLevel(0);
     setHasMic(false);
   }, []);
 
-  // Cleanup ao desmontar componente
+  // Cleanup ao desmontar componente (apenas unmount)
   useEffect(() => {
     return () => {
       // Remover classe e parar gravação ao desmontar
       document.body.classList.remove('recording-active');
-      if (mediaRecorderRef.current && isRecording) {
-        mediaRecorderRef.current.stop();
+
+      if (mediaRecorderRef.current?.state === 'recording') {
+        try {
+          mediaRecorderRef.current.stop();
+        } catch {
+          // ignore
+        }
       }
+
       // Parar stream do microfone
       if (micStreamRef.current) {
-        micStreamRef.current.getTracks().forEach(track => track.stop());
+        micStreamRef.current.getTracks().forEach((track) => track.stop());
+        micStreamRef.current = null;
       }
+
       stopMicMonitoring();
     };
-  }, [isRecording, stopMicMonitoring]);
+  }, [stopMicMonitoring]);
 
   const startRecording = async () => {
     if (!isPro) {
