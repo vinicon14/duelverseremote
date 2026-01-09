@@ -75,11 +75,26 @@ export default function MatchGallery() {
       } catch {
         // Ignorar erro silenciosamente - a sincronização é apenas um fallback
       }
+
+      // Obter sessão atual
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user?.id;
       
-      const { data, error } = await supabase
+      // Buscar gravações: públicas OU do próprio usuário
+      let query = supabase
         .from('match_recordings')
         .select('*')
         .order('created_at', { ascending: false });
+
+      if (userId) {
+        // Usuário logado: mostra públicas + próprias
+        query = query.or(`is_public.eq.true,user_id.eq.${userId}`);
+      } else {
+        // Não logado: apenas públicas
+        query = query.eq('is_public', true);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
