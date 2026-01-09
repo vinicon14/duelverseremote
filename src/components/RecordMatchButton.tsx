@@ -113,6 +113,12 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
 
       // Combinar streams de vídeo e áudio
       const audioContext = new AudioContext();
+      
+      // Garantir que o AudioContext está ativo
+      if (audioContext.state === 'suspended') {
+        await audioContext.resume();
+      }
+      
       const destination = audioContext.createMediaStreamDestination();
       
       // Adicionar áudio do display (sistema/tab) se disponível
@@ -124,9 +130,10 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
       }
 
       // Adicionar áudio do microfone se disponível
-      if (micStream) {
+      if (micStream && micStream.getAudioTracks().length > 0) {
         const micAudioSource = audioContext.createMediaStreamSource(micStream);
         micAudioSource.connect(destination);
+        console.log('✅ Microfone conectado à gravação');
       }
 
       // Criar stream combinado: vídeo da tela + áudio combinado
