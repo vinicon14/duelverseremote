@@ -17,27 +17,39 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 interface RecordMatchButtonProps {
   duelId: string;
   tournamentId?: string;
 }
 
+type RecordingAudioSource = "system" | "mic" | "both";
+
 export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonProps) => {
   const { toast } = useToast();
   const { isPro, loading: accountLoading } = useAccountType();
   const isMobile = useIsMobile();
+
   const [isRecording, setIsRecording] = useState(false);
+  const isRecordingRef = useRef(false);
+
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showSetupDialog, setShowSetupDialog] = useState(false);
+  const [audioSource, setAudioSource] = useState<RecordingAudioSource>("both");
+
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [isPublic, setIsPublic] = useState(false);
+
   const [micLevel, setMicLevel] = useState(0);
   const [hasMic, setHasMic] = useState(false);
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const videoBlob = useRef<Blob | null>(null);
+
   const micStreamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -116,7 +128,7 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
     };
   }, [stopMicMonitoring]);
 
-  const startRecording = async () => {
+  const startRecording = async (source: RecordingAudioSource) => {
     if (!isPro) {
       toast({
         title: "Recurso PRO",
@@ -126,14 +138,14 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
       return;
     }
 
-    // Detectar se é mobile
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    
+    // Detectar se é mobile (fallback; o botão já é ocultado no mobile)
+    const isDeviceMobileUA = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
     // Verificar se a API de gravação está disponível
     if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
       toast({
         title: "Não suportado",
-        description: isMobile 
+        description: isDeviceMobileUA
           ? "A gravação de tela não é suportada em dispositivos móveis. Use um computador para gravar suas partidas."
           : "Seu navegador não suporta gravação de tela.",
         variant: "destructive",
@@ -142,84 +154,113 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
     }
 
     try {
-      
+      // Segurança: limpar qualquer estado anterior de mic/monitoramento
+      stopMicMonitoring();
+      if (micStreamRef.current) {
+        micStreamRef.current.getTracks().forEach((t) => t.stop());
+        micStreamRef.current = null;
+      }
+
       const displayMediaOptions: any = {
         video: {
           displaySurface: "browser",
-          width: { ideal: isMobile ? 720 : 1280 },
-          height: { ideal: isMobile ? 1280 : 720 },
-          frameRate: { ideal: isMobile ? 15 : 30 }
+          width: { ideal: isDeviceMobileUA ? 720 : 1280 },
+          height: { ideal: isDeviceMobileUA ? 1280 : 720 },
+          frameRate: { ideal: isDeviceMobileUA ? 15 : 30 },
         },
-        audio: true, // Áudio do sistema/tab
+        audio: source !== "mic", // "som do jogo" somente se o usuário escolher
       };
 
       const displayStream = await navigator.mediaDevices.getDisplayMedia(displayMediaOptions);
 
-      // Capturar áudio do microfone
+      // Capturar áudio do microfone (se necessário)
       let micStream: MediaStream | null = null;
-      try {
-        micStream = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
+      if (source === "mic" || source === "both") {
+        try {
+          micStream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true,
+            },
+          });
+          micStreamRef.current = micStream;
+        } catch (micError) {
+          console.log("Microfone não disponível:", micError);
+
+          if (source === "mic") {
+            // Se o usuário escolheu "microfone", aborta para não gravar sem áudio.
+            displayStream.getTracks().forEach((t) => t.stop());
+            toast({
+              title: "Microfone bloqueado",
+              description: "Permita o acesso ao microfone para gravar com áudio.",
+              variant: "destructive",
+            });
+            return;
           }
-        });
-        micStreamRef.current = micStream;
-      } catch (micError) {
-        console.log('Microfone não disponível, gravando apenas tela:', micError);
-        toast({
-          title: "Aviso",
-          description: "Microfone não disponível. Gravando apenas a tela.",
-        });
+
+          toast({
+            title: "Aviso",
+            description: "Não foi possível acessar o microfone. Gravando sem áudio do microfone.",
+          });
+        }
       }
 
-      // Combinar streams de vídeo e áudio
-      const audioContext = new AudioContext();
-      
-      // Garantir que o AudioContext está ativo
-      if (audioContext.state === 'suspended') {
-        await audioContext.resume();
+      // Criar trilha única de áudio (mix) para melhorar compatibilidade do MediaRecorder
+      const mixContext = new AudioContext();
+
+      if (mixContext.state === "suspended") {
+        await mixContext.resume();
       }
-      
-      const destination = audioContext.createMediaStreamDestination();
-      
-      // Adicionar áudio do display (sistema/tab) se disponível
+
+      const destination = mixContext.createMediaStreamDestination();
+
+      // Áudio do jogo (sistema/aba)
       const displayAudioTracks = displayStream.getAudioTracks();
-      if (displayAudioTracks.length > 0) {
-        const displayAudioStream = new MediaStream(displayAudioTracks);
-        const displayAudioSource = audioContext.createMediaStreamSource(displayAudioStream);
-        displayAudioSource.connect(destination);
+      if (source !== "mic") {
+        if (displayAudioTracks.length > 0) {
+          const displayAudioStream = new MediaStream(displayAudioTracks);
+          const displayAudioSource = mixContext.createMediaStreamSource(displayAudioStream);
+          displayAudioSource.connect(destination);
+        } else {
+          // Importante: em muitos navegadores só grava áudio se compartilhar uma ABA e marcar "Compartilhar áudio".
+          toast({
+            title: "Sem áudio do jogo",
+            description:
+              "Para gravar o som do jogo, compartilhe uma aba e ative a opção de compartilhar áudio na janela do navegador.",
+          });
+        }
       }
 
-      // Adicionar áudio do microfone se disponível
-      if (micStream && micStream.getAudioTracks().length > 0) {
-        const micAudioSource = audioContext.createMediaStreamSource(micStream);
+      // Áudio do microfone
+      const micTrack = micStream?.getAudioTracks?.()?.[0];
+      if (micTrack && micTrack.readyState === "live") {
+        const micAudioSource = mixContext.createMediaStreamSource(micStream as MediaStream);
         micAudioSource.connect(destination);
-        console.log('✅ Microfone conectado à gravação');
-        
-        // Iniciar monitoramento do nível do microfone
+
+        // Indicador visual
         setHasMic(true);
-        startMicMonitoring(micStream);
+        startMicMonitoring(micStream as MediaStream);
+      } else {
+        setHasMic(false);
       }
 
-      // Criar stream combinado: vídeo da tela + áudio combinado
       const combinedStream = new MediaStream([
         ...displayStream.getVideoTracks(),
         ...destination.stream.getAudioTracks(),
       ]);
 
       // Determinar melhor codec disponível
-      let mimeType = 'video/webm;codecs=vp8,opus';
-      if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')) {
-        mimeType = 'video/webm;codecs=vp9,opus';
-      } else if (MediaRecorder.isTypeSupported('video/webm;codecs=h264,opus')) {
-        mimeType = 'video/webm;codecs=h264,opus';
+      let mimeType = "video/webm;codecs=vp8,opus";
+      if (MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")) {
+        mimeType = "video/webm;codecs=vp9,opus";
+      } else if (MediaRecorder.isTypeSupported("video/webm;codecs=h264,opus")) {
+        mimeType = "video/webm;codecs=h264,opus";
       }
 
       const mediaRecorder = new MediaRecorder(combinedStream, {
         mimeType,
-        videoBitsPerSecond: isMobile ? 1500000 : 2500000,
+        videoBitsPerSecond: isDeviceMobileUA ? 1500000 : 2500000,
       });
 
       mediaRecorderRef.current = mediaRecorder;
@@ -232,51 +273,58 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
       };
 
       mediaRecorder.onstop = async () => {
-        const blob = new Blob(chunksRef.current, { type: 'video/webm' });
+        const blob = new Blob(chunksRef.current, { type: "video/webm" });
         videoBlob.current = blob;
-        
+
         // Parar todas as tracks do stream
-        combinedStream.getTracks().forEach(track => track.stop());
-        displayStream.getTracks().forEach(track => track.stop());
+        combinedStream.getTracks().forEach((track) => track.stop());
+        displayStream.getTracks().forEach((track) => track.stop());
+
         if (micStreamRef.current) {
-          micStreamRef.current.getTracks().forEach(track => track.stop());
+          micStreamRef.current.getTracks().forEach((track) => track.stop());
           micStreamRef.current = null;
         }
-        audioContext.close();
-        
+
+        try {
+          await mixContext.close();
+        } catch {
+          // ignore
+        }
+
         // Parar monitoramento do microfone
         stopMicMonitoring();
-        
+
         setShowSaveDialog(true);
       };
 
       // Detectar se o usuário parou a gravação pelo navegador
-      displayStream.getVideoTracks()[0].addEventListener('ended', () => {
-        if (isRecording) {
+      displayStream.getVideoTracks()[0].addEventListener("ended", () => {
+        if (isRecordingRef.current) {
           stopRecording();
         }
       });
 
       mediaRecorder.start();
+      isRecordingRef.current = true;
       setIsRecording(true);
 
       // Adicionar classe ao body para indicar gravação ativa
-      document.body.classList.add('recording-active');
+      document.body.classList.add("recording-active");
 
       toast({
         title: "🔴 Gravação iniciada",
         description: "Sua partida está sendo gravada.",
       });
     } catch (error: any) {
-      console.error('Erro ao iniciar gravação:', error);
-      
+      console.error("Erro ao iniciar gravação:", error);
+
       let errorMessage = "Não foi possível iniciar a gravação da tela.";
-      if (error.name === 'NotAllowedError') {
+      if (error?.name === "NotAllowedError") {
         errorMessage = "Você precisa permitir o compartilhamento de tela.";
-      } else if (error.name === 'NotSupportedError') {
+      } else if (error?.name === "NotSupportedError") {
         errorMessage = "Seu navegador não suporta gravação de tela.";
       }
-      
+
       toast({
         title: "Erro ao gravar",
         description: errorMessage,
@@ -288,11 +336,12 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
+      isRecordingRef.current = false;
       setIsRecording(false);
-      
+
       // Remover classe do body
-      document.body.classList.remove('recording-active');
-      
+      document.body.classList.remove("recording-active");
+
       // Parar monitoramento
       stopMicMonitoring();
     }
@@ -432,12 +481,7 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
   return (
     <>
       {!isRecording ? (
-        <Button
-          onClick={startRecording}
-          variant="outline"
-          size="sm"
-          className="gap-2"
-        >
+        <Button onClick={() => setShowSetupDialog(true)} variant="outline" size="sm" className="gap-2">
           <Video className="w-4 h-4" />
           Gravar Partida
         </Button>
@@ -447,7 +491,7 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
           <div className="flex items-center gap-1.5 px-2 py-1 bg-background/80 rounded-md border">
             {hasMic ? (
               <>
-                <Mic className="w-3.5 h-3.5 text-green-500" />
+                <Mic className="w-3.5 h-3.5 text-primary" />
                 <div className="flex items-end gap-0.5 h-4">
                   {[...Array(5)].map((_, i) => {
                     const threshold = (i + 1) * 20;
@@ -456,15 +500,15 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
                       <div
                         key={i}
                         className={`w-1 rounded-full transition-all duration-75 ${
-                          isActive 
-                            ? micLevel > 60 
-                              ? 'bg-green-500' 
-                              : micLevel > 30 
-                                ? 'bg-yellow-500' 
-                                : 'bg-green-400'
-                            : 'bg-muted-foreground/30'
+                          isActive
+                            ? micLevel > 70
+                              ? "bg-destructive"
+                              : micLevel > 35
+                                ? "bg-accent"
+                                : "bg-primary"
+                            : "bg-muted-foreground/30"
                         }`}
-                        style={{ 
+                        style={{
                           height: `${(i + 1) * 3 + 4}px`,
                         }}
                       />
@@ -479,18 +523,65 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
               </>
             )}
           </div>
-          
-          <Button
-            onClick={stopRecording}
-            variant="destructive"
-            size="sm"
-            className="gap-2 animate-pulse"
-          >
+
+          <Button onClick={stopRecording} variant="destructive" size="sm" className="gap-2 animate-pulse">
             <Square className="w-4 h-4 fill-current" />
             Parar Gravação
           </Button>
         </div>
       )}
+
+      {/* Dialog de configuração (fonte de áudio) */}
+      <Dialog open={showSetupDialog} onOpenChange={setShowSetupDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Configurar gravação</DialogTitle>
+            <DialogDescription>
+              Escolha o áudio que será gravado. (Dica: para “som do jogo”, compartilhe uma aba e ative “compartilhar áudio”.)
+            </DialogDescription>
+          </DialogHeader>
+
+          <RadioGroup value={audioSource} onValueChange={(v) => setAudioSource(v as RecordingAudioSource)}>
+            <div className="flex items-start gap-3 rounded-lg border p-3">
+              <RadioGroupItem id="audio-system" value="system" className="mt-1" />
+              <div className="grid gap-1">
+                <Label htmlFor="audio-system">Som do jogo (aba)</Label>
+                <p className="text-xs text-muted-foreground">Grava apenas o áudio do compartilhamento (quando disponível).</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3 rounded-lg border p-3">
+              <RadioGroupItem id="audio-mic" value="mic" className="mt-1" />
+              <div className="grid gap-1">
+                <Label htmlFor="audio-mic">Microfone</Label>
+                <p className="text-xs text-muted-foreground">Grava sua voz pelo microfone.</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3 rounded-lg border p-3">
+              <RadioGroupItem id="audio-both" value="both" className="mt-1" />
+              <div className="grid gap-1">
+                <Label htmlFor="audio-both">Ambos</Label>
+                <p className="text-xs text-muted-foreground">Mistura áudio do jogo + microfone em uma única faixa.</p>
+              </div>
+            </div>
+          </RadioGroup>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSetupDialog(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => {
+                setShowSetupDialog(false);
+                startRecording(audioSource);
+              }}
+            >
+              Iniciar gravação
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
         <DialogContent>
