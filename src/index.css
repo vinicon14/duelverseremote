@@ -115,8 +115,4 @@ All colors MUST be HSL.
     @apply opacity-100;
   }
   
-  /* Ocultar botão de controles durante gravação */
-  body.recording-active .recording-safe-hide-button {
-    @apply opacity-0 pointer-events-none;
-  }
 }
