@@ -8,6 +8,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Trophy, Swords, Star, Calendar } from "lucide-react";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { BrowserNotificationTest } from "@/components/BrowserNotificationTest";
+import { ChangePasswordForm } from "@/components/ChangePasswordForm";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -169,10 +170,13 @@ const Profile = () => {
                 </div>
               </div>
 
-              <Button onClick={() => navigate('/duels')} className="btn-mystic text-white w-full md:w-auto">
-                <Swords className="mr-2 h-4 w-4" />
-                Novo Duelo
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+                <ChangePasswordForm />
+                <Button onClick={() => navigate('/duels')} className="btn-mystic text-white">
+                  <Swords className="mr-2 h-4 w-4" />
+                  Novo Duelo
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
