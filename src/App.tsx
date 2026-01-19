@@ -32,6 +32,7 @@ import VideoShare from "./pages/VideoShare";
 import News from "./pages/News";
 import NotFound from "./pages/NotFound";
 import InstallApp from "./pages/InstallApp";
+import DeckBuilder from "./pages/DeckBuilder";
 
 const queryClient = new QueryClient();
 
@@ -60,6 +61,7 @@ const RouterContent = () => {
       <Route path="/gallery" element={<MatchGallery />} />
       <Route path="/video/:id" element={<VideoShare />} />
       <Route path="/install" element={<InstallApp />} />
+      <Route path="/deck-builder" element={<DeckBuilder />} />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
     </Routes>
