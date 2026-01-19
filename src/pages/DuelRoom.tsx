@@ -3,13 +3,15 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { PhoneOff, Loader2, Scale } from "lucide-react";
+import { PhoneOff, Loader2, Scale, Layers } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { DuelChat } from "@/components/DuelChat";
 import { FloatingCalculator } from "@/components/FloatingCalculator";
 import { RecordMatchButton } from "@/components/RecordMatchButton";
 import { HideElementsButton } from "@/components/HideElementsButton";
 import { useBanCheck } from "@/hooks/useBanCheck";
+import { DuelDeckViewer } from "@/components/duel/DuelDeckViewer";
+import { useDuelDeck } from "@/hooks/useDuelDeck";
 
 const DuelRoom = () => {
   useBanCheck(); // Proteger contra usuários banidos
@@ -35,6 +37,11 @@ const DuelRoom = () => {
   
   const isJudge = searchParams.get('role') === 'judge';
   const [hideControls, setHideControls] = useState(false);
+  
+  // Deck viewer state
+  const [showDeckViewer, setShowDeckViewer] = useState(false);
+  const { mainDeck, extraDeck, sideDeck, importDeckFromYDK, isLoading: isDeckLoading } = useDuelDeck();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Carrega dados do duelo e inicia timer
   useEffect(() => {
@@ -839,6 +846,16 @@ const DuelRoom = () => {
                 <>
                   {isParticipant && !isJudge && (
                     <>
+                      {/* Botão do Deck */}
+                      <Button
+                        onClick={() => setShowDeckViewer(!showDeckViewer)}
+                        variant="outline"
+                        size="sm"
+                        className="bg-amber-600/95 hover:bg-amber-700 text-white backdrop-blur-sm text-xs sm:text-sm"
+                        title="Abrir Deck"
+                      >
+                        <Layers className="w-3 h-3 sm:w-4 sm:h-4" />
+                      </Button>
                       <Button
                         onClick={callJudge}
                         disabled={judgeCalled}
@@ -898,6 +915,33 @@ const DuelRoom = () => {
           onSetLP={setLP}
           currentUserPlayer={isSpectator ? null : currentUserPlayer}
         />
+      )}
+
+      {/* Deck Viewer Component */}
+      {isParticipant && !isJudge && (
+        <>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".ydk"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) {
+                importDeckFromYDK(file);
+              }
+              e.target.value = '';
+            }}
+          />
+          <DuelDeckViewer
+            isOpen={showDeckViewer}
+            onClose={() => setShowDeckViewer(false)}
+            deck={mainDeck}
+            extraDeck={extraDeck}
+            sideDeck={sideDeck}
+            onLoadDeck={() => fileInputRef.current?.click()}
+          />
+        </>
       )}
 
       {/* Chat Component */}
