@@ -901,6 +901,45 @@ export type Database = {
           },
         ]
       }
+      saved_decks: {
+        Row: {
+          created_at: string
+          description: string | null
+          extra_deck: Json
+          id: string
+          is_public: boolean | null
+          main_deck: Json
+          name: string
+          side_deck: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          extra_deck?: Json
+          id?: string
+          is_public?: boolean | null
+          main_deck?: Json
+          name: string
+          side_deck?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          extra_deck?: Json
+          id?: string
+          is_public?: boolean | null
+          main_deck?: Json
+          name?: string
+          side_deck?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       system_settings: {
         Row: {
           created_at: string | null
