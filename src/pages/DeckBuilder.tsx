@@ -3,11 +3,15 @@ import { Navbar } from '@/components/Navbar';
 import { CardSearchPanel } from '@/components/deckbuilder/CardSearchPanel';
 import { DeckPanel, DeckCard } from '@/components/deckbuilder/DeckPanel';
 import { CardDetailModal } from '@/components/deckbuilder/CardDetailModal';
+import { SaveDeckModal } from '@/components/deckbuilder/SaveDeckModal';
+import { LoadDeckModal } from '@/components/deckbuilder/LoadDeckModal';
+import { CardRecognitionModal } from '@/components/deckbuilder/CardRecognitionModal';
 import { YugiohCard, Language } from '@/hooks/useYugiohCards';
+import { useSavedDecks } from '@/hooks/useSavedDecks';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Layers, Search, Globe } from 'lucide-react';
+import { Layers, Search, Globe, Save, FolderOpen, Wand2 } from 'lucide-react';
 import {
   ResizableHandle,
   ResizablePanel,
@@ -28,6 +32,15 @@ const DeckBuilder = () => {
   const [selectedCard, setSelectedCard] = useState<YugiohCard | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [mobileTab, setMobileTab] = useState<'search' | 'deck'>('search');
+  
+  // Modal states
+  const [saveModalOpen, setSaveModalOpen] = useState(false);
+  const [loadModalOpen, setLoadModalOpen] = useState(false);
+  const [recognitionModalOpen, setRecognitionModalOpen] = useState(false);
+  const [currentDeckId, setCurrentDeckId] = useState<string | null>(null);
+  
+  // Saved decks hook
+  const { savedDecks, isLoading: isSavingLoading, isLoggedIn, saveDeck, deleteDeck, loadDeck } = useSavedDecks();
 
   const labels = {
     en: {
@@ -165,16 +178,11 @@ const DeckBuilder = () => {
     setMainDeck([]);
     setExtraDeck([]);
     setSideDeck([]);
+    setCurrentDeckId(null);
     toast.success(t.deckCleared);
   };
 
   const handleExportDeck = () => {
-    const deckData = {
-      main: mainDeck.map((c) => ({ id: c.id, name: c.name, quantity: c.quantity })),
-      extra: extraDeck.map((c) => ({ id: c.id, name: c.name, quantity: c.quantity })),
-      side: sideDeck.map((c) => ({ id: c.id, name: c.name, quantity: c.quantity })),
-    };
-
     const ydk = generateYDK();
     
     const blob = new Blob([ydk], { type: 'text/plain' });
@@ -212,23 +220,13 @@ const DeckBuilder = () => {
   const handleImportDeck = () => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.ydk,.json';
+    input.accept = '.ydk';
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
 
       const text = await file.text();
-      
-      if (file.name.endsWith('.ydk')) {
-        await importYDK(text);
-      } else {
-        try {
-          const data = JSON.parse(text);
-          // Handle JSON import if needed
-        } catch {
-          toast.error(t.invalidDeck);
-        }
-      }
+      await importYDK(text);
     };
     input.click();
   };
@@ -261,6 +259,11 @@ const DeckBuilder = () => {
     // Fetch card data for all IDs
     const allIds = [...new Set([...mainIds, ...extraIds, ...sideIds])];
     
+    if (allIds.length === 0) {
+      toast.error(t.invalidDeck);
+      return;
+    }
+
     try {
       const response = await fetch(
         `https://db.ygoprodeck.com/api/v7/cardinfo.php?id=${allIds.join(',')}&language=${language}`
@@ -288,10 +291,31 @@ const DeckBuilder = () => {
       setMainDeck(buildDeck(mainIds));
       setExtraDeck(buildDeck(extraIds));
       setSideDeck(buildDeck(sideIds));
+      setCurrentDeckId(null);
       toast.success(t.deckImported);
     } catch {
       toast.error(t.invalidDeck);
     }
+  };
+
+  const handleSaveDeck = async (name: string, description: string, isPublic: boolean) => {
+    await saveDeck(name, mainDeck, extraDeck, sideDeck, description, isPublic, currentDeckId || undefined);
+  };
+
+  const handleLoadSavedDeck = (deck: any) => {
+    const { mainDeck: main, extraDeck: extra, sideDeck: side } = loadDeck(deck);
+    setMainDeck(main);
+    setExtraDeck(extra);
+    setSideDeck(side);
+    setCurrentDeckId(deck.id);
+    toast.success(`Deck "${deck.name}" carregado!`);
+  };
+
+  const handleAddRecognizedCards = (cards: YugiohCard[]) => {
+    cards.forEach((card) => {
+      const targetDeck = isExtraDeckCard(card) ? 'extra' : 'main';
+      handleAddToDeck(card, targetDeck);
+    });
   };
 
   const canAddToMain = selectedCard
@@ -310,19 +334,55 @@ const DeckBuilder = () => {
     ? getTotalCount(sideDeck) < 15 && getCardCount(selectedCard.id) < 3
     : false;
 
+  const hasDeck = mainDeck.length > 0 || extraDeck.length > 0 || sideDeck.length > 0;
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       
       <div className="pt-16 h-screen flex flex-col">
         {/* Header */}
-        <div className="p-4 border-b border-border flex items-center justify-between">
+        <div className="p-4 border-b border-border flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <Layers className="h-6 w-6 text-primary" />
             <h1 className="text-xl font-bold">{t.title}</h1>
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* AI Recognition Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setRecognitionModalOpen(true)}
+              className="gap-1"
+            >
+              <Wand2 className="h-3 w-3" />
+              <span className="hidden sm:inline">IA</span>
+            </Button>
+            
+            {/* Save/Load Buttons */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setLoadModalOpen(true)}
+              className="gap-1"
+            >
+              <FolderOpen className="h-3 w-3" />
+              <span className="hidden sm:inline">Carregar</span>
+            </Button>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSaveModalOpen(true)}
+              disabled={!hasDeck}
+              className="gap-1"
+            >
+              <Save className="h-3 w-3" />
+              <span className="hidden sm:inline">Salvar</span>
+            </Button>
+            
+            {/* Language Buttons */}
             <Button
               variant={language === 'pt' ? 'default' : 'outline'}
               size="sm"
@@ -415,6 +475,33 @@ const DeckBuilder = () => {
         canAddToExtra={canAddToExtra}
         canAddToSide={canAddToSide}
         isExtraDeckCard={selectedCard ? isExtraDeckCard(selectedCard) : false}
+      />
+
+      {/* Save Deck Modal */}
+      <SaveDeckModal
+        open={saveModalOpen}
+        onClose={() => setSaveModalOpen(false)}
+        onSave={handleSaveDeck}
+        isLoading={isSavingLoading}
+        isUpdate={!!currentDeckId}
+      />
+
+      {/* Load Deck Modal */}
+      <LoadDeckModal
+        open={loadModalOpen}
+        onClose={() => setLoadModalOpen(false)}
+        onLoad={handleLoadSavedDeck}
+        onDelete={deleteDeck}
+        decks={savedDecks}
+        isLoading={isSavingLoading}
+        isLoggedIn={isLoggedIn}
+      />
+
+      {/* Card Recognition Modal */}
+      <CardRecognitionModal
+        open={recognitionModalOpen}
+        onClose={() => setRecognitionModalOpen(false)}
+        onAddCards={handleAddRecognizedCards}
       />
     </div>
   );
