@@ -26,6 +26,7 @@ serve(async (req) => {
     }
 
     // Use Gemini Pro with vision capabilities to recognize Yu-Gi-Oh! cards
+    console.log("Starting card recognition...");
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -37,25 +38,36 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are an expert Yu-Gi-Oh! card recognition system. When shown an image containing Yu-Gi-Oh! cards, you must:
-1. Identify ALL visible Yu-Gi-Oh! cards in the image
-2. For each card, provide its EXACT English name as it appears in the official database
-3. Return ONLY a JSON array of card names, nothing else
+            content: `You are an expert Yu-Gi-Oh! Trading Card Game card recognition system with extensive knowledge of all cards ever printed. Your task is to identify ALL Yu-Gi-Oh! cards visible in an image.
 
-Important rules:
-- Only include cards you can clearly identify
-- Use the official English card names
-- If you can't read a card name clearly, don't include it
-- Return an empty array [] if no cards are visible
+CRITICAL INSTRUCTIONS:
+1. Examine the ENTIRE image carefully - look at all visible cards
+2. Identify EVERY Yu-Gi-Oh! card you can see, even partially visible ones
+3. For each card, provide its EXACT official English name
+4. Pay attention to card artwork, text, and any identifying features
+5. Include cards even if you can only see part of the artwork - use your knowledge to identify them
+6. Look for cards in the background, stacked cards, or cards at angles
 
-Example response: ["Dark Magician", "Blue-Eyes White Dragon", "Pot of Greed"]`
+OUTPUT FORMAT:
+- Return ONLY a valid JSON array of card names
+- Each name must be the official English card name
+- Example: ["Dark Magician", "Blue-Eyes White Dragon", "Pot of Greed", "Monster Reborn"]
+
+RECOGNITION TIPS:
+- Check for distinctive artwork elements
+- Look at card borders (normal, effect, ritual, fusion, synchro, xyz, link, pendulum)
+- Read any visible text on the cards
+- Consider card frame colors and designs
+- Identify archetypes from artwork patterns
+
+If you cannot identify any cards, return an empty array: []`
           },
           {
             role: "user",
             content: [
               {
                 type: "text",
-                text: "Please identify all Yu-Gi-Oh! cards visible in this image and return their names as a JSON array."
+                text: "Carefully examine this image and identify ALL Yu-Gi-Oh! cards visible. List every card you can recognize, even partial cards. Return the official English names as a JSON array."
               },
               {
                 type: "image_url",
@@ -103,23 +115,57 @@ Example response: ["Dark Magician", "Blue-Eyes White Dragon", "Pot of Greed"]`
       cardNames = [];
     }
 
-    // Fetch card data from YGOProdeck API for each recognized card
-    const cardData = [];
-    for (const cardName of cardNames) {
+    console.log(`Recognized ${cardNames.length} card names:`, cardNames);
+
+    // Fetch card data from YGOProdeck API for each recognized card using parallel requests
+    const cardPromises = cardNames.map(async (cardName: string) => {
       try {
-        const cardResponse = await fetch(
+        // First try exact name match
+        let cardResponse = await fetch(
           `https://db.ygoprodeck.com/api/v7/cardinfo.php?name=${encodeURIComponent(cardName)}`
         );
+        
         if (cardResponse.ok) {
           const cardInfo = await cardResponse.json();
           if (cardInfo.data && cardInfo.data.length > 0) {
-            cardData.push(cardInfo.data[0]);
+            console.log(`Found exact match for: ${cardName}`);
+            return cardInfo.data[0];
           }
         }
+        
+        // If exact match fails, try fuzzy search
+        console.log(`Exact match failed for "${cardName}", trying fuzzy search...`);
+        cardResponse = await fetch(
+          `https://db.ygoprodeck.com/api/v7/cardinfo.php?fname=${encodeURIComponent(cardName)}`
+        );
+        
+        if (cardResponse.ok) {
+          const cardInfo = await cardResponse.json();
+          if (cardInfo.data && cardInfo.data.length > 0) {
+            // Find best match - prioritize exact substring match
+            const lowerName = cardName.toLowerCase();
+            const bestMatch = cardInfo.data.find((c: any) => 
+              c.name.toLowerCase() === lowerName
+            ) || cardInfo.data.find((c: any) => 
+              c.name.toLowerCase().includes(lowerName) || lowerName.includes(c.name.toLowerCase())
+            ) || cardInfo.data[0];
+            
+            console.log(`Fuzzy match for "${cardName}" -> "${bestMatch.name}"`);
+            return bestMatch;
+          }
+        }
+        
+        console.log(`No match found for: ${cardName}`);
+        return null;
       } catch (cardError) {
         console.error(`Failed to fetch card: ${cardName}`, cardError);
+        return null;
       }
-    }
+    });
+
+    const cardResults = await Promise.all(cardPromises);
+    const cardData = cardResults.filter((card): card is NonNullable<typeof card> => card !== null);
+    console.log(`Successfully fetched ${cardData.length} cards`);
 
     return new Response(
       JSON.stringify({ 

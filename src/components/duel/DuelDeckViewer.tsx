@@ -6,7 +6,6 @@ import { Input } from '@/components/ui/input';
 import { 
   Layers, 
   Hand, 
-  Trash2, 
   RotateCcw,
   Shuffle,
   X,
@@ -14,7 +13,6 @@ import {
   EyeOff,
   Upload,
   Minus,
-  Plus,
   BookOpen,
   Maximize2,
   Minimize2,
@@ -22,12 +20,16 @@ import {
   ChevronDown,
   ChevronUp,
   Flame,
-  Ban
+  Ban,
+  Sparkles,
+  GripVertical
 } from 'lucide-react';
 import { DeckCard } from '@/components/deckbuilder/DeckPanel';
 import { YugiohCard } from '@/hooks/useYugiohCards';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
+import { CardActionsModal } from './CardActionsModal';
+import { OpponentFieldViewer } from './OpponentFieldViewer';
 
 interface DuelDeckViewerProps {
   isOpen: boolean;
@@ -37,16 +39,33 @@ interface DuelDeckViewerProps {
   sideDeck: DeckCard[];
   onLoadDeck: () => void;
   duelId?: string;
+  currentUserId?: string;
+  opponentUsername?: string;
+}
+
+interface GameCard extends YugiohCard {
+  instanceId: string;
 }
 
 interface GameState {
-  deckPile: YugiohCard[];
-  hand: YugiohCard[];
-  field: YugiohCard[];
-  graveyard: YugiohCard[];
-  banished: YugiohCard[];
-  extraDeckPile: YugiohCard[];
+  deckPile: GameCard[];
+  hand: GameCard[];
+  field: GameCard[];
+  graveyard: GameCard[];
+  banished: GameCard[];
+  extraDeckPile: GameCard[];
+  sideDeckPile: GameCard[];
 }
+
+type ZoneType = keyof GameState;
+
+const EXTRA_DECK_TYPES = ['Fusion', 'Synchro', 'XYZ', 'Link'];
+
+const isExtraDeckCardType = (type: string): boolean => {
+  return EXTRA_DECK_TYPES.some((t) => type.includes(t));
+};
+
+const generateInstanceId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
 export const DuelDeckViewer = ({
   isOpen,
@@ -56,6 +75,8 @@ export const DuelDeckViewer = ({
   sideDeck,
   onLoadDeck,
   duelId,
+  currentUserId,
+  opponentUsername,
 }: DuelDeckViewerProps) => {
   const [gameState, setGameState] = useState<GameState>({
     deckPile: [],
@@ -64,73 +85,85 @@ export const DuelDeckViewer = ({
     graveyard: [],
     banished: [],
     extraDeckPile: [],
+    sideDeckPile: [],
   });
-  const [selectedCard, setSelectedCard] = useState<YugiohCard | null>(null);
+  
+  // Card Actions Modal state
+  const [selectedCard, setSelectedCard] = useState<GameCard | null>(null);
+  const [selectedCardZone, setSelectedCardZone] = useState<ZoneType>('hand');
+  const [selectedCardIndex, setSelectedCardIndex] = useState(0);
+  const [showActionsModal, setShowActionsModal] = useState(false);
+  
+  // UI state
   const [showDeckPile, setShowDeckPile] = useState(false);
-  const [activeZone, setActiveZone] = useState<'hand' | 'field' | 'graveyard' | 'banished'>('hand');
   const [isMinimized, setIsMinimized] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
-  const [expandedZones, setExpandedZones] = useState<Set<string>>(new Set(['hand', 'field']));
+  const [expandedZones, setExpandedZones] = useState<Set<string>>(new Set(['hand', 'field', 'extraDeckPile']));
+  
+  // Drag and drop state
+  const [draggedCard, setDraggedCard] = useState<{ card: GameCard; fromZone: ZoneType; index: number } | null>(null);
 
-  // Sincronizar estado do deck com o oponente via Supabase Realtime
-  useEffect(() => {
-    if (!duelId || !isOpen) return;
-
-    const channel = supabase.channel(`deck-sync-${duelId}`);
-    
-    channel
-      .on('broadcast', { event: 'deck-state' }, ({ payload }) => {
-        // Receber estado do oponente (apenas para visualização)
-        console.log('Received opponent deck state:', payload);
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [duelId, isOpen]);
-
-  // Broadcast state changes
+  // Broadcast state changes to opponent
   const broadcastState = useCallback(() => {
-    if (!duelId) return;
+    if (!duelId || !currentUserId) return;
     
     const channel = supabase.channel(`deck-sync-${duelId}`);
     channel.send({
       type: 'broadcast',
       event: 'deck-state',
       payload: {
+        userId: currentUserId,
         hand: gameState.hand.length,
-        field: gameState.field.map(c => ({ id: c.id, name: c.name, image: c.card_images[0]?.image_url_small })),
-        graveyard: gameState.graveyard.map(c => ({ id: c.id, name: c.name, image: c.card_images[0]?.image_url_small })),
-        banished: gameState.banished.map(c => ({ id: c.id, name: c.name, image: c.card_images[0]?.image_url_small })),
+        field: gameState.field.map(c => ({ 
+          id: c.id, 
+          name: c.name, 
+          image: c.card_images?.[0]?.image_url_small 
+        })),
+        graveyard: gameState.graveyard.map(c => ({ 
+          id: c.id, 
+          name: c.name, 
+          image: c.card_images?.[0]?.image_url_small 
+        })),
+        banished: gameState.banished.map(c => ({ 
+          id: c.id, 
+          name: c.name, 
+          image: c.card_images?.[0]?.image_url_small 
+        })),
         deckCount: gameState.deckPile.length,
         extraCount: gameState.extraDeckPile.length,
       }
     });
-  }, [duelId, gameState]);
+  }, [duelId, currentUserId, gameState]);
 
   useEffect(() => {
-    if (duelId && isOpen) {
+    if (duelId && isOpen && currentUserId) {
       broadcastState();
     }
-  }, [gameState.field, gameState.graveyard, gameState.banished, broadcastState, duelId, isOpen]);
+  }, [gameState, broadcastState, duelId, isOpen, currentUserId]);
 
-  // Inicializar deck quando carregado
+  // Initialize deck when loaded
   useEffect(() => {
-    if (deck.length > 0 || extraDeck.length > 0) {
-      const expandedDeck: YugiohCard[] = [];
+    if (deck.length > 0 || extraDeck.length > 0 || sideDeck.length > 0) {
+      const expandedDeck: GameCard[] = [];
       deck.forEach(card => {
         for (let i = 0; i < card.quantity; i++) {
-          expandedDeck.push({ ...card });
+          expandedDeck.push({ ...card, instanceId: generateInstanceId() });
         }
       });
 
-      const expandedExtra: YugiohCard[] = [];
+      const expandedExtra: GameCard[] = [];
       extraDeck.forEach(card => {
         for (let i = 0; i < card.quantity; i++) {
-          expandedExtra.push({ ...card });
+          expandedExtra.push({ ...card, instanceId: generateInstanceId() });
+        }
+      });
+
+      const expandedSide: GameCard[] = [];
+      sideDeck.forEach(card => {
+        for (let i = 0; i < card.quantity; i++) {
+          expandedSide.push({ ...card, instanceId: generateInstanceId() });
         }
       });
 
@@ -141,9 +174,10 @@ export const DuelDeckViewer = ({
         graveyard: [],
         banished: [],
         extraDeckPile: expandedExtra,
+        sideDeckPile: expandedSide,
       });
     }
-  }, [deck, extraDeck]);
+  }, [deck, extraDeck, sideDeck]);
 
   const shuffleArray = <T,>(array: T[]): T[] => {
     const newArray = [...array];
@@ -186,13 +220,15 @@ export const DuelDeckViewer = ({
     }));
   }, []);
 
-  const moveCardToZone = useCallback((card: YugiohCard, fromZone: keyof GameState, toZone: keyof GameState, cardIndex: number) => {
+  const moveCardToZone = useCallback((card: GameCard, fromZone: ZoneType, toZone: ZoneType, cardIndex: number) => {
     setGameState(prev => {
-      const fromArray = [...prev[fromZone]] as YugiohCard[];
-      const toArray = [...prev[toZone]] as YugiohCard[];
+      const fromArray = [...prev[fromZone]] as GameCard[];
+      const toArray = [...prev[toZone]] as GameCard[];
       
-      fromArray.splice(cardIndex, 1);
-      toArray.push(card);
+      const removedCard = fromArray.splice(cardIndex, 1)[0];
+      if (removedCard) {
+        toArray.push(removedCard);
+      }
       
       return {
         ...prev,
@@ -221,9 +257,9 @@ export const DuelDeckViewer = ({
     });
   }, []);
 
-  const returnToTopOfDeck = useCallback((card: YugiohCard, fromZone: keyof GameState, cardIndex: number) => {
+  const returnToTopOfDeck = useCallback((card: GameCard, fromZone: ZoneType, cardIndex: number) => {
     setGameState(prev => {
-      const fromArray = [...prev[fromZone]] as YugiohCard[];
+      const fromArray = [...prev[fromZone]] as GameCard[];
       fromArray.splice(cardIndex, 1);
       
       return {
@@ -234,7 +270,45 @@ export const DuelDeckViewer = ({
     });
   }, []);
 
-  // Buscar carta específica no deck
+  const returnToBottomOfDeck = useCallback((card: GameCard, fromZone: ZoneType, cardIndex: number) => {
+    setGameState(prev => {
+      const fromArray = [...prev[fromZone]] as GameCard[];
+      fromArray.splice(cardIndex, 1);
+      
+      return {
+        ...prev,
+        [fromZone]: fromArray,
+        deckPile: [...prev.deckPile, card],
+      };
+    });
+  }, []);
+
+  const shuffleIntoDeck = useCallback((card: GameCard, fromZone: ZoneType, cardIndex: number) => {
+    setGameState(prev => {
+      const fromArray = [...prev[fromZone]] as GameCard[];
+      fromArray.splice(cardIndex, 1);
+      
+      return {
+        ...prev,
+        [fromZone]: fromArray,
+        deckPile: shuffleArray([...prev.deckPile, card]),
+      };
+    });
+  }, []);
+
+  const sendToExtraDeck = useCallback((card: GameCard, fromZone: ZoneType, cardIndex: number) => {
+    setGameState(prev => {
+      const fromArray = [...prev[fromZone]] as GameCard[];
+      fromArray.splice(cardIndex, 1);
+      
+      return {
+        ...prev,
+        [fromZone]: fromArray,
+        extraDeckPile: [...prev.extraDeckPile, card],
+      };
+    });
+  }, []);
+
   const searchCardInDeck = useCallback((cardName: string) => {
     if (!cardName.trim()) return;
     
@@ -246,8 +320,8 @@ export const DuelDeckViewer = ({
       
       if (cardIndex === -1) return prev;
       
-      const [foundCard] = prev.deckPile.splice(cardIndex, 1);
       const newDeckPile = [...prev.deckPile];
+      const [foundCard] = newDeckPile.splice(cardIndex, 1);
       
       return {
         ...prev,
@@ -271,7 +345,45 @@ export const DuelDeckViewer = ({
     });
   };
 
-  const hasDeck = deck.length > 0 || extraDeck.length > 0;
+  // Drag and Drop handlers
+  const handleDragStart = (e: React.DragEvent, card: GameCard, fromZone: ZoneType, index: number) => {
+    setDraggedCard({ card, fromZone, index });
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', card.instanceId);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e: React.DragEvent, toZone: ZoneType) => {
+    e.preventDefault();
+    if (!draggedCard) return;
+    
+    const { card, fromZone, index } = draggedCard;
+    if (fromZone !== toZone) {
+      moveCardToZone(card, fromZone, toZone, index);
+    }
+    setDraggedCard(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedCard(null);
+  };
+
+  const handleCardClick = (card: GameCard, zone: ZoneType, index: number) => {
+    setSelectedCard(card);
+    setSelectedCardZone(zone);
+    setSelectedCardIndex(index);
+    setShowActionsModal(true);
+  };
+
+  // Calculate total cards
+  const totalMainDeck = deck.reduce((acc, c) => acc + c.quantity, 0);
+  const totalExtraDeck = extraDeck.reduce((acc, c) => acc + c.quantity, 0);
+  const totalSideDeck = sideDeck.reduce((acc, c) => acc + c.quantity, 0);
+  const hasDeck = totalMainDeck > 0 || totalExtraDeck > 0;
 
   if (!isOpen) return null;
 
@@ -280,44 +392,45 @@ export const DuelDeckViewer = ({
     cards, 
     zone, 
     icon: Icon,
-    isActive,
     color = 'primary'
   }: { 
     title: string; 
-    cards: YugiohCard[]; 
-    zone: 'hand' | 'field' | 'graveyard' | 'banished';
+    cards: GameCard[]; 
+    zone: ZoneType;
     icon: typeof Hand;
-    isActive: boolean;
     color?: string;
   }) => {
     const isExpanded = expandedZones.has(zone);
+    const cardCount = cards.length;
+    const isDragOver = draggedCard && draggedCard.fromZone !== zone;
     
     return (
       <div 
         className={cn(
-          "flex flex-col border rounded-lg transition-colors",
-          isActive ? "border-primary bg-primary/10" : "border-border/50 bg-muted/20",
+          "flex flex-col border rounded-lg transition-all",
+          isDragOver ? "border-primary border-dashed bg-primary/5" : "border-border/50 bg-muted/20",
           isFullscreen ? "flex-1" : ""
         )}
+        onDragOver={handleDragOver}
+        onDrop={(e) => handleDrop(e, zone)}
       >
         <div 
           className="flex items-center justify-between p-2 border-b border-border/50 cursor-pointer"
-          onClick={() => {
-            setActiveZone(zone);
-            toggleZoneExpanded(zone);
-          }}
+          onClick={() => toggleZoneExpanded(zone)}
         >
           <div className="flex items-center gap-1">
             <Icon className={cn("h-3 w-3", 
               zone === 'graveyard' ? 'text-orange-500' : 
               zone === 'banished' ? 'text-purple-500' : 
-              zone === 'field' ? 'text-green-500' : 'text-blue-500'
+              zone === 'field' ? 'text-green-500' : 
+              zone === 'extraDeckPile' ? 'text-yellow-500' :
+              zone === 'sideDeckPile' ? 'text-cyan-500' : 'text-blue-500'
             )} />
             <span className="text-xs font-medium">{title}</span>
           </div>
           <div className="flex items-center gap-1">
             <Badge variant="secondary" className="text-[10px] h-4 px-1">
-              {cards.length}
+              {cardCount}
             </Badge>
             {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
           </div>
@@ -330,82 +443,26 @@ export const DuelDeckViewer = ({
             )}>
               {cards.map((card, idx) => (
                 <div
-                  key={`${card.id}-${idx}`}
-                  className="relative group cursor-pointer"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedCard(card);
-                  }}
+                  key={card.instanceId}
+                  className={cn(
+                    "relative group cursor-pointer",
+                    draggedCard?.card.instanceId === card.instanceId && "opacity-50"
+                  )}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, card, zone, idx)}
+                  onDragEnd={handleDragEnd}
+                  onClick={() => handleCardClick(card, zone, idx)}
                 >
+                  <div className="absolute top-0 left-0 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <GripVertical className="h-3 w-3 text-white drop-shadow-lg" />
+                  </div>
                   <img
-                    src={card.card_images[0]?.image_url_small}
+                    src={card.card_images?.[0]?.image_url_small}
                     alt={card.name}
                     className="w-full rounded-sm shadow-sm hover:shadow-lg transition-all hover:scale-105 hover:z-10"
                     loading="lazy"
+                    title={card.name}
                   />
-                  <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity rounded-sm flex flex-col items-center justify-center gap-0.5 p-0.5">
-                    <span className="text-[8px] text-white text-center line-clamp-2">{card.name}</span>
-                    <div className="flex gap-0.5 flex-wrap justify-center">
-                      {zone !== 'field' && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            moveCardToZone(card, zone, 'field', idx);
-                          }}
-                          className="p-0.5 bg-green-600 rounded text-[8px] text-white"
-                          title="Campo"
-                        >
-                          ⬆️
-                        </button>
-                      )}
-                      {zone !== 'graveyard' && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            moveCardToZone(card, zone, 'graveyard', idx);
-                          }}
-                          className="p-0.5 bg-orange-600 rounded text-[8px] text-white"
-                          title="Cemitério"
-                        >
-                          ⚰️
-                        </button>
-                      )}
-                      {zone !== 'banished' && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            moveCardToZone(card, zone, 'banished', idx);
-                          }}
-                          className="p-0.5 bg-purple-600 rounded text-[8px] text-white"
-                          title="Banir"
-                        >
-                          🚫
-                        </button>
-                      )}
-                      {zone !== 'hand' && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            moveCardToZone(card, zone, 'hand', idx);
-                          }}
-                          className="p-0.5 bg-blue-600 rounded text-[8px] text-white"
-                          title="Mão"
-                        >
-                          ✋
-                        </button>
-                      )}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          returnToTopOfDeck(card, zone, idx);
-                        }}
-                        className="p-0.5 bg-yellow-600 rounded text-[8px] text-white"
-                        title="Topo do Deck"
-                      >
-                        📤
-                      </button>
-                    </div>
-                  </div>
                 </div>
               ))}
             </div>
@@ -421,301 +478,250 @@ export const DuelDeckViewer = ({
         "fixed z-40 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-2xl transition-all duration-300",
         isMinimized 
           ? "w-12 h-12 left-2 bottom-20" 
-          : "w-80 sm:w-96 h-[500px] max-h-[70vh] left-2 bottom-20"
+          : "w-80 sm:w-96 h-[600px] max-h-[80vh] left-2 bottom-20"
       );
 
   return (
-    <div className={containerClasses}>
-      {isMinimized ? (
-        <button
-          onClick={() => setIsMinimized(false)}
-          className="w-full h-full flex items-center justify-center hover:bg-muted/50 rounded-lg"
-        >
-          <Layers className="h-6 w-6 text-primary" />
-        </button>
-      ) : (
-        <div className="flex flex-col h-full">
-          {/* Header */}
-          <div className="flex items-center justify-between p-2 border-b border-border">
-            <div className="flex items-center gap-2">
-              <Layers className="h-4 w-4 text-primary" />
-              <span className="font-semibold text-sm">Deck de Duelo</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6"
-                onClick={() => setIsFullscreen(!isFullscreen)}
-                title={isFullscreen ? "Sair da Tela Cheia" : "Tela Cheia"}
-              >
-                {isFullscreen ? <Minimize2 className="h-3 w-3" /> : <Maximize2 className="h-3 w-3" />}
-              </Button>
-              {!isFullscreen && (
+    <>
+      <div className={containerClasses}>
+        {isMinimized ? (
+          <button
+            onClick={() => setIsMinimized(false)}
+            className="w-full h-full flex items-center justify-center hover:bg-muted/50 rounded-lg"
+          >
+            <Layers className="h-6 w-6 text-primary" />
+          </button>
+        ) : (
+          <div className="flex flex-col h-full">
+            {/* Header */}
+            <div className="flex items-center justify-between p-2 border-b border-border">
+              <div className="flex items-center gap-2">
+                <Layers className="h-4 w-4 text-primary" />
+                <span className="font-semibold text-sm">Deck de Duelo</span>
+              </div>
+              <div className="flex items-center gap-1">
                 <Button
                   variant="ghost"
                   size="icon"
                   className="h-6 w-6"
-                  onClick={() => setIsMinimized(true)}
+                  onClick={() => setIsFullscreen(!isFullscreen)}
+                  title={isFullscreen ? "Sair da Tela Cheia" : "Tela Cheia"}
                 >
-                  <Minus className="h-3 w-3" />
+                  {isFullscreen ? <Minimize2 className="h-3 w-3" /> : <Maximize2 className="h-3 w-3" />}
                 </Button>
-              )}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6"
-                onClick={onClose}
-              >
-                <X className="h-3 w-3" />
-              </Button>
-            </div>
-          </div>
-
-          {!hasDeck ? (
-            // Sem deck carregado
-            <div className="flex-1 flex flex-col items-center justify-center p-4 gap-4">
-              <BookOpen className="h-12 w-12 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground text-center">
-                Nenhum deck carregado. Importe um deck para usar durante o duelo.
-              </p>
-              <Button onClick={onLoadDeck} className="gap-2">
-                <Upload className="h-4 w-4" />
-                Importar Deck (.ydk)
-              </Button>
-            </div>
-          ) : (
-            <>
-              {/* Deck Controls */}
-              <div className="flex items-center justify-between p-2 border-b border-border gap-1 flex-wrap">
-                <div className="flex items-center gap-1">
-                  <Badge variant="outline" className="text-xs">
-                    Deck: {gameState.deckPile.length}
-                  </Badge>
-                  <Badge variant="outline" className="text-xs">
-                    Extra: {gameState.extraDeckPile.length}
-                  </Badge>
-                </div>
-                <div className="flex items-center gap-1">
+                {!isFullscreen && (
                   <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-6 text-xs px-2"
-                    onClick={drawCard}
-                    disabled={gameState.deckPile.length === 0}
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={() => setIsMinimized(true)}
                   >
-                    Comprar
+                    <Minus className="h-3 w-3" />
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-6 text-xs px-2"
-                    onClick={() => drawMultiple(5)}
-                    disabled={gameState.deckPile.length === 0}
-                  >
-                    +5
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-6 w-6 p-0"
-                    onClick={shuffleDeck}
-                    title="Embaralhar"
-                  >
-                    <Shuffle className="h-3 w-3" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-6 w-6 p-0"
-                    onClick={returnAllToDeck}
-                    title="Reiniciar"
-                  >
-                    <RotateCcw className="h-3 w-3" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-6 w-6 p-0"
-                    onClick={() => setShowDeckPile(!showDeckPile)}
-                    title={showDeckPile ? "Ocultar Deck" : "Ver Deck"}
-                  >
-                    {showDeckPile ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-6 w-6 p-0"
-                    onClick={() => setShowSearch(!showSearch)}
-                    title="Buscar Carta"
-                  >
-                    <Search className="h-3 w-3" />
-                  </Button>
-                </div>
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={onClose}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
               </div>
+            </div>
 
-              {/* Search Card */}
-              {showSearch && (
-                <div className="p-2 border-b border-border bg-muted/30">
-                  <div className="flex gap-1">
-                    <Input
-                      placeholder="Nome da carta..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="h-7 text-xs"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          searchCardInDeck(searchQuery);
-                        }
-                      }}
+            {!hasDeck ? (
+              <div className="flex-1 flex flex-col items-center justify-center p-4 gap-4">
+                <BookOpen className="h-12 w-12 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground text-center">
+                  Nenhum deck carregado. Importe um deck para usar durante o duelo.
+                </p>
+                <Button onClick={onLoadDeck} className="gap-2">
+                  <Upload className="h-4 w-4" />
+                  Importar Deck (.ydk)
+                </Button>
+              </div>
+            ) : (
+              <ScrollArea className="flex-1">
+                <div className="p-2 space-y-2">
+                  {/* Opponent Field (if in duel) */}
+                  {duelId && currentUserId && (
+                    <OpponentFieldViewer 
+                      duelId={duelId} 
+                      currentUserId={currentUserId}
+                      opponentUsername={opponentUsername}
                     />
-                    <Button
-                      size="sm"
-                      className="h-7 text-xs px-2"
-                      onClick={() => searchCardInDeck(searchQuery)}
-                      disabled={!searchQuery.trim() || gameState.deckPile.length === 0}
-                    >
-                      Buscar
-                    </Button>
+                  )}
+
+                  {/* Deck Controls */}
+                  <div className="flex items-center justify-between gap-1 flex-wrap p-2 bg-muted/30 rounded-lg">
+                    <div className="flex items-center gap-1 flex-wrap">
+                      <Badge variant="outline" className="text-xs">
+                        Deck: {gameState.deckPile.length}
+                      </Badge>
+                      <Badge variant="outline" className="text-xs">
+                        Extra: {gameState.extraDeckPile.length}
+                      </Badge>
+                      <Badge variant="outline" className="text-xs">
+                        Side: {gameState.sideDeckPile.length}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => setShowSearch(!showSearch)}
+                        title="Buscar Carta"
+                      >
+                        <Search className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => setShowDeckPile(!showDeckPile)}
+                        title={showDeckPile ? "Esconder Deck" : "Ver Deck"}
+                      >
+                        {showDeckPile ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={shuffleDeck}
+                        title="Embaralhar"
+                      >
+                        <Shuffle className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={returnAllToDeck}
+                        title="Resetar"
+                      >
+                        <RotateCcw className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </div>
-                  {gameState.deckPile.length > 0 && (
-                    <div className="mt-1 text-[10px] text-muted-foreground">
-                      Sugestões: {gameState.deckPile.slice(0, 3).map(c => c.name).join(', ')}...
+
+                  {/* Search */}
+                  {showSearch && (
+                    <div className="flex gap-1">
+                      <Input
+                        placeholder="Nome da carta..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && searchCardInDeck(searchQuery)}
+                        className="h-7 text-xs"
+                      />
+                      <Button 
+                        size="sm" 
+                        className="h-7 px-2"
+                        onClick={() => searchCardInDeck(searchQuery)}
+                      >
+                        <Search className="h-3 w-3" />
+                      </Button>
                     </div>
                   )}
-                </div>
-              )}
 
-              {/* Deck Pile View */}
-              {showDeckPile && (
-                <div className="p-2 border-b border-border bg-muted/30">
-                  <div className="text-xs font-medium mb-1">Deck ({gameState.deckPile.length})</div>
-                  <ScrollArea className="h-16">
-                    <div className="flex gap-0.5 flex-wrap">
-                      {gameState.deckPile.map((card, idx) => (
-                        <img
-                          key={`deck-${card.id}-${idx}`}
-                          src={card.card_images[0]?.image_url_small}
-                          alt={card.name}
-                          className="h-10 rounded-sm cursor-pointer hover:scale-110 transition-transform"
-                          onClick={() => setSelectedCard(card)}
-                          title={card.name}
-                        />
-                      ))}
-                    </div>
-                  </ScrollArea>
-                </div>
-              )}
+                  {/* Draw Buttons */}
+                  <div className="flex gap-1">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1 h-7 text-xs"
+                      onClick={drawCard}
+                      disabled={gameState.deckPile.length === 0}
+                    >
+                      Comprar 1
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1 h-7 text-xs"
+                      onClick={() => drawMultiple(5)}
+                      disabled={gameState.deckPile.length === 0}
+                    >
+                      Comprar 5
+                    </Button>
+                  </div>
 
-              {/* Card Zones */}
-              <div className={cn(
-                "flex-1 p-2 flex flex-col gap-2 min-h-0 overflow-auto",
-                isFullscreen && "grid grid-cols-1 md:grid-cols-2 gap-4"
-              )}>
-                <CardZone 
-                  title="Mão" 
-                  cards={gameState.hand} 
-                  zone="hand" 
-                  icon={Hand}
-                  isActive={activeZone === 'hand'}
-                />
-                <CardZone 
-                  title="Campo" 
-                  cards={gameState.field} 
-                  zone="field" 
-                  icon={Layers}
-                  isActive={activeZone === 'field'}
-                />
-                <div className={cn("flex gap-2", isFullscreen ? "flex-col" : "")}>
+                  {/* Deck Pile View */}
+                  {showDeckPile && (
+                    <CardZone 
+                      title="Deck Principal" 
+                      cards={gameState.deckPile} 
+                      zone="deckPile" 
+                      icon={Layers}
+                    />
+                  )}
+
+                  {/* Main Zones */}
+                  <CardZone title="Mão" cards={gameState.hand} zone="hand" icon={Hand} />
+                  <CardZone title="Campo" cards={gameState.field} zone="field" icon={Layers} />
+                  <CardZone title="Cemitério" cards={gameState.graveyard} zone="graveyard" icon={Flame} />
+                  <CardZone title="Banidos" cards={gameState.banished} zone="banished" icon={Ban} />
+                  
+                  {/* Extra Deck */}
                   <CardZone 
-                    title="Cemitério" 
-                    cards={gameState.graveyard} 
-                    zone="graveyard" 
-                    icon={Flame}
-                    isActive={activeZone === 'graveyard'}
-                    color="orange"
+                    title="Extra Deck" 
+                    cards={gameState.extraDeckPile} 
+                    zone="extraDeckPile" 
+                    icon={Sparkles}
                   />
-                  <CardZone 
-                    title="Banido" 
-                    cards={gameState.banished} 
-                    zone="banished" 
-                    icon={Ban}
-                    isActive={activeZone === 'banished'}
-                    color="purple"
-                  />
+                  
+                  {/* Side Deck */}
+                  {gameState.sideDeckPile.length > 0 && (
+                    <CardZone 
+                      title="Side Deck" 
+                      cards={gameState.sideDeckPile} 
+                      zone="sideDeckPile" 
+                      icon={Layers}
+                    />
+                  )}
                 </div>
-              </div>
-
-              {/* Extra Deck */}
-              {gameState.extraDeckPile.length > 0 && (
-                <div className="p-2 border-t border-border">
-                  <div className="text-xs font-medium mb-1">Extra Deck ({gameState.extraDeckPile.length})</div>
-                  <ScrollArea className="h-12">
-                    <div className="flex gap-0.5">
-                      {gameState.extraDeckPile.map((card, idx) => (
-                        <img
-                          key={`extra-${card.id}-${idx}`}
-                          src={card.card_images[0]?.image_url_small}
-                          alt={card.name}
-                          className="h-10 rounded-sm cursor-pointer hover:scale-110 transition-transform"
-                          onClick={() => setSelectedCard(card)}
-                          title={card.name}
-                        />
-                      ))}
-                    </div>
-                  </ScrollArea>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      )}
-
-      {/* Card Detail Modal */}
-      {selectedCard && (
-        <div 
-          className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
-          onClick={() => setSelectedCard(null)}
-        >
-          <div 
-            className="bg-card rounded-lg p-4 max-w-sm w-full max-h-[80vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex gap-4">
-              <img
-                src={selectedCard.card_images[0]?.image_url}
-                alt={selectedCard.name}
-                className="w-32 rounded-lg shadow-lg"
-              />
-              <div className="flex-1">
-                <h3 className="font-bold text-sm mb-1">{selectedCard.name}</h3>
-                <Badge variant="secondary" className="text-xs mb-2">
-                  {selectedCard.type}
-                </Badge>
-                {selectedCard.atk !== undefined && (
-                  <p className="text-xs text-muted-foreground">
-                    ATK: {selectedCard.atk} / DEF: {selectedCard.def}
-                  </p>
-                )}
-                {selectedCard.level && (
-                  <p className="text-xs text-muted-foreground">
-                    Level: {selectedCard.level}
-                  </p>
-                )}
-              </div>
-            </div>
-            <p className="text-xs mt-3 text-muted-foreground">{selectedCard.desc}</p>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="w-full mt-3"
-              onClick={() => setSelectedCard(null)}
-            >
-              Fechar
-            </Button>
+              </ScrollArea>
+            )}
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+
+      {/* Card Actions Modal */}
+      <CardActionsModal
+        card={selectedCard}
+        open={showActionsModal}
+        onClose={() => setShowActionsModal(false)}
+        currentZone={selectedCardZone}
+        cardIndex={selectedCardIndex}
+        onMoveToZone={(toZone) => {
+          if (selectedCard) {
+            moveCardToZone(selectedCard, selectedCardZone, toZone, selectedCardIndex);
+          }
+        }}
+        onReturnToTopOfDeck={() => {
+          if (selectedCard) {
+            returnToTopOfDeck(selectedCard, selectedCardZone, selectedCardIndex);
+          }
+        }}
+        onReturnToBottomOfDeck={() => {
+          if (selectedCard) {
+            returnToBottomOfDeck(selectedCard, selectedCardZone, selectedCardIndex);
+          }
+        }}
+        onShuffleIntoDeck={() => {
+          if (selectedCard) {
+            shuffleIntoDeck(selectedCard, selectedCardZone, selectedCardIndex);
+          }
+        }}
+        onSendToExtraDeck={() => {
+          if (selectedCard) {
+            sendToExtraDeck(selectedCard, selectedCardZone, selectedCardIndex);
+          }
+        }}
+        isExtraDeckCard={selectedCard ? isExtraDeckCardType(selectedCard.type) : false}
+      />
+    </>
   );
 };
