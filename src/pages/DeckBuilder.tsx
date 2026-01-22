@@ -312,51 +312,75 @@ const DeckBuilder = () => {
   };
 
   const handleAddRecognizedCards = useCallback((cards: YugiohCard[]) => {
-    // Use functional updates to avoid stale state issues
+    // Use batch update approach to ensure all cards are added correctly
+    const mainCardsToAdd: YugiohCard[] = [];
+    const extraCardsToAdd: YugiohCard[] = [];
+
+    // Separate cards by type
     cards.forEach((card) => {
-      const isExtra = isExtraDeckCard(card);
-      
-      if (isExtra) {
-        setExtraDeck((prevExtra) => {
-          const total = prevExtra.reduce((acc, c) => acc + c.quantity, 0);
-          if (total >= 15) return prevExtra;
-          
-          const allDecks = [...mainDeck, ...prevExtra, ...sideDeck];
-          const totalCopies = allDecks.filter(c => c.id === card.id).reduce((acc, c) => acc + c.quantity, 0);
-          if (totalCopies >= 3) return prevExtra;
-          
-          const existing = prevExtra.find((c) => c.id === card.id);
-          if (existing) {
-            return prevExtra.map((c) =>
-              c.id === card.id ? { ...c, quantity: Math.min(c.quantity + 1, 3) } : c
-            );
-          }
-          return [...prevExtra, { ...card, quantity: 1 }];
-        });
+      if (isExtraDeckCard(card)) {
+        extraCardsToAdd.push(card);
       } else {
-        setMainDeck((prevMain) => {
-          const total = prevMain.reduce((acc, c) => acc + c.quantity, 0);
-          if (total >= 60) return prevMain;
-          
-          const allDecks = [...prevMain, ...extraDeck, ...sideDeck];
-          const totalCopies = allDecks.filter(c => c.id === card.id).reduce((acc, c) => acc + c.quantity, 0);
-          if (totalCopies >= 3) return prevMain;
-          
-          const existing = prevMain.find((c) => c.id === card.id);
-          if (existing) {
-            return prevMain.map((c) =>
-              c.id === card.id ? { ...c, quantity: Math.min(c.quantity + 1, 3) } : c
-            );
-          }
-          return [...prevMain, { ...card, quantity: 1 }];
-        });
+        mainCardsToAdd.push(card);
       }
     });
+
+    // Add main deck cards
+    if (mainCardsToAdd.length > 0) {
+      setMainDeck((prevMain) => {
+        let newDeck = [...prevMain];
+        
+        mainCardsToAdd.forEach((card) => {
+          const totalInDeck = newDeck.reduce((acc, c) => acc + c.quantity, 0);
+          if (totalInDeck >= 60) return;
+          
+          const totalCopies = newDeck.filter(c => c.id === card.id).reduce((acc, c) => acc + c.quantity, 0);
+          if (totalCopies >= 3) return;
+          
+          const existing = newDeck.find((c) => c.id === card.id);
+          if (existing) {
+            newDeck = newDeck.map((c) =>
+              c.id === card.id ? { ...c, quantity: Math.min(c.quantity + 1, 3) } : c
+            );
+          } else {
+            newDeck = [...newDeck, { ...card, quantity: 1 }];
+          }
+        });
+        
+        return newDeck;
+      });
+    }
+
+    // Add extra deck cards
+    if (extraCardsToAdd.length > 0) {
+      setExtraDeck((prevExtra) => {
+        let newDeck = [...prevExtra];
+        
+        extraCardsToAdd.forEach((card) => {
+          const totalInDeck = newDeck.reduce((acc, c) => acc + c.quantity, 0);
+          if (totalInDeck >= 15) return;
+          
+          const totalCopies = newDeck.filter(c => c.id === card.id).reduce((acc, c) => acc + c.quantity, 0);
+          if (totalCopies >= 3) return;
+          
+          const existing = newDeck.find((c) => c.id === card.id);
+          if (existing) {
+            newDeck = newDeck.map((c) =>
+              c.id === card.id ? { ...c, quantity: Math.min(c.quantity + 1, 3) } : c
+            );
+          } else {
+            newDeck = [...newDeck, { ...card, quantity: 1 }];
+          }
+        });
+        
+        return newDeck;
+      });
+    }
     
     if (cards.length > 0) {
       toast.success(`${cards.length} carta(s) adicionada(s) ao deck!`);
     }
-  }, [mainDeck, extraDeck, sideDeck]);
+  }, []);
 
   const canAddToMain = selectedCard
     ? !isExtraDeckCard(selectedCard) &&

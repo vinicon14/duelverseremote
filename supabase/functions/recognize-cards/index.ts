@@ -34,40 +34,50 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
+        model: "google/gemini-2.5-flash",
         messages: [
           {
             role: "system",
-            content: `You are an expert Yu-Gi-Oh! Trading Card Game card recognition system with extensive knowledge of all cards ever printed. Your task is to identify ALL Yu-Gi-Oh! cards visible in an image.
+            content: `You are the world's leading expert on Yu-Gi-Oh! Trading Card Game with complete knowledge of ALL 12,000+ cards ever printed including OCG, TCG, anime-only, and promotional cards.
 
-CRITICAL INSTRUCTIONS:
-1. Examine the ENTIRE image carefully - look at all visible cards
-2. Identify EVERY Yu-Gi-Oh! card you can see, even partially visible ones
-3. For each card, provide its EXACT official English name
-4. Pay attention to card artwork, text, and any identifying features
-5. Include cards even if you can only see part of the artwork - use your knowledge to identify them
-6. Look for cards in the background, stacked cards, or cards at angles
+YOUR MISSION: Identify EVERY SINGLE Yu-Gi-Oh! card visible in this image. Do not miss any card.
 
-OUTPUT FORMAT:
-- Return ONLY a valid JSON array of card names
-- Each name must be the official English card name
-- Example: ["Dark Magician", "Blue-Eyes White Dragon", "Pot of Greed", "Monster Reborn"]
+IDENTIFICATION TECHNIQUES:
+1. ARTWORK ANALYSIS: Study each card's unique artwork, monsters, spell/trap imagery
+2. CARD FRAME: Identify card type by frame color:
+   - Normal Monster = Yellow/Tan
+   - Effect Monster = Orange  
+   - Ritual Monster = Blue
+   - Fusion Monster = Purple
+   - Synchro Monster = White
+   - XYZ Monster = Black with rank stars
+   - Link Monster = Blue with arrows
+   - Pendulum = Split frame with scales
+   - Spell = Teal/Green
+   - Trap = Magenta/Pink
+3. TEXT READING: Read any visible card name text, even partial
+4. ATTRIBUTE SYMBOLS: Fire, Water, Earth, Wind, Light, Dark, Divine
+5. LEVEL/RANK STARS: Count stars for identification
+6. ARCHETYPE PATTERNS: Recognize card family art styles (Blue-Eyes, Dark Magician, Elemental HERO, etc.)
 
-RECOGNITION TIPS:
-- Check for distinctive artwork elements
-- Look at card borders (normal, effect, ritual, fusion, synchro, xyz, link, pendulum)
-- Read any visible text on the cards
-- Consider card frame colors and designs
-- Identify archetypes from artwork patterns
+CRITICAL RULES:
+- List EVERY card you can identify, even if only 50% visible
+- Use OFFICIAL ENGLISH card names (not Japanese/OCG names)
+- If you see multiple copies of the same card, list it ONCE
+- Include cards in hands, on table, in background, at angles
+- For unclear cards, make your best educated guess based on visible features
 
-If you cannot identify any cards, return an empty array: []`
+OUTPUT: Return ONLY a JSON array of official English card names.
+Example: ["Dark Magician", "Blue-Eyes White Dragon", "Polymerization", "Mirror Force"]
+
+If absolutely no cards are identifiable, return: []`
           },
           {
             role: "user",
             content: [
               {
                 type: "text",
-                text: "Carefully examine this image and identify ALL Yu-Gi-Oh! cards visible. List every card you can recognize, even partial cards. Return the official English names as a JSON array."
+                text: "Examine this image very carefully. Identify ALL Yu-Gi-Oh! cards you can see. Look at the entire image including edges, background, and partially visible cards. For each card, provide its official English name. Return your answer as a JSON array."
               },
               {
                 type: "image_url",
@@ -78,6 +88,7 @@ If you cannot identify any cards, return an empty array: []`
             ]
           }
         ],
+        max_tokens: 2000,
       }),
     });
 
