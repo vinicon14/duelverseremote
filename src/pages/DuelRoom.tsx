@@ -11,6 +11,7 @@ import { RecordMatchButton } from "@/components/RecordMatchButton";
 import { HideElementsButton } from "@/components/HideElementsButton";
 import { useBanCheck } from "@/hooks/useBanCheck";
 import { DuelDeckViewer } from "@/components/duel/DuelDeckViewer";
+import { FloatingOpponentViewer } from "@/components/duel/FloatingOpponentViewer";
 import { useDuelDeck } from "@/hooks/useDuelDeck";
 
 const DuelRoom = () => {
@@ -949,6 +950,19 @@ const DuelRoom = () => {
             }
           />
         </>
+      )}
+
+      {/* Floating Opponent Viewer - Always visible for participants */}
+      {isParticipant && !isJudge && currentUser && id && duel && (
+        <FloatingOpponentViewer
+          duelId={id}
+          currentUserId={currentUser.id}
+          opponentUsername={
+            currentUser.id === duel.creator_id 
+              ? duel.opponent?.username 
+              : duel.creator?.username
+          }
+        />
       )}
 
       {/* Chat Component */}
