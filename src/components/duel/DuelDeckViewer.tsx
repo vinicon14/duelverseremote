@@ -579,7 +579,10 @@ export const DuelDeckViewer = ({
           </div>
         </div>
         {isExpanded && (
-          <ScrollArea className={cn("flex-1 p-1", isFullscreen ? "max-h-[200px]" : "max-h-[120px]")}>
+          <div className={cn(
+            "p-1 overflow-y-auto overflow-x-hidden",
+            isFullscreen ? "max-h-[200px]" : "max-h-[150px]"
+          )}>
             <div className={cn(
               "grid gap-1",
               isFullscreen ? "grid-cols-8 sm:grid-cols-10 md:grid-cols-12" : "grid-cols-5 sm:grid-cols-6"
@@ -637,7 +640,7 @@ export const DuelDeckViewer = ({
                 </div>
               ))}
             </div>
-          </ScrollArea>
+          </div>
         )}
       </div>
     );

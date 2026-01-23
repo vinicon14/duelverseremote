@@ -62,15 +62,32 @@ export const useDuelDeck = () => {
     const extraGrouped = groupById(extra);
     const sideGrouped = groupById(side);
 
-    // Buscar dados das cartas
+    // Buscar dados das cartas - tentar português primeiro, depois inglês
     const fetchCards = async (grouped: Map<number, number>): Promise<DeckCard[]> => {
       const cards: DeckCard[] = [];
+      const notFound: number[] = [];
+      
+      // Primeiro, tentar buscar em português
       for (const [id, quantity] of grouped.entries()) {
         const cardData = await getCardById(id, 'pt');
         if (cardData) {
           cards.push({ ...cardData, quantity });
+        } else {
+          notFound.push(id);
         }
       }
+      
+      // Para os não encontrados, tentar em inglês
+      for (const id of notFound) {
+        const quantity = grouped.get(id) || 1;
+        const cardData = await getCardById(id, 'en');
+        if (cardData) {
+          cards.push({ ...cardData, quantity });
+        } else {
+          console.warn(`Card with ID ${id} not found in any language`);
+        }
+      }
+      
       return cards;
     };
 
