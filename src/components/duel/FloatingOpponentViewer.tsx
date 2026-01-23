@@ -86,11 +86,11 @@ export const FloatingOpponentViewer = ({
       <Button
         variant="secondary"
         size="sm"
-        className="fixed right-2 top-20 z-40 gap-2"
+        className="fixed left-2 top-20 z-40 gap-2"
         onClick={() => setIsVisible(true)}
       >
         <Eye className="h-4 w-4" />
-        Ver Deck Virtual
+        Ver Deck Oponente
       </Button>
     );
   }
@@ -99,7 +99,7 @@ export const FloatingOpponentViewer = ({
     return (
       <button
         onClick={() => setIsMinimized(false)}
-        className="fixed right-2 top-20 z-40 w-10 h-10 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-lg flex items-center justify-center hover:bg-muted/50 transition-colors"
+        className="fixed left-2 top-20 z-40 w-10 h-10 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-lg flex items-center justify-center hover:bg-muted/50 transition-colors"
       >
         <Eye className="h-5 w-5 text-primary" />
       </button>
@@ -157,7 +157,7 @@ export const FloatingOpponentViewer = ({
   );
 
   return (
-    <div className="fixed right-2 top-20 z-40 w-72 sm:w-80 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-2xl overflow-hidden">
+    <div className="fixed left-2 top-20 z-40 w-72 sm:w-80 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-2xl overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between p-2 border-b border-border bg-muted/30">
         <div className="flex items-center gap-2">
