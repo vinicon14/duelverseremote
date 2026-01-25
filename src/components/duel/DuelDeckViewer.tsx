@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -121,10 +121,6 @@ export const DuelDeckViewer = ({
   
   // XYZ material attachment mode
   const [attachMode, setAttachMode] = useState<{ targetCard: GameCard; targetIndex: number } | null>(null);
-  
-  // Refs for preserving scroll positions
-  const scrollPositionsRef = useRef<Record<string, number>>({});
-  const zoneRefsMap = useRef<Record<string, HTMLDivElement | null>>({});
 
   // Broadcast state changes to opponent
   const broadcastState = useCallback(() => {
@@ -310,57 +306,28 @@ export const DuelDeckViewer = ({
     setAttachMode(null);
   }, []);
 
-  // Detach XYZ material - sends to graveyard and preserves scroll
+  // Detach XYZ material
   const detachMaterial = useCallback((fieldIndex: number, materialIndex: number) => {
-    // Save scroll positions before update
-    Object.keys(zoneRefsMap.current).forEach(zone => {
-      const ref = zoneRefsMap.current[zone];
-      if (ref) {
-        scrollPositionsRef.current[zone] = ref.scrollTop;
-      }
-    });
-    
     setGameState(prev => {
       const fieldArray = [...prev.field];
-      if (fieldArray[fieldIndex]?.attachedCards && fieldArray[fieldIndex].attachedCards!.length > materialIndex) {
+      if (fieldArray[fieldIndex]?.attachedCards) {
         const materials = [...fieldArray[fieldIndex].attachedCards!];
         const [detachedCard] = materials.splice(materialIndex, 1);
-        
-        if (detachedCard) {
-          fieldArray[fieldIndex] = {
-            ...fieldArray[fieldIndex],
-            attachedCards: materials
-          };
-          return {
-            ...prev,
-            field: fieldArray,
-            graveyard: [...prev.graveyard, { ...detachedCard, isFaceDown: false }],
-          };
-        }
+        fieldArray[fieldIndex] = {
+          ...fieldArray[fieldIndex],
+          attachedCards: materials
+        };
+        return {
+          ...prev,
+          field: fieldArray,
+          graveyard: [...prev.graveyard, detachedCard],
+        };
       }
       return prev;
-    });
-    
-    // Restore scroll positions after update
-    requestAnimationFrame(() => {
-      Object.keys(scrollPositionsRef.current).forEach(zone => {
-        const ref = zoneRefsMap.current[zone];
-        if (ref && scrollPositionsRef.current[zone] !== undefined) {
-          ref.scrollTop = scrollPositionsRef.current[zone];
-        }
-      });
     });
   }, []);
 
   const moveCardToZone = useCallback((card: GameCard, fromZone: ZoneType, toZone: ZoneType, cardIndex: number) => {
-    // Save scroll positions before update
-    Object.keys(zoneRefsMap.current).forEach(zone => {
-      const ref = zoneRefsMap.current[zone];
-      if (ref) {
-        scrollPositionsRef.current[zone] = ref.scrollTop;
-      }
-    });
-    
     setGameState(prev => {
       const fromArray = [...prev[fromZone]] as GameCard[];
       const toArray = [...prev[toZone]] as GameCard[];
@@ -379,16 +346,6 @@ export const DuelDeckViewer = ({
         [fromZone]: fromArray,
         [toZone]: toArray,
       };
-    });
-    
-    // Restore scroll positions after update
-    requestAnimationFrame(() => {
-      Object.keys(scrollPositionsRef.current).forEach(zone => {
-        const ref = zoneRefsMap.current[zone];
-        if (ref && scrollPositionsRef.current[zone] !== undefined) {
-          ref.scrollTop = scrollPositionsRef.current[zone];
-        }
-      });
     });
   }, []);
 
@@ -574,38 +531,6 @@ export const DuelDeckViewer = ({
 
   if (!isOpen) return null;
 
-  // Save scroll position before state update
-  const saveScrollPosition = useCallback((zone: string) => {
-    const ref = zoneRefsMap.current[zone];
-    if (ref) {
-      scrollPositionsRef.current[zone] = ref.scrollTop;
-    }
-  }, []);
-  
-  // Restore scroll position after state update
-  const restoreScrollPosition = useCallback((zone: string) => {
-    requestAnimationFrame(() => {
-      const ref = zoneRefsMap.current[zone];
-      if (ref && scrollPositionsRef.current[zone] !== undefined) {
-        ref.scrollTop = scrollPositionsRef.current[zone];
-      }
-    });
-  }, []);
-  
-  // Save all scroll positions
-  const saveAllScrollPositions = useCallback(() => {
-    Object.keys(zoneRefsMap.current).forEach(zone => {
-      saveScrollPosition(zone);
-    });
-  }, [saveScrollPosition]);
-  
-  // Restore all scroll positions
-  const restoreAllScrollPositions = useCallback(() => {
-    Object.keys(scrollPositionsRef.current).forEach(zone => {
-      restoreScrollPosition(zone);
-    });
-  }, [restoreScrollPosition]);
-
   const CardZone = ({ 
     title, 
     cards, 
@@ -654,13 +579,10 @@ export const DuelDeckViewer = ({
           </div>
         </div>
         {isExpanded && (
-          <div 
-            ref={(el) => { zoneRefsMap.current[zone] = el; }}
-            className={cn(
-              "p-1 overflow-y-auto overflow-x-hidden",
-              isFullscreen ? "max-h-[200px]" : "max-h-[150px]"
-            )}
-          >
+          <div className={cn(
+            "p-1 overflow-y-auto overflow-x-hidden",
+            isFullscreen ? "max-h-[200px]" : "max-h-[150px]"
+          )}>
             <div className={cn(
               "grid gap-1",
               isFullscreen ? "grid-cols-8 sm:grid-cols-10 md:grid-cols-12" : "grid-cols-5 sm:grid-cols-6"
