@@ -17,23 +17,15 @@ import {
   Maximize2,
   Minimize2,
   Search,
-  ChevronDown,
-  ChevronUp,
-  Flame,
-  Ban,
-  Sparkles,
-  GripVertical,
-  FlipVertical,
-  RotateCw,
-  Link2,
-  Crown
+  GripVertical
 } from 'lucide-react';
 import { DeckCard } from '@/components/deckbuilder/DeckPanel';
-import { YugiohCard } from '@/hooks/useYugiohCards';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
-import { CardActionsModal } from './CardActionsModal';
-import { OpponentFieldViewer } from './OpponentFieldViewer';
+import { DuelFieldBoard, FieldState, FieldZoneType, GameCard } from './DuelFieldBoard';
+import { ZonePlacementModal } from './ZonePlacementModal';
+import { ZoneViewerModal } from './ZoneViewerModal';
+import { FieldCardActionsModal } from './FieldCardActionsModal';
 
 interface DuelDeckViewerProps {
   isOpen: boolean;
@@ -47,38 +39,37 @@ interface DuelDeckViewerProps {
   opponentUsername?: string;
 }
 
-interface GameCard extends YugiohCard {
-  instanceId: string;
-  isFaceDown?: boolean;
-  attachedCards?: GameCard[]; // For XYZ materials
-  position?: 'attack' | 'defense'; // Card position
-}
-
-interface GameState {
-  deckPile: GameCard[];
-  hand: GameCard[];
-  field: GameCard[];
-  fieldZone: GameCard[]; // Field Spell zone
-  graveyard: GameCard[];
-  banished: GameCard[];
-  extraDeckPile: GameCard[];
-  sideDeckPile: GameCard[];
-}
-
-type ZoneType = keyof GameState;
-
 const EXTRA_DECK_TYPES = ['Fusion', 'Synchro', 'XYZ', 'Link'];
 
 const isExtraDeckCardType = (type: string): boolean => {
   return EXTRA_DECK_TYPES.some((t) => type.includes(t));
 };
 
-const isXYZCard = (type: string): boolean => type.includes('XYZ');
-
 const generateInstanceId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-// Card back image for face-down cards
 const CARD_BACK_URL = 'https://images.ygoprodeck.com/images/cards/back_high.jpg';
+
+const INITIAL_FIELD_STATE: FieldState = {
+  monster1: null,
+  monster2: null,
+  monster3: null,
+  monster4: null,
+  monster5: null,
+  spell1: null,
+  spell2: null,
+  spell3: null,
+  spell4: null,
+  spell5: null,
+  extraMonster1: null,
+  extraMonster2: null,
+  fieldSpell: null,
+  graveyard: [],
+  banished: [],
+  extraDeck: [],
+  deck: [],
+  sideDeck: [],
+  hand: [],
+};
 
 export const DuelDeckViewer = ({
   isOpen,
@@ -91,82 +82,83 @@ export const DuelDeckViewer = ({
   currentUserId,
   opponentUsername,
 }: DuelDeckViewerProps) => {
-  const [gameState, setGameState] = useState<GameState>({
-    deckPile: [],
-    hand: [],
-    field: [],
-    fieldZone: [],
-    graveyard: [],
-    banished: [],
-    extraDeckPile: [],
-    sideDeckPile: [],
-  });
+  const [fieldState, setFieldState] = useState<FieldState>(INITIAL_FIELD_STATE);
   
-  // Card Actions Modal state
-  const [selectedCard, setSelectedCard] = useState<GameCard | null>(null);
-  const [selectedCardZone, setSelectedCardZone] = useState<ZoneType>('hand');
-  const [selectedCardIndex, setSelectedCardIndex] = useState(0);
-  const [showActionsModal, setShowActionsModal] = useState(false);
+  // Modal states
+  const [placementModal, setPlacementModal] = useState<{ open: boolean; card: GameCard | null }>({ 
+    open: false, 
+    card: null 
+  });
+  const [viewerModal, setViewerModal] = useState<{ 
+    open: boolean; 
+    zone: FieldZoneType | 'hand' | null 
+  }>({ open: false, zone: null });
+  const [cardActionsModal, setCardActionsModal] = useState<{ 
+    open: boolean; 
+    card: GameCard | null; 
+    zone: FieldZoneType | null 
+  }>({ open: false, card: null, zone: null });
   
   // UI state
-  const [showDeckPile, setShowDeckPile] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
-  const [expandedZones, setExpandedZones] = useState<Set<string>>(new Set(['hand', 'field', 'extraDeckPile']));
-  
-  // Drag and drop state
-  const [draggedCard, setDraggedCard] = useState<{ card: GameCard; fromZone: ZoneType; index: number } | null>(null);
-  
-  // XYZ material attachment mode
-  const [attachMode, setAttachMode] = useState<{ targetCard: GameCard; targetIndex: number } | null>(null);
+  const [attachMode, setAttachMode] = useState<{ targetZone: FieldZoneType } | null>(null);
 
   // Broadcast state changes to opponent
   const broadcastState = useCallback(() => {
     if (!duelId || !currentUserId) return;
     
+    const getFieldCards = (): { id: number; name: string; image: string; isFaceDown?: boolean; position?: string; materials?: number }[] => {
+      const zones: FieldZoneType[] = [
+        'monster1', 'monster2', 'monster3', 'monster4', 'monster5',
+        'spell1', 'spell2', 'spell3', 'spell4', 'spell5',
+        'extraMonster1', 'extraMonster2', 'fieldSpell'
+      ];
+      
+      return zones
+        .map(zone => fieldState[zone] as GameCard | null)
+        .filter((card): card is GameCard => card !== null)
+        .map(c => ({
+          id: c.id,
+          name: c.isFaceDown ? 'Face-down Card' : c.name,
+          image: c.isFaceDown ? CARD_BACK_URL : c.card_images?.[0]?.image_url_small || '',
+          isFaceDown: c.isFaceDown,
+          position: c.position,
+          materials: c.attachedCards?.length || 0
+        }));
+    };
+
     const channel = supabase.channel(`deck-sync-${duelId}`);
     channel.send({
       type: 'broadcast',
       event: 'deck-state',
       payload: {
         userId: currentUserId,
-        hand: gameState.hand.length,
-        field: gameState.field.map(c => ({ 
-          id: c.id, 
-          name: c.isFaceDown ? 'Face-down Card' : c.name, 
-          image: c.isFaceDown ? CARD_BACK_URL : c.card_images?.[0]?.image_url_small,
-          isFaceDown: c.isFaceDown,
-          position: c.position,
-          materials: c.attachedCards?.length || 0
-        })),
-        fieldZone: gameState.fieldZone.map(c => ({
-          id: c.id,
-          name: c.name,
-          image: c.card_images?.[0]?.image_url_small
-        })),
-        graveyard: gameState.graveyard.map(c => ({ 
+        hand: fieldState.hand.length,
+        field: getFieldCards(),
+        graveyard: fieldState.graveyard.map(c => ({ 
           id: c.id, 
           name: c.name, 
           image: c.card_images?.[0]?.image_url_small 
         })),
-        banished: gameState.banished.map(c => ({ 
+        banished: fieldState.banished.map(c => ({ 
           id: c.id, 
           name: c.name, 
           image: c.card_images?.[0]?.image_url_small 
         })),
-        deckCount: gameState.deckPile.length,
-        extraCount: gameState.extraDeckPile.length,
+        deckCount: fieldState.deck.length,
+        extraCount: fieldState.extraDeck.length,
       }
     });
-  }, [duelId, currentUserId, gameState]);
+  }, [duelId, currentUserId, fieldState]);
 
   useEffect(() => {
     if (duelId && isOpen && currentUserId) {
       broadcastState();
     }
-  }, [gameState, broadcastState, duelId, isOpen, currentUserId]);
+  }, [fieldState, broadcastState, duelId, isOpen, currentUserId]);
 
   // Initialize deck when loaded
   useEffect(() => {
@@ -192,15 +184,11 @@ export const DuelDeckViewer = ({
         }
       });
 
-      setGameState({
-        deckPile: shuffleArray(expandedDeck),
-        hand: [],
-        field: [],
-        fieldZone: [],
-        graveyard: [],
-        banished: [],
-        extraDeckPile: expandedExtra,
-        sideDeckPile: expandedSide,
+      setFieldState({
+        ...INITIAL_FIELD_STATE,
+        deck: shuffleArray(expandedDeck),
+        extraDeck: expandedExtra,
+        sideDeck: expandedSide,
       });
     }
   }, [deck, extraDeck, sideDeck]);
@@ -215,256 +203,217 @@ export const DuelDeckViewer = ({
   };
 
   const drawCard = useCallback(() => {
-    setGameState(prev => {
-      if (prev.deckPile.length === 0) return prev;
-      const [drawnCard, ...remaining] = prev.deckPile;
+    setFieldState(prev => {
+      if (prev.deck.length === 0) return prev;
+      const [drawnCard, ...remaining] = prev.deck;
       return {
         ...prev,
-        deckPile: remaining,
+        deck: remaining,
         hand: [...prev.hand, { ...drawnCard, isFaceDown: false }],
       };
     });
   }, []);
 
   const drawMultiple = useCallback((count: number) => {
-    setGameState(prev => {
-      const toDraw = Math.min(count, prev.deckPile.length);
-      const drawnCards = prev.deckPile.slice(0, toDraw).map(c => ({ ...c, isFaceDown: false }));
-      const remaining = prev.deckPile.slice(toDraw);
+    setFieldState(prev => {
+      const toDraw = Math.min(count, prev.deck.length);
+      const drawnCards = prev.deck.slice(0, toDraw).map(c => ({ ...c, isFaceDown: false }));
+      const remaining = prev.deck.slice(toDraw);
       return {
         ...prev,
-        deckPile: remaining,
+        deck: remaining,
         hand: [...prev.hand, ...drawnCards],
       };
     });
   }, []);
 
   const shuffleDeck = useCallback(() => {
-    setGameState(prev => ({
+    setFieldState(prev => ({
       ...prev,
-      deckPile: shuffleArray(prev.deckPile),
+      deck: shuffleArray(prev.deck),
     }));
   }, []);
 
-  // Set card face-down
-  const setCardFaceDown = useCallback((zone: ZoneType, cardIndex: number, faceDown: boolean) => {
-    setGameState(prev => {
-      const array = [...prev[zone]] as GameCard[];
-      if (array[cardIndex]) {
-        array[cardIndex] = { ...array[cardIndex], isFaceDown: faceDown };
-      }
-      return { ...prev, [zone]: array };
-    });
-  }, []);
-
-  // Toggle card position (attack/defense)
-  const toggleCardPosition = useCallback((zone: ZoneType, cardIndex: number) => {
-    setGameState(prev => {
-      const array = [...prev[zone]] as GameCard[];
-      if (array[cardIndex]) {
-        array[cardIndex] = { 
-          ...array[cardIndex], 
-          position: array[cardIndex].position === 'attack' ? 'defense' : 'attack' 
-        };
-      }
-      return { ...prev, [zone]: array };
-    });
-  }, []);
-
-  // Flip card face-up
-  const flipCardUp = useCallback((zone: ZoneType, cardIndex: number) => {
-    setGameState(prev => {
-      const array = [...prev[zone]] as GameCard[];
-      if (array[cardIndex]) {
-        array[cardIndex] = { ...array[cardIndex], isFaceDown: false };
-      }
-      return { ...prev, [zone]: array };
-    });
-  }, []);
-
-  // Attach card as XYZ material
-  const attachAsMaterial = useCallback((materialCard: GameCard, fromZone: ZoneType, materialIndex: number, targetIndex: number) => {
-    setGameState(prev => {
-      const fromArray = [...prev[fromZone]] as GameCard[];
-      const fieldArray = [...prev.field];
-      
-      const [removedCard] = fromArray.splice(materialIndex, 1);
-      if (removedCard && fieldArray[targetIndex]) {
-        const attachedCards = fieldArray[targetIndex].attachedCards || [];
-        fieldArray[targetIndex] = {
-          ...fieldArray[targetIndex],
-          attachedCards: [...attachedCards, removedCard]
-        };
-      }
-      
-      return {
-        ...prev,
-        [fromZone]: fromArray,
-        field: fieldArray,
-      };
-    });
-    setAttachMode(null);
-  }, []);
-
-  // Detach XYZ material
-  const detachMaterial = useCallback((fieldIndex: number, materialIndex: number) => {
-    setGameState(prev => {
-      const fieldArray = [...prev.field];
-      if (fieldArray[fieldIndex]?.attachedCards) {
-        const materials = [...fieldArray[fieldIndex].attachedCards!];
-        const [detachedCard] = materials.splice(materialIndex, 1);
-        fieldArray[fieldIndex] = {
-          ...fieldArray[fieldIndex],
-          attachedCards: materials
-        };
-        return {
-          ...prev,
-          field: fieldArray,
-          graveyard: [...prev.graveyard, detachedCard],
-        };
-      }
-      return prev;
-    });
-  }, []);
-
-  const moveCardToZone = useCallback((card: GameCard, fromZone: ZoneType, toZone: ZoneType, cardIndex: number) => {
-    setGameState(prev => {
-      const fromArray = [...prev[fromZone]] as GameCard[];
-      const toArray = [...prev[toZone]] as GameCard[];
-      
-      const removedCard = fromArray.splice(cardIndex, 1)[0];
-      if (removedCard) {
-        // Clear face-down when moving to hand
-        if (toZone === 'hand') {
-          removedCard.isFaceDown = false;
-        }
-        toArray.push(removedCard);
-      }
-      
-      return {
-        ...prev,
-        [fromZone]: fromArray,
-        [toZone]: toArray,
-      };
-    });
-  }, []);
-
-  // Set/Baixar card face-down to field
-  const setCardToField = useCallback((card: GameCard, fromZone: ZoneType, cardIndex: number) => {
-    setGameState(prev => {
-      const fromArray = [...prev[fromZone]] as GameCard[];
-      const [removedCard] = fromArray.splice(cardIndex, 1);
-      
-      if (removedCard) {
-        const setCard = { 
-          ...removedCard, 
-          isFaceDown: true, 
-          position: 'defense' as const 
-        };
-        return {
-          ...prev,
-          [fromZone]: fromArray,
-          field: [...prev.field, setCard],
-        };
-      }
-      return prev;
-    });
-  }, []);
-
   const returnAllToDeck = useCallback(() => {
-    setGameState(prev => {
-      // Collect all materials from field cards
-      const allMaterials = prev.field.flatMap(c => c.attachedCards || []);
-      
-      const allCards = [
-        ...prev.hand,
-        ...prev.field.map(c => ({ ...c, attachedCards: undefined, isFaceDown: false })),
-        ...allMaterials,
-        ...prev.fieldZone,
-        ...prev.graveyard,
-        ...prev.banished,
+    setFieldState(prev => {
+      const fieldZones: FieldZoneType[] = [
+        'monster1', 'monster2', 'monster3', 'monster4', 'monster5',
+        'spell1', 'spell2', 'spell3', 'spell4', 'spell5',
+        'extraMonster1', 'extraMonster2', 'fieldSpell'
       ];
+      
+      const cardsFromField: GameCard[] = [];
+      const extraCards: GameCard[] = [];
+      
+      fieldZones.forEach(zone => {
+        const card = prev[zone] as GameCard | null;
+        if (card) {
+          // Return materials to GY
+          if (card.attachedCards) {
+            cardsFromField.push(...card.attachedCards);
+          }
+          // Check if extra deck card
+          if (isExtraDeckCardType(card.type)) {
+            extraCards.push({ ...card, attachedCards: undefined, isFaceDown: false });
+          } else {
+            cardsFromField.push({ ...card, attachedCards: undefined, isFaceDown: false });
+          }
+        }
+      });
+
+      const mainDeckCards = [
+        ...prev.hand,
+        ...cardsFromField.filter(c => !isExtraDeckCardType(c.type)),
+        ...prev.graveyard.filter(c => !isExtraDeckCardType(c.type)),
+        ...prev.banished.filter(c => !isExtraDeckCardType(c.type)),
+      ];
+
+      const extraDeckCards = [
+        ...prev.extraDeck,
+        ...extraCards,
+        ...prev.graveyard.filter(c => isExtraDeckCardType(c.type)),
+        ...prev.banished.filter(c => isExtraDeckCardType(c.type)),
+      ];
+
       return {
-        ...prev,
-        deckPile: shuffleArray([...prev.deckPile, ...allCards]),
-        hand: [],
-        field: [],
-        fieldZone: [],
-        graveyard: [],
-        banished: [],
+        ...INITIAL_FIELD_STATE,
+        deck: shuffleArray([...prev.deck, ...mainDeckCards]),
+        extraDeck: extraDeckCards,
+        sideDeck: prev.sideDeck,
       };
     });
   }, []);
 
-  const returnToTopOfDeck = useCallback((card: GameCard, fromZone: ZoneType, cardIndex: number) => {
-    setGameState(prev => {
-      const fromArray = [...prev[fromZone]] as GameCard[];
-      fromArray.splice(cardIndex, 1);
-      
+  const getOccupiedZones = useCallback((): FieldZoneType[] => {
+    const zones: FieldZoneType[] = [
+      'monster1', 'monster2', 'monster3', 'monster4', 'monster5',
+      'spell1', 'spell2', 'spell3', 'spell4', 'spell5',
+      'extraMonster1', 'extraMonster2', 'fieldSpell'
+    ];
+    return zones.filter(zone => fieldState[zone] !== null);
+  }, [fieldState]);
+
+  const handlePlaceCard = useCallback((zone: FieldZoneType, faceDown: boolean, position: 'attack' | 'defense') => {
+    const card = placementModal.card;
+    if (!card) return;
+
+    setFieldState(prev => {
+      // Remove from hand
+      const handIndex = prev.hand.findIndex(c => c.instanceId === card.instanceId);
+      if (handIndex === -1) return prev;
+
+      const newHand = [...prev.hand];
+      newHand.splice(handIndex, 1);
+
+      const placedCard: GameCard = {
+        ...card,
+        isFaceDown: faceDown,
+        position: position,
+      };
+
       return {
         ...prev,
-        [fromZone]: fromArray,
-        deckPile: [{ ...card, isFaceDown: false }, ...prev.deckPile],
+        hand: newHand,
+        [zone]: placedCard,
       };
+    });
+
+    setPlacementModal({ open: false, card: null });
+  }, [placementModal.card]);
+
+  const handleZoneClick = useCallback((zone: FieldZoneType) => {
+    // Open zone viewer for pile zones
+    if (['graveyard', 'banished', 'extraDeck', 'deck', 'sideDeck'].includes(zone)) {
+      setViewerModal({ open: true, zone });
+    }
+  }, []);
+
+  const handleCardOnFieldClick = useCallback((card: GameCard, zone: FieldZoneType) => {
+    if (attachMode) {
+      // Attach card as material
+      setFieldState(prev => {
+        const targetCard = prev[attachMode.targetZone as keyof FieldState];
+        if (!targetCard || Array.isArray(targetCard)) return prev;
+
+        // Add as material
+        const updatedTarget: GameCard = {
+          ...(targetCard as GameCard),
+          attachedCards: [...((targetCard as GameCard).attachedCards || []), card]
+        };
+        
+        // Type-safe update for single card zones
+        const singleCardZones = ['monster1', 'monster2', 'monster3', 'monster4', 'monster5',
+          'spell1', 'spell2', 'spell3', 'spell4', 'spell5',
+          'extraMonster1', 'extraMonster2', 'fieldSpell'] as const;
+        
+        if (singleCardZones.includes(attachMode.targetZone as any) && singleCardZones.includes(zone as any)) {
+          const updates: Partial<FieldState> = {
+            [attachMode.targetZone]: updatedTarget,
+            [zone]: null,
+          };
+          return { ...prev, ...updates } as FieldState;
+        }
+        
+        return prev;
+      });
+      setAttachMode(null);
+      return;
+    }
+    
+    setCardActionsModal({ open: true, card, zone });
+  }, [attachMode]);
+
+  const handleCardDrop = useCallback((zone: FieldZoneType, card: GameCard) => {
+    // Handle dropped card from drag and drop
+    setFieldState(prev => {
+      // Remove from source (hand, or check other zones)
+      const handIndex = prev.hand.findIndex(c => c.instanceId === card.instanceId);
+      let newHand = prev.hand;
+      if (handIndex !== -1) {
+        newHand = [...prev.hand];
+        newHand.splice(handIndex, 1);
+      }
+      
+      // Place in zone
+      if (zone === 'graveyard') {
+        return { ...prev, hand: newHand, graveyard: [...prev.graveyard, card] };
+      } else if (zone === 'banished') {
+        return { ...prev, hand: newHand, banished: [...prev.banished, card] };
+      } else if (zone === 'deck') {
+        return { ...prev, hand: newHand, deck: [...prev.deck, card] };
+      } else if (zone === 'sideDeck') {
+        return { ...prev, hand: newHand, sideDeck: [...prev.sideDeck, card] };
+      } else if (zone === 'extraDeck') {
+        return { ...prev, hand: newHand, extraDeck: [...prev.extraDeck, card] };
+      } else {
+        // Single card zone
+        return { ...prev, hand: newHand, [zone]: card };
+      }
     });
   }, []);
 
-  const returnToBottomOfDeck = useCallback((card: GameCard, fromZone: ZoneType, cardIndex: number) => {
-    setGameState(prev => {
-      const fromArray = [...prev[fromZone]] as GameCard[];
-      fromArray.splice(cardIndex, 1);
-      
-      return {
-        ...prev,
-        [fromZone]: fromArray,
-        deckPile: [...prev.deckPile, { ...card, isFaceDown: false }],
-      };
-    });
-  }, []);
-
-  const shuffleIntoDeck = useCallback((card: GameCard, fromZone: ZoneType, cardIndex: number) => {
-    setGameState(prev => {
-      const fromArray = [...prev[fromZone]] as GameCard[];
-      fromArray.splice(cardIndex, 1);
-      
-      return {
-        ...prev,
-        [fromZone]: fromArray,
-        deckPile: shuffleArray([...prev.deckPile, { ...card, isFaceDown: false }]),
-      };
-    });
-  }, []);
-
-  const sendToExtraDeck = useCallback((card: GameCard, fromZone: ZoneType, cardIndex: number) => {
-    setGameState(prev => {
-      const fromArray = [...prev[fromZone]] as GameCard[];
-      fromArray.splice(cardIndex, 1);
-      
-      return {
-        ...prev,
-        [fromZone]: fromArray,
-        extraDeckPile: [...prev.extraDeckPile, { ...card, isFaceDown: false }],
-      };
-    });
+  const handleHandCardClick = useCallback((card: GameCard) => {
+    // Open placement modal
+    setPlacementModal({ open: true, card });
   }, []);
 
   const searchCardInDeck = useCallback((cardName: string) => {
     if (!cardName.trim()) return;
     
-    setGameState(prev => {
+    setFieldState(prev => {
       const lowerQuery = cardName.toLowerCase();
-      const cardIndex = prev.deckPile.findIndex(c => 
+      const cardIndex = prev.deck.findIndex(c => 
         c.name.toLowerCase().includes(lowerQuery)
       );
       
       if (cardIndex === -1) return prev;
       
-      const newDeckPile = [...prev.deckPile];
-      const [foundCard] = newDeckPile.splice(cardIndex, 1);
+      const newDeck = [...prev.deck];
+      const [foundCard] = newDeck.splice(cardIndex, 1);
       
       return {
         ...prev,
-        deckPile: newDeckPile,
+        deck: newDeck,
         hand: [...prev.hand, { ...foundCard, isFaceDown: false }],
       };
     });
@@ -472,57 +421,152 @@ export const DuelDeckViewer = ({
     setShowSearch(false);
   }, []);
 
-  const toggleZoneExpanded = (zone: string) => {
-    setExpandedZones(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(zone)) {
-        newSet.delete(zone);
-      } else {
-        newSet.add(zone);
+  // Card actions from modal
+  const handleFieldCardAction = useCallback((action: string) => {
+    const { card, zone } = cardActionsModal;
+    if (!card || !zone) return;
+
+    const singleCardZones = ['monster1', 'monster2', 'monster3', 'monster4', 'monster5',
+      'spell1', 'spell2', 'spell3', 'spell4', 'spell5',
+      'extraMonster1', 'extraMonster2', 'fieldSpell'] as const;
+
+    setFieldState(prev => {
+      const currentCard = prev[zone as keyof FieldState];
+      if (!currentCard || Array.isArray(currentCard)) return prev;
+
+      let updates: Partial<FieldState> = {};
+      
+      switch (action) {
+        case 'flipUp':
+          updates = { [zone]: { ...(currentCard as GameCard), isFaceDown: false } };
+          break;
+        case 'flipDown':
+          updates = { [zone]: { ...(currentCard as GameCard), isFaceDown: true } };
+          break;
+        case 'togglePosition': {
+          const gc = currentCard as GameCard;
+          updates = { 
+            [zone]: { ...gc, position: gc.position === 'attack' ? 'defense' : 'attack' }
+          };
+          break;
+        }
+        case 'toGraveyard': {
+          const materials = card.attachedCards || [];
+          updates = { 
+            [zone]: null, 
+            graveyard: [...prev.graveyard, { ...card, isFaceDown: false, attachedCards: undefined }, ...materials]
+          };
+          break;
+        }
+        case 'toBanished': {
+          const materials = card.attachedCards || [];
+          updates = { 
+            [zone]: null, 
+            banished: [...prev.banished, { ...card, isFaceDown: false, attachedCards: undefined }],
+            graveyard: [...prev.graveyard, ...materials]
+          };
+          break;
+        }
+        case 'toHand': {
+          const materials = card.attachedCards || [];
+          updates = { 
+            [zone]: null, 
+            hand: [...prev.hand, { ...card, isFaceDown: false, attachedCards: undefined }],
+            graveyard: [...prev.graveyard, ...materials]
+          };
+          break;
+        }
+        case 'toTopDeck': {
+          const materials = card.attachedCards || [];
+          updates = { 
+            [zone]: null, 
+            deck: [{ ...card, isFaceDown: false, attachedCards: undefined }, ...prev.deck],
+            graveyard: [...prev.graveyard, ...materials]
+          };
+          break;
+        }
+        case 'toBottomDeck': {
+          const materials = card.attachedCards || [];
+          updates = { 
+            [zone]: null, 
+            deck: [...prev.deck, { ...card, isFaceDown: false, attachedCards: undefined }],
+            graveyard: [...prev.graveyard, ...materials]
+          };
+          break;
+        }
+        case 'shuffleIntoDeck': {
+          const materials = card.attachedCards || [];
+          updates = { 
+            [zone]: null, 
+            deck: shuffleArray([...prev.deck, { ...card, isFaceDown: false, attachedCards: undefined }]),
+            graveyard: [...prev.graveyard, ...materials]
+          };
+          break;
+        }
+        case 'toExtraDeck': {
+          const materials = card.attachedCards || [];
+          updates = { 
+            [zone]: null, 
+            extraDeck: [...prev.extraDeck, { ...card, isFaceDown: false, attachedCards: undefined }],
+            graveyard: [...prev.graveyard, ...materials]
+          };
+          break;
+        }
       }
-      return newSet;
+      
+      return { ...prev, ...updates } as FieldState;
     });
-  };
-
-  // Drag and Drop handlers
-  const handleDragStart = (e: React.DragEvent, card: GameCard, fromZone: ZoneType, index: number) => {
-    setDraggedCard({ card, fromZone, index });
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', card.instanceId);
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  };
-
-  const handleDrop = (e: React.DragEvent, toZone: ZoneType) => {
-    e.preventDefault();
-    if (!draggedCard) return;
     
-    const { card, fromZone, index } = draggedCard;
-    if (fromZone !== toZone) {
-      moveCardToZone(card, fromZone, toZone, index);
-    }
-    setDraggedCard(null);
-  };
+    setCardActionsModal({ open: false, card: null, zone: null });
+  }, [cardActionsModal]);
 
-  const handleDragEnd = () => {
-    setDraggedCard(null);
-  };
+  const handleDetachMaterial = useCallback((materialIndex: number) => {
+    const { card, zone } = cardActionsModal;
+    if (!card || !zone || !card.attachedCards) return;
 
-  const handleCardClick = (card: GameCard, zone: ZoneType, index: number) => {
-    // If in attach mode, attach this card as material
-    if (attachMode && zone !== 'field') {
-      attachAsMaterial(card, zone, index, attachMode.targetIndex);
-      return;
-    }
-    
-    setSelectedCard(card);
-    setSelectedCardZone(zone);
-    setSelectedCardIndex(index);
-    setShowActionsModal(true);
-  };
+    setFieldState(prev => {
+      const currentCard = prev[zone] as GameCard;
+      if (!currentCard?.attachedCards) return prev;
+
+      const newMaterials = [...currentCard.attachedCards];
+      const [detached] = newMaterials.splice(materialIndex, 1);
+
+      return {
+        ...prev,
+        [zone]: { ...currentCard, attachedCards: newMaterials },
+        graveyard: [...prev.graveyard, detached],
+      };
+    });
+  }, [cardActionsModal]);
+
+  const handleZoneViewerAction = useCallback((action: string, card: GameCard, index: number) => {
+    const zone = viewerModal.zone;
+    if (!zone) return;
+
+    setFieldState(prev => {
+      const newState = { ...prev };
+      const sourceArray = [...(prev[zone as keyof FieldState] as GameCard[])];
+      sourceArray.splice(index, 1);
+      newState[zone as keyof FieldState] = sourceArray as any;
+
+      switch (action) {
+        case 'toHand':
+          newState.hand = [...prev.hand, { ...card, isFaceDown: false }];
+          break;
+        case 'toGY':
+          newState.graveyard = [...prev.graveyard, card];
+          break;
+        case 'toTop':
+          newState.deck = [card, ...prev.deck];
+          break;
+        case 'toBottom':
+          newState.deck = [...prev.deck, card];
+          break;
+      }
+
+      return newState;
+    });
+  }, [viewerModal.zone]);
 
   // Calculate total cards
   const totalMainDeck = deck.reduce((acc, c) => acc + c.quantity, 0);
@@ -531,128 +575,13 @@ export const DuelDeckViewer = ({
 
   if (!isOpen) return null;
 
-  const CardZone = ({ 
-    title, 
-    cards, 
-    zone, 
-    icon: Icon,
-  }: { 
-    title: string; 
-    cards: GameCard[]; 
-    zone: ZoneType;
-    icon: typeof Hand;
-  }) => {
-    const isExpanded = expandedZones.has(zone);
-    const cardCount = cards.length;
-    const isDragOver = draggedCard && draggedCard.fromZone !== zone;
-    
-    return (
-      <div 
-        className={cn(
-          "flex flex-col border rounded-lg transition-all",
-          isDragOver ? "border-primary border-dashed bg-primary/5" : "border-border/50 bg-muted/20",
-          isFullscreen ? "flex-1" : ""
-        )}
-        onDragOver={handleDragOver}
-        onDrop={(e) => handleDrop(e, zone)}
-      >
-        <div 
-          className="flex items-center justify-between p-2 border-b border-border/50 cursor-pointer"
-          onClick={() => toggleZoneExpanded(zone)}
-        >
-          <div className="flex items-center gap-1">
-            <Icon className={cn("h-3 w-3", 
-              zone === 'graveyard' ? 'text-orange-500' : 
-              zone === 'banished' ? 'text-purple-500' : 
-              zone === 'field' ? 'text-green-500' : 
-              zone === 'fieldZone' ? 'text-emerald-500' :
-              zone === 'extraDeckPile' ? 'text-yellow-500' :
-              zone === 'sideDeckPile' ? 'text-cyan-500' : 'text-blue-500'
-            )} />
-            <span className="text-xs font-medium">{title}</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Badge variant="secondary" className="text-[10px] h-4 px-1">
-              {cardCount}
-            </Badge>
-            {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-          </div>
-        </div>
-        {isExpanded && (
-          <div className={cn(
-            "p-1 overflow-y-auto overflow-x-hidden",
-            isFullscreen ? "max-h-[200px]" : "max-h-[150px]"
-          )}>
-            <div className={cn(
-              "grid gap-1",
-              isFullscreen ? "grid-cols-8 sm:grid-cols-10 md:grid-cols-12" : "grid-cols-5 sm:grid-cols-6"
-            )}>
-              {cards.map((card, idx) => (
-                <div
-                  key={card.instanceId}
-                  className={cn(
-                    "relative group cursor-pointer",
-                    draggedCard?.card.instanceId === card.instanceId && "opacity-50",
-                    attachMode && zone !== 'field' && "ring-2 ring-yellow-400 animate-pulse"
-                  )}
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, card, zone, idx)}
-                  onDragEnd={handleDragEnd}
-                  onClick={() => handleCardClick(card, zone, idx)}
-                >
-                  <div className="absolute top-0 left-0 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <GripVertical className="h-3 w-3 text-white drop-shadow-lg" />
-                  </div>
-                  
-                  {/* Face-down indicator */}
-                  {card.isFaceDown && zone === 'field' && (
-                    <div className="absolute top-0 right-0 z-10">
-                      <EyeOff className="h-3 w-3 text-red-500 drop-shadow-lg" />
-                    </div>
-                  )}
-                  
-                  {/* Position indicator */}
-                  {zone === 'field' && card.position === 'defense' && (
-                    <div className="absolute bottom-0 left-0 z-10">
-                      <RotateCw className="h-3 w-3 text-blue-400 drop-shadow-lg" />
-                    </div>
-                  )}
-                  
-                  {/* XYZ materials count */}
-                  {card.attachedCards && card.attachedCards.length > 0 && (
-                    <div className="absolute bottom-0 right-0 z-10">
-                      <Badge className="text-[8px] h-3 px-1 bg-yellow-600">
-                        {card.attachedCards.length}
-                      </Badge>
-                    </div>
-                  )}
-                  
-                  <img
-                    src={card.isFaceDown ? CARD_BACK_URL : card.card_images?.[0]?.image_url_small}
-                    alt={card.isFaceDown ? 'Face-down card' : card.name}
-                    className={cn(
-                      "w-full rounded-sm shadow-sm hover:shadow-lg transition-all hover:scale-105 hover:z-10",
-                      card.position === 'defense' && zone === 'field' && "rotate-90"
-                    )}
-                    loading="lazy"
-                    title={card.isFaceDown ? 'Face-down card' : card.name}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
-
   const containerClasses = isFullscreen
     ? "fixed inset-4 z-50 bg-card/98 backdrop-blur-md border border-border rounded-xl shadow-2xl flex flex-col"
     : cn(
         "fixed z-40 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-2xl transition-all duration-300",
         isMinimized 
           ? "w-12 h-12 left-2 bottom-20" 
-          : "w-80 sm:w-96 h-[650px] max-h-[85vh] left-2 bottom-20"
+          : "w-[420px] sm:w-[500px] max-w-[95vw] h-[700px] max-h-[90vh] left-2 bottom-20"
       );
 
   return (
@@ -668,7 +597,7 @@ export const DuelDeckViewer = ({
         ) : (
           <div className="flex flex-col h-full">
             {/* Header */}
-            <div className="flex items-center justify-between p-2 border-b border-border">
+            <div className="flex items-center justify-between p-2 border-b border-border flex-shrink-0">
               <div className="flex items-center gap-2">
                 <Layers className="h-4 w-4 text-primary" />
                 <span className="font-semibold text-sm">Duelingbook</span>
@@ -706,10 +635,9 @@ export const DuelDeckViewer = ({
 
             {/* Attach mode banner */}
             {attachMode && (
-              <div className="bg-yellow-500/20 border-b border-yellow-500 p-2 flex items-center justify-between">
-                <span className="text-xs text-yellow-600 flex items-center gap-1">
-                  <Link2 className="h-3 w-3" />
-                  Selecione uma carta para anexar como material
+              <div className="bg-yellow-500/20 border-b border-yellow-500 p-2 flex items-center justify-between flex-shrink-0">
+                <span className="text-xs text-yellow-600">
+                  Selecione uma carta no campo para anexar como material
                 </span>
                 <Button 
                   variant="ghost" 
@@ -736,29 +664,18 @@ export const DuelDeckViewer = ({
             ) : (
               <ScrollArea className="flex-1">
                 <div className="p-2 space-y-2">
-                  {/* Opponent Field (if in duel) */}
-                  {duelId && currentUserId && (
-                    <OpponentFieldViewer 
-                      duelId={duelId} 
-                      currentUserId={currentUserId}
-                      opponentUsername={opponentUsername}
-                    />
-                  )}
-
                   {/* Deck Controls */}
                   <div className="flex items-center justify-between gap-1 flex-wrap p-2 bg-muted/30 rounded-lg">
                     <div className="flex items-center gap-1 flex-wrap">
                       <Badge variant="outline" className="text-xs">
-                        Deck: {gameState.deckPile.length}
+                        Deck: {fieldState.deck.length}
                       </Badge>
                       <Badge variant="outline" className="text-xs">
-                        Extra: {gameState.extraDeckPile.length}
+                        Extra: {fieldState.extraDeck.length}
                       </Badge>
-                      {gameState.sideDeckPile.length > 0 && (
-                        <Badge variant="outline" className="text-xs">
-                          Side: {gameState.sideDeckPile.length}
-                        </Badge>
-                      )}
+                      <Badge variant="outline" className="text-xs">
+                        Mão: {fieldState.hand.length}
+                      </Badge>
                     </div>
                     <div className="flex items-center gap-1">
                       <Button
@@ -769,15 +686,6 @@ export const DuelDeckViewer = ({
                         title="Buscar Carta"
                       >
                         <Search className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={() => setShowDeckPile(!showDeckPile)}
-                        title={showDeckPile ? "Esconder Deck" : "Ver Deck"}
-                      >
-                        {showDeckPile ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
                       </Button>
                       <Button
                         variant="ghost"
@@ -827,7 +735,7 @@ export const DuelDeckViewer = ({
                       variant="outline"
                       className="flex-1 h-7 text-xs"
                       onClick={drawCard}
-                      disabled={gameState.deckPile.length === 0}
+                      disabled={fieldState.deck.length === 0}
                     >
                       Comprar 1
                     </Button>
@@ -836,51 +744,60 @@ export const DuelDeckViewer = ({
                       variant="outline"
                       className="flex-1 h-7 text-xs"
                       onClick={() => drawMultiple(5)}
-                      disabled={gameState.deckPile.length === 0}
+                      disabled={fieldState.deck.length === 0}
                     >
                       Comprar 5
                     </Button>
                   </div>
 
-                  {/* Deck Pile View */}
-                  {showDeckPile && (
-                    <CardZone 
-                      title="Deck Principal" 
-                      cards={gameState.deckPile} 
-                      zone="deckPile" 
-                      icon={Layers}
-                    />
-                  )}
+                  {/* Hand Zone */}
+                  <div className="border rounded-lg p-2 bg-muted/20">
+                    <div className="flex items-center gap-1 mb-2">
+                      <Hand className="h-3 w-3 text-green-500" />
+                      <span className="text-xs font-medium">Mão</span>
+                      <Badge variant="secondary" className="text-[10px] h-4 px-1 ml-auto">
+                        {fieldState.hand.length}
+                      </Badge>
+                    </div>
+                    <div className="flex flex-wrap gap-1 min-h-[60px]">
+                      {fieldState.hand.map((card) => (
+                        <div
+                          key={card.instanceId}
+                          className="relative group cursor-pointer"
+                          draggable
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData('application/json', JSON.stringify(card));
+                            e.dataTransfer.effectAllowed = 'move';
+                          }}
+                          onClick={() => handleHandCardClick(card)}
+                        >
+                          <div className="absolute top-0 left-0 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <GripVertical className="h-3 w-3 text-white drop-shadow-lg" />
+                          </div>
+                          <img
+                            src={card.card_images?.[0]?.image_url_small}
+                            alt={card.name}
+                            className="h-16 sm:h-20 w-auto rounded-sm shadow-sm hover:shadow-lg transition-all hover:scale-105"
+                            title={card.name}
+                          />
+                        </div>
+                      ))}
+                      {fieldState.hand.length === 0 && (
+                        <p className="text-xs text-muted-foreground w-full text-center py-4">
+                          Clique em "Comprar" para adicionar cartas à mão
+                        </p>
+                      )}
+                    </div>
+                  </div>
 
-                  {/* Main Zones */}
-                  <CardZone title="Mão" cards={gameState.hand} zone="hand" icon={Hand} />
-                  <CardZone title="Campo" cards={gameState.field} zone="field" icon={Layers} />
-                  
-                  {/* Field Zone */}
-                  {(gameState.fieldZone.length > 0 || expandedZones.has('fieldZone')) && (
-                    <CardZone title="Zona de Campo" cards={gameState.fieldZone} zone="fieldZone" icon={Crown} />
-                  )}
-                  
-                  <CardZone title="Cemitério" cards={gameState.graveyard} zone="graveyard" icon={Flame} />
-                  <CardZone title="Banidos" cards={gameState.banished} zone="banished" icon={Ban} />
-                  
-                  {/* Extra Deck */}
-                  <CardZone 
-                    title="Extra Deck" 
-                    cards={gameState.extraDeckPile} 
-                    zone="extraDeckPile" 
-                    icon={Sparkles}
+                  {/* Field Board */}
+                  <DuelFieldBoard
+                    fieldState={fieldState}
+                    onZoneClick={handleZoneClick}
+                    onCardClick={handleCardOnFieldClick}
+                    onCardDrop={handleCardDrop}
+                    isFullscreen={isFullscreen}
                   />
-                  
-                  {/* Side Deck */}
-                  {gameState.sideDeckPile.length > 0 && (
-                    <CardZone 
-                      title="Side Deck" 
-                      cards={gameState.sideDeckPile} 
-                      zone="sideDeckPile" 
-                      icon={Layers}
-                    />
-                  )}
                 </div>
               </ScrollArea>
             )}
@@ -888,77 +805,59 @@ export const DuelDeckViewer = ({
         )}
       </div>
 
-      {/* Card Actions Modal */}
-      <CardActionsModal
-        card={selectedCard}
-        open={showActionsModal}
-        onClose={() => setShowActionsModal(false)}
-        currentZone={selectedCardZone}
-        cardIndex={selectedCardIndex}
-        onMoveToZone={(toZone) => {
-          if (selectedCard) {
-            moveCardToZone(selectedCard, selectedCardZone, toZone, selectedCardIndex);
-          }
-        }}
-        onSetFaceDown={() => {
-          if (selectedCard && selectedCardZone === 'hand') {
-            setCardToField(selectedCard, selectedCardZone, selectedCardIndex);
-          } else if (selectedCard && selectedCardZone === 'field') {
-            setCardFaceDown(selectedCardZone, selectedCardIndex, true);
-          }
-        }}
-        onFlipFaceUp={() => {
-          if (selectedCard) {
-            flipCardUp(selectedCardZone, selectedCardIndex);
-          }
-        }}
-        onTogglePosition={() => {
-          if (selectedCard) {
-            toggleCardPosition(selectedCardZone, selectedCardIndex);
-          }
-        }}
+      {/* Placement Modal */}
+      <ZonePlacementModal
+        open={placementModal.open}
+        onClose={() => setPlacementModal({ open: false, card: null })}
+        card={placementModal.card}
+        onPlaceCard={handlePlaceCard}
+        occupiedZones={getOccupiedZones()}
+      />
+
+      {/* Zone Viewer Modal */}
+      <ZoneViewerModal
+        open={viewerModal.open}
+        onClose={() => setViewerModal({ open: false, zone: null })}
+        zone={viewerModal.zone}
+        cards={
+          viewerModal.zone 
+            ? (fieldState[viewerModal.zone as keyof FieldState] as GameCard[]) || []
+            : []
+        }
+        onCardClick={(card, idx) => handleZoneViewerAction('toHand', card, idx)}
+        onAddToHand={(card, idx) => handleZoneViewerAction('toHand', card, idx)}
+        onSendToGY={(card, idx) => handleZoneViewerAction('toGY', card, idx)}
+        onReturnToTop={viewerModal.zone === 'deck' ? (card, idx) => handleZoneViewerAction('toTop', card, idx) : undefined}
+        onReturnToBottom={viewerModal.zone === 'deck' ? (card, idx) => handleZoneViewerAction('toBottom', card, idx) : undefined}
+        onShuffle={viewerModal.zone === 'deck' ? shuffleDeck : undefined}
+        onDraw={viewerModal.zone === 'deck' ? drawCard : undefined}
+        isDeck={viewerModal.zone === 'deck'}
+      />
+
+      {/* Field Card Actions Modal */}
+      <FieldCardActionsModal
+        open={cardActionsModal.open}
+        onClose={() => setCardActionsModal({ open: false, card: null, zone: null })}
+        card={cardActionsModal.card}
+        zone={cardActionsModal.zone}
+        onFlipFaceUp={() => handleFieldCardAction('flipUp')}
+        onFlipFaceDown={() => handleFieldCardAction('flipDown')}
+        onTogglePosition={() => handleFieldCardAction('togglePosition')}
+        onSendToGraveyard={() => handleFieldCardAction('toGraveyard')}
+        onSendToBanished={() => handleFieldCardAction('toBanished')}
+        onReturnToHand={() => handleFieldCardAction('toHand')}
+        onReturnToTopOfDeck={() => handleFieldCardAction('toTopDeck')}
+        onReturnToBottomOfDeck={() => handleFieldCardAction('toBottomDeck')}
+        onShuffleIntoDeck={() => handleFieldCardAction('shuffleIntoDeck')}
+        onReturnToExtraDeck={() => handleFieldCardAction('toExtraDeck')}
         onAttachMaterial={() => {
-          if (selectedCard && selectedCardZone === 'field') {
-            setAttachMode({ targetCard: selectedCard, targetIndex: selectedCardIndex });
-            setShowActionsModal(false);
+          if (cardActionsModal.zone) {
+            setAttachMode({ targetZone: cardActionsModal.zone });
+            setCardActionsModal({ open: false, card: null, zone: null });
           }
         }}
-        onDetachMaterial={(materialIndex) => {
-          if (selectedCard) {
-            detachMaterial(selectedCardIndex, materialIndex);
-          }
-        }}
-        onReturnToTopOfDeck={() => {
-          if (selectedCard) {
-            returnToTopOfDeck(selectedCard, selectedCardZone, selectedCardIndex);
-          }
-        }}
-        onReturnToBottomOfDeck={() => {
-          if (selectedCard) {
-            returnToBottomOfDeck(selectedCard, selectedCardZone, selectedCardIndex);
-          }
-        }}
-        onShuffleIntoDeck={() => {
-          if (selectedCard) {
-            shuffleIntoDeck(selectedCard, selectedCardZone, selectedCardIndex);
-          }
-        }}
-        onSendToExtraDeck={() => {
-          if (selectedCard) {
-            sendToExtraDeck(selectedCard, selectedCardZone, selectedCardIndex);
-          }
-        }}
-        onMoveToFieldZone={() => {
-          if (selectedCard) {
-            moveCardToZone(selectedCard, selectedCardZone, 'fieldZone', selectedCardIndex);
-          }
-        }}
-        isExtraDeckCard={selectedCard ? isExtraDeckCardType(selectedCard.type) : false}
-        isXYZCard={selectedCard ? isXYZCard(selectedCard.type) : false}
-        isFaceDown={selectedCard?.isFaceDown || false}
-        isOnField={selectedCardZone === 'field'}
-        isFieldSpell={selectedCard?.type?.includes('Field') || false}
-        attachedMaterials={selectedCard?.attachedCards || []}
+        onDetachMaterial={handleDetachMaterial}
+        isExtraDeckCard={cardActionsModal.card ? isExtraDeckCardType(cardActionsModal.card.type) : false}
       />
     </>
   );
