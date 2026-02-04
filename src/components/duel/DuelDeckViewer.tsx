@@ -598,18 +598,21 @@ export const DuelDeckViewer = ({
       sourceArray.splice(index, 1);
       newState[zone as keyof FieldState] = sourceArray as any;
 
+      // Use the updated sourceArray if moving within the same zone (deck)
+      const currentDeck = zone === 'deck' ? sourceArray : prev.deck;
+
       switch (action) {
         case 'toHand':
           newState.hand = [...prev.hand, { ...card, isFaceDown: false }];
           break;
         case 'toGY':
-          newState.graveyard = [...prev.graveyard, card];
+          newState.graveyard = zone === 'graveyard' ? sourceArray : [...prev.graveyard, card];
           break;
         case 'toTop':
-          newState.deck = [card, ...prev.deck];
+          newState.deck = [card, ...currentDeck];
           break;
         case 'toBottom':
-          newState.deck = [...prev.deck, card];
+          newState.deck = [...currentDeck, card];
           break;
       }
 
