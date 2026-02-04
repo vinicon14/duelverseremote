@@ -254,7 +254,10 @@ export const DuelDeckViewer = ({
   const drawCard = useCallback(() => {
     setFieldState(prev => {
       if (prev.deck.length === 0) return prev;
-      const [drawnCard, ...remaining] = prev.deck;
+      // Random draw - select a random card from the deck
+      const randomIndex = Math.floor(Math.random() * prev.deck.length);
+      const drawnCard = prev.deck[randomIndex];
+      const remaining = prev.deck.filter((_, idx) => idx !== randomIndex);
       return {
         ...prev,
         deck: remaining,
@@ -266,11 +269,21 @@ export const DuelDeckViewer = ({
   const drawMultiple = useCallback((count: number) => {
     setFieldState(prev => {
       const toDraw = Math.min(count, prev.deck.length);
-      const drawnCards = prev.deck.slice(0, toDraw).map(c => ({ ...c, isFaceDown: false }));
-      const remaining = prev.deck.slice(toDraw);
+      if (toDraw === 0) return prev;
+      
+      // Random draw - select random cards from the deck
+      const deckCopy = [...prev.deck];
+      const drawnCards: GameCard[] = [];
+      
+      for (let i = 0; i < toDraw; i++) {
+        const randomIndex = Math.floor(Math.random() * deckCopy.length);
+        drawnCards.push({ ...deckCopy[randomIndex], isFaceDown: false });
+        deckCopy.splice(randomIndex, 1);
+      }
+      
       return {
         ...prev,
-        deck: remaining,
+        deck: deckCopy,
         hand: [...prev.hand, ...drawnCards],
       };
     });
