@@ -604,6 +604,15 @@ export const DuelDeckViewer = ({
               </div>
               <div className="flex items-center gap-1">
                 <Button
+                  variant="destructive"
+                  size="sm"
+                  className="h-6 px-2 text-xs gap-1"
+                  onClick={onClose}
+                >
+                  <X className="h-3 w-3" />
+                  Sair
+                </Button>
+                <Button
                   variant="ghost"
                   size="icon"
                   className="h-6 w-6"
@@ -622,14 +631,6 @@ export const DuelDeckViewer = ({
                     <Minus className="h-3 w-3" />
                   </Button>
                 )}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={onClose}
-                >
-                  <X className="h-3 w-3" />
-                </Button>
               </div>
             </div>
 
