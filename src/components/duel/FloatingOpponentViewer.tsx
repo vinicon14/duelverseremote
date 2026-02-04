@@ -12,11 +12,13 @@ import {
   ChevronUp,
   X,
   Minimize2,
-  Maximize2,
-  Hand
+  Hand,
+  Move,
+  Sparkles
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
+import { useDraggable } from '@/hooks/useDraggable';
 
 interface OpponentCard {
   id: number;
@@ -24,12 +26,37 @@ interface OpponentCard {
   image: string;
   isFaceDown?: boolean;
   materials?: number;
+  position?: string;
+}
+
+interface ZoneCards {
+  monster1: OpponentCard | null;
+  monster2: OpponentCard | null;
+  monster3: OpponentCard | null;
+  monster4: OpponentCard | null;
+  monster5: OpponentCard | null;
+}
+
+interface SpellZoneCards {
+  spell1: OpponentCard | null;
+  spell2: OpponentCard | null;
+  spell3: OpponentCard | null;
+  spell4: OpponentCard | null;
+  spell5: OpponentCard | null;
+}
+
+interface ExtraMonsterZones {
+  extraMonster1: OpponentCard | null;
+  extraMonster2: OpponentCard | null;
 }
 
 interface OpponentState {
   hand: number;
   field: OpponentCard[];
-  fieldZone?: OpponentCard[];
+  monsterZones?: ZoneCards;
+  spellZones?: SpellZoneCards;
+  extraMonsterZones?: ExtraMonsterZones;
+  fieldSpell?: OpponentCard | null;
   graveyard: OpponentCard[];
   banished: OpponentCard[];
   deckCount: number;
@@ -54,6 +81,10 @@ export const FloatingOpponentViewer = ({
   const [isMinimized, setIsMinimized] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
 
+  const { position, isDragging, elementRef, dragHandlers } = useDraggable({
+    initialPosition: { x: 8, y: 80 },
+  });
+
   useEffect(() => {
     if (!duelId) return;
 
@@ -66,7 +97,10 @@ export const FloatingOpponentViewer = ({
           setOpponentState({
             hand: payload.hand || 0,
             field: payload.field || [],
-            fieldZone: payload.fieldZone || [],
+            monsterZones: payload.monsterZones || undefined,
+            spellZones: payload.spellZones || undefined,
+            extraMonsterZones: payload.extraMonsterZones || undefined,
+            fieldSpell: payload.fieldSpell || null,
             graveyard: payload.graveyard || [],
             banished: payload.banished || [],
             deckCount: payload.deckCount || 0,
@@ -99,12 +133,46 @@ export const FloatingOpponentViewer = ({
     return (
       <button
         onClick={() => setIsMinimized(false)}
-        className="fixed left-2 top-20 z-40 w-10 h-10 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-lg flex items-center justify-center hover:bg-muted/50 transition-colors"
+        className="fixed z-40 w-10 h-10 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-lg flex items-center justify-center hover:bg-muted/50 transition-colors"
+        style={{ left: position.x, top: position.y }}
       >
         <Eye className="h-5 w-5 text-primary" />
       </button>
     );
   }
+
+  const ZoneSlotDisplay = ({ card, label }: { card: OpponentCard | null; label: string }) => (
+    <div className={cn(
+      "w-8 h-12 border border-dashed border-muted-foreground/30 rounded flex items-center justify-center",
+      card && "border-solid border-primary/30"
+    )}>
+      {card ? (
+        <div className="relative w-full h-full">
+          <img
+            src={card.image || CARD_BACK_URL}
+            alt={card.name}
+            title={card.isFaceDown ? 'Carta virada' : card.name}
+            className={cn(
+              "w-full h-full object-cover rounded",
+              card.position === 'defense' && "rotate-90"
+            )}
+          />
+          {card.isFaceDown && (
+            <div className="absolute top-0 right-0">
+              <EyeOff className="h-2 w-2 text-red-500" />
+            </div>
+          )}
+          {card.materials && card.materials > 0 && (
+            <Badge className="absolute -bottom-1 -right-1 text-[6px] h-3 px-0.5 bg-yellow-600">
+              {card.materials}
+            </Badge>
+          )}
+        </div>
+      ) : (
+        <span className="text-[6px] text-muted-foreground/50">{label}</span>
+      )}
+    </div>
+  );
 
   const ZoneDisplay = ({ 
     title, 
@@ -157,10 +225,21 @@ export const FloatingOpponentViewer = ({
   );
 
   return (
-    <div className="fixed left-2 top-20 z-40 w-72 sm:w-80 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-2xl overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between p-2 border-b border-border bg-muted/30">
+    <div 
+      ref={elementRef}
+      className={cn(
+        "fixed z-40 w-80 sm:w-96 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-2xl overflow-hidden",
+        isDragging && "cursor-grabbing"
+      )}
+      style={{ left: position.x, top: position.y }}
+    >
+      {/* Draggable Header */}
+      <div 
+        className="flex items-center justify-between p-2 border-b border-border bg-muted/30 cursor-grab hover:bg-muted/50"
+        {...dragHandlers}
+      >
         <div className="flex items-center gap-2">
+          <Move className="h-3 w-3 text-muted-foreground" />
           <Eye className="h-4 w-4 text-primary" />
           <span className="text-sm font-semibold">Deck de {opponentUsername}</span>
         </div>
@@ -205,7 +284,7 @@ export const FloatingOpponentViewer = ({
                 <span className="text-xs">Deck: {opponentState.deckCount}</span>
               </div>
               <div className="flex items-center gap-1">
-                <Layers className="h-3 w-3 text-yellow-500" />
+                <Sparkles className="h-3 w-3 text-yellow-500" />
                 <span className="text-xs">Extra: {opponentState.extraCount}</span>
               </div>
               <Button
@@ -218,42 +297,79 @@ export const FloatingOpponentViewer = ({
               </Button>
             </div>
 
-            {/* Field */}
-            <ZoneDisplay 
-              title="Campo" 
-              cards={opponentState.field} 
-              icon={Layers} 
-              color="text-green-500" 
-            />
-
-            {/* Field Zone */}
-            {opponentState.fieldZone && opponentState.fieldZone.length > 0 && (
-              <ZoneDisplay 
-                title="Zona de Campo" 
-                cards={opponentState.fieldZone} 
-                icon={Layers} 
-                color="text-emerald-500" 
-              />
-            )}
-
-            {/* Graveyard & Banished */}
             {!isCollapsed && (
-              <div className="grid grid-cols-2 gap-2">
-                <ZoneDisplay 
-                  title="Cemitério" 
-                  cards={opponentState.graveyard} 
-                  icon={Flame} 
-                  color="text-orange-500"
-                  compact 
-                />
-                <ZoneDisplay 
-                  title="Banido" 
-                  cards={opponentState.banished} 
-                  icon={Ban} 
-                  color="text-purple-500"
-                  compact 
-                />
-              </div>
+              <>
+                {/* Field Zones Layout */}
+                {opponentState.monsterZones && (
+                  <div className="space-y-2 p-2 bg-muted/20 rounded-lg">
+                    <span className="text-[10px] font-medium text-muted-foreground">Zonas de Campo do Oponente</span>
+                    
+                    {/* Extra Monster Zones */}
+                    {opponentState.extraMonsterZones && (
+                      <div className="flex justify-center gap-8">
+                        <ZoneSlotDisplay card={opponentState.extraMonsterZones.extraMonster1} label="EM1" />
+                        <ZoneSlotDisplay card={opponentState.extraMonsterZones.extraMonster2} label="EM2" />
+                      </div>
+                    )}
+
+                    {/* Monster Zones */}
+                    <div className="flex justify-center gap-1">
+                      <ZoneSlotDisplay card={opponentState.monsterZones.monster1} label="M1" />
+                      <ZoneSlotDisplay card={opponentState.monsterZones.monster2} label="M2" />
+                      <ZoneSlotDisplay card={opponentState.monsterZones.monster3} label="M3" />
+                      <ZoneSlotDisplay card={opponentState.monsterZones.monster4} label="M4" />
+                      <ZoneSlotDisplay card={opponentState.monsterZones.monster5} label="M5" />
+                    </div>
+
+                    {/* Spell/Trap Zones */}
+                    {opponentState.spellZones && (
+                      <div className="flex justify-center gap-1">
+                        <ZoneSlotDisplay card={opponentState.spellZones.spell1} label="S1" />
+                        <ZoneSlotDisplay card={opponentState.spellZones.spell2} label="S2" />
+                        <ZoneSlotDisplay card={opponentState.spellZones.spell3} label="S3" />
+                        <ZoneSlotDisplay card={opponentState.spellZones.spell4} label="S4" />
+                        <ZoneSlotDisplay card={opponentState.spellZones.spell5} label="S5" />
+                      </div>
+                    )}
+
+                    {/* Field Spell Zone */}
+                    {opponentState.fieldSpell && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-muted-foreground">Campo:</span>
+                        <ZoneSlotDisplay card={opponentState.fieldSpell} label="FS" />
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Fallback to old field display if no zone data */}
+                {!opponentState.monsterZones && opponentState.field.length > 0 && (
+                  <ZoneDisplay 
+                    title="Campo" 
+                    cards={opponentState.field} 
+                    icon={Layers} 
+                    color="text-green-500" 
+                  />
+                )}
+
+                {/* Graveyard & Banished */}
+                <div className="grid grid-cols-2 gap-2">
+                  <ZoneDisplay 
+                    title="Cemitério" 
+                    cards={opponentState.graveyard} 
+                    icon={Flame} 
+                    color="text-orange-500"
+                    compact 
+                  />
+                  <ZoneDisplay 
+                    title="Banido" 
+                    cards={opponentState.banished} 
+                    icon={Ban} 
+                    color="text-purple-500"
+                    compact 
+                  />
+                </div>
+              </>
             )}
           </div>
         )}
