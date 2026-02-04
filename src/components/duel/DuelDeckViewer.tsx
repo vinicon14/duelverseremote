@@ -428,33 +428,116 @@ export const DuelDeckViewer = ({
     setCardActionsModal({ open: true, card, zone });
   }, [attachMode]);
 
-  const handleCardDrop = useCallback((zone: FieldZoneType, card: GameCard) => {
+  const handleCardDrop = useCallback((zone: FieldZoneType, card: GameCard & { sourceZone?: FieldZoneType }) => {
     // Handle dropped card from drag and drop
     setFieldState(prev => {
-      // Remove from source (hand, or check other zones)
-      const handIndex = prev.hand.findIndex(c => c.instanceId === card.instanceId);
-      let newHand = prev.hand;
+      const sourceZone = card.sourceZone;
+      let newState = { ...prev };
+
+      // Remove from source zone
+      if (sourceZone) {
+        // Remove sourceZone from card data
+        const cleanCard = { ...card };
+        delete (cleanCard as any).sourceZone;
+
+        // Check if source is a single-card zone
+        const singleCardZones = ['monster1', 'monster2', 'monster3', 'monster4', 'monster5',
+          'spell1', 'spell2', 'spell3', 'spell4', 'spell5',
+          'extraMonster1', 'extraMonster2', 'fieldSpell'] as const;
+
+        if (singleCardZones.includes(sourceZone as any)) {
+          newState[sourceZone] = null;
+        } else if (['graveyard', 'banished', 'deck', 'extraDeck', 'sideDeck'].includes(sourceZone)) {
+          const sourceArray = [...(newState[sourceZone as keyof FieldState] as GameCard[])];
+          const idx = sourceArray.findIndex(c => c.instanceId === cleanCard.instanceId);
+          if (idx !== -1) {
+            sourceArray.splice(idx, 1);
+            (newState as any)[sourceZone] = sourceArray;
+          }
+        }
+      }
+
+      // Remove from hand if present
+      const handIndex = newState.hand.findIndex(c => c.instanceId === card.instanceId);
       if (handIndex !== -1) {
-        newHand = [...prev.hand];
+        const newHand = [...newState.hand];
         newHand.splice(handIndex, 1);
+        newState.hand = newHand;
       }
+
+      // Clean card data before placing
+      const placedCard = { ...card, isFaceDown: false, attachedCards: undefined };
+      delete (placedCard as any).sourceZone;
       
-      // Place in zone
+      // Place in target zone
       if (zone === 'graveyard') {
-        return { ...prev, hand: newHand, graveyard: [...prev.graveyard, card] };
+        newState.graveyard = [...newState.graveyard, placedCard];
       } else if (zone === 'banished') {
-        return { ...prev, hand: newHand, banished: [...prev.banished, card] };
+        newState.banished = [...newState.banished, placedCard];
       } else if (zone === 'deck') {
-        return { ...prev, hand: newHand, deck: [...prev.deck, card] };
+        newState.deck = [...newState.deck, placedCard];
       } else if (zone === 'sideDeck') {
-        return { ...prev, hand: newHand, sideDeck: [...prev.sideDeck, card] };
+        newState.sideDeck = [...newState.sideDeck, placedCard];
       } else if (zone === 'extraDeck') {
-        return { ...prev, hand: newHand, extraDeck: [...prev.extraDeck, card] };
+        newState.extraDeck = [...newState.extraDeck, placedCard];
       } else {
-        // Single card zone
-        return { ...prev, hand: newHand, [zone]: card };
+        // Single card zone - check if occupied
+        if (newState[zone] !== null) {
+          return prev; // Zone occupied, don't drop
+        }
+        (newState as any)[zone] = { ...placedCard, position: 'attack' };
       }
+
+      return newState;
     });
+  }, []);
+
+  // Handle drop on hand zone
+  const handleHandDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    const cardData = e.dataTransfer.getData('application/json');
+    if (!cardData) return;
+
+    try {
+      const card = JSON.parse(cardData) as GameCard & { sourceZone?: FieldZoneType };
+      
+      setFieldState(prev => {
+        const sourceZone = card.sourceZone;
+        let newState = { ...prev };
+
+        // Remove from source zone
+        if (sourceZone) {
+          const singleCardZones = ['monster1', 'monster2', 'monster3', 'monster4', 'monster5',
+            'spell1', 'spell2', 'spell3', 'spell4', 'spell5',
+            'extraMonster1', 'extraMonster2', 'fieldSpell'] as const;
+
+          if (singleCardZones.includes(sourceZone as any)) {
+            // Send materials to GY
+            const fieldCard = newState[sourceZone] as GameCard;
+            if (fieldCard?.attachedCards) {
+              newState.graveyard = [...newState.graveyard, ...fieldCard.attachedCards];
+            }
+            newState[sourceZone] = null;
+          } else if (['graveyard', 'banished', 'deck', 'extraDeck', 'sideDeck'].includes(sourceZone)) {
+            const sourceArray = [...(newState[sourceZone as keyof FieldState] as GameCard[])];
+            const idx = sourceArray.findIndex(c => c.instanceId === card.instanceId);
+            if (idx !== -1) {
+              sourceArray.splice(idx, 1);
+              (newState as any)[sourceZone] = sourceArray;
+            }
+          }
+        }
+
+        // Add to hand
+        const cleanCard = { ...card, isFaceDown: false, attachedCards: undefined };
+        delete (cleanCard as any).sourceZone;
+        newState.hand = [...newState.hand, cleanCard];
+
+        return newState;
+      });
+    } catch (err) {
+      console.error('Failed to parse dropped card:', err);
+    }
   }, []);
 
   const handleHandCardClick = useCallback((card: GameCard) => {
@@ -887,11 +970,25 @@ export const DuelDeckViewer = ({
                     </Button>
                   </div>
 
-                  {/* Hand Zone */}
-                  <div className="border rounded-lg p-2 bg-muted/20">
+                  {/* Hand Zone - Droppable */}
+                  <div 
+                    className="border rounded-lg p-2 bg-muted/20 transition-colors"
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.currentTarget.classList.add('border-primary', 'bg-primary/10');
+                    }}
+                    onDragLeave={(e) => {
+                      e.currentTarget.classList.remove('border-primary', 'bg-primary/10');
+                    }}
+                    onDrop={(e) => {
+                      e.currentTarget.classList.remove('border-primary', 'bg-primary/10');
+                      handleHandDrop(e);
+                    }}
+                  >
                     <div className="flex items-center gap-1 mb-2">
                       <Hand className="h-3 w-3 text-green-500" />
                       <span className="text-xs font-medium">Mão</span>
+                      <span className="text-[9px] text-muted-foreground ml-1">(arraste cartas aqui)</span>
                       <Badge variant="secondary" className="text-[10px] h-4 px-1 ml-auto">
                         {fieldState.hand.length}
                       </Badge>
@@ -900,10 +997,10 @@ export const DuelDeckViewer = ({
                       {fieldState.hand.map((card) => (
                         <div
                           key={card.instanceId}
-                          className="relative group cursor-pointer"
+                          className="relative group cursor-grab active:cursor-grabbing"
                           draggable
                           onDragStart={(e) => {
-                            e.dataTransfer.setData('application/json', JSON.stringify(card));
+                            e.dataTransfer.setData('application/json', JSON.stringify({ ...card, sourceZone: 'hand' }));
                             e.dataTransfer.effectAllowed = 'move';
                           }}
                           onClick={() => handleHandCardClick(card)}
@@ -921,7 +1018,7 @@ export const DuelDeckViewer = ({
                       ))}
                       {fieldState.hand.length === 0 && (
                         <p className="text-xs text-muted-foreground w-full text-center py-4">
-                          Clique em "Comprar" para adicionar cartas à mão
+                          Arraste cartas do campo ou clique em "Comprar"
                         </p>
                       )}
                     </div>
