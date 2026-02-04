@@ -17,7 +17,8 @@ import {
   Maximize2,
   Minimize2,
   Search,
-  GripVertical
+  GripVertical,
+  Move
 } from 'lucide-react';
 import { DeckCard } from '@/components/deckbuilder/DeckPanel';
 import { cn } from '@/lib/utils';
@@ -26,6 +27,7 @@ import { DuelFieldBoard, FieldState, FieldZoneType, GameCard } from './DuelField
 import { ZonePlacementModal } from './ZonePlacementModal';
 import { ZoneViewerModal } from './ZoneViewerModal';
 import { FieldCardActionsModal } from './FieldCardActionsModal';
+import { useDraggable } from '@/hooks/useDraggable';
 
 interface DuelDeckViewerProps {
   isOpen: boolean;
@@ -106,11 +108,16 @@ export const DuelDeckViewer = ({
   const [showSearch, setShowSearch] = useState(false);
   const [attachMode, setAttachMode] = useState<{ targetZone: FieldZoneType } | null>(null);
 
+  // Draggable functionality
+  const { position, isDragging, elementRef, dragHandlers } = useDraggable({
+    initialPosition: { x: 8, y: 80 },
+  });
+
   // Broadcast state changes to opponent
   const broadcastState = useCallback(() => {
     if (!duelId || !currentUserId) return;
     
-    const getFieldCards = (): { id: number; name: string; image: string; isFaceDown?: boolean; position?: string; materials?: number }[] => {
+    const getFieldCards = (): { id: number; name: string; image: string; isFaceDown?: boolean; position?: string; materials?: number; zone: string }[] => {
       const zones: FieldZoneType[] = [
         'monster1', 'monster2', 'monster3', 'monster4', 'monster5',
         'spell1', 'spell2', 'spell3', 'spell4', 'spell5',
@@ -118,16 +125,20 @@ export const DuelDeckViewer = ({
       ];
       
       return zones
-        .map(zone => fieldState[zone] as GameCard | null)
-        .filter((card): card is GameCard => card !== null)
-        .map(c => ({
-          id: c.id,
-          name: c.isFaceDown ? 'Face-down Card' : c.name,
-          image: c.isFaceDown ? CARD_BACK_URL : c.card_images?.[0]?.image_url_small || '',
-          isFaceDown: c.isFaceDown,
-          position: c.position,
-          materials: c.attachedCards?.length || 0
-        }));
+        .map(zone => {
+          const card = fieldState[zone] as GameCard | null;
+          if (!card) return null;
+          return {
+            id: card.id,
+            name: card.isFaceDown ? 'Face-down Card' : card.name,
+            image: card.isFaceDown ? CARD_BACK_URL : card.card_images?.[0]?.image_url_small || '',
+            isFaceDown: card.isFaceDown,
+            position: card.position,
+            materials: card.attachedCards?.length || 0,
+            zone: zone
+          };
+        })
+        .filter((card): card is NonNullable<typeof card> => card !== null);
     };
 
     const channel = supabase.channel(`deck-sync-${duelId}`);
@@ -138,6 +149,25 @@ export const DuelDeckViewer = ({
         userId: currentUserId,
         hand: fieldState.hand.length,
         field: getFieldCards(),
+        monsterZones: {
+          monster1: fieldState.monster1 ? { id: fieldState.monster1.id, name: fieldState.monster1.isFaceDown ? 'Face-down' : fieldState.monster1.name, image: fieldState.monster1.isFaceDown ? CARD_BACK_URL : fieldState.monster1.card_images?.[0]?.image_url_small, isFaceDown: fieldState.monster1.isFaceDown, position: fieldState.monster1.position } : null,
+          monster2: fieldState.monster2 ? { id: fieldState.monster2.id, name: fieldState.monster2.isFaceDown ? 'Face-down' : fieldState.monster2.name, image: fieldState.monster2.isFaceDown ? CARD_BACK_URL : fieldState.monster2.card_images?.[0]?.image_url_small, isFaceDown: fieldState.monster2.isFaceDown, position: fieldState.monster2.position } : null,
+          monster3: fieldState.monster3 ? { id: fieldState.monster3.id, name: fieldState.monster3.isFaceDown ? 'Face-down' : fieldState.monster3.name, image: fieldState.monster3.isFaceDown ? CARD_BACK_URL : fieldState.monster3.card_images?.[0]?.image_url_small, isFaceDown: fieldState.monster3.isFaceDown, position: fieldState.monster3.position } : null,
+          monster4: fieldState.monster4 ? { id: fieldState.monster4.id, name: fieldState.monster4.isFaceDown ? 'Face-down' : fieldState.monster4.name, image: fieldState.monster4.isFaceDown ? CARD_BACK_URL : fieldState.monster4.card_images?.[0]?.image_url_small, isFaceDown: fieldState.monster4.isFaceDown, position: fieldState.monster4.position } : null,
+          monster5: fieldState.monster5 ? { id: fieldState.monster5.id, name: fieldState.monster5.isFaceDown ? 'Face-down' : fieldState.monster5.name, image: fieldState.monster5.isFaceDown ? CARD_BACK_URL : fieldState.monster5.card_images?.[0]?.image_url_small, isFaceDown: fieldState.monster5.isFaceDown, position: fieldState.monster5.position } : null,
+        },
+        spellZones: {
+          spell1: fieldState.spell1 ? { id: fieldState.spell1.id, name: fieldState.spell1.isFaceDown ? 'Face-down' : fieldState.spell1.name, image: fieldState.spell1.isFaceDown ? CARD_BACK_URL : fieldState.spell1.card_images?.[0]?.image_url_small, isFaceDown: fieldState.spell1.isFaceDown } : null,
+          spell2: fieldState.spell2 ? { id: fieldState.spell2.id, name: fieldState.spell2.isFaceDown ? 'Face-down' : fieldState.spell2.name, image: fieldState.spell2.isFaceDown ? CARD_BACK_URL : fieldState.spell2.card_images?.[0]?.image_url_small, isFaceDown: fieldState.spell2.isFaceDown } : null,
+          spell3: fieldState.spell3 ? { id: fieldState.spell3.id, name: fieldState.spell3.isFaceDown ? 'Face-down' : fieldState.spell3.name, image: fieldState.spell3.isFaceDown ? CARD_BACK_URL : fieldState.spell3.card_images?.[0]?.image_url_small, isFaceDown: fieldState.spell3.isFaceDown } : null,
+          spell4: fieldState.spell4 ? { id: fieldState.spell4.id, name: fieldState.spell4.isFaceDown ? 'Face-down' : fieldState.spell4.name, image: fieldState.spell4.isFaceDown ? CARD_BACK_URL : fieldState.spell4.card_images?.[0]?.image_url_small, isFaceDown: fieldState.spell4.isFaceDown } : null,
+          spell5: fieldState.spell5 ? { id: fieldState.spell5.id, name: fieldState.spell5.isFaceDown ? 'Face-down' : fieldState.spell5.name, image: fieldState.spell5.isFaceDown ? CARD_BACK_URL : fieldState.spell5.card_images?.[0]?.image_url_small, isFaceDown: fieldState.spell5.isFaceDown } : null,
+        },
+        extraMonsterZones: {
+          extraMonster1: fieldState.extraMonster1 ? { id: fieldState.extraMonster1.id, name: fieldState.extraMonster1.isFaceDown ? 'Face-down' : fieldState.extraMonster1.name, image: fieldState.extraMonster1.isFaceDown ? CARD_BACK_URL : fieldState.extraMonster1.card_images?.[0]?.image_url_small, materials: fieldState.extraMonster1.attachedCards?.length || 0 } : null,
+          extraMonster2: fieldState.extraMonster2 ? { id: fieldState.extraMonster2.id, name: fieldState.extraMonster2.isFaceDown ? 'Face-down' : fieldState.extraMonster2.name, image: fieldState.extraMonster2.isFaceDown ? CARD_BACK_URL : fieldState.extraMonster2.card_images?.[0]?.image_url_small, materials: fieldState.extraMonster2.attachedCards?.length || 0 } : null,
+        },
+        fieldSpell: fieldState.fieldSpell ? { id: fieldState.fieldSpell.id, name: fieldState.fieldSpell.isFaceDown ? 'Face-down' : fieldState.fieldSpell.name, image: fieldState.fieldSpell.isFaceDown ? CARD_BACK_URL : fieldState.fieldSpell.card_images?.[0]?.image_url_small, isFaceDown: fieldState.fieldSpell.isFaceDown } : null,
         graveyard: fieldState.graveyard.map(c => ({ 
           id: c.id, 
           name: c.name, 
@@ -575,18 +605,29 @@ export const DuelDeckViewer = ({
 
   if (!isOpen) return null;
 
+  const containerStyle = isFullscreen 
+    ? {} 
+    : isMinimized 
+      ? { left: position.x, top: position.y } 
+      : { left: position.x, top: position.y };
+
   const containerClasses = isFullscreen
     ? "fixed inset-4 z-50 bg-card/98 backdrop-blur-md border border-border rounded-xl shadow-2xl flex flex-col"
     : cn(
         "fixed z-40 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-2xl transition-all duration-300",
         isMinimized 
-          ? "w-12 h-12 left-2 bottom-20" 
-          : "w-[420px] sm:w-[500px] max-w-[95vw] h-[700px] max-h-[90vh] left-2 bottom-20"
+          ? "w-12 h-12" 
+          : "w-[420px] sm:w-[500px] max-w-[95vw] h-[700px] max-h-[90vh]",
+        isDragging && "cursor-grabbing"
       );
 
   return (
     <>
-      <div className={containerClasses}>
+      <div 
+        ref={elementRef}
+        className={containerClasses}
+        style={containerStyle}
+      >
         {isMinimized ? (
           <button
             onClick={() => setIsMinimized(false)}
@@ -596,9 +637,16 @@ export const DuelDeckViewer = ({
           </button>
         ) : (
           <div className="flex flex-col h-full">
-            {/* Header */}
-            <div className="flex items-center justify-between p-2 border-b border-border flex-shrink-0">
+            {/* Draggable Header */}
+            <div 
+              className={cn(
+                "flex items-center justify-between p-2 border-b border-border flex-shrink-0",
+                !isFullscreen && "cursor-grab hover:bg-muted/30"
+              )}
+              {...(!isFullscreen ? dragHandlers : {})}
+            >
               <div className="flex items-center gap-2">
+                {!isFullscreen && <Move className="h-3 w-3 text-muted-foreground" />}
                 <Layers className="h-4 w-4 text-primary" />
                 <span className="font-semibold text-sm">Duelingbook</span>
               </div>
