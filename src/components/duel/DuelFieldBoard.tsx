@@ -101,6 +101,12 @@ const ZoneSlot = ({
   isHorizontal?: boolean;
 }) => {
   const hasCard = card !== null;
+
+  const handleDragStart = (e: React.DragEvent) => {
+    if (!card) return;
+    e.dataTransfer.setData('application/json', JSON.stringify({ ...card, sourceZone: zone }));
+    e.dataTransfer.effectAllowed = 'move';
+  };
   
   return (
     <div
@@ -115,10 +121,14 @@ const ZoneSlot = ({
       onDrop={onDrop}
     >
       {hasCard ? (
-        <div className={cn(
-          "relative w-full h-full",
-          card.position === 'defense' && isHorizontal && "rotate-90"
-        )}>
+        <div 
+          className={cn(
+            "relative w-full h-full",
+            card.position === 'defense' && isHorizontal && "rotate-90"
+          )}
+          draggable
+          onDragStart={handleDragStart}
+        >
           {/* Face-down indicator */}
           {card.isFaceDown && (
             <div className="absolute top-0.5 right-0.5 z-10">
@@ -147,7 +157,7 @@ const ZoneSlot = ({
             src={card.isFaceDown ? CARD_BACK_URL : card.card_images?.[0]?.image_url_small}
             alt={card.isFaceDown ? 'Face-down card' : card.name}
             className={cn(
-              "w-full h-full object-cover rounded-md shadow-sm hover:shadow-lg transition-all hover:scale-105",
+              "w-full h-full object-cover rounded-md shadow-sm hover:shadow-lg transition-all hover:scale-105 cursor-grab active:cursor-grabbing",
               card.position === 'defense' && isHorizontal && "rotate-90"
             )}
             title={card.isFaceDown ? 'Face-down card' : card.name}
