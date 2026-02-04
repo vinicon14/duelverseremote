@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -569,14 +569,23 @@ export const DuelDeckViewer = ({
     setCardActionsModal({ open: false, card: null, zone: null });
   }, [cardActionsModal]);
 
+  // Ref to track if detach is in progress to prevent double-clicks
+  const isDetachingRef = useRef(false);
+
   const handleDetachMaterial = useCallback((materialIndex: number) => {
+    // Prevent double-click processing
+    if (isDetachingRef.current) return;
+    
     const { card, zone } = cardActionsModal;
     if (!card || !zone || !card.attachedCards) return;
 
     // Validate index before proceeding
     if (materialIndex < 0 || materialIndex >= card.attachedCards.length) return;
 
-    // Close the modal immediately to prevent double-clicks
+    // Set flag to prevent additional clicks
+    isDetachingRef.current = true;
+
+    // Close the modal immediately
     setCardActionsModal({ open: false, card: null, zone: null });
 
     setFieldState(prev => {
@@ -584,14 +593,26 @@ export const DuelDeckViewer = ({
       if (!currentCard?.attachedCards) return prev;
       
       // Double-check index is still valid in current state
-      if (materialIndex >= currentCard.attachedCards.length) return prev;
+      if (materialIndex >= currentCard.attachedCards.length) {
+        isDetachingRef.current = false;
+        return prev;
+      }
 
       const newMaterials = [...currentCard.attachedCards];
       const detachedResult = newMaterials.splice(materialIndex, 1);
       
       // Ensure we actually detached something
-      if (detachedResult.length === 0) return prev;
+      if (detachedResult.length === 0) {
+        isDetachingRef.current = false;
+        return prev;
+      }
+      
       const detached = detachedResult[0];
+
+      // Reset flag after successful operation
+      setTimeout(() => {
+        isDetachingRef.current = false;
+      }, 100);
 
       return {
         ...prev,
