@@ -22,16 +22,18 @@ const isExtraDeckCardType = (type: string): boolean => {
   return extraTypes.some(t => type.includes(t));
 };
 
-const isMonsterCard = (type: string): boolean => {
-  return type.includes('Monster');
-};
-
 const isSpellCard = (type: string): boolean => {
-  return type.includes('Spell');
+  return type.toLowerCase().includes('spell');
 };
 
 const isTrapCard = (type: string): boolean => {
-  return type.includes('Trap');
+  return type.toLowerCase().includes('trap');
+};
+
+const isMonsterCard = (type: string): boolean => {
+  // Explicitly exclude spells and traps first
+  if (isSpellCard(type) || isTrapCard(type)) return false;
+  return type.toLowerCase().includes('monster');
 };
 
 const isFieldSpell = (type: string, race?: string): boolean => {
