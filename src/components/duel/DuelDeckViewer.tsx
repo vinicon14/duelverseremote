@@ -18,7 +18,8 @@ import {
   Minimize2,
   Search,
   GripVertical,
-  Move
+  Move,
+  ArrowLeftRight
 } from 'lucide-react';
 import { DeckCard } from '@/components/deckbuilder/DeckPanel';
 import { cn } from '@/lib/utils';
@@ -27,6 +28,7 @@ import { DuelFieldBoard, FieldState, FieldZoneType, GameCard } from './DuelField
 import { ZonePlacementModal } from './ZonePlacementModal';
 import { ZoneViewerModal } from './ZoneViewerModal';
 import { FieldCardActionsModal } from './FieldCardActionsModal';
+import { SideDeckSwapModal } from './SideDeckSwapModal';
 import { useDraggable } from '@/hooks/useDraggable';
 
 interface DuelDeckViewerProps {
@@ -107,6 +109,7 @@ export const DuelDeckViewer = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const [attachMode, setAttachMode] = useState<{ targetZone: FieldZoneType } | null>(null);
+  const [showSideSwap, setShowSideSwap] = useState(false);
 
   // Draggable functionality
   const { position, isDragging, elementRef, dragHandlers } = useDraggable({
@@ -717,7 +720,7 @@ export const DuelDeckViewer = ({
               <div className="flex items-center gap-2">
                 {!isFullscreen && <Move className="h-3 w-3 text-muted-foreground" />}
                 <Layers className="h-4 w-4 text-primary" />
-                <span className="font-semibold text-sm">Duelingbook</span>
+                <span className="font-semibold text-sm">Arena Digital</span>
               </div>
               <div className="flex items-center gap-1">
                 <Button
@@ -794,8 +797,24 @@ export const DuelDeckViewer = ({
                       <Badge variant="outline" className="text-xs">
                         Mão: {fieldState.hand.length}
                       </Badge>
+                      {fieldState.sideDeck.length > 0 && (
+                        <Badge variant="outline" className="text-xs">
+                          Side: {fieldState.sideDeck.length}
+                        </Badge>
+                      )}
                     </div>
                     <div className="flex items-center gap-1">
+                      {fieldState.sideDeck.length > 0 && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => setShowSideSwap(true)}
+                          title="Trocar Side Deck"
+                        >
+                          <ArrowLeftRight className="h-3 w-3" />
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="icon"
@@ -976,6 +995,21 @@ export const DuelDeckViewer = ({
         }}
         onDetachMaterial={handleDetachMaterial}
         isExtraDeckCard={cardActionsModal.card ? isExtraDeckCardType(cardActionsModal.card.type) : false}
+      />
+
+      {/* Side Deck Swap Modal */}
+      <SideDeckSwapModal
+        open={showSideSwap}
+        onClose={() => setShowSideSwap(false)}
+        mainDeck={fieldState.deck}
+        sideDeck={fieldState.sideDeck}
+        onSwapComplete={(newMainDeck, newSideDeck) => {
+          setFieldState(prev => ({
+            ...prev,
+            deck: shuffleArray(newMainDeck),
+            sideDeck: newSideDeck,
+          }));
+        }}
       />
     </>
   );
