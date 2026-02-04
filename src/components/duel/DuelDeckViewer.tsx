@@ -573,12 +573,25 @@ export const DuelDeckViewer = ({
     const { card, zone } = cardActionsModal;
     if (!card || !zone || !card.attachedCards) return;
 
+    // Validate index before proceeding
+    if (materialIndex < 0 || materialIndex >= card.attachedCards.length) return;
+
+    // Close the modal immediately to prevent double-clicks
+    setCardActionsModal({ open: false, card: null, zone: null });
+
     setFieldState(prev => {
       const currentCard = prev[zone] as GameCard;
       if (!currentCard?.attachedCards) return prev;
+      
+      // Double-check index is still valid in current state
+      if (materialIndex >= currentCard.attachedCards.length) return prev;
 
       const newMaterials = [...currentCard.attachedCards];
-      const [detached] = newMaterials.splice(materialIndex, 1);
+      const detachedResult = newMaterials.splice(materialIndex, 1);
+      
+      // Ensure we actually detached something
+      if (detachedResult.length === 0) return prev;
+      const detached = detachedResult[0];
 
       return {
         ...prev,
