@@ -276,7 +276,7 @@ export const FloatingOpponentViewer = ({
           <div className="text-center text-sm text-muted-foreground py-4">
             <Eye className="h-6 w-6 mx-auto mb-2 opacity-50" />
             <p>Aguardando o oponente carregar o deck virtual...</p>
-            <p className="text-xs mt-1">O oponente precisa abrir o Duelingbook</p>
+            <p className="text-xs mt-1">O oponente precisa abrir a Arena Digital</p>
           </div>
         ) : (
           <div className="space-y-2">
