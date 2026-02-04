@@ -126,18 +126,6 @@ export const ZoneViewerModal = ({
                     <span className="text-[8px] text-white text-center line-clamp-2">{card.name}</span>
                     
                     <div className="flex gap-1 flex-wrap justify-center">
-                      {onAddToHand && (
-                        <Button
-                          variant="secondary"
-                          size="icon"
-                          className="h-5 w-5"
-                          onClick={(e) => { e.stopPropagation(); onAddToHand(card, idx); }}
-                          title="Adicionar à Mão"
-                        >
-                          <Hand className="h-3 w-3" />
-                        </Button>
-                      )}
-                      
                       {zone !== 'graveyard' && onSendToGY && (
                         <Button
                           variant="secondary"
