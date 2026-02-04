@@ -113,9 +113,29 @@ export const DuelDeckViewer = ({
     initialPosition: { x: 8, y: 80 },
   });
 
+  // Persistent channel for broadcasting
+  const [broadcastChannel, setBroadcastChannel] = useState<ReturnType<typeof supabase.channel> | null>(null);
+
+  // Setup broadcast channel
+  useEffect(() => {
+    if (!duelId || !currentUserId) return;
+    
+    const channel = supabase.channel(`deck-sync-${duelId}`);
+    channel.subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        setBroadcastChannel(channel);
+      }
+    });
+
+    return () => {
+      supabase.removeChannel(channel);
+      setBroadcastChannel(null);
+    };
+  }, [duelId, currentUserId]);
+
   // Broadcast state changes to opponent
   const broadcastState = useCallback(() => {
-    if (!duelId || !currentUserId) return;
+    if (!broadcastChannel || !currentUserId) return;
     
     const getFieldCards = (): { id: number; name: string; image: string; isFaceDown?: boolean; position?: string; materials?: number; zone: string }[] => {
       const zones: FieldZoneType[] = [
@@ -141,8 +161,7 @@ export const DuelDeckViewer = ({
         .filter((card): card is NonNullable<typeof card> => card !== null);
     };
 
-    const channel = supabase.channel(`deck-sync-${duelId}`);
-    channel.send({
+    broadcastChannel.send({
       type: 'broadcast',
       event: 'deck-state',
       payload: {
@@ -150,11 +169,11 @@ export const DuelDeckViewer = ({
         hand: fieldState.hand.length,
         field: getFieldCards(),
         monsterZones: {
-          monster1: fieldState.monster1 ? { id: fieldState.monster1.id, name: fieldState.monster1.isFaceDown ? 'Face-down' : fieldState.monster1.name, image: fieldState.monster1.isFaceDown ? CARD_BACK_URL : fieldState.monster1.card_images?.[0]?.image_url_small, isFaceDown: fieldState.monster1.isFaceDown, position: fieldState.monster1.position } : null,
-          monster2: fieldState.monster2 ? { id: fieldState.monster2.id, name: fieldState.monster2.isFaceDown ? 'Face-down' : fieldState.monster2.name, image: fieldState.monster2.isFaceDown ? CARD_BACK_URL : fieldState.monster2.card_images?.[0]?.image_url_small, isFaceDown: fieldState.monster2.isFaceDown, position: fieldState.monster2.position } : null,
-          monster3: fieldState.monster3 ? { id: fieldState.monster3.id, name: fieldState.monster3.isFaceDown ? 'Face-down' : fieldState.monster3.name, image: fieldState.monster3.isFaceDown ? CARD_BACK_URL : fieldState.monster3.card_images?.[0]?.image_url_small, isFaceDown: fieldState.monster3.isFaceDown, position: fieldState.monster3.position } : null,
-          monster4: fieldState.monster4 ? { id: fieldState.monster4.id, name: fieldState.monster4.isFaceDown ? 'Face-down' : fieldState.monster4.name, image: fieldState.monster4.isFaceDown ? CARD_BACK_URL : fieldState.monster4.card_images?.[0]?.image_url_small, isFaceDown: fieldState.monster4.isFaceDown, position: fieldState.monster4.position } : null,
-          monster5: fieldState.monster5 ? { id: fieldState.monster5.id, name: fieldState.monster5.isFaceDown ? 'Face-down' : fieldState.monster5.name, image: fieldState.monster5.isFaceDown ? CARD_BACK_URL : fieldState.monster5.card_images?.[0]?.image_url_small, isFaceDown: fieldState.monster5.isFaceDown, position: fieldState.monster5.position } : null,
+          monster1: fieldState.monster1 ? { id: fieldState.monster1.id, name: fieldState.monster1.isFaceDown ? 'Face-down' : fieldState.monster1.name, image: fieldState.monster1.isFaceDown ? CARD_BACK_URL : fieldState.monster1.card_images?.[0]?.image_url_small, isFaceDown: fieldState.monster1.isFaceDown, position: fieldState.monster1.position, materials: fieldState.monster1.attachedCards?.length || 0 } : null,
+          monster2: fieldState.monster2 ? { id: fieldState.monster2.id, name: fieldState.monster2.isFaceDown ? 'Face-down' : fieldState.monster2.name, image: fieldState.monster2.isFaceDown ? CARD_BACK_URL : fieldState.monster2.card_images?.[0]?.image_url_small, isFaceDown: fieldState.monster2.isFaceDown, position: fieldState.monster2.position, materials: fieldState.monster2.attachedCards?.length || 0 } : null,
+          monster3: fieldState.monster3 ? { id: fieldState.monster3.id, name: fieldState.monster3.isFaceDown ? 'Face-down' : fieldState.monster3.name, image: fieldState.monster3.isFaceDown ? CARD_BACK_URL : fieldState.monster3.card_images?.[0]?.image_url_small, isFaceDown: fieldState.monster3.isFaceDown, position: fieldState.monster3.position, materials: fieldState.monster3.attachedCards?.length || 0 } : null,
+          monster4: fieldState.monster4 ? { id: fieldState.monster4.id, name: fieldState.monster4.isFaceDown ? 'Face-down' : fieldState.monster4.name, image: fieldState.monster4.isFaceDown ? CARD_BACK_URL : fieldState.monster4.card_images?.[0]?.image_url_small, isFaceDown: fieldState.monster4.isFaceDown, position: fieldState.monster4.position, materials: fieldState.monster4.attachedCards?.length || 0 } : null,
+          monster5: fieldState.monster5 ? { id: fieldState.monster5.id, name: fieldState.monster5.isFaceDown ? 'Face-down' : fieldState.monster5.name, image: fieldState.monster5.isFaceDown ? CARD_BACK_URL : fieldState.monster5.card_images?.[0]?.image_url_small, isFaceDown: fieldState.monster5.isFaceDown, position: fieldState.monster5.position, materials: fieldState.monster5.attachedCards?.length || 0 } : null,
         },
         spellZones: {
           spell1: fieldState.spell1 ? { id: fieldState.spell1.id, name: fieldState.spell1.isFaceDown ? 'Face-down' : fieldState.spell1.name, image: fieldState.spell1.isFaceDown ? CARD_BACK_URL : fieldState.spell1.card_images?.[0]?.image_url_small, isFaceDown: fieldState.spell1.isFaceDown } : null,
@@ -182,13 +201,13 @@ export const DuelDeckViewer = ({
         extraCount: fieldState.extraDeck.length,
       }
     });
-  }, [duelId, currentUserId, fieldState]);
+  }, [broadcastChannel, currentUserId, fieldState]);
 
   useEffect(() => {
-    if (duelId && isOpen && currentUserId) {
+    if (broadcastChannel && isOpen && currentUserId) {
       broadcastState();
     }
-  }, [fieldState, broadcastState, duelId, isOpen, currentUserId]);
+  }, [fieldState, broadcastState, broadcastChannel, isOpen, currentUserId]);
 
   // Initialize deck when loaded
   useEffect(() => {

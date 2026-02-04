@@ -92,8 +92,13 @@ export const FloatingOpponentViewer = ({
     
     channel
       .on('broadcast', { event: 'deck-state' }, ({ payload }) => {
+        console.log('[FloatingOpponentViewer] Received broadcast:', payload);
         // Only update if this is the opponent's state (not our own)
         if (payload.userId && payload.userId !== currentUserId) {
+          console.log('[FloatingOpponentViewer] Updating opponent state with zones:', {
+            monsterZones: payload.monsterZones,
+            spellZones: payload.spellZones,
+          });
           setOpponentState({
             hand: payload.hand || 0,
             field: payload.field || [],
@@ -108,7 +113,9 @@ export const FloatingOpponentViewer = ({
           });
         }
       })
-      .subscribe();
+      .subscribe((status) => {
+        console.log('[FloatingOpponentViewer] Channel subscription status:', status);
+      });
 
     return () => {
       supabase.removeChannel(channel);
