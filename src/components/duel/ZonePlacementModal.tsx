@@ -74,34 +74,9 @@ export const ZonePlacementModal = ({
     onClose();
   };
 
-  const ZoneButton = ({
-    zone,
-    label,
-    faceDown,
-    position,
-  }: {
-    zone: FieldZoneType;
-    label: string;
-    faceDown: boolean;
-    position: 'attack' | 'defense';
-  }) => (
-    <Button
-      variant="outline"
-      size="sm"
-      className="h-auto py-2 px-3 flex flex-col items-center gap-1"
-      onClick={() => handlePlace(zone, faceDown, position)}
-    >
-      <span className="text-xs">{label}</span>
-      <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-        {faceDown ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-        {position === 'attack' ? <Sword className="h-3 w-3" /> : <Shield className="h-3 w-3" />}
-      </div>
-    </Button>
-  );
-
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             Colocar Carta no Campo
@@ -137,78 +112,7 @@ export const ZonePlacementModal = ({
               )}
             </div>
 
-            {/* Monster Placement Options */}
-            {isMonster && (
-              <div className="space-y-2">
-                <p className="text-xs font-medium">Zona de Monstro:</p>
-                
-                {/* Attack Position */}
-                <div className="space-y-1">
-                  <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-                    <Sword className="h-3 w-3" /> Posição de Ataque (Face para cima)
-                  </p>
-                  <div className="flex flex-wrap gap-1">
-                    {getAvailableMonsterZones().map((zone, idx) => (
-                      <Button
-                        key={zone}
-                        variant="outline"
-                        size="sm"
-                        className="h-7 px-2 text-xs"
-                        onClick={() => handlePlace(zone, false, 'attack')}
-                      >
-                        {zone.includes('extra') ? 'EMZ' : `M${idx + 1}`}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Defense Position - Not available for Link monsters */}
-                {!isLinkMonster && (
-                  <div className="space-y-1">
-                    <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-                      <Shield className="h-3 w-3" /> Posição de Defesa (Face para cima)
-                    </p>
-                    <div className="flex flex-wrap gap-1">
-                      {getAvailableMonsterZones().filter(z => !z.includes('extra')).map((zone, idx) => (
-                        <Button
-                          key={zone}
-                          variant="outline"
-                          size="sm"
-                          className="h-7 px-2 text-xs"
-                          onClick={() => handlePlace(zone, false, 'defense')}
-                        >
-                          M{idx + 1}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Set (Face-down Defense) - Not available for Extra Deck monsters or Link monsters */}
-                {!isExtraDeck && !isLinkMonster && (
-                  <div className="space-y-1">
-                    <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-                      <EyeOff className="h-3 w-3" /> Baixar (Face para baixo em Defesa)
-                    </p>
-                    <div className="flex flex-wrap gap-1">
-                      {getAvailableMonsterZones().filter(z => !z.includes('extra')).map((zone, idx) => (
-                        <Button
-                          key={zone}
-                          variant="secondary"
-                          size="sm"
-                          className="h-7 px-2 text-xs"
-                          onClick={() => handlePlace(zone, true, 'defense')}
-                        >
-                          M{idx + 1}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Field Spell Placement */}
+            {/* Field Spell Placement - Priority for Field Spells */}
             {isField && (
               <div className="space-y-2">
                 <p className="text-xs font-medium">Zona de Campo:</p>
@@ -225,32 +129,101 @@ export const ZonePlacementModal = ({
               </div>
             )}
 
-            {/* Spell/Trap Placement */}
-            {(isSpell || isTrap) && !isField && (
+            {/* Monster Zone Options */}
+            {getAvailableMonsterZones().length > 0 && (
               <div className="space-y-2">
-                <p className="text-xs font-medium">Zona de Magia/Armadilha:</p>
+                <p className="text-xs font-medium">Zona de Monstro:</p>
                 
-                {/* Activate (Face-up) - Only for Spells */}
-                {isSpell && (
+                {/* Attack Position (Face-up) */}
+                <div className="space-y-1">
+                  <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                    <Sword className="h-3 w-3" /> Posição de Ataque (Face para cima)
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    {getAvailableMonsterZones().map((zone, idx) => (
+                      <Button
+                        key={zone}
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => handlePlace(zone, false, 'attack')}
+                      >
+                        {zone.includes('extra') ? 'EMZ' : `M${MONSTER_ZONES.indexOf(zone as any) + 1}`}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Defense Position (Face-up) - Not for Link monsters */}
+                {!isLinkMonster && (
                   <div className="space-y-1">
                     <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-                      <Eye className="h-3 w-3" /> Ativar (Face para cima)
+                      <Shield className="h-3 w-3" /> Posição de Defesa (Face para cima)
                     </p>
                     <div className="flex flex-wrap gap-1">
-                      {getAvailableSpellTrapZones().map((zone, idx) => (
+                      {getAvailableMonsterZones().filter(z => !z.includes('extra')).map((zone) => (
                         <Button
                           key={zone}
                           variant="outline"
                           size="sm"
                           className="h-7 px-2 text-xs"
-                          onClick={() => handlePlace(zone, false, 'attack')}
+                          onClick={() => handlePlace(zone, false, 'defense')}
                         >
-                          S/T{idx + 1}
+                          M{MONSTER_ZONES.indexOf(zone as any) + 1}
                         </Button>
                       ))}
                     </div>
                   </div>
                 )}
+
+                {/* Set (Face-down Defense) - Not for Extra Deck or Link monsters */}
+                {!isExtraDeck && !isLinkMonster && (
+                  <div className="space-y-1">
+                    <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                      <EyeOff className="h-3 w-3" /> Baixar (Face para baixo em Defesa)
+                    </p>
+                    <div className="flex flex-wrap gap-1">
+                      {getAvailableMonsterZones().filter(z => !z.includes('extra')).map((zone) => (
+                        <Button
+                          key={zone}
+                          variant="secondary"
+                          size="sm"
+                          className="h-7 px-2 text-xs"
+                          onClick={() => handlePlace(zone, true, 'defense')}
+                        >
+                          M{MONSTER_ZONES.indexOf(zone as any) + 1}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Spell/Trap Zone Options */}
+            {getAvailableSpellTrapZones().length > 0 && !isField && (
+              <div className="space-y-2">
+                <p className="text-xs font-medium">Zona de Magia/Armadilha:</p>
+                
+                {/* Activate (Face-up) */}
+                <div className="space-y-1">
+                  <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                    <Eye className="h-3 w-3" /> Ativar (Face para cima)
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    {getAvailableSpellTrapZones().map((zone) => (
+                      <Button
+                        key={zone}
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => handlePlace(zone, false, 'attack')}
+                      >
+                        S/T{SPELL_TRAP_ZONES.indexOf(zone as any) + 1}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
 
                 {/* Set (Face-down) */}
                 <div className="space-y-1">
@@ -258,7 +231,7 @@ export const ZonePlacementModal = ({
                     <EyeOff className="h-3 w-3" /> Setar (Face para baixo)
                   </p>
                   <div className="flex flex-wrap gap-1">
-                    {getAvailableSpellTrapZones().map((zone, idx) => (
+                    {getAvailableSpellTrapZones().map((zone) => (
                       <Button
                         key={zone}
                         variant="secondary"
@@ -266,7 +239,7 @@ export const ZonePlacementModal = ({
                         className="h-7 px-2 text-xs"
                         onClick={() => handlePlace(zone, true, 'attack')}
                       >
-                        S/T{idx + 1}
+                        S/T{SPELL_TRAP_ZONES.indexOf(zone as any) + 1}
                       </Button>
                     ))}
                   </div>
@@ -274,12 +247,9 @@ export const ZonePlacementModal = ({
               </div>
             )}
 
-            {getAvailableMonsterZones().length === 0 && isMonster && (
-              <p className="text-xs text-destructive">Todas as zonas de monstro estão ocupadas!</p>
-            )}
-            
-            {getAvailableSpellTrapZones().length === 0 && (isSpell || isTrap) && !isField && (
-              <p className="text-xs text-destructive">Todas as zonas de magia/armadilha estão ocupadas!</p>
+            {/* Warning messages */}
+            {getAvailableMonsterZones().length === 0 && getAvailableSpellTrapZones().length === 0 && (
+              <p className="text-xs text-destructive">Todas as zonas estão ocupadas!</p>
             )}
           </div>
         </div>
