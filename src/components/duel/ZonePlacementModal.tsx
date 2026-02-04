@@ -129,7 +129,7 @@ export const ZonePlacementModal = ({
               </div>
             )}
 
-            {/* Monster Zone Options */}
+            {/* Monster Zone Options - Available for all cards */}
             {getAvailableMonsterZones().length > 0 && (
               <div className="space-y-2">
                 <p className="text-xs font-medium">Zona de Monstro:</p>
@@ -140,7 +140,7 @@ export const ZonePlacementModal = ({
                     <Sword className="h-3 w-3" /> Posição de Ataque (Face para cima)
                   </p>
                   <div className="flex flex-wrap gap-1">
-                    {getAvailableMonsterZones().map((zone, idx) => (
+                    {getAvailableMonsterZones().map((zone) => (
                       <Button
                         key={zone}
                         variant="outline"
@@ -200,8 +200,8 @@ export const ZonePlacementModal = ({
               </div>
             )}
 
-            {/* Spell/Trap Zone Options */}
-            {getAvailableSpellTrapZones().length > 0 && !isField && (
+            {/* Spell/Trap Zone Options - Available for all cards */}
+            {getAvailableSpellTrapZones().length > 0 && (
               <div className="space-y-2">
                 <p className="text-xs font-medium">Zona de Magia/Armadilha:</p>
                 
