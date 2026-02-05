@@ -14,12 +14,11 @@ interface CardDetailModalProps {
   card: YugiohCard | null;
   open: boolean;
   onClose: () => void;
-  onAddToDeck: (card: YugiohCard, deckType: 'main' | 'extra' | 'side' | 'tokens') => void;
+  onAddToDeck: (card: YugiohCard, deckType: 'main' | 'extra' | 'side') => void;
   language: Language;
   canAddToMain: boolean;
   canAddToExtra: boolean;
   canAddToSide: boolean;
-  canAddToTokens?: boolean;
   isExtraDeckCard: boolean;
 }
 
@@ -28,7 +27,6 @@ const labels = {
     addToMain: 'Add to Main',
     addToExtra: 'Add to Extra',
     addToSide: 'Add to Side',
-    addToTokens: 'Add to Tokens',
     atk: 'ATK',
     def: 'DEF',
     level: 'Level',
@@ -43,7 +41,6 @@ const labels = {
     addToMain: 'Add ao Principal',
     addToExtra: 'Add ao Extra',
     addToSide: 'Add ao Side',
-    addToTokens: 'Add às Fichas',
     atk: 'ATK',
     def: 'DEF',
     level: 'Nível',
@@ -65,7 +62,6 @@ export const CardDetailModal = ({
   canAddToMain,
   canAddToExtra,
   canAddToSide,
-  canAddToTokens,
   isExtraDeckCard,
 }: CardDetailModalProps) => {
   const t = labels[language];
@@ -191,18 +187,6 @@ export const CardDetailModal = ({
                   <Plus className="h-3 w-3" />
                   {t.addToSide}
                 </Button>
-                {card.type.toLowerCase().includes('token') && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => onAddToDeck(card, 'tokens')}
-                    disabled={!canAddToTokens}
-                    className="gap-1"
-                  >
-                    <Plus className="h-3 w-3" />
-                    {t.addToTokens}
-                  </Button>
-                )}
               </div>
             </div>
           </div>

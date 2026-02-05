@@ -7,10 +7,11 @@
  import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
  import { cn } from '@/lib/utils';
  import { GameCard } from './DuelFieldBoard';
- import { EXTRA_DECK_TYPES } from '@/constants/cardTypes';
+ 
+ const EXTRA_DECK_TYPES = ['Fusion', 'Synchro', 'XYZ', 'Link'];
  
  const isExtraDeckCard = (card: GameCard): boolean => {
-   return EXTRA_DECK_TYPES.some((type) => card.type.includes(type.replace(' Monster', '')));
+   return EXTRA_DECK_TYPES.some((t) => card.type.includes(t));
  };
  
  interface SideDeckSwapModalProps {

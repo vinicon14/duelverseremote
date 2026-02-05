@@ -41,7 +41,7 @@ const DuelRoom = () => {
   
   // Deck viewer state
   const [showDeckViewer, setShowDeckViewer] = useState(false);
-  const { mainDeck, extraDeck, sideDeck, tokensDeck, importDeckFromYDK, isLoading: isDeckLoading } = useDuelDeck();
+  const { mainDeck, extraDeck, sideDeck, importDeckFromYDK, isLoading: isDeckLoading } = useDuelDeck();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Carrega dados do duelo e inicia timer
@@ -938,7 +938,6 @@ const DuelRoom = () => {
             deck={mainDeck}
             extraDeck={extraDeck}
             sideDeck={sideDeck}
-            tokensDeck={tokensDeck}
             onLoadDeck={() => fileInputRef.current?.click()}
             duelId={id}
             currentUserId={currentUser?.id}
