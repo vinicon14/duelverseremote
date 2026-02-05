@@ -124,8 +124,7 @@ const ZoneSlot = ({
       {hasCard ? (
         <div 
           className={cn(
-            "relative w-full h-full",
-            card.position === 'defense' && isHorizontal && "-rotate-90"
+            "relative w-full h-full"
           )}
           draggable
           onDragStart={handleDragStart}
@@ -172,7 +171,7 @@ const ZoneSlot = ({
             alt={card.isFaceDown ? 'Face-down card' : card.name}
             className={cn(
               "w-full h-full object-cover rounded-md shadow-sm hover:shadow-lg transition-all hover:scale-105 cursor-grab active:cursor-grabbing",
-              card.position === 'defense' && isHorizontal && "-rotate-90"
+              card.position === 'defense' && isHorizontal && "rotate-90"
             )}
             title={card.isFaceDown ? 'Face-down card' : card.name}
           />

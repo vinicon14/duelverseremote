@@ -25,6 +25,7 @@ import { DeckCard } from '@/components/deckbuilder/DeckPanel';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { DuelFieldBoard, FieldState, FieldZoneType, GameCard } from './DuelFieldBoard';
+import { EXTRA_DECK_TYPES } from '@/constants/cardTypes';
 import { ZonePlacementModal } from './ZonePlacementModal';
 import { ZoneViewerModal } from './ZoneViewerModal';
 import { FieldCardActionsModal } from './FieldCardActionsModal';
@@ -37,16 +38,15 @@ interface DuelDeckViewerProps {
   deck: DeckCard[];
   extraDeck: DeckCard[];
   sideDeck: DeckCard[];
+  tokensDeck?: DeckCard[];
   onLoadDeck: () => void;
   duelId?: string;
   currentUserId?: string;
   opponentUsername?: string;
 }
 
-const EXTRA_DECK_TYPES = ['Fusion', 'Synchro', 'XYZ', 'Link'];
-
 const isExtraDeckCardType = (type: string): boolean => {
-  return EXTRA_DECK_TYPES.some((t) => type.includes(t));
+  return EXTRA_DECK_TYPES.some((t) => type.includes(t.replace(' Monster', '')));
 };
 
 const generateInstanceId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -81,6 +81,7 @@ export const DuelDeckViewer = ({
   deck,
   extraDeck,
   sideDeck,
+  tokensDeck = [],
   onLoadDeck,
   duelId,
   currentUserId,
@@ -214,7 +215,7 @@ export const DuelDeckViewer = ({
 
   // Initialize deck when loaded
   useEffect(() => {
-    if (deck.length > 0 || extraDeck.length > 0 || sideDeck.length > 0) {
+    if (deck.length > 0 || extraDeck.length > 0 || sideDeck.length > 0 || tokensDeck.length > 0) {
       const expandedDeck: GameCard[] = [];
       deck.forEach(card => {
         for (let i = 0; i < card.quantity; i++) {
@@ -224,6 +225,13 @@ export const DuelDeckViewer = ({
 
       const expandedExtra: GameCard[] = [];
       extraDeck.forEach(card => {
+        for (let i = 0; i < card.quantity; i++) {
+          expandedExtra.push({ ...card, instanceId: generateInstanceId(), isFaceDown: false, position: 'attack' });
+        }
+      });
+
+      // Add tokens to extra deck in arena mode
+      tokensDeck.forEach(card => {
         for (let i = 0; i < card.quantity; i++) {
           expandedExtra.push({ ...card, instanceId: generateInstanceId(), isFaceDown: false, position: 'attack' });
         }
@@ -243,7 +251,7 @@ export const DuelDeckViewer = ({
         sideDeck: expandedSide,
       });
     }
-  }, [deck, extraDeck, sideDeck]);
+  }, [deck, extraDeck, sideDeck, tokensDeck]);
 
   const shuffleArray = <T,>(array: T[]): T[] => {
     const newArray = [...array];
