@@ -13,7 +13,8 @@ export const useDuelDeck = () => {
 
   const isExtraDeckCard = (type: string): boolean => {
     const extraTypes = ['Fusion Monster', 'Synchro Monster', 'XYZ Monster', 'Link Monster', 
-                        'Synchro Pendulum Effect Monster', 'XYZ Pendulum Effect Monster'];
+                        'Synchro Pendulum Effect Monster', 'XYZ Pendulum Effect Monster',
+                        'Pendulum Fusion Monster', 'Pendulum Synchro Monster', 'Pendulum XYZ Monster'];
     return extraTypes.some(t => type.includes(t));
   };
 
@@ -140,10 +141,21 @@ export const useDuelDeck = () => {
 
   const hasDeck = mainDeck.length > 0 || extraDeck.length > 0;
 
+  const [tokensDeck, setTokensDeck] = useState<DeckCard[]>([]);
+
+  const returnAllToDeck = useCallback(() => {
+    // ... logic would go here if needed, but it's handled in DuelDeckViewer
+  }, []);
+
   return {
     mainDeck,
     extraDeck,
     sideDeck,
+    tokensDeck,
+    setMainDeck,
+    setExtraDeck,
+    setSideDeck,
+    setTokensDeck,
     isLoading,
     hasDeck,
     importDeckFromYDK,

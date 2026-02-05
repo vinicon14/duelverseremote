@@ -181,7 +181,7 @@ export const FloatingCalculator = ({
 
         {/* Content */}
         {!isMinimized && (
-          <div className="p-3 sm:p-4 space-y-3 sm:space-y-4 w-72 sm:w-80">
+          <div className="p-2 sm:p-4 space-y-2 sm:space-y-4 w-60 sm:w-80">
             {/* Player 1 */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -220,9 +220,9 @@ export const FloatingCalculator = ({
               
               {currentUserPlayer === 'player1' && (
                 <>
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="grid grid-cols-4 gap-1 sm:gap-2">
                     <Button
-                      size="sm"
+                      size="xs"
                       variant="outline"
                       onClick={() => onUpdateLP('player1', -1000)}
                       className="text-xs"
@@ -259,9 +259,9 @@ export const FloatingCalculator = ({
                     </Button>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-1 sm:gap-2">
                     <Button
-                      size="sm"
+                      size="xs"
                       variant="outline"
                       onClick={() => onUpdateLP('player1', -100)}
                       className="text-xs"
@@ -323,9 +323,9 @@ export const FloatingCalculator = ({
               
               {currentUserPlayer === 'player2' && (
                 <>
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="grid grid-cols-4 gap-1 sm:gap-2">
                     <Button
-                      size="sm"
+                      size="xs"
                       variant="outline"
                       onClick={() => onUpdateLP('player2', -1000)}
                       className="text-xs"
@@ -362,9 +362,9 @@ export const FloatingCalculator = ({
                     </Button>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-1 sm:gap-2">
                     <Button
-                      size="sm"
+                      size="xs"
                       variant="outline"
                       onClick={() => onUpdateLP('player2', -100)}
                       className="text-xs"
