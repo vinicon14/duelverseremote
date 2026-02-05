@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Eye, EyeOff, Shield, Sword, Sparkles } from 'lucide-react';
 import { FieldZoneType, GameCard } from './DuelFieldBoard';
+import { EXTRA_DECK_TYPES } from '@/constants/cardTypes';
 
 interface ZonePlacementModalProps {
   open: boolean;
@@ -18,8 +19,7 @@ const EXTRA_MONSTER_ZONES: FieldZoneType[] = ['extraMonster1', 'extraMonster2'];
 const SPELL_TRAP_ZONES: FieldZoneType[] = ['spell1', 'spell2', 'spell3', 'spell4', 'spell5'];
 
 const isExtraDeckCardType = (type: string): boolean => {
-  const extraTypes = ['Fusion', 'Synchro', 'XYZ', 'Link'];
-  return extraTypes.some(t => type.includes(t));
+  return EXTRA_DECK_TYPES.some(t => type.includes(t.replace(' Monster', '')));
 };
 
 const isSpellCard = (type: string): boolean => {
