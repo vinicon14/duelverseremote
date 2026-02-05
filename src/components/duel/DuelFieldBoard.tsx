@@ -12,6 +12,7 @@ import {
   RotateCw,
   Link2
 } from 'lucide-react';
+import { Shield, Swords } from 'lucide-react';
 
 // Card back image for face-down cards
 const CARD_BACK_URL = 'https://images.ygoprodeck.com/images/cards/back_high.jpg';
@@ -112,7 +113,7 @@ const ZoneSlot = ({
     <div
       className={cn(
         "relative border-2 border-dashed border-muted-foreground/30 rounded-md flex items-center justify-center cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all",
-        "w-[52px] h-[76px] sm:w-[60px] sm:h-[88px]",
+        "w-[44px] h-[64px] sm:w-[52px] sm:h-[76px] md:w-[60px] md:h-[88px]",
         hasCard && "border-solid border-primary/20 bg-transparent",
         className
       )}
@@ -124,7 +125,7 @@ const ZoneSlot = ({
         <div 
           className={cn(
             "relative w-full h-full",
-            card.position === 'defense' && isHorizontal && "rotate-90"
+            card.position === 'defense' && isHorizontal && "-rotate-90"
           )}
           draggable
           onDragStart={handleDragStart}
@@ -146,10 +147,23 @@ const ZoneSlot = ({
           {/* XYZ materials count */}
           {card.attachedCards && card.attachedCards.length > 0 && (
             <div className="absolute -bottom-1 -right-1 z-10">
-              <Badge className="text-[8px] h-4 px-1 bg-yellow-600">
+              <Badge className="text-[8px] h-4 px-1 bg-yellow-600/90">
                 <Link2 className="h-2 w-2 mr-0.5" />
                 {card.attachedCards.length}
               </Badge>
+            </div>
+          )}
+          
+          {/* ATK/DEF Display for monsters */}
+          {card.atk !== undefined && !card.isFaceDown && (
+            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 z-20">
+              <div className="bg-background/90 border border-border text-[6px] sm:text-[7px] font-bold px-1 py-0.5 rounded flex items-center gap-0.5 whitespace-nowrap">
+                <Swords className="h-2 w-2 text-destructive" />
+                <span className="text-destructive">{card.atk}</span>
+                <span className="text-muted-foreground">/</span>
+                <Shield className="h-2 w-2 text-primary" />
+                <span className="text-primary">{card.def ?? '?'}</span>
+              </div>
             </div>
           )}
           
@@ -158,7 +172,7 @@ const ZoneSlot = ({
             alt={card.isFaceDown ? 'Face-down card' : card.name}
             className={cn(
               "w-full h-full object-cover rounded-md shadow-sm hover:shadow-lg transition-all hover:scale-105 cursor-grab active:cursor-grabbing",
-              card.position === 'defense' && isHorizontal && "rotate-90"
+              card.position === 'defense' && isHorizontal && "-rotate-90"
             )}
             title={card.isFaceDown ? 'Face-down card' : card.name}
           />
@@ -195,7 +209,7 @@ const PileZone = ({
     <div
       className={cn(
         "relative border-2 border-dashed border-muted-foreground/30 rounded-md flex flex-col items-center justify-center cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all",
-        "w-[52px] h-[76px] sm:w-[60px] sm:h-[88px]",
+        "w-[44px] h-[64px] sm:w-[52px] sm:h-[76px] md:w-[60px] md:h-[88px]",
         cards.length > 0 && "border-solid border-primary/20"
       )}
       onClick={onClick}
