@@ -15,10 +15,12 @@ interface CardDetailModalProps {
   open: boolean;
   onClose: () => void;
   onAddToDeck: (card: YugiohCard, deckType: 'main' | 'extra' | 'side') => void;
+  onAddToTokens?: (card: YugiohCard) => void;
   language: Language;
   canAddToMain: boolean;
   canAddToExtra: boolean;
   canAddToSide: boolean;
+  canAddToTokens?: boolean;
   isExtraDeckCard: boolean;
 }
 
@@ -27,6 +29,7 @@ const labels = {
     addToMain: 'Add to Main',
     addToExtra: 'Add to Extra',
     addToSide: 'Add to Side',
+    addToTokens: 'Add as Token',
     atk: 'ATK',
     def: 'DEF',
     level: 'Level',
@@ -41,6 +44,7 @@ const labels = {
     addToMain: 'Add ao Principal',
     addToExtra: 'Add ao Extra',
     addToSide: 'Add ao Side',
+    addToTokens: 'Add como Ficha',
     atk: 'ATK',
     def: 'DEF',
     level: 'Nível',
@@ -58,10 +62,12 @@ export const CardDetailModal = ({
   open,
   onClose,
   onAddToDeck,
+  onAddToTokens,
   language,
   canAddToMain,
   canAddToExtra,
   canAddToSide,
+  canAddToTokens = false,
   isExtraDeckCard,
 }: CardDetailModalProps) => {
   const t = labels[language];
@@ -72,6 +78,7 @@ export const CardDetailModal = ({
   const isLink = card.type.includes('Link');
   const isXyz = card.type.includes('XYZ');
   const isPendulum = card.type.includes('Pendulum');
+  const isToken = card.type?.toLowerCase().includes('token');
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -155,7 +162,7 @@ export const CardDetailModal = ({
 
               {/* Add Buttons */}
               <div className="flex flex-wrap gap-2 pt-2">
-                {!isExtraDeckCard && (
+                {!isExtraDeckCard && !isToken && (
                   <Button
                     size="sm"
                     onClick={() => onAddToDeck(card, 'main')}
@@ -166,7 +173,7 @@ export const CardDetailModal = ({
                     {t.addToMain}
                   </Button>
                 )}
-                {isExtraDeckCard && (
+                {isExtraDeckCard && !isToken && (
                   <Button
                     size="sm"
                     onClick={() => onAddToDeck(card, 'extra')}
@@ -177,16 +184,30 @@ export const CardDetailModal = ({
                     {t.addToExtra}
                   </Button>
                 )}
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => onAddToDeck(card, 'side')}
-                  disabled={!canAddToSide}
-                  className="gap-1"
-                >
-                  <Plus className="h-3 w-3" />
-                  {t.addToSide}
-                </Button>
+                {!isToken && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => onAddToDeck(card, 'side')}
+                    disabled={!canAddToSide}
+                    className="gap-1"
+                  >
+                    <Plus className="h-3 w-3" />
+                    {t.addToSide}
+                  </Button>
+                )}
+                {onAddToTokens && (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => onAddToTokens(card)}
+                    disabled={!canAddToTokens}
+                    className="gap-1"
+                  >
+                    <Plus className="h-3 w-3" />
+                    {t.addToTokens}
+                  </Button>
+                )}
               </div>
             </div>
           </div>

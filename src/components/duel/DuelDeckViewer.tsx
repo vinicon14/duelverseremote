@@ -72,6 +72,7 @@ const INITIAL_FIELD_STATE: FieldState = {
   extraDeck: [],
   deck: [],
   sideDeck: [],
+  tokens: [],
   hand: [],
 };
 
