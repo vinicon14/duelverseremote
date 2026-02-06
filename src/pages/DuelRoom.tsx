@@ -224,10 +224,12 @@ const DuelRoom = () => {
           clearInterval(timerInterval.current);
         }
         toast({
-          title: "⏱️ Tempo de partida esgotado",
-          description: `O tempo de ${durationMinutes} minutos acabou. A sala permanece aberta até que ambos saiam.`,
+          title: "⏱️ Tempo esgotado",
+          description: `A chamada atingiu o limite de ${durationMinutes} minutos e será encerrada.`,
+          variant: "destructive",
         });
-        // Não fecha automaticamente - apenas quando não houver players por 3 min
+        // Garante que a partida seja contabilizada mesmo com tempo esgotado
+        endDuel();
       }
     }, 1000);
   };

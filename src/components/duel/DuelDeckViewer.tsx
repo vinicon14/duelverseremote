@@ -501,11 +501,6 @@ export const DuelDeckViewer = ({
     try {
       const card = JSON.parse(cardData) as GameCard & { sourceZone?: FieldZoneType };
       
-      // Prevent duplicating if already in hand (dragging from hand to hand)
-      if ((card as any).sourceZone === 'hand') {
-        return;
-      }
-      
       setFieldState(prev => {
         const sourceZone = card.sourceZone;
         let newState = { ...prev };
@@ -1104,13 +1099,11 @@ export const DuelDeckViewer = ({
         open={showSideSwap}
         onClose={() => setShowSideSwap(false)}
         mainDeck={fieldState.deck}
-        extraDeck={fieldState.extraDeck}
         sideDeck={fieldState.sideDeck}
-        onSwapComplete={(newMainDeck, newExtraDeck, newSideDeck) => {
+        onSwapComplete={(newMainDeck, newSideDeck) => {
           setFieldState(prev => ({
             ...prev,
             deck: shuffleArray(newMainDeck),
-            extraDeck: newExtraDeck,
             sideDeck: newSideDeck,
           }));
         }}

@@ -1,5 +1,5 @@
 # Duelverse - Plataforma de Duelos Yu-Gi-Oh Remote Duel
-# https://duelverse.site
+# https://duelverseonline.vercel.app
 
 User-agent: Googlebot
 Allow: /
@@ -19,11 +19,11 @@ User-agent: *
 Allow: /
 
 # Sitemap
-Sitemap: https://duelverse.site/sitemap.xml
+Sitemap: https://duelverseonline.vercel.app/sitemap.xml
 
 # Important Pages
-# Homepage: https://duelverse.site/
-# Duels: https://duelverse.site/duels
-# Tournaments: https://duelverse.site/tournaments
-# Ranking: https://duelverse.site/ranking
-# Matchmaking: https://duelverse.site/matchmaking
+# Homepage: https://duelverse.free.nf/
+# Duels: https://duelverse.free.nf/duels
+# Tournaments: https://duelverse.free.nf/tournaments
+# Ranking: https://duelverse.free.nf/ranking
+# Matchmaking: https://duelverse.free.nf/matchmaking
