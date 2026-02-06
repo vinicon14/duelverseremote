@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -80,6 +79,8 @@ interface DuelFieldBoardProps {
   isFullscreen?: boolean;
 }
 
+// Local state for effect modal will be managed inside component
+
 const ZoneSlot = ({
   zone,
   card,
@@ -103,6 +104,11 @@ const ZoneSlot = ({
 }) => {
   const hasCard = card !== null;
 
+  const isDefensePos = (pos?: string) => {
+    if (!pos) return false;
+    return pos.toString().toLowerCase().startsWith('def');
+  };
+
   const handleDragStart = (e: React.DragEvent) => {
     if (!card) return;
     e.dataTransfer.setData('application/json', JSON.stringify({ ...card, sourceZone: zone }));
@@ -120,15 +126,18 @@ const ZoneSlot = ({
       onClick={() => hasCard ? onCardClick(card!) : onClick()}
       onDragOver={onDragOver}
       onDrop={onDrop}
+      draggable={hasCard}
+      onDragStart={hasCard ? handleDragStart : undefined}
     >
       {hasCard ? (
         <div 
           className={cn(
             "relative w-full h-full",
-            card.position === 'defense' && isHorizontal && "rotate-90"
+            isDefensePos(card?.position) && isHorizontal && "rotate-90"
           )}
-          draggable
-          onDragStart={handleDragStart}
+          style={{
+            transformOrigin: 'center center'
+          }}
         >
           {/* Face-down indicator */}
           {card.isFaceDown && (
@@ -171,9 +180,11 @@ const ZoneSlot = ({
             src={card.isFaceDown ? CARD_BACK_URL : card.card_images?.[0]?.image_url_small}
             alt={card.isFaceDown ? 'Face-down card' : card.name}
             className={cn(
-              "w-full h-full object-cover rounded-md shadow-sm hover:shadow-lg transition-all hover:scale-105 cursor-grab active:cursor-grabbing",
-              card.position === 'defense' && isHorizontal && "rotate-90"
+              "w-full h-full object-cover rounded-md shadow-sm hover:shadow-lg transition-all hover:scale-105 cursor-grab active:cursor-grabbing"
             )}
+            style={{
+              transformOrigin: 'center center'
+            }}
             title={card.isFaceDown ? 'Face-down card' : card.name}
           />
         </div>
@@ -273,6 +284,15 @@ export const DuelFieldBoard = ({
     }
   };
 
+  // Effect modal state
+  const handleCardClickLocal = (card: GameCard, zone: FieldZoneType) => {
+    try {
+      onCardClick(card, zone);
+    } catch (err) {
+      // ignore
+    }
+  };
+
   return (
     <div 
       className={cn(
@@ -294,7 +314,7 @@ export const DuelFieldBoard = ({
               card={fieldState.extraMonster1}
               label="Extra Monster"
               onClick={() => onZoneClick('extraMonster1')}
-              onCardClick={(card) => onCardClick(card, 'extraMonster1')}
+              onCardClick={(card) => handleCardClickLocal(card, 'extraMonster1')}
               onDragOver={handleDragOver}
               onDrop={handleDrop('extraMonster1')}
               className="border-purple-500/30"
@@ -305,7 +325,7 @@ export const DuelFieldBoard = ({
               card={fieldState.extraMonster2}
               label="Extra Monster"
               onClick={() => onZoneClick('extraMonster2')}
-              onCardClick={(card) => onCardClick(card, 'extraMonster2')}
+              onCardClick={(card) => handleCardClickLocal(card, 'extraMonster2')}
               onDragOver={handleDragOver}
               onDrop={handleDrop('extraMonster2')}
               className="border-purple-500/30"
@@ -322,7 +342,7 @@ export const DuelFieldBoard = ({
             card={fieldState.fieldSpell}
             label="Field"
             onClick={() => onZoneClick('fieldSpell')}
-            onCardClick={(card) => onCardClick(card, 'fieldSpell')}
+            onCardClick={(card) => handleCardClickLocal(card, 'fieldSpell')}
             onDragOver={handleDragOver}
             onDrop={handleDrop('fieldSpell')}
             className="border-green-500/30"
@@ -337,7 +357,7 @@ export const DuelFieldBoard = ({
                 card={fieldState[zone]}
                 label={`M${idx + 1}`}
                 onClick={() => onZoneClick(zone)}
-                onCardClick={(card) => onCardClick(card, zone)}
+                onCardClick={(card) => handleCardClickLocal(card, zone)}
                 onDragOver={handleDragOver}
                 onDrop={handleDrop(zone)}
                 className="border-orange-500/30"
@@ -382,7 +402,7 @@ export const DuelFieldBoard = ({
                 card={fieldState[zone]}
                 label={`S/T${idx + 1}`}
                 onClick={() => onZoneClick(zone)}
-                onCardClick={(card) => onCardClick(card, zone)}
+                onCardClick={(card) => handleCardClickLocal(card, zone)}
                 onDragOver={handleDragOver}
                 onDrop={handleDrop(zone)}
                 className="border-blue-500/30"
@@ -430,6 +450,7 @@ export const DuelFieldBoard = ({
           />
         </div>
       </div>
+
     </div>
   );
 };

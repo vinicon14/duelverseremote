@@ -25,6 +25,7 @@ import { DeckCard } from '@/components/deckbuilder/DeckPanel';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { DuelFieldBoard, FieldState, FieldZoneType, GameCard } from './DuelFieldBoard';
+import { CardEffectModal } from './CardEffectModal';
 import { ZonePlacementModal } from './ZonePlacementModal';
 import { ZoneViewerModal } from './ZoneViewerModal';
 import { FieldCardActionsModal } from './FieldCardActionsModal';
@@ -86,6 +87,8 @@ export const DuelDeckViewer = ({
   currentUserId,
   opponentUsername,
 }: DuelDeckViewerProps) => {
+  const [selectedEffectCard, setSelectedEffectCard] = useState<GameCard | null>(null);
+  const [effectModalOpen, setEffectModalOpen] = useState(false);
   const [fieldState, setFieldState] = useState<FieldState>(INITIAL_FIELD_STATE);
   
   // Modal states
@@ -546,8 +549,9 @@ export const DuelDeckViewer = ({
   }, []);
 
   const handleHandCardClick = useCallback((card: GameCard) => {
-    // Open placement modal
-    setPlacementModal({ open: true, card });
+    // Open effect modal for hand cards (click shows effect)
+    setSelectedEffectCard(card);
+    setEffectModalOpen(true);
   }, []);
 
   const searchCardInDeck = useCallback((cardName: string) => {
@@ -1097,6 +1101,20 @@ export const DuelDeckViewer = ({
         }}
         onDetachMaterial={handleDetachMaterial}
         isExtraDeckCard={cardActionsModal.card ? isExtraDeckCardType(cardActionsModal.card.type) : false}
+      />
+
+      {/* Card Effect Modal for hand/field/opponent previews */}
+      <CardEffectModal
+        open={!!effectModalOpen}
+        onClose={() => setEffectModalOpen(false)}
+        card={selectedEffectCard}
+        showPlaceButton={selectedEffectCard && fieldState.hand.some(c => c.instanceId === selectedEffectCard.instanceId)}
+        onPlaceCard={() => {
+          if (selectedEffectCard) {
+            setPlacementModal({ open: true, card: selectedEffectCard });
+            setEffectModalOpen(false);
+          }
+        }}
       />
 
       {/* Side Deck Swap Modal */}

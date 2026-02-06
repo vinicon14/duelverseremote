@@ -41,7 +41,7 @@ const DuelRoom = () => {
   
   // Deck viewer state
   const [showDeckViewer, setShowDeckViewer] = useState(false);
-  const { mainDeck, extraDeck, sideDeck, importDeckFromYDK, isLoading: isDeckLoading } = useDuelDeck();
+  const { mainDeck, extraDeck, sideDeck, tokensDeck, importDeckFromYDK, loadDeckFromSaved, isLoading: isDeckLoading } = useDuelDeck();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Carrega dados do duelo e inicia timer
@@ -49,7 +49,46 @@ const DuelRoom = () => {
     const init = async () => {
       const user = await checkAuth();
       if (user) {
+        setCurrentUser(user);
         await fetchDuel(user.id);
+
+        // Tentar carregar deck do localStorage (salvo no DeckBuilder)
+        try {
+          const savedDeckData = localStorage.getItem('currentDeckForDuel');
+          if (savedDeckData) {
+            const deckData = JSON.parse(savedDeckData);
+            loadDeckFromSaved(
+              deckData.main || [],
+              deckData.extra || [],
+              deckData.tokens || [],
+              deckData.side || []
+            );
+          } else {
+            // Fallback: tentar carregar o último deck salvo do usuário no Supabase
+            try {
+              const { data: saved, error } = await supabase
+                .from('saved_decks')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('updated_at', { ascending: false })
+                .limit(1);
+
+              if (!error && saved && saved.length > 0) {
+                const deck = saved[0] as any;
+                loadDeckFromSaved(
+                  deck.main_deck || [],
+                  deck.extra_deck || [],
+                  deck.tokens_deck || [],
+                  deck.side_deck || []
+                );
+              }
+            } catch (err) {
+              console.error('Erro ao buscar deck salvo do usuário:', err);
+            }
+          }
+        } catch (error) {
+          console.error('Erro ao carregar deck do localStorage:', error);
+        }
       }
     };
     
@@ -60,7 +99,7 @@ const DuelRoom = () => {
         clearInterval(timerInterval.current);
       }
     };
-  }, [id]);
+  }, [id, loadDeckFromSaved]);
 
   // Listener realtime para sincronizar LP entre usuários e atualização de opponent
   useEffect(() => {

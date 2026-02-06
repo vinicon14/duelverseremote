@@ -6,6 +6,7 @@ import { useToast } from '@/components/ui/use-toast';
 export const useDuelDeck = () => {
   const [mainDeck, setMainDeck] = useState<DeckCard[]>([]);
   const [extraDeck, setExtraDeck] = useState<DeckCard[]>([]);
+  const [tokensDeck, setTokensDeck] = useState<DeckCard[]>([]);
   const [sideDeck, setSideDeck] = useState<DeckCard[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { getCardById } = useYugiohCards();
@@ -107,6 +108,9 @@ export const useDuelDeck = () => {
       const result = await parseYDKContent(content);
       
       setMainDeck(result.main);
+      // Fichas começam vazias em YDK (YDK não suporta fichas)
+      setTokensDeck([]);
+      // No duel, fichas e extra deck são mesclados
       setExtraDeck(result.extra);
       setSideDeck(result.side);
 
@@ -132,9 +136,24 @@ export const useDuelDeck = () => {
     }
   }, [parseYDKContent, toast]);
 
+  const loadDeckFromSaved = useCallback((
+    main: DeckCard[],
+    extra: DeckCard[],
+    tokens: DeckCard[],
+    side: DeckCard[]
+  ) => {
+    setMainDeck(main);
+    // Mesclar fichas com extra deck para exibição no duel
+    const mergedExtra = [...extra, ...tokens];
+    setExtraDeck(mergedExtra);
+    setTokensDeck(tokens);
+    setSideDeck(side);
+  }, []);
+
   const clearDeck = useCallback(() => {
     setMainDeck([]);
     setExtraDeck([]);
+    setTokensDeck([]);
     setSideDeck([]);
   }, []);
 
@@ -143,10 +162,12 @@ export const useDuelDeck = () => {
   return {
     mainDeck,
     extraDeck,
+    tokensDeck,
     sideDeck,
     isLoading,
     hasDeck,
     importDeckFromYDK,
+    loadDeckFromSaved,
     clearDeck,
   };
 };

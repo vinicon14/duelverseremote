@@ -200,7 +200,7 @@ export const DeckPanel = ({
             deckType="tokens"
             maxCards={5}
             count={tokensCount}
-            icon={<Sparkles className="h-3 w-3 text-yellow-500" />}
+            icon={<Sparkles className="h-4 w-4" />}
           />
         </div>
       </ScrollArea>

@@ -1,7 +1,8 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Swords, Shield, Star, Sparkles } from 'lucide-react';
+import { Swords, Shield, Star, Sparkles, BookOpen, ChevronDown } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useState } from 'react';
 
 interface CardEffectModalProps {
   open: boolean;
@@ -19,80 +20,131 @@ interface CardEffectModalProps {
       image_url_small: string;
     }[];
   } | null;
+  onPlaceCard?: () => void;
+  showPlaceButton?: boolean;
+  initialShowEffect?: boolean;
 }
 
-export const CardEffectModal = ({ open, onClose, card }: CardEffectModalProps) => {
+export const CardEffectModal = ({ open, onClose, card, onPlaceCard, showPlaceButton, initialShowEffect = false }: CardEffectModalProps) => {
+  const [showEffect, setShowEffect] = useState(initialShowEffect);
+  
   if (!card) return null;
 
   const isMonster = card.atk !== undefined;
+  const effectText = card.desc;
+  const isLong = effectText && effectText.length > 150;
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg max-h-[85vh]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-lg">
+    <Dialog open={open} onOpenChange={() => {
+      onClose();
+      setShowEffect(false);
+    }}>
+      <DialogContent className="max-w-2xl max-h-[90vh] p-0 flex flex-col">
+        <DialogHeader className="border-b px-6 py-4">
+          <div className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
-            Efeito da Carta
-          </DialogTitle>
+            <DialogTitle className="text-lg">{card.name}</DialogTitle>
+          </div>
         </DialogHeader>
 
-        <div className="flex gap-4">
-          {/* Card Image */}
-          <div className="w-24 flex-shrink-0">
-            <img
-              src={card.card_images?.[0]?.image_url_small}
-              alt={card.name}
-              className="w-full rounded-lg shadow-lg"
-            />
-          </div>
-
-          {/* Card Info */}
-          <div className="flex-1 space-y-2">
-            <h3 className="font-bold text-base">{card.name}</h3>
-            
-            <div className="flex flex-wrap gap-1">
-              <Badge variant="outline" className="text-xs">
-                {card.type}
-              </Badge>
-              <Badge variant="secondary" className="text-xs">
-                {card.race}
-              </Badge>
-              {card.attribute && (
-                <Badge className="text-xs bg-primary/20 text-primary">
-                  {card.attribute}
-                </Badge>
-              )}
+        <div className="flex gap-4 px-6 pt-4 pb-4 overflow-hidden flex-1 flex-col min-h-0">
+          {/* Card Preview */}
+          <div className="flex gap-4">
+            <div className="w-24 flex-shrink-0 rounded-lg overflow-hidden shadow-lg bg-muted">
+              <img
+                src={card.card_images?.[0]?.image_url_small}
+                alt={card.name}
+                className="w-full h-auto object-cover"
+              />
             </div>
 
-            {isMonster && (
-              <div className="flex items-center gap-3 text-sm">
-                {card.level && (
-                  <div className="flex items-center gap-1">
-                    <Star className="h-4 w-4 text-yellow-500" />
-                    <span>Nível {card.level}</span>
-                  </div>
+            {/* Card Info */}
+            <div className="flex-1 space-y-2">
+              <div className="flex flex-wrap gap-1">
+                <Badge variant="outline" className="text-xs">
+                  {card.type}
+                </Badge>
+                <Badge variant="secondary" className="text-xs">
+                  {card.race}
+                </Badge>
+                {card.attribute && (
+                  <Badge className="text-xs bg-primary/20 text-primary border-0">
+                    {card.attribute}
+                  </Badge>
                 )}
-                <div className="flex items-center gap-1">
-                  <Swords className="h-4 w-4 text-destructive" />
-                  <span>{card.atk}</span>
+              </div>
+
+              {isMonster && (
+                <div className="flex items-center gap-3 text-xs gap-2 flex-wrap">
+                  {card.level && (
+                    <Badge variant="outline" className="text-xs">
+                      <Star className="h-3 w-3 mr-1 text-yellow-500" />
+                      Nível {card.level}
+                    </Badge>
+                  )}
+                  <Badge className="bg-destructive/20 text-destructive border-0 text-xs">
+                    <Swords className="h-3 w-3 mr-1" />
+                    ATK {card.atk}
+                  </Badge>
+                  <Badge className="bg-primary/20 text-primary border-0 text-xs">
+                    <Shield className="h-3 w-3 mr-1" />
+                    DEF {card.def ?? '?'}
+                  </Badge>
                 </div>
-                <div className="flex items-center gap-1">
-                  <Shield className="h-4 w-4 text-primary" />
-                  <span>{card.def ?? '?'}</span>
+              )}
+            </div>
+          </div>
+
+          {/* Card Description with Auto-Scroll */}
+          {showEffect && (
+            <div className="border-t pt-4 flex-1 flex flex-col min-h-0 overflow-hidden">
+              <h4 className="text-xs font-semibold text-muted-foreground mb-2">EFEITO</h4>
+              <div className="flex-1 overflow-y-auto">
+                <div className="text-sm leading-relaxed whitespace-pre-wrap pr-4 pb-2">
+                  {effectText}
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Footer with Action Buttons */}
+          <div className="border-t pt-3 pb-2 flex flex-col gap-2 flex-shrink-0">
+            {!showEffect && (
+              <Button
+                onClick={() => setShowEffect(true)}
+                variant="default"
+                className="w-full"
+                size="sm"
+              >
+                <BookOpen className="h-4 w-4 mr-2" />
+                Ler Efeito
+              </Button>
+            )}
+            {showEffect && (
+              <Button
+                onClick={() => setShowEffect(false)}
+                variant="outline"
+                className="w-full"
+                size="sm"
+              >
+                <ChevronDown className="h-4 w-4 mr-2" />
+                Esconder Efeito
+              </Button>
+            )}
+            {showPlaceButton && onPlaceCard && (
+              <Button
+                onClick={() => {
+                  onPlaceCard();
+                  onClose();
+                }}
+                className="w-full"
+                size="sm"
+              >
+                Colocar no Campo
+              </Button>
             )}
           </div>
         </div>
-
-        {/* Card Description */}
-        <ScrollArea className="max-h-[300px]">
-          <div className="p-3 bg-muted/30 rounded-lg border border-border/50">
-            <p className="text-sm leading-relaxed whitespace-pre-wrap">
-              {card.desc || 'Sem descrição disponível.'}
-            </p>
-          </div>
-        </ScrollArea>
       </DialogContent>
     </Dialog>
   );

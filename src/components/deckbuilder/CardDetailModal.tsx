@@ -7,18 +7,18 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Swords, Shield, Star, Layers } from 'lucide-react';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Plus, Swords, Shield, Star, Layers, Sparkles } from 'lucide-react';
 
 interface CardDetailModalProps {
   card: YugiohCard | null;
   open: boolean;
   onClose: () => void;
-  onAddToDeck: (card: YugiohCard, deckType: 'main' | 'extra' | 'side') => void;
+  onAddToDeck: (card: YugiohCard, deckType: 'main' | 'extra' | 'side' | 'tokens') => void;
   language: Language;
   canAddToMain: boolean;
   canAddToExtra: boolean;
   canAddToSide: boolean;
+  canAddToTokens: boolean;
   isExtraDeckCard: boolean;
 }
 
@@ -27,6 +27,7 @@ const labels = {
     addToMain: 'Add to Main',
     addToExtra: 'Add to Extra',
     addToSide: 'Add to Side',
+    addToTokens: 'Add as Token',
     atk: 'ATK',
     def: 'DEF',
     level: 'Level',
@@ -41,6 +42,7 @@ const labels = {
     addToMain: 'Add ao Principal',
     addToExtra: 'Add ao Extra',
     addToSide: 'Add ao Side',
+    addToTokens: 'Adicionar como Ficha',
     atk: 'ATK',
     def: 'DEF',
     level: 'Nível',
@@ -62,6 +64,7 @@ export const CardDetailModal = ({
   canAddToMain,
   canAddToExtra,
   canAddToSide,
+  canAddToTokens,
   isExtraDeckCard,
 }: CardDetailModalProps) => {
   const t = labels[language];
@@ -75,12 +78,12 @@ export const CardDetailModal = ({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh]">
+      <DialogContent className="max-w-2xl max-h-[95vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-lg font-bold">{card.name}</DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[70vh]">
+        <div className="max-h-[calc(95vh-100px)] overflow-y-auto">
           <div className="grid md:grid-cols-2 gap-4 p-1">
             {/* Card Image */}
             <div className="flex justify-center">
@@ -154,7 +157,7 @@ export const CardDetailModal = ({
               </div>
 
               {/* Add Buttons */}
-              <div className="flex flex-wrap gap-2 pt-2">
+              <div className="grid grid-cols-2 gap-2 pt-2">
                 {!isExtraDeckCard && (
                   <Button
                     size="sm"
@@ -187,10 +190,20 @@ export const CardDetailModal = ({
                   <Plus className="h-3 w-3" />
                   {t.addToSide}
                 </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => onAddToDeck(card, 'tokens')}
+                  disabled={!canAddToTokens}
+                  className="gap-1"
+                >
+                  <Sparkles className="h-3 w-3" />
+                  {t.addToTokens}
+                </Button>
               </div>
             </div>
           </div>
-        </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );

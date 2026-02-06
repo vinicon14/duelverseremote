@@ -11,6 +11,7 @@ interface SavedDeck {
   main_deck: DeckCard[];
   extra_deck: DeckCard[];
   side_deck: DeckCard[];
+  tokens_deck: DeckCard[];
   is_public: boolean;
   created_at: string;
   updated_at: string;
@@ -24,6 +25,7 @@ interface RawSavedDeck {
   main_deck: unknown;
   extra_deck: unknown;
   side_deck: unknown;
+  tokens_deck: unknown;
   is_public: boolean;
   created_at: string;
   updated_at: string;
@@ -67,6 +69,7 @@ export const useSavedDecks = () => {
         main_deck: (deck.main_deck || []) as DeckCard[],
         extra_deck: (deck.extra_deck || []) as DeckCard[],
         side_deck: (deck.side_deck || []) as DeckCard[],
+        tokens_deck: (deck.tokens_deck || []) as DeckCard[],
       }));
       
       setSavedDecks(parsedData);
@@ -89,6 +92,7 @@ export const useSavedDecks = () => {
     mainDeck: DeckCard[],
     extraDeck: DeckCard[],
     sideDeck: DeckCard[],
+    tokensDeck: DeckCard[],
     description?: string,
     isPublic?: boolean,
     existingId?: string
@@ -108,6 +112,7 @@ export const useSavedDecks = () => {
         main_deck: JSON.parse(JSON.stringify(mainDeck)),
         extra_deck: JSON.parse(JSON.stringify(extraDeck)),
         side_deck: JSON.parse(JSON.stringify(sideDeck)),
+        tokens_deck: JSON.parse(JSON.stringify(tokensDeck)),
         is_public: isPublic || false,
       };
 
@@ -132,6 +137,7 @@ export const useSavedDecks = () => {
           main_deck: (rawData.main_deck || []) as DeckCard[],
           extra_deck: (rawData.extra_deck || []) as DeckCard[],
           side_deck: (rawData.side_deck || []) as DeckCard[],
+          tokens_deck: (rawData.tokens_deck || []) as DeckCard[],
         };
       } else {
         // Create new deck
@@ -152,6 +158,7 @@ export const useSavedDecks = () => {
           main_deck: (rawData.main_deck || []) as DeckCard[],
           extra_deck: (rawData.extra_deck || []) as DeckCard[],
           side_deck: (rawData.side_deck || []) as DeckCard[],
+          tokens_deck: (rawData.tokens_deck || []) as DeckCard[],
         };
       }
     } catch (error: any) {
@@ -193,6 +200,7 @@ export const useSavedDecks = () => {
       mainDeck: deck.main_deck,
       extraDeck: deck.extra_deck,
       sideDeck: deck.side_deck,
+      tokensDeck: deck.tokens_deck,
     };
   }, []);
 

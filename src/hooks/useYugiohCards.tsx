@@ -104,7 +104,7 @@ export const useYugiohCards = () => {
         params.append('archetype', filters.archetype);
       }
       
-      // Language parameter
+      // Language parameter - start with requested language
       if (language === 'pt') {
         params.append('language', 'pt');
       }
@@ -114,6 +114,19 @@ export const useYugiohCards = () => {
       
       if (!response.ok) {
         if (response.status === 400) {
+          // If Portuguese search returns 400, try English
+          if (language === 'pt') {
+            const englishParams = new URLSearchParams(params);
+            englishParams.delete('language');
+            const englishUrl = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${englishParams.toString()}`;
+            const englishResponse = await fetch(englishUrl);
+            
+            if (englishResponse.ok) {
+              const englishData = await englishResponse.json();
+              setCards(englishData.data || []);
+              return;
+            }
+          }
           setCards([]);
           return;
         }
@@ -121,6 +134,23 @@ export const useYugiohCards = () => {
       }
 
       const data = await response.json();
+      
+      // If Portuguese search returns no results, try English
+      if ((!data.data || data.data.length === 0) && language === 'pt') {
+        const englishParams = new URLSearchParams(params);
+        englishParams.delete('language');
+        const englishUrl = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${englishParams.toString()}`;
+        
+        try {
+          const englishResponse = await fetch(englishUrl);
+          if (englishResponse.ok) {
+            const englishData = await englishResponse.json();
+            setCards(englishData.data || []);
+            return;
+          }
+        } catch {}
+      }
+      
       setCards(data.data || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro desconhecido');
@@ -137,11 +167,48 @@ export const useYugiohCards = () => {
         `https://db.ygoprodeck.com/api/v7/cardinfo.php?id=${id}${langParam}`
       );
       
-      if (!response.ok) return null;
+      if (!response.ok) {
+        // If Portuguese fetch fails, try English
+        if (language === 'pt') {
+          const englishResponse = await fetch(
+            `https://db.ygoprodeck.com/api/v7/cardinfo.php?id=${id}`
+          );
+          if (englishResponse.ok) {
+            const englishData = await englishResponse.json();
+            return englishData.data?.[0] || null;
+          }
+        }
+        return null;
+      }
       
       const data = await response.json();
-      return data.data?.[0] || null;
+      const card = data.data?.[0];
+      
+      // If Portuguese fetch returns no data, try English
+      if (!card && language === 'pt') {
+        const englishResponse = await fetch(
+          `https://db.ygoprodeck.com/api/v7/cardinfo.php?id=${id}`
+        );
+        if (englishResponse.ok) {
+          const englishData = await englishResponse.json();
+          return englishData.data?.[0] || null;
+        }
+      }
+      
+      return card || null;
     } catch {
+      // Try English as fallback on error
+      if (language === 'pt') {
+        try {
+          const englishResponse = await fetch(
+            `https://db.ygoprodeck.com/api/v7/cardinfo.php?id=${id}`
+          );
+          if (englishResponse.ok) {
+            const englishData = await englishResponse.json();
+            return englishData.data?.[0] || null;
+          }
+        } catch {}
+      }
       return null;
     }
   }, []);
