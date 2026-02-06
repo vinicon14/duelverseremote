@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -18,10 +17,8 @@ import {
   Shield,
   Link2,
   Sparkles,
-  Trash2,
-  BookOpen
+  Trash2
 } from 'lucide-react';
-import { CardEffectModal } from './CardEffectModal';
 import { FieldZoneType, GameCard } from './DuelFieldBoard';
 
 interface FieldCardActionsModalProps {
@@ -63,8 +60,6 @@ export const FieldCardActionsModal = ({
   onDetachMaterial,
   isExtraDeckCard,
 }: FieldCardActionsModalProps) => {
-  const [showEffectModal, setShowEffectModal] = useState(false);
-
   if (!card || !zone) return null;
 
   const isMonsterZone = zone.includes('monster') || zone.includes('Monster');
@@ -80,12 +75,6 @@ export const FieldCardActionsModal = ({
   };
 
   return (
-    <>
-      <CardEffectModal 
-        open={showEffectModal} 
-        onClose={() => setShowEffectModal(false)} 
-        card={card} 
-      />
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
@@ -139,19 +128,6 @@ export const FieldCardActionsModal = ({
                 )}
               </div>
             </div>
-
-            {/* Read Effect Button */}
-            {!card.isFaceDown && (
-              <Button
-                variant="secondary"
-                size="sm"
-                className="w-full h-8 text-xs"
-                onClick={() => setShowEffectModal(true)}
-              >
-                <BookOpen className="h-3 w-3 mr-1" />
-                Ler Efeito
-              </Button>
-            )}
 
             <div className="grid grid-cols-2 gap-1.5">
               {/* Flip Actions */}
@@ -314,6 +290,5 @@ export const FieldCardActionsModal = ({
         </div>
       </DialogContent>
     </Dialog>
-    </>
   );
 };
