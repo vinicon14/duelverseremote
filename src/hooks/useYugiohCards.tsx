@@ -103,59 +103,25 @@ export const useYugiohCards = () => {
       if (filters.archetype) {
         params.append('archetype', filters.archetype);
       }
-
-      // Try Portuguese first
-      const ptParams = new URLSearchParams(params);
-      ptParams.append('language', 'pt');
       
-      const ptUrl = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${ptParams.toString()}`;
-      const ptResponse = await fetch(ptUrl);
-      
-      let ptCards: YugiohCard[] = [];
-      if (ptResponse.ok) {
-        const ptData = await ptResponse.json();
-        ptCards = ptData.data || [];
+      // Language parameter
+      if (language === 'pt') {
+        params.append('language', 'pt');
       }
 
-      // If no Portuguese results or language is English, search in English
-      if (ptCards.length === 0 || language === 'en') {
-        const enUrl = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${params.toString()}`;
-        const enResponse = await fetch(enUrl);
-        
-        if (enResponse.ok) {
-          const enData = await enResponse.json();
-          const enCards: YugiohCard[] = enData.data || [];
-          
-          // Merge: use Portuguese where available, fill gaps with English
-          if (ptCards.length > 0) {
-            const ptCardIds = new Set(ptCards.map(c => c.id));
-            const missingEnCards = enCards.filter(c => !ptCardIds.has(c.id));
-            setCards([...ptCards, ...missingEnCards]);
-          } else {
-            setCards(enCards);
-          }
-        } else if (ptCards.length > 0) {
-          setCards(ptCards);
-        } else {
+      const url = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${params.toString()}`;
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        if (response.status === 400) {
           setCards([]);
+          return;
         }
-      } else {
-        // Also fetch English to get untranslated cards
-        const enUrl = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${params.toString()}`;
-        const enResponse = await fetch(enUrl);
-        
-        if (enResponse.ok) {
-          const enData = await enResponse.json();
-          const enCards: YugiohCard[] = enData.data || [];
-          
-          // Merge cards: prefer Portuguese, add English for missing ones
-          const ptCardIds = new Set(ptCards.map(c => c.id));
-          const missingEnCards = enCards.filter(c => !ptCardIds.has(c.id));
-          setCards([...ptCards, ...missingEnCards]);
-        } else {
-          setCards(ptCards);
-        }
+        throw new Error('Erro ao buscar cartas');
       }
+
+      const data = await response.json();
+      setCards(data.data || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro desconhecido');
       setCards([]);
