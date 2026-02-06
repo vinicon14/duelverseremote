@@ -57,17 +57,28 @@ const TournamentDetail = () => {
 
       const participantsWithProfiles = await Promise.all(
         (participantsData || []).map(async (participant) => {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('username, points')
-            .eq('user_id', participant.user_id)
-            .maybeSingle();
-          
-          return { ...participant, profiles: profile };
+          try {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('username, points')
+              .eq('user_id', participant.user_id)
+              .maybeSingle();
+            
+            return { 
+              ...participant, 
+              profiles: profile || { username: 'Usuário', points: 0 }
+            };
+          } catch (err) {
+            console.error('Error loading profile for participant:', participant.user_id, err);
+            return { 
+              ...participant, 
+              profiles: { username: 'Usuário', points: 0 } 
+            };
+          }
         })
       );
 
-      setParticipants(participantsWithProfiles);
+      setParticipants(participantsWithProfiles.filter(p => p && p.profiles));
 
       const { data: matchesData, error: matchesError } = await supabase
         .from('tournament_matches')

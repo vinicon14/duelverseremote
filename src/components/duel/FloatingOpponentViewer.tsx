@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { CardEffectModal } from '@/components/duel/CardEffectModal';
 import { 
   Layers, 
   Flame, 
@@ -80,6 +81,8 @@ export const FloatingOpponentViewer = ({
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
+  const [selectedCard, setSelectedCard] = useState<OpponentCard | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
 
   const { position, isDragging, elementRef, dragHandlers } = useDraggable({
     initialPosition: { x: 8, y: 80 },
@@ -154,14 +157,16 @@ export const FloatingOpponentViewer = ({
       card && "border-solid border-primary/30"
     )}>
       {card ? (
-        <div className="relative w-full h-full">
+        <div className={cn(
+          "relative w-full h-full",
+          card.position?.toString().toLowerCase().startsWith('def') && "rotate-90"
+        )}>
           <img
             src={card.image || CARD_BACK_URL}
             alt={card.name}
             title={card.isFaceDown ? 'Carta virada' : card.name}
             className={cn(
-              "w-full h-full object-cover rounded",
-              card.position === 'defense' && "rotate-90"
+              "w-full h-full object-cover rounded"
             )}
           />
           {card.isFaceDown && (
@@ -206,12 +211,24 @@ export const FloatingOpponentViewer = ({
         <ScrollArea className="max-h-20">
           <div className="flex gap-1 flex-wrap">
             {cards.map((card, idx) => (
-              <div key={`${card.id}-${idx}`} className="relative">
+                <div 
+                key={`${card.id}-${idx}`} 
+                className={cn(
+                  "relative cursor-pointer hover:opacity-80 transition-opacity",
+                  card.position?.toString().toLowerCase().startsWith('def') && "transform origin-center"
+                )}
+                onClick={() => {
+                  setSelectedCard(card);
+                  setModalOpen(true);
+                }}
+              >
                 <img
                   src={card.isFaceDown ? CARD_BACK_URL : card.image}
                   alt={card.isFaceDown ? 'Face-down card' : card.name}
                   title={card.isFaceDown ? 'Carta virada' : card.name}
-                  className="w-10 h-auto rounded-sm shadow-sm hover:scale-110 transition-transform"
+                  className={cn(
+                    "w-10 h-auto rounded-sm shadow-sm hover:scale-110 transition-transform"
+                  )}
                 />
                 {card.materials && card.materials > 0 && (
                   <Badge className="absolute -bottom-1 -right-1 text-[8px] h-3 px-1 bg-yellow-600">
@@ -381,6 +398,19 @@ export const FloatingOpponentViewer = ({
           </div>
         )}
       </div>
+
+      {/* Card effect modal for opponent previews */}
+      <CardEffectModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        card={selectedCard ? {
+          name: selectedCard.name,
+          type: '',
+          desc: '',
+          race: '',
+          card_images: [{ image_url_small: selectedCard.image }]
+        } : null}
+      />
     </div>
   );
 };

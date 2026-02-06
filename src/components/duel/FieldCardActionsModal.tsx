@@ -84,7 +84,8 @@ export const FieldCardActionsModal = ({
       <CardEffectModal 
         open={showEffectModal} 
         onClose={() => setShowEffectModal(false)} 
-        card={card} 
+        card={card}
+        initialShowEffect={true}
       />
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-sm">
@@ -103,8 +104,11 @@ export const FieldCardActionsModal = ({
               alt={card.name}
               className={cn(
                 "w-full rounded-md shadow-md",
-                card.position === 'defense' && "rotate-90"
+                card.position?.toString().toLowerCase().startsWith('def') && "rotate-90"
               )}
+              style={{
+                transformOrigin: 'center center'
+              }}
             />
             {hasMaterials && (
               <div className="mt-1 flex items-center justify-center">

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { CardSearchPanel } from '@/components/deckbuilder/CardSearchPanel';
 import { DeckPanel, DeckCard } from '@/components/deckbuilder/DeckPanel';
@@ -42,6 +42,18 @@ const DeckBuilder = () => {
   
   // Saved decks hook
   const { savedDecks, isLoading: isSavingLoading, isLoggedIn, saveDeck, deleteDeck, loadDeck } = useSavedDecks();
+
+  // Salvar deck atual no localStorage para carregar em duelos
+  useEffect(() => {
+    const deckData = {
+      main: mainDeck,
+      extra: extraDeck,
+      tokens: tokensDeck,
+      side: sideDeck,
+      lastSaved: new Date().toISOString(),
+    };
+    localStorage.setItem('currentDeckForDuel', JSON.stringify(deckData));
+  }, [mainDeck, extraDeck, sideDeck, tokensDeck]);
 
   const labels = {
     en: {
@@ -101,6 +113,28 @@ const DeckBuilder = () => {
         }
       }
 
+      // Extra + Tokens combined cannot exceed 20
+      if (deckType === 'extra') {
+        const combinedTotal = getTotalCount(extraDeck) + getTotalCount(tokensDeck);
+        if (combinedTotal >= 20) {
+          toast.error(t.extraFull);
+          return;
+        }
+      }
+
+      // Tokens cannot exceed 5 and combined with extra cannot exceed 20
+      if (deckType === 'tokens') {
+        if (getTotalCount(tokensDeck) >= 5) {
+          toast.error('Máximo de 5 fichas permitidas');
+          return;
+        }
+        const combinedTotal = getTotalCount(extraDeck) + getTotalCount(tokensDeck);
+        if (combinedTotal >= 20) {
+          toast.error('Extra deck e fichas não podem ultrapassar 20 cartas');
+          return;
+        }
+      }
+
       const updateDeck = (
         deck: DeckCard[],
         setDeck: React.Dispatch<React.SetStateAction<DeckCard[]>>,
@@ -128,7 +162,7 @@ const DeckBuilder = () => {
       if (deckType === 'main') {
         updateDeck(mainDeck, setMainDeck, 60);
       } else if (deckType === 'extra') {
-        updateDeck(extraDeck, setExtraDeck, 15);
+        updateDeck(extraDeck, setExtraDeck, 20); // Use 20 as max since tokens are separate
       } else if (deckType === 'tokens') {
         updateDeck(tokensDeck, setTokensDeck, 5);
       } else {
@@ -138,11 +172,11 @@ const DeckBuilder = () => {
     [mainDeck, extraDeck, sideDeck, tokensDeck, t]
   );
 
-  const handleRemoveCard = (cardId: number, deckType: 'main' | 'extra' | 'side' | 'tokens') => {
+  const handleRemoveQuantity = (cardId: number, deckType: 'main' | 'extra' | 'side' | 'tokens') => {
     const setDeck =
       deckType === 'main' ? setMainDeck : 
       deckType === 'extra' ? setExtraDeck : 
-      deckType === 'tokens' ? setTokensDeck : 
+      deckType === 'tokens' ? setTokensDeck :
       setSideDeck;
     
     setDeck((prev) => prev.filter((c) => c.id !== cardId));
@@ -159,17 +193,35 @@ const DeckBuilder = () => {
       }
     }
 
+    // Extra + Tokens combined cannot exceed 20
+    if (deckType === 'extra') {
+      const combinedTotal = getTotalCount(extraDeck) + getTotalCount(tokensDeck);
+      if (combinedTotal >= 20) {
+        toast.error(t.extraFull);
+        return;
+      }
+    }
+
+    // Tokens combined with extra cannot exceed 20
+    if (deckType === 'tokens') {
+      const combinedTotal = getTotalCount(extraDeck) + getTotalCount(tokensDeck);
+      if (combinedTotal >= 20) {
+        toast.error('Extra deck e fichas não podem ultrapassar 20 cartas');
+        return;
+      }
+    }
+
     const setDeck =
       deckType === 'main' ? setMainDeck : 
       deckType === 'extra' ? setExtraDeck : 
-      deckType === 'tokens' ? setTokensDeck : 
+      deckType === 'tokens' ? setTokensDeck :
       setSideDeck;
     const deck = 
       deckType === 'main' ? mainDeck : 
       deckType === 'extra' ? extraDeck : 
-      deckType === 'tokens' ? tokensDeck : 
+      deckType === 'tokens' ? tokensDeck :
       sideDeck;
-    const maxCards = deckType === 'main' ? 60 : deckType === 'tokens' ? 5 : 15;
+    const maxCards = deckType === 'main' ? 60 : deckType === 'extra' ? 20 : deckType === 'tokens' ? 5 : 15;
 
     if (getTotalCount(deck) >= maxCards) {
       toast.error(t.deckFull);
@@ -181,11 +233,11 @@ const DeckBuilder = () => {
     );
   };
 
-  const handleRemoveQuantity = (cardId: number, deckType: 'main' | 'extra' | 'side' | 'tokens') => {
+  const handleRemoveCard = (cardId: number, deckType: 'main' | 'extra' | 'side' | 'tokens') => {
     const setDeck =
       deckType === 'main' ? setMainDeck : 
       deckType === 'extra' ? setExtraDeck : 
-      deckType === 'tokens' ? setTokensDeck : 
+      deckType === 'tokens' ? setTokensDeck :
       setSideDeck;
 
     setDeck((prev) =>
@@ -321,14 +373,15 @@ const DeckBuilder = () => {
   };
 
   const handleSaveDeck = async (name: string, description: string, isPublic: boolean) => {
-    await saveDeck(name, mainDeck, extraDeck, sideDeck, description, isPublic, currentDeckId || undefined);
+    await saveDeck(name, mainDeck, extraDeck, sideDeck, tokensDeck, description, isPublic, currentDeckId || undefined);
   };
 
   const handleLoadSavedDeck = (deck: any) => {
-    const { mainDeck: main, extraDeck: extra, sideDeck: side } = loadDeck(deck);
+    const { mainDeck: main, extraDeck: extra, sideDeck: side, tokensDeck: tokens } = loadDeck(deck);
     setMainDeck(main);
     setExtraDeck(extra);
     setSideDeck(side);
+    setTokensDeck(tokens);
     setCurrentDeckId(deck.id);
     toast.success(`Deck "${deck.name}" carregado!`);
   };
@@ -412,12 +465,17 @@ const DeckBuilder = () => {
 
   const canAddToExtra = selectedCard
     ? isExtraDeckCard(selectedCard) &&
-      getTotalCount(extraDeck) < 15 &&
+      (getTotalCount(extraDeck) + getTotalCount(tokensDeck)) < 20 &&
       getCardCount(selectedCard.id) < 3
     : false;
 
   const canAddToSide = selectedCard
     ? getTotalCount(sideDeck) < 15 && getCardCount(selectedCard.id) < 3
+    : false;
+
+  const canAddToTokens = selectedCard
+    ? getTotalCount(tokensDeck) < 5 &&
+      (getTotalCount(extraDeck) + getTotalCount(tokensDeck)) < 20
     : false;
 
   const hasDeck = mainDeck.length > 0 || extraDeck.length > 0 || sideDeck.length > 0;
@@ -562,6 +620,7 @@ const DeckBuilder = () => {
         canAddToMain={canAddToMain}
         canAddToExtra={canAddToExtra}
         canAddToSide={canAddToSide}
+        canAddToTokens={canAddToTokens}
         isExtraDeckCard={selectedCard ? isExtraDeckCard(selectedCard) : false}
       />
 

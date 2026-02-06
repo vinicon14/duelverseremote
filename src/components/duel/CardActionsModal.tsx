@@ -21,10 +21,13 @@ import {
   RotateCw,
   Link2,
   Unlink,
-  Crown
+  Crown,
+  BookOpen
 } from 'lucide-react';
 import { YugiohCard } from '@/hooks/useYugiohCards';
 import { cn } from '@/lib/utils';
+import { useState } from 'react';
+import { CardEffectModal } from './CardEffectModal';
 
 type ZoneType = 'hand' | 'field' | 'graveyard' | 'banished' | 'deckPile' | 'extraDeckPile' | 'sideDeckPile' | 'fieldZone';
 
@@ -83,6 +86,8 @@ export const CardActionsModal = ({
   isFieldSpell,
   attachedMaterials = [],
 }: CardActionsModalProps) => {
+  const [showEffectModal, setShowEffectModal] = useState(false);
+
   if (!card) return null;
 
   const handleAction = (action: () => void) => {
@@ -108,43 +113,63 @@ export const CardActionsModal = ({
   const currentZoneLabel = zoneLabels[currentZone]?.label || currentZone;
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="sm:max-w-md max-h-[85vh]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Layers className="h-5 w-5 text-primary" />
-            Ações da Carta
-          </DialogTitle>
-        </DialogHeader>
+    <>
+      <CardEffectModal 
+        open={showEffectModal} 
+        onClose={() => setShowEffectModal(false)} 
+        card={card}
+        initialShowEffect={true}
+      />
+      <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+        <DialogContent className="sm:max-w-md max-h-[85vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Layers className="h-5 w-5 text-primary" />
+              Ações da Carta
+            </DialogTitle>
+          </DialogHeader>
 
-        <ScrollArea className="max-h-[70vh]">
-          <div className="space-y-4 pr-2">
-            {/* Card Preview */}
-            <div className="flex gap-4">
-              <img
-                src={isFaceDown ? 'https://images.ygoprodeck.com/images/cards/back_high.jpg' : (card.card_images?.[0]?.image_url_small || card.card_images?.[0]?.image_url)}
-                alt={card.name}
-                className="w-20 h-auto rounded-lg shadow-lg"
-              />
-              <div className="flex flex-col gap-1 flex-1">
-                <h3 className="font-bold text-sm">{isFaceDown ? 'Carta Virada' : card.name}</h3>
-                {!isFaceDown && (
-                  <>
-                    <Badge variant="outline" className="w-fit text-xs">
-                      {card.type}
-                    </Badge>
-                    {card.atk !== undefined && (
-                      <span className="text-xs text-muted-foreground">
-                        ATK: {card.atk} / DEF: {card.def}
-                      </span>
-                    )}
-                  </>
-                )}
-                <Badge variant="secondary" className="w-fit text-xs mt-1">
-                  Zona: {currentZoneLabel}
-                </Badge>
+          <ScrollArea className="max-h-[70vh]">
+            <div className="space-y-4 pr-2">
+              {/* Card Preview */}
+              <div className="flex gap-4">
+                <img
+                  src={isFaceDown ? 'https://images.ygoprodeck.com/images/cards/back_high.jpg' : (card.card_images?.[0]?.image_url_small || card.card_images?.[0]?.image_url)}
+                  alt={card.name}
+                  className="w-20 h-auto rounded-lg shadow-lg"
+                />
+                <div className="flex flex-col gap-1 flex-1">
+                  <h3 className="font-bold text-sm">{isFaceDown ? 'Carta Virada' : card.name}</h3>
+                  {!isFaceDown && (
+                    <>
+                      <Badge variant="outline" className="w-fit text-xs">
+                        {card.type}
+                      </Badge>
+                      {card.atk !== undefined && (
+                        <span className="text-xs text-muted-foreground">
+                          ATK: {card.atk} / DEF: {card.def}
+                        </span>
+                      )}
+                    </>
+                  )}
+                  <Badge variant="secondary" className="w-fit text-xs mt-1">
+                    Zona: {currentZoneLabel}
+                  </Badge>
+                </div>
               </div>
-            </div>
+
+              {/* Read Effect Button */}
+              {!isFaceDown && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full h-8 text-xs"
+                  onClick={() => setShowEffectModal(true)}
+                >
+                  <BookOpen className="h-3 w-3 mr-1" />
+                  Ler Efeito
+                </Button>
+              )}
 
             {/* Face Down / Flip Actions */}
             {(currentZone === 'hand' || isOnField) && (
@@ -329,5 +354,6 @@ export const CardActionsModal = ({
         </ScrollArea>
       </DialogContent>
     </Dialog>
+    </>
   );
 };

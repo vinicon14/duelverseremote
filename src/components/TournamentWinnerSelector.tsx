@@ -78,22 +78,28 @@ export const TournamentWinnerSelector = ({
           <span>Prêmio: {prizePool} DuelCoins</span>
         </div>
 
-        <Select value={selectedWinnerId} onValueChange={setSelectedWinnerId}>
-          <SelectTrigger>
-            <SelectValue placeholder="Selecione o vencedor" />
-          </SelectTrigger>
-          <SelectContent>
-            {participants.map((participant) => (
-              <SelectItem key={participant.user_id} value={participant.user_id}>
-                {participant.profiles?.username}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {participants.length === 0 ? (
+          <div className="text-center py-4 text-muted-foreground">
+            Nenhum participante encontrado
+          </div>
+        ) : (
+          <Select value={selectedWinnerId} onValueChange={setSelectedWinnerId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione o vencedor" />
+            </SelectTrigger>
+            <SelectContent>
+              {participants.filter(p => p.profiles?.username).map((participant) => (
+                <SelectItem key={participant.user_id} value={participant.user_id}>
+                  {participant.profiles?.username || participant.user_id}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
 
         <Button
           onClick={finalizeTournament}
-          disabled={loading || !selectedWinnerId}
+          disabled={loading || !selectedWinnerId || participants.length === 0}
           className="w-full btn-mystic text-white"
         >
           {loading ? "Finalizando..." : "Finalizar Torneio e Premiar Vencedor"}
