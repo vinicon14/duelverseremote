@@ -29,6 +29,7 @@ const DeckBuilder = () => {
   const [mainDeck, setMainDeck] = useState<DeckCard[]>([]);
   const [extraDeck, setExtraDeck] = useState<DeckCard[]>([]);
   const [sideDeck, setSideDeck] = useState<DeckCard[]>([]);
+  const [tokens, setTokens] = useState<DeckCard[]>([]);
   const [selectedCard, setSelectedCard] = useState<YugiohCard | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [mobileTab, setMobileTab] = useState<'search' | 'deck'>('search');
@@ -73,11 +74,16 @@ const DeckBuilder = () => {
 
   const t = labels[language];
 
+  const isTokenCard = (card: YugiohCard): boolean => {
+    return card.type?.toLowerCase().includes('token') || false;
+  };
+
   const getCardCount = (cardId: number): number => {
     const mainCount = mainDeck.find((c) => c.id === cardId)?.quantity || 0;
     const extraCount = extraDeck.find((c) => c.id === cardId)?.quantity || 0;
     const sideCount = sideDeck.find((c) => c.id === cardId)?.quantity || 0;
-    return mainCount + extraCount + sideCount;
+    const tokenCount = tokens.find((c) => c.id === cardId)?.quantity || 0;
+    return mainCount + extraCount + sideCount + tokenCount;
   };
 
   const getTotalCount = (deck: DeckCard[]): number => {
@@ -88,6 +94,26 @@ const DeckBuilder = () => {
     setSelectedCard(card);
     setModalOpen(true);
   };
+
+  const handleAddToTokens = useCallback((card: YugiohCard) => {
+    const total = getTotalCount(tokens);
+    if (total >= 5) {
+      toast.error('Máximo de 5 fichas permitidas');
+      return;
+    }
+    
+    const existing = tokens.find((c) => c.id === card.id);
+    if (existing) {
+      setTokens(
+        tokens.map((c) =>
+          c.id === card.id ? { ...c, quantity: c.quantity + 1 } : c
+        )
+      );
+    } else {
+      setTokens([...tokens, { ...card, quantity: 1 }]);
+    }
+    toast.success('Ficha adicionada');
+  }, [tokens]);
 
   const handleAddToDeck = useCallback(
     (card: YugiohCard, deckType: 'main' | 'extra' | 'side') => {
@@ -133,7 +159,13 @@ const DeckBuilder = () => {
     [mainDeck, extraDeck, sideDeck, t]
   );
 
-  const handleRemoveCard = (cardId: number, deckType: 'main' | 'extra' | 'side') => {
+  const handleRemoveCard = (cardId: number, deckType: 'main' | 'extra' | 'side' | 'tokens') => {
+    if (deckType === 'tokens') {
+      setTokens((prev) => prev.filter((c) => c.id !== cardId));
+      toast.success(t.cardRemoved);
+      return;
+    }
+    
     const setDeck =
       deckType === 'main' ? setMainDeck : deckType === 'extra' ? setExtraDeck : setSideDeck;
     
@@ -141,7 +173,19 @@ const DeckBuilder = () => {
     toast.success(t.cardRemoved);
   };
 
-  const handleAddQuantity = (cardId: number, deckType: 'main' | 'extra' | 'side') => {
+  const handleAddQuantity = (cardId: number, deckType: 'main' | 'extra' | 'side' | 'tokens') => {
+    if (deckType === 'tokens') {
+      const total = getTotalCount(tokens);
+      if (total >= 5) {
+        toast.error('Máximo de 5 fichas');
+        return;
+      }
+      setTokens((prev) =>
+        prev.map((c) => (c.id === cardId ? { ...c, quantity: c.quantity + 1 } : c))
+      );
+      return;
+    }
+
     const totalCopies = getCardCount(cardId);
     if (totalCopies >= 3) {
       toast.error(t.maxCopies);
@@ -163,7 +207,16 @@ const DeckBuilder = () => {
     );
   };
 
-  const handleRemoveQuantity = (cardId: number, deckType: 'main' | 'extra' | 'side') => {
+  const handleRemoveQuantity = (cardId: number, deckType: 'main' | 'extra' | 'side' | 'tokens') => {
+    if (deckType === 'tokens') {
+      setTokens((prev) =>
+        prev
+          .map((c) => (c.id === cardId ? { ...c, quantity: c.quantity - 1 } : c))
+          .filter((c) => c.quantity > 0)
+      );
+      return;
+    }
+
     const setDeck =
       deckType === 'main' ? setMainDeck : deckType === 'extra' ? setExtraDeck : setSideDeck;
 
@@ -178,6 +231,7 @@ const DeckBuilder = () => {
     setMainDeck([]);
     setExtraDeck([]);
     setSideDeck([]);
+    setTokens([]);
     setCurrentDeckId(null);
     toast.success(t.deckCleared);
   };
@@ -489,6 +543,7 @@ const DeckBuilder = () => {
                 mainDeck={mainDeck}
                 extraDeck={extraDeck}
                 sideDeck={sideDeck}
+                tokens={tokens}
                 language={language}
                 onRemoveCard={handleRemoveCard}
                 onAddQuantity={handleAddQuantity}
@@ -514,6 +569,7 @@ const DeckBuilder = () => {
                 mainDeck={mainDeck}
                 extraDeck={extraDeck}
                 sideDeck={sideDeck}
+                tokens={tokens}
                 language={language}
                 onRemoveCard={handleRemoveCard}
                 onAddQuantity={handleAddQuantity}
@@ -534,10 +590,12 @@ const DeckBuilder = () => {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onAddToDeck={handleAddToDeck}
+        onAddToTokens={handleAddToTokens}
         language={language}
         canAddToMain={canAddToMain}
         canAddToExtra={canAddToExtra}
         canAddToSide={canAddToSide}
+        canAddToTokens={getTotalCount(tokens) < 5}
         isExtraDeckCard={selectedCard ? isExtraDeckCard(selectedCard) : false}
       />
 

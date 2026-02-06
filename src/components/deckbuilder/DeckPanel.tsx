@@ -13,10 +13,11 @@ interface DeckPanelProps {
   mainDeck: DeckCard[];
   extraDeck: DeckCard[];
   sideDeck: DeckCard[];
+  tokens?: DeckCard[];
   language: Language;
-  onRemoveCard: (cardId: number, deckType: 'main' | 'extra' | 'side') => void;
-  onAddQuantity: (cardId: number, deckType: 'main' | 'extra' | 'side') => void;
-  onRemoveQuantity: (cardId: number, deckType: 'main' | 'extra' | 'side') => void;
+  onRemoveCard: (cardId: number, deckType: 'main' | 'extra' | 'side' | 'tokens') => void;
+  onAddQuantity: (cardId: number, deckType: 'main' | 'extra' | 'side' | 'tokens') => void;
+  onRemoveQuantity: (cardId: number, deckType: 'main' | 'extra' | 'side' | 'tokens') => void;
   onClearDeck: () => void;
   onExportDeck: () => void;
   onImportDeck: () => void;
@@ -28,6 +29,7 @@ const labels = {
     mainDeck: 'Main Deck',
     extraDeck: 'Extra Deck',
     sideDeck: 'Side Deck',
+    tokens: 'Tokens',
     clearAll: 'Clear All',
     export: 'Export',
     import: 'Import',
@@ -37,6 +39,7 @@ const labels = {
     mainDeck: 'Deck Principal',
     extraDeck: 'Deck Extra',
     sideDeck: 'Side Deck',
+    tokens: 'Fichas',
     clearAll: 'Limpar Tudo',
     export: 'Exportar',
     import: 'Importar',
@@ -48,6 +51,7 @@ export const DeckPanel = ({
   mainDeck,
   extraDeck,
   sideDeck,
+  tokens = [],
   language,
   onRemoveCard,
   onAddQuantity,
@@ -62,6 +66,7 @@ export const DeckPanel = ({
   const mainCount = mainDeck.reduce((acc, c) => acc + c.quantity, 0);
   const extraCount = extraDeck.reduce((acc, c) => acc + c.quantity, 0);
   const sideCount = sideDeck.reduce((acc, c) => acc + c.quantity, 0);
+  const tokenCount = tokens.reduce((acc, c) => acc + c.quantity, 0);
 
   const DeckSection = ({
     title,
@@ -72,7 +77,7 @@ export const DeckPanel = ({
   }: {
     title: string;
     cards: DeckCard[];
-    deckType: 'main' | 'extra' | 'side';
+    deckType: 'main' | 'extra' | 'side' | 'tokens';
     maxCards: number;
     count: number;
   }) => (
@@ -183,6 +188,13 @@ export const DeckPanel = ({
             deckType="side"
             maxCards={15}
             count={sideCount}
+          />
+          <DeckSection
+            title={t.tokens}
+            cards={tokens}
+            deckType="tokens"
+            maxCards={5}
+            count={tokenCount}
           />
         </div>
       </ScrollArea>
