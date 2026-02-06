@@ -47,7 +47,6 @@ const RouterContent = () => {
       <Route path="/duels" element={<Duels />} />
       <Route path="/duel/:id" element={<DuelRoom />} />
       <Route path="/profile" element={<Profile />} />
-      <Route path="/profile/:userId" element={<Profile />} />
       <Route path="/ranking" element={<Ranking />} />
       <Route path="/friends" element={<Friends />} />
       <Route path="/chat/:friendId" element={<FriendChat />} />
