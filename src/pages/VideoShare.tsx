@@ -223,20 +223,13 @@ export default function VideoShare() {
                 })}
               </div>
 
-              <div className="pt-4 border-t flex flex-wrap gap-2">
+              <div className="pt-4 border-t">
                 <Button
                   onClick={() => navigate(`/profile/${recording.user_id}?tab=gallery`)}
                   variant="outline"
-                  className="flex-1 sm:flex-none"
+                  className="w-full sm:w-auto"
                 >
-                  Ver Mais Vídeos de {recording.profiles.username}
-                </Button>
-                <Button
-                  onClick={() => navigate('/match-gallery')}
-                  variant="ghost"
-                  className="flex-1 sm:flex-none"
-                >
-                  Galeria Geral
+                  Ver Mais Vídeos
                 </Button>
               </div>
             </CardContent>

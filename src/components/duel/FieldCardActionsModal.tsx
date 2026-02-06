@@ -21,8 +21,8 @@ import {
   Trash2,
   BookOpen
 } from 'lucide-react';
+import { CardEffectModal } from './CardEffectModal';
 import { FieldZoneType, GameCard } from './DuelFieldBoard';
-import { CardDetailViewModal } from './CardDetailViewModal';
 
 interface FieldCardActionsModalProps {
   open: boolean;
@@ -63,8 +63,8 @@ export const FieldCardActionsModal = ({
   onDetachMaterial,
   isExtraDeckCard,
 }: FieldCardActionsModalProps) => {
-  const [showCardDetail, setShowCardDetail] = useState(false);
-  
+  const [showEffectModal, setShowEffectModal] = useState(false);
+
   if (!card || !zone) return null;
 
   const isMonsterZone = zone.includes('monster') || zone.includes('Monster');
@@ -80,6 +80,12 @@ export const FieldCardActionsModal = ({
   };
 
   return (
+    <>
+      <CardEffectModal 
+        open={showEffectModal} 
+        onClose={() => setShowEffectModal(false)} 
+        card={card} 
+      />
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
@@ -134,16 +140,16 @@ export const FieldCardActionsModal = ({
               </div>
             </div>
 
-            {/* View Card Effect Button */}
+            {/* Read Effect Button */}
             {!card.isFaceDown && (
               <Button
-                variant="default"
+                variant="secondary"
                 size="sm"
                 className="w-full h-8 text-xs"
-                onClick={() => setShowCardDetail(true)}
+                onClick={() => setShowEffectModal(true)}
               >
                 <BookOpen className="h-3 w-3 mr-1" />
-                Ver Efeito
+                Ler Efeito
               </Button>
             )}
 
@@ -307,13 +313,7 @@ export const FieldCardActionsModal = ({
           </div>
         </div>
       </DialogContent>
-
-      {/* Card Detail View Modal */}
-      <CardDetailViewModal
-        open={showCardDetail}
-        onClose={() => setShowCardDetail(false)}
-        card={card}
-      />
     </Dialog>
+    </>
   );
 };

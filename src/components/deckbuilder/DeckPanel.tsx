@@ -2,7 +2,7 @@ import { YugiohCard } from '@/hooks/useYugiohCards';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Trash2, Download, Upload, Plus, Minus } from 'lucide-react';
+import { Trash2, Download, Upload, Plus, Minus, Sparkles } from 'lucide-react';
 import { Language } from '@/hooks/useYugiohCards';
 
 export interface DeckCard extends YugiohCard {
@@ -13,7 +13,7 @@ interface DeckPanelProps {
   mainDeck: DeckCard[];
   extraDeck: DeckCard[];
   sideDeck: DeckCard[];
-  tokens?: DeckCard[];
+  tokensDeck: DeckCard[];
   language: Language;
   onRemoveCard: (cardId: number, deckType: 'main' | 'extra' | 'side' | 'tokens') => void;
   onAddQuantity: (cardId: number, deckType: 'main' | 'extra' | 'side' | 'tokens') => void;
@@ -29,7 +29,7 @@ const labels = {
     mainDeck: 'Main Deck',
     extraDeck: 'Extra Deck',
     sideDeck: 'Side Deck',
-    tokens: 'Tokens',
+    tokensDeck: 'Tokens',
     clearAll: 'Clear All',
     export: 'Export',
     import: 'Import',
@@ -39,7 +39,7 @@ const labels = {
     mainDeck: 'Deck Principal',
     extraDeck: 'Deck Extra',
     sideDeck: 'Side Deck',
-    tokens: 'Fichas',
+    tokensDeck: 'Fichas',
     clearAll: 'Limpar Tudo',
     export: 'Exportar',
     import: 'Importar',
@@ -51,7 +51,7 @@ export const DeckPanel = ({
   mainDeck,
   extraDeck,
   sideDeck,
-  tokens = [],
+  tokensDeck,
   language,
   onRemoveCard,
   onAddQuantity,
@@ -66,7 +66,7 @@ export const DeckPanel = ({
   const mainCount = mainDeck.reduce((acc, c) => acc + c.quantity, 0);
   const extraCount = extraDeck.reduce((acc, c) => acc + c.quantity, 0);
   const sideCount = sideDeck.reduce((acc, c) => acc + c.quantity, 0);
-  const tokenCount = tokens.reduce((acc, c) => acc + c.quantity, 0);
+  const tokensCount = tokensDeck.reduce((acc, c) => acc + c.quantity, 0);
 
   const DeckSection = ({
     title,
@@ -74,16 +74,21 @@ export const DeckPanel = ({
     deckType,
     maxCards,
     count,
+    icon,
   }: {
     title: string;
     cards: DeckCard[];
     deckType: 'main' | 'extra' | 'side' | 'tokens';
     maxCards: number;
     count: number;
+    icon?: React.ReactNode;
   }) => (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-sm">{title}</h3>
+        <h3 className="font-semibold text-sm flex items-center gap-1">
+          {icon}
+          {title}
+        </h3>
         <Badge variant={count > maxCards ? 'destructive' : 'secondary'} className="text-xs">
           {count}/{maxCards}
         </Badge>
@@ -190,11 +195,12 @@ export const DeckPanel = ({
             count={sideCount}
           />
           <DeckSection
-            title={t.tokens}
-            cards={tokens}
+            title={t.tokensDeck}
+            cards={tokensDeck}
             deckType="tokens"
             maxCards={5}
-            count={tokenCount}
+            count={tokensCount}
+            icon={<Sparkles className="h-3 w-3 text-yellow-500" />}
           />
         </div>
       </ScrollArea>
