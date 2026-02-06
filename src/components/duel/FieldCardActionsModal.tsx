@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -18,11 +17,9 @@ import {
   Shield,
   Link2,
   Sparkles,
-  Trash2,
-  BookOpen
+  Trash2
 } from 'lucide-react';
 import { FieldZoneType, GameCard } from './DuelFieldBoard';
-import { CardDetailViewModal } from './CardDetailViewModal';
 
 interface FieldCardActionsModalProps {
   open: boolean;
@@ -63,8 +60,6 @@ export const FieldCardActionsModal = ({
   onDetachMaterial,
   isExtraDeckCard,
 }: FieldCardActionsModalProps) => {
-  const [showCardDetail, setShowCardDetail] = useState(false);
-  
   if (!card || !zone) return null;
 
   const isMonsterZone = zone.includes('monster') || zone.includes('Monster');
@@ -133,19 +128,6 @@ export const FieldCardActionsModal = ({
                 )}
               </div>
             </div>
-
-            {/* View Card Effect Button */}
-            {!card.isFaceDown && (
-              <Button
-                variant="default"
-                size="sm"
-                className="w-full h-8 text-xs"
-                onClick={() => setShowCardDetail(true)}
-              >
-                <BookOpen className="h-3 w-3 mr-1" />
-                Ver Efeito
-              </Button>
-            )}
 
             <div className="grid grid-cols-2 gap-1.5">
               {/* Flip Actions */}
@@ -307,13 +289,6 @@ export const FieldCardActionsModal = ({
           </div>
         </div>
       </DialogContent>
-
-      {/* Card Detail View Modal */}
-      <CardDetailViewModal
-        open={showCardDetail}
-        onClose={() => setShowCardDetail(false)}
-        card={card}
-      />
     </Dialog>
   );
 };

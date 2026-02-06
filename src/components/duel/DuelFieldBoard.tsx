@@ -48,8 +48,7 @@ export type FieldZoneType =
   | 'banished'
   | 'extraDeck'
   | 'deck'
-  | 'sideDeck'
-  | 'tokens';
+  | 'sideDeck';
 
 export interface FieldState {
   monster1: GameCard | null;
@@ -70,7 +69,6 @@ export interface FieldState {
   extraDeck: GameCard[];
   deck: GameCard[];
   sideDeck: GameCard[];
-  tokens: GameCard[];
   hand: GameCard[];
 }
 
@@ -113,10 +111,8 @@ const ZoneSlot = ({
   
   return (
     <div
-      data-droppable="true"
-      data-zone={zone}
       className={cn(
-        "relative border-2 border-dashed border-muted-foreground/30 rounded-md flex items-center justify-center cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all touch-none",
+        "relative border-2 border-dashed border-muted-foreground/30 rounded-md flex items-center justify-center cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all",
         "w-[44px] h-[64px] sm:w-[52px] sm:h-[76px] md:w-[60px] md:h-[88px]",
         hasCard && "border-solid border-primary/20 bg-transparent",
         className
@@ -129,8 +125,7 @@ const ZoneSlot = ({
         <div 
           className={cn(
             "relative w-full h-full",
-            // Defense position: rotate 90 degrees clockwise (not mirrored)
-            card.position === 'defense' && isHorizontal && "rotate-90 origin-center"
+            card.position === 'defense' && isHorizontal && "-rotate-90"
           )}
           draggable
           onDragStart={handleDragStart}
@@ -138,7 +133,7 @@ const ZoneSlot = ({
           {/* Face-down indicator */}
           {card.isFaceDown && (
             <div className="absolute top-0.5 right-0.5 z-10">
-              <EyeOff className="h-3 w-3 text-destructive drop-shadow-lg" />
+              <EyeOff className="h-3 w-3 text-red-500 drop-shadow-lg" />
             </div>
           )}
           
@@ -175,9 +170,11 @@ const ZoneSlot = ({
           <img
             src={card.isFaceDown ? CARD_BACK_URL : card.card_images?.[0]?.image_url_small}
             alt={card.isFaceDown ? 'Face-down card' : card.name}
-            className="w-full h-full object-cover rounded-md shadow-sm hover:shadow-lg transition-all hover:scale-105 cursor-grab active:cursor-grabbing"
+            className={cn(
+              "w-full h-full object-cover rounded-md shadow-sm hover:shadow-lg transition-all hover:scale-105 cursor-grab active:cursor-grabbing",
+              card.position === 'defense' && isHorizontal && "-rotate-90"
+            )}
             title={card.isFaceDown ? 'Face-down card' : card.name}
-            draggable={false}
           />
         </div>
       ) : (
@@ -210,10 +207,8 @@ const PileZone = ({
 }) => {
   return (
     <div
-      data-droppable="true"
-      data-zone={zone}
       className={cn(
-        "relative border-2 border-dashed border-muted-foreground/30 rounded-md flex flex-col items-center justify-center cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all touch-none",
+        "relative border-2 border-dashed border-muted-foreground/30 rounded-md flex flex-col items-center justify-center cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all",
         "w-[44px] h-[64px] sm:w-[52px] sm:h-[76px] md:w-[60px] md:h-[88px]",
         cards.length > 0 && "border-solid border-primary/20"
       )}
@@ -408,21 +403,9 @@ export const DuelFieldBoard = ({
           />
         </div>
 
-        {/* Bottom Row: Tokens, Side, Banished */}
-        <div className="flex justify-between items-center gap-1">
-          {/* Tokens (Left) */}
-          <PileZone
-            zone="tokens"
-            cards={fieldState.tokens}
-            icon={Sparkles}
-            label="Fichas"
-            onClick={() => onZoneClick('tokens')}
-            onDragOver={handleDragOver}
-            onDrop={handleDrop('tokens')}
-            iconColor="text-amber-500"
-          />
-
-          {/* Side Deck (Center-Left) */}
+        {/* Bottom Row: Banished and Side */}
+        <div className="flex justify-between items-center">
+          {/* Side Deck (Left) */}
           <PileZone
             zone="sideDeck"
             cards={fieldState.sideDeck}
@@ -439,7 +422,7 @@ export const DuelFieldBoard = ({
             zone="banished"
             cards={fieldState.banished}
             icon={Ban}
-            label="Banir"
+            label="Banish"
             onClick={() => onZoneClick('banished')}
             onDragOver={handleDragOver}
             onDrop={handleDrop('banished')}
