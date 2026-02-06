@@ -29,6 +29,7 @@ const DeckBuilder = () => {
   const [mainDeck, setMainDeck] = useState<DeckCard[]>([]);
   const [extraDeck, setExtraDeck] = useState<DeckCard[]>([]);
   const [sideDeck, setSideDeck] = useState<DeckCard[]>([]);
+  const [tokensDeck, setTokensDeck] = useState<DeckCard[]>([]);
   const [selectedCard, setSelectedCard] = useState<YugiohCard | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [mobileTab, setMobileTab] = useState<'search' | 'deck'>('search');
@@ -90,12 +91,14 @@ const DeckBuilder = () => {
   };
 
   const handleAddToDeck = useCallback(
-    (card: YugiohCard, deckType: 'main' | 'extra' | 'side') => {
-      const totalCopies = getCardCount(card.id);
-      
-      if (totalCopies >= 3) {
-        toast.error(t.maxCopies);
-        return;
+    (card: YugiohCard, deckType: 'main' | 'extra' | 'side' | 'tokens') => {
+      // Tokens don't count towards 3-copy limit
+      if (deckType !== 'tokens') {
+        const totalCopies = getCardCount(card.id);
+        if (totalCopies >= 3) {
+          toast.error(t.maxCopies);
+          return;
+        }
       }
 
       const updateDeck = (
@@ -126,32 +129,47 @@ const DeckBuilder = () => {
         updateDeck(mainDeck, setMainDeck, 60);
       } else if (deckType === 'extra') {
         updateDeck(extraDeck, setExtraDeck, 15);
+      } else if (deckType === 'tokens') {
+        updateDeck(tokensDeck, setTokensDeck, 5);
       } else {
         updateDeck(sideDeck, setSideDeck, 15);
       }
     },
-    [mainDeck, extraDeck, sideDeck, t]
+    [mainDeck, extraDeck, sideDeck, tokensDeck, t]
   );
 
-  const handleRemoveCard = (cardId: number, deckType: 'main' | 'extra' | 'side') => {
+  const handleRemoveCard = (cardId: number, deckType: 'main' | 'extra' | 'side' | 'tokens') => {
     const setDeck =
-      deckType === 'main' ? setMainDeck : deckType === 'extra' ? setExtraDeck : setSideDeck;
+      deckType === 'main' ? setMainDeck : 
+      deckType === 'extra' ? setExtraDeck : 
+      deckType === 'tokens' ? setTokensDeck : 
+      setSideDeck;
     
     setDeck((prev) => prev.filter((c) => c.id !== cardId));
     toast.success(t.cardRemoved);
   };
 
-  const handleAddQuantity = (cardId: number, deckType: 'main' | 'extra' | 'side') => {
-    const totalCopies = getCardCount(cardId);
-    if (totalCopies >= 3) {
-      toast.error(t.maxCopies);
-      return;
+  const handleAddQuantity = (cardId: number, deckType: 'main' | 'extra' | 'side' | 'tokens') => {
+    // Tokens don't count towards 3-copy limit
+    if (deckType !== 'tokens') {
+      const totalCopies = getCardCount(cardId);
+      if (totalCopies >= 3) {
+        toast.error(t.maxCopies);
+        return;
+      }
     }
 
     const setDeck =
-      deckType === 'main' ? setMainDeck : deckType === 'extra' ? setExtraDeck : setSideDeck;
-    const deck = deckType === 'main' ? mainDeck : deckType === 'extra' ? extraDeck : sideDeck;
-    const maxCards = deckType === 'main' ? 60 : 15;
+      deckType === 'main' ? setMainDeck : 
+      deckType === 'extra' ? setExtraDeck : 
+      deckType === 'tokens' ? setTokensDeck : 
+      setSideDeck;
+    const deck = 
+      deckType === 'main' ? mainDeck : 
+      deckType === 'extra' ? extraDeck : 
+      deckType === 'tokens' ? tokensDeck : 
+      sideDeck;
+    const maxCards = deckType === 'main' ? 60 : deckType === 'tokens' ? 5 : 15;
 
     if (getTotalCount(deck) >= maxCards) {
       toast.error(t.deckFull);
@@ -163,9 +181,12 @@ const DeckBuilder = () => {
     );
   };
 
-  const handleRemoveQuantity = (cardId: number, deckType: 'main' | 'extra' | 'side') => {
+  const handleRemoveQuantity = (cardId: number, deckType: 'main' | 'extra' | 'side' | 'tokens') => {
     const setDeck =
-      deckType === 'main' ? setMainDeck : deckType === 'extra' ? setExtraDeck : setSideDeck;
+      deckType === 'main' ? setMainDeck : 
+      deckType === 'extra' ? setExtraDeck : 
+      deckType === 'tokens' ? setTokensDeck : 
+      setSideDeck;
 
     setDeck((prev) =>
       prev
@@ -178,6 +199,7 @@ const DeckBuilder = () => {
     setMainDeck([]);
     setExtraDeck([]);
     setSideDeck([]);
+    setTokensDeck([]);
     setCurrentDeckId(null);
     toast.success(t.deckCleared);
   };
@@ -489,6 +511,7 @@ const DeckBuilder = () => {
                 mainDeck={mainDeck}
                 extraDeck={extraDeck}
                 sideDeck={sideDeck}
+                tokensDeck={tokensDeck}
                 language={language}
                 onRemoveCard={handleRemoveCard}
                 onAddQuantity={handleAddQuantity}
@@ -514,6 +537,7 @@ const DeckBuilder = () => {
                 mainDeck={mainDeck}
                 extraDeck={extraDeck}
                 sideDeck={sideDeck}
+                tokensDeck={tokensDeck}
                 language={language}
                 onRemoveCard={handleRemoveCard}
                 onAddQuantity={handleAddQuantity}

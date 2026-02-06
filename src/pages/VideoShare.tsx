@@ -225,7 +225,7 @@ export default function VideoShare() {
 
               <div className="pt-4 border-t">
                 <Button
-                  onClick={() => navigate('/match-gallery')}
+                  onClick={() => navigate(`/profile/${recording.user_id}?tab=gallery`)}
                   variant="outline"
                   className="w-full sm:w-auto"
                 >
