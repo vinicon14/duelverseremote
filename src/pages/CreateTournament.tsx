@@ -7,17 +7,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Navbar } from "@/components/Navbar";
 import { useToast } from "@/hooks/use-toast";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-
-// Swiss tournament rounds calculation
-const getSwissRounds = (playerCount: number): number => {
-  if (playerCount >= 65) return 7;
-  if (playerCount >= 33) return 6;
-  if (playerCount >= 17) return 5;
-  if (playerCount >= 9) return 4;
-  return 3; // 5-8 players
-};
 
 const CreateTournament = () => {
   const navigate = useNavigate();
@@ -29,10 +18,7 @@ const CreateTournament = () => {
   const [maxParticipants, setMaxParticipants] = useState(8);
   const [prizePool, setPrizePool] = useState(0);
   const [entryFee, setEntryFee] = useState(0);
-  const [tournamentType, setTournamentType] = useState<'single_elimination' | 'swiss'>('single_elimination');
   const [loading, setLoading] = useState(false);
-
-  const swissRounds = getSwissRounds(maxParticipants);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,18 +45,14 @@ const CreateTournament = () => {
         prize_pool: prizePool,
         entry_fee: entryFee,
         created_by: user.id,
-        status: 'upcoming',
-        tournament_type: tournamentType,
-        total_rounds: tournamentType === 'swiss' ? swissRounds : null,
+        status: 'upcoming'
       });
 
       if (error) throw error;
 
       toast({
         title: "Torneio criado com sucesso!",
-        description: tournamentType === 'swiss' 
-          ? `Torneio Suíço com ${swissRounds} rodadas + Top 4 eliminatório.`
-          : "O novo torneio já está visível para os jogadores.",
+        description: "O novo torneio já está visível para os jogadores.",
       });
       navigate("/tournaments");
     } catch (error: any) {
@@ -126,26 +108,6 @@ const CreateTournament = () => {
                   <Input id="entryFee" type="number" value={entryFee} onChange={(e) => setEntryFee(parseInt(e.target.value))} required />
                 </div>
               </div>
-              
-              {/* Tournament Type */}
-              <div>
-                <Label htmlFor="tournamentType">Tipo de Torneio</Label>
-                <Select value={tournamentType} onValueChange={(v) => setTournamentType(v as any)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="single_elimination">Eliminação Simples</SelectItem>
-                    <SelectItem value="swiss">Suíço + Top 4</SelectItem>
-                  </SelectContent>
-                </Select>
-                {tournamentType === 'swiss' && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {swissRounds} rodadas suíças → Top 4 eliminatório
-                  </p>
-                )}
-              </div>
-              
               <Button type="submit" className="w-full btn-mystic text-white" disabled={loading}>
                 {loading ? 'Criando...' : 'Criar Torneio'}
               </Button>
