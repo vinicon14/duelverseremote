@@ -137,7 +137,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
-          receiver_id: string
+          receiver_id: string | null
           sender_id: string | null
           transaction_type: string
         }
@@ -146,7 +146,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
-          receiver_id: string
+          receiver_id?: string | null
           sender_id?: string | null
           transaction_type: string
         }
@@ -155,7 +155,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
-          receiver_id?: string
+          receiver_id?: string | null
           sender_id?: string | null
           transaction_type?: string
         }
