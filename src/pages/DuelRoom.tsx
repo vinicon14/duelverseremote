@@ -3,7 +3,7 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { PhoneOff, Loader2, Scale, Layers, SplitSquareHorizontal, Maximize } from "lucide-react";
+import { PhoneOff, Loader2, Scale, Layers } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { DuelChat } from "@/components/DuelChat";
 import { FloatingCalculator } from "@/components/FloatingCalculator";
@@ -38,7 +38,6 @@ const DuelRoom = () => {
   
   const isJudge = searchParams.get('role') === 'judge';
   const [hideControls, setHideControls] = useState(false);
-  const [splitViewMode, setSplitViewMode] = useState<'split' | 'full'>('split'); // Default to split
   
   // Deck viewer state
   const [showDeckViewer, setShowDeckViewer] = useState(false);
@@ -804,83 +803,31 @@ const DuelRoom = () => {
     <div className="min-h-screen bg-background">
       {!hideControls && <Navbar />}
       
-      <main className={hideControls ? "px-1 pt-1 pb-1" : "px-2 sm:px-4 pt-16 sm:pt-20 pb-2 sm:pb-4"}>
-        <div className={hideControls ? "h-[calc(100vh-8px)]" : "h-[calc(100vh-80px)] sm:h-[calc(100vh-100px)]"} style={{ position: 'relative' }}>
-          {/* Split View Layout or Full Video */}
-          {splitViewMode === 'split' ? (
-            <div className="h-full w-full flex flex-col md:flex-row gap-1 sm:gap-2">
-              {/* Left side - Your view (video call) */}
-              <div className="flex-1 rounded-lg overflow-hidden bg-card shadow-lg border border-border/50 min-h-0">
-                {roomUrl ? (
-                  <iframe
-                    src={roomUrl}
-                    allow="camera; microphone; fullscreen; speaker; display-capture; autoplay"
-                    className="w-full h-full"
-                    title="Daily.co Video Call"
-                    style={{ border: 'none' }}
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-muted/20">
-                    <div className="text-center space-y-2">
-                      <Loader2 className="w-8 h-8 mx-auto text-primary animate-spin" />
-                      <p className="text-xs text-muted-foreground">Carregando vídeo...</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-              
-              {/* Right side - Opponent field */}
-              <div className="flex-1 rounded-lg overflow-hidden bg-card shadow-lg border border-border/50 flex flex-col min-h-0">
-                <div className="flex-shrink-0 px-2 py-1 bg-muted/30 border-b border-border text-xs font-medium flex items-center justify-between">
-                  <span>Campo do {currentUser?.id === duel?.creator_id ? duel?.opponent?.username : duel?.creator?.username || 'Oponente'}</span>
-                  <span className="text-muted-foreground">Arena Digital</span>
-                </div>
-                <div className="flex-1 flex items-center justify-center p-2 overflow-auto">
-                  {/* Inline simplified opponent view */}
-                  {isParticipant && !isJudge && currentUser && id && duel && (
-                    <div className="w-full h-full">
-                      <FloatingOpponentViewer
-                        duelId={id}
-                        currentUserId={currentUser.id}
-                        opponentUsername={
-                          currentUser.id === duel.creator_id 
-                            ? duel.opponent?.username 
-                            : duel.creator?.username
-                        }
-                      />
-                    </div>
-                  )}
-                  {(!isParticipant || isJudge || !currentUser) && (
-                    <p className="text-xs text-muted-foreground text-center">
-                      Aguardando dados do oponente...
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          ) : (
-            /* Full Video Mode */
-            <div className="h-full w-full rounded-lg overflow-hidden bg-card shadow-2xl border border-primary/20">
-              {roomUrl ? (
-                <iframe
-                  src={roomUrl}
-                  allow="camera; microphone; fullscreen; speaker; display-capture; autoplay"
-                  className="w-full h-full"
-                  title="Daily.co Video Call"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <div className="text-center space-y-4">
-                    <Loader2 className="w-12 h-12 mx-auto text-primary animate-spin" />
-                    <div>
-                      <p className="text-muted-foreground mb-2">Carregando sala de vídeo...</p>
-                      <p className="text-xs text-muted-foreground">ID: {id}</p>
-                    </div>
+      <main className="px-2 sm:px-4 pt-16 sm:pt-20 pb-2 sm:pb-4">
+        <div className="h-[calc(100vh-80px)] sm:h-[calc(100vh-100px)] relative">
+          {/* Video Call - Daily.co - SEMPRE VISÍVEL */}
+          <div className="h-full w-full rounded-lg overflow-hidden bg-card shadow-2xl border border-primary/20">
+            {roomUrl ? (
+              <iframe
+                src={roomUrl}
+                allow="camera; microphone; fullscreen; speaker; display-capture; autoplay"
+                className="w-full h-full"
+                title="Daily.co Video Call"
+                onLoad={() => console.log('Iframe loaded')}
+                onError={(e) => console.error('Iframe error:', e)}
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <div className="text-center space-y-4">
+                  <Loader2 className="w-12 h-12 mx-auto text-primary animate-spin" />
+                  <div>
+                    <p className="text-muted-foreground mb-2">Carregando sala de vídeo...</p>
+                    <p className="text-xs text-muted-foreground">ID: {id}</p>
                   </div>
                 </div>
-              )}
-            </div>
-          )}
+              </div>
+            )}
+          </div>
 
           {/* Botão de Sair e Timer - Fixo no canto superior direito */}
           <div className="absolute top-2 sm:top-4 right-2 sm:right-4 z-50 flex flex-col sm:flex-row gap-2 items-end sm:items-center">
@@ -888,7 +835,7 @@ const DuelRoom = () => {
               <>
                 {/* Badge de juiz */}
                 {isJudge && (
-                  <div className="px-2 sm:px-3 py-1 sm:py-2 rounded-lg backdrop-blur-sm text-xs sm:text-sm font-bold bg-secondary text-secondary-foreground flex items-center gap-1">
+                  <div className="px-2 sm:px-3 py-1 sm:py-2 rounded-lg backdrop-blur-sm text-xs sm:text-sm font-bold bg-purple-500/95 text-white flex items-center gap-1">
                     <Scale className="w-3 h-3 sm:w-4 sm:h-4" />
                     Juiz
                   </div>
@@ -896,7 +843,7 @@ const DuelRoom = () => {
 
                 {/* Badge de modo espectador */}
                 {isSpectator && !isJudge && (
-                  <div className="px-2 sm:px-3 py-1 sm:py-2 rounded-lg backdrop-blur-sm text-xs sm:text-sm font-bold bg-secondary text-secondary-foreground">
+                  <div className="px-2 sm:px-3 py-1 sm:py-2 rounded-lg backdrop-blur-sm text-xs sm:text-sm font-bold bg-purple-500/95 text-white">
                     👁️ Espectador
                   </div>
                 )}
@@ -924,21 +871,11 @@ const DuelRoom = () => {
             )}
             
             <div className="flex gap-1 sm:gap-2">
-              {/* O botão de Ocultar, Gravar, e Deck ficam sempre visíveis para participantes */}
+              {/* O botão de Ocultar e Gravar ficam sempre visíveis para participantes */}
               {isParticipant && !isJudge && (
                 <>
                   <HideElementsButton onToggle={setHideControls} />
                   <RecordMatchButton duelId={id!} />
-                  {/* Botão do Deck - sempre visível para permitir arrastar arena quando oculto */}
-                  <Button
-                    onClick={() => setShowDeckViewer(!showDeckViewer)}
-                    variant="outline"
-                    size="sm"
-                    className="bg-accent/95 text-accent-foreground backdrop-blur-sm text-xs sm:text-sm recording-safe-hide-button"
-                    title="Abrir Arena Digital"
-                  >
-                    <Layers className="w-3 h-3 sm:w-4 sm:h-4" />
-                  </Button>
                 </>
               )}
 
@@ -947,22 +884,22 @@ const DuelRoom = () => {
                 <>
                   {isParticipant && !isJudge && (
                     <>
-                      {/* Botão de Alternar Vista */}
+                      {/* Botão do Deck */}
                       <Button
-                        onClick={() => setSplitViewMode(splitViewMode === 'split' ? 'full' : 'split')}
+                        onClick={() => setShowDeckViewer(!showDeckViewer)}
                         variant="outline"
                         size="sm"
-                        className="bg-card/95 backdrop-blur-sm text-xs sm:text-sm"
-                        title={splitViewMode === 'split' ? 'Vídeo Cheio' : 'Vista Dividida'}
+                        className="bg-amber-600/95 hover:bg-amber-700 text-white backdrop-blur-sm text-xs sm:text-sm"
+                        title="Abrir Deck"
                       >
-                        {splitViewMode === 'split' ? <Maximize className="w-3 h-3 sm:w-4 sm:h-4" /> : <SplitSquareHorizontal className="w-3 h-3 sm:w-4 sm:h-4" />}
+                        <Layers className="w-3 h-3 sm:w-4 sm:h-4" />
                       </Button>
                       <Button
                         onClick={callJudge}
                         disabled={judgeCalled}
                         variant="outline"
                         size="sm"
-                        className="bg-secondary text-secondary-foreground backdrop-blur-sm text-xs sm:text-sm"
+                        className="bg-purple-600/95 hover:bg-purple-700 text-white backdrop-blur-sm text-xs sm:text-sm"
                         title="Chamar Juiz"
                       >
                         <Scale className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -981,7 +918,7 @@ const DuelRoom = () => {
                         onClick={() => endDuel()}
                         variant="outline"
                         size="sm"
-                        className="bg-primary/95 text-primary-foreground backdrop-blur-sm text-xs sm:text-sm"
+                        className="bg-green-600/95 hover:bg-green-700 text-white backdrop-blur-sm text-xs sm:text-sm"
                         title="Finalizar partida"
                       >
                         <span className="hidden sm:inline">Finalizar</span>
@@ -1052,8 +989,8 @@ const DuelRoom = () => {
         </>
       )}
 
-      {/* Floating Opponent Viewer - Only show in full mode (not split) */}
-      {splitViewMode === 'full' && isParticipant && !isJudge && currentUser && id && duel && (
+      {/* Floating Opponent Viewer - Always visible for participants */}
+      {isParticipant && !isJudge && currentUser && id && duel && (
         <FloatingOpponentViewer
           duelId={id}
           currentUserId={currentUser.id}

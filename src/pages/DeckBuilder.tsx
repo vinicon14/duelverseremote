@@ -24,11 +24,6 @@ const isExtraDeckCard = (card: YugiohCard): boolean => {
   return EXTRA_DECK_TYPES.some((type) => card.type.includes(type));
 };
 
-// Helper function to check if a card is a Token type
-const isTokenCard = (card: YugiohCard): boolean => {
-  return card.type?.toLowerCase().includes('token') || false;
-};
-
 const DeckBuilder = () => {
   const [language, setLanguage] = useState<Language>('pt');
   const [mainDeck, setMainDeck] = useState<DeckCard[]>([]);
@@ -70,11 +65,9 @@ const DeckBuilder = () => {
       deckCleared: 'Deck cleared',
       maxCopies: 'Maximum 3 copies per card',
       deckFull: 'Deck is full',
-      extraFull: 'Extra deck and tokens cannot exceed 20 cards',
       deckExported: 'Deck exported',
       invalidDeck: 'Invalid deck file',
       deckImported: 'Deck imported successfully',
-      onlyTokensAllowed: 'Only Token-type cards can be added to Tokens',
     },
     pt: {
       title: 'Deck Builder',
@@ -85,11 +78,9 @@ const DeckBuilder = () => {
       deckCleared: 'Deck limpo',
       maxCopies: 'Máximo de 3 cópias por carta',
       deckFull: 'Deck está cheio',
-      extraFull: 'Extra deck e fichas não podem ultrapassar 20 cartas',
       deckExported: 'Deck exportado',
       invalidDeck: 'Arquivo de deck inválido',
       deckImported: 'Deck importado com sucesso',
-      onlyTokensAllowed: 'Apenas cartas do tipo Ficha podem ser adicionadas às Fichas',
     },
   };
 
@@ -131,12 +122,8 @@ const DeckBuilder = () => {
         }
       }
 
-      // Tokens can only be Token-type cards
+      // Tokens cannot exceed 5 and combined with extra cannot exceed 20
       if (deckType === 'tokens') {
-        if (!isTokenCard(card)) {
-          toast.error(t.onlyTokensAllowed);
-          return;
-        }
         if (getTotalCount(tokensDeck) >= 5) {
           toast.error('Máximo de 5 fichas permitidas');
           return;
