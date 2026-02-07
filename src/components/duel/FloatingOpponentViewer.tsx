@@ -28,6 +28,8 @@ interface OpponentCard {
   isFaceDown?: boolean;
   materials?: number;
   position?: string;
+  atk?: number;
+  def?: number;
 }
 
 interface ZoneCards {
@@ -164,18 +166,23 @@ export const FloatingOpponentViewer = ({
           <img
             src={card.image || CARD_BACK_URL}
             alt={card.name}
-            title={card.isFaceDown ? 'Carta virada' : card.name}
+            title={card.isFaceDown ? 'Carta virada' : `${card.name}${card.atk !== undefined ? ` | ATK: ${card.atk} / DEF: ${card.def}` : ''}`}
             className={cn(
               "w-full h-full object-cover rounded"
             )}
           />
           {card.isFaceDown && (
             <div className="absolute top-0 right-0">
-              <EyeOff className="h-2 w-2 text-red-500" />
+              <EyeOff className="h-2 w-2 text-destructive" />
+            </div>
+          )}
+          {!card.isFaceDown && card.atk !== undefined && (
+            <div className="absolute -bottom-1 -left-1 text-[5px] bg-background/90 px-0.5 rounded border border-border">
+              {card.atk}
             </div>
           )}
           {card.materials && card.materials > 0 && (
-            <Badge className="absolute -bottom-1 -right-1 text-[6px] h-3 px-0.5 bg-yellow-600">
+            <Badge className="absolute -bottom-1 -right-1 text-[6px] h-3 px-0.5 bg-accent text-accent-foreground">
               {card.materials}
             </Badge>
           )}
