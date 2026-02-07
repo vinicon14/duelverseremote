@@ -161,6 +161,8 @@ export const DuelDeckViewer = ({
             isFaceDown: card.isFaceDown,
             position: card.position,
             materials: card.attachedCards?.length || 0,
+            atk: card.atk,
+            def: card.def,
             zone: zone
           };
         })
@@ -175,11 +177,11 @@ export const DuelDeckViewer = ({
         hand: fieldState.hand.length,
         field: getFieldCards(),
         monsterZones: {
-          monster1: fieldState.monster1 ? { id: fieldState.monster1.id, name: fieldState.monster1.isFaceDown ? 'Face-down' : fieldState.monster1.name, image: fieldState.monster1.isFaceDown ? CARD_BACK_URL : fieldState.monster1.card_images?.[0]?.image_url_small, isFaceDown: fieldState.monster1.isFaceDown, position: fieldState.monster1.position, materials: fieldState.monster1.attachedCards?.length || 0 } : null,
-          monster2: fieldState.monster2 ? { id: fieldState.monster2.id, name: fieldState.monster2.isFaceDown ? 'Face-down' : fieldState.monster2.name, image: fieldState.monster2.isFaceDown ? CARD_BACK_URL : fieldState.monster2.card_images?.[0]?.image_url_small, isFaceDown: fieldState.monster2.isFaceDown, position: fieldState.monster2.position, materials: fieldState.monster2.attachedCards?.length || 0 } : null,
-          monster3: fieldState.monster3 ? { id: fieldState.monster3.id, name: fieldState.monster3.isFaceDown ? 'Face-down' : fieldState.monster3.name, image: fieldState.monster3.isFaceDown ? CARD_BACK_URL : fieldState.monster3.card_images?.[0]?.image_url_small, isFaceDown: fieldState.monster3.isFaceDown, position: fieldState.monster3.position, materials: fieldState.monster3.attachedCards?.length || 0 } : null,
-          monster4: fieldState.monster4 ? { id: fieldState.monster4.id, name: fieldState.monster4.isFaceDown ? 'Face-down' : fieldState.monster4.name, image: fieldState.monster4.isFaceDown ? CARD_BACK_URL : fieldState.monster4.card_images?.[0]?.image_url_small, isFaceDown: fieldState.monster4.isFaceDown, position: fieldState.monster4.position, materials: fieldState.monster4.attachedCards?.length || 0 } : null,
-          monster5: fieldState.monster5 ? { id: fieldState.monster5.id, name: fieldState.monster5.isFaceDown ? 'Face-down' : fieldState.monster5.name, image: fieldState.monster5.isFaceDown ? CARD_BACK_URL : fieldState.monster5.card_images?.[0]?.image_url_small, isFaceDown: fieldState.monster5.isFaceDown, position: fieldState.monster5.position, materials: fieldState.monster5.attachedCards?.length || 0 } : null,
+          monster1: fieldState.monster1 ? { id: fieldState.monster1.id, name: fieldState.monster1.isFaceDown ? 'Face-down' : fieldState.monster1.name, image: fieldState.monster1.isFaceDown ? CARD_BACK_URL : fieldState.monster1.card_images?.[0]?.image_url_small, isFaceDown: fieldState.monster1.isFaceDown, position: fieldState.monster1.position, materials: fieldState.monster1.attachedCards?.length || 0, atk: fieldState.monster1.atk, def: fieldState.monster1.def } : null,
+          monster2: fieldState.monster2 ? { id: fieldState.monster2.id, name: fieldState.monster2.isFaceDown ? 'Face-down' : fieldState.monster2.name, image: fieldState.monster2.isFaceDown ? CARD_BACK_URL : fieldState.monster2.card_images?.[0]?.image_url_small, isFaceDown: fieldState.monster2.isFaceDown, position: fieldState.monster2.position, materials: fieldState.monster2.attachedCards?.length || 0, atk: fieldState.monster2.atk, def: fieldState.monster2.def } : null,
+          monster3: fieldState.monster3 ? { id: fieldState.monster3.id, name: fieldState.monster3.isFaceDown ? 'Face-down' : fieldState.monster3.name, image: fieldState.monster3.isFaceDown ? CARD_BACK_URL : fieldState.monster3.card_images?.[0]?.image_url_small, isFaceDown: fieldState.monster3.isFaceDown, position: fieldState.monster3.position, materials: fieldState.monster3.attachedCards?.length || 0, atk: fieldState.monster3.atk, def: fieldState.monster3.def } : null,
+          monster4: fieldState.monster4 ? { id: fieldState.monster4.id, name: fieldState.monster4.isFaceDown ? 'Face-down' : fieldState.monster4.name, image: fieldState.monster4.isFaceDown ? CARD_BACK_URL : fieldState.monster4.card_images?.[0]?.image_url_small, isFaceDown: fieldState.monster4.isFaceDown, position: fieldState.monster4.position, materials: fieldState.monster4.attachedCards?.length || 0, atk: fieldState.monster4.atk, def: fieldState.monster4.def } : null,
+          monster5: fieldState.monster5 ? { id: fieldState.monster5.id, name: fieldState.monster5.isFaceDown ? 'Face-down' : fieldState.monster5.name, image: fieldState.monster5.isFaceDown ? CARD_BACK_URL : fieldState.monster5.card_images?.[0]?.image_url_small, isFaceDown: fieldState.monster5.isFaceDown, position: fieldState.monster5.position, materials: fieldState.monster5.attachedCards?.length || 0, atk: fieldState.monster5.atk, def: fieldState.monster5.def } : null,
         },
         spellZones: {
           spell1: fieldState.spell1 ? { id: fieldState.spell1.id, name: fieldState.spell1.isFaceDown ? 'Face-down' : fieldState.spell1.name, image: fieldState.spell1.isFaceDown ? CARD_BACK_URL : fieldState.spell1.card_images?.[0]?.image_url_small, isFaceDown: fieldState.spell1.isFaceDown } : null,
@@ -793,12 +795,16 @@ export const DuelDeckViewer = ({
         style={containerStyle}
       >
         {isMinimized ? (
-          <button
+          <div
             onClick={() => setIsMinimized(false)}
-            className="w-full h-full flex items-center justify-center hover:bg-muted/50 rounded-lg"
+            className="w-full h-full flex items-center justify-center gap-2 px-3 py-2 hover:bg-muted/50 rounded-lg cursor-grab hover:cursor-grabbing"
+            {...dragHandlers}
+            title="Clique para expandir ou arraste"
           >
-            <Layers className="h-6 w-6 text-primary" />
-          </button>
+            <Move className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <Layers className="h-4 w-4 text-primary flex-shrink-0" />
+            <span className="text-xs font-semibold whitespace-nowrap">Seu Deck</span>
+          </div>
         ) : (
           <div className="flex flex-col h-full">
             {/* Draggable Header */}

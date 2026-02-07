@@ -24,6 +24,11 @@ const isExtraDeckCard = (card: YugiohCard): boolean => {
   return EXTRA_DECK_TYPES.some((type) => card.type.includes(type));
 };
 
+const isTokenCard = (card: YugiohCard): boolean => {
+  if (!card || !card.type) return false;
+  return card.type.toLowerCase().includes('token');
+};
+
 const DeckBuilder = () => {
   const [language, setLanguage] = useState<Language>('pt');
   const [mainDeck, setMainDeck] = useState<DeckCard[]>([]);
@@ -124,6 +129,10 @@ const DeckBuilder = () => {
 
       // Tokens cannot exceed 5 and combined with extra cannot exceed 20
       if (deckType === 'tokens') {
+        if (!isTokenCard(card)) {
+          toast.error('Apenas cartas do tipo Token podem ser adicionadas como fichas');
+          return;
+        }
         if (getTotalCount(tokensDeck) >= 5) {
           toast.error('Máximo de 5 fichas permitidas');
           return;
@@ -475,7 +484,8 @@ const DeckBuilder = () => {
 
   const canAddToTokens = selectedCard
     ? getTotalCount(tokensDeck) < 5 &&
-      (getTotalCount(extraDeck) + getTotalCount(tokensDeck)) < 20
+      (getTotalCount(extraDeck) + getTotalCount(tokensDeck)) < 20 &&
+      isTokenCard(selectedCard)
     : false;
 
   const hasDeck = mainDeck.length > 0 || extraDeck.length > 0 || sideDeck.length > 0;

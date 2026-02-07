@@ -1,4 +1,6 @@
 import { YugiohCard, Language } from '@/hooks/useYugiohCards';
+import { translateCardFields } from '@/utils/cardTranslator';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -39,9 +41,9 @@ const labels = {
     effect: 'Effect',
   },
   pt: {
-    addToMain: 'Add ao Principal',
-    addToExtra: 'Add ao Extra',
-    addToSide: 'Add ao Side',
+    addToMain: 'Adicionar ao Principal',
+    addToExtra: 'Adicionar ao Extra',
+    addToSide: 'Adicionar ao Side',
     addToTokens: 'Adicionar como Ficha',
     atk: 'ATK',
     def: 'DEF',
@@ -68,6 +70,24 @@ export const CardDetailModal = ({
   isExtraDeckCard,
 }: CardDetailModalProps) => {
   const t = labels[language];
+  const [displayType, setDisplayType] = useState<string>(card?.type || '');
+  const [displayRace, setDisplayRace] = useState<string>(card?.race || '');
+  const [displayAttribute, setDisplayAttribute] = useState<string>(card?.attribute || '');
+  
+  useEffect(() => {
+    if (card && language === 'pt') {
+      translateCardFields({ type: card.type, race: card.race, attribute: card.attribute }, 'pt')
+        .then(result => {
+          setDisplayType(result.type || card.type);
+          setDisplayRace(result.race || card.race);
+          setDisplayAttribute(result.attribute || card.attribute);
+        });
+    } else if (card) {
+      setDisplayType(card.type);
+      setDisplayRace(card.race);
+      setDisplayAttribute(card.attribute || '');
+    }
+  }, [card, language]);
 
   if (!card) return null;
 
@@ -98,11 +118,11 @@ export const CardDetailModal = ({
             <div className="space-y-4">
               {/* Type Badge */}
               <div className="flex flex-wrap gap-2">
-                <Badge variant="secondary">{card.type}</Badge>
-                {card.attribute && (
-                  <Badge variant="outline">{card.attribute}</Badge>
+                <Badge variant="secondary">{displayType}</Badge>
+                {displayAttribute && (
+                  <Badge variant="outline">{displayAttribute}</Badge>
                 )}
-                <Badge variant="outline">{card.race}</Badge>
+                <Badge variant="outline">{displayRace}</Badge>
                 {card.archetype && (
                   <Badge className="bg-primary/20">{card.archetype}</Badge>
                 )}

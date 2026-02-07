@@ -16,6 +16,7 @@ import {
   Hand,
   Move,
   Sparkles
+  , Swords, Shield
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -28,6 +29,8 @@ interface OpponentCard {
   isFaceDown?: boolean;
   materials?: number;
   position?: string;
+  atk?: number;
+  def?: number;
 }
 
 interface ZoneCards {
@@ -68,6 +71,7 @@ interface FloatingOpponentViewerProps {
   duelId: string;
   currentUserId: string;
   opponentUsername?: string;
+  isFullScreen?: boolean;
 }
 
 const CARD_BACK_URL = 'https://images.ygoprodeck.com/images/cards/back_high.jpg';
@@ -75,11 +79,12 @@ const CARD_BACK_URL = 'https://images.ygoprodeck.com/images/cards/back_high.jpg'
 export const FloatingOpponentViewer = ({ 
   duelId, 
   currentUserId, 
-  opponentUsername = 'Oponente' 
+  opponentUsername = 'Oponente',
+  isFullScreen = false
 }: FloatingOpponentViewerProps) => {
   const [opponentState, setOpponentState] = useState<OpponentState | null>(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(true); // Inicia minimizado
   const [isVisible, setIsVisible] = useState(true);
   const [selectedCard, setSelectedCard] = useState<OpponentCard | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -141,13 +146,18 @@ export const FloatingOpponentViewer = ({
 
   if (isMinimized) {
     return (
-      <button
-        onClick={() => setIsMinimized(false)}
-        className="fixed z-40 w-10 h-10 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-lg flex items-center justify-center hover:bg-muted/50 transition-colors"
+      <div
+        ref={elementRef}
         style={{ left: position.x, top: position.y }}
+        className="fixed z-40 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-lg px-3 py-2 flex items-center gap-2 hover:bg-muted/50 transition-colors cursor-grab hover:cursor-grabbing"
+        onClick={() => setIsMinimized(false)}
+        {...dragHandlers}
+        title="Clique para expandir ou arraste"
       >
-        <Eye className="h-5 w-5 text-primary" />
-      </button>
+        <Move className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+        <Eye className="h-4 w-4 text-primary flex-shrink-0" />
+        <span className="text-xs font-semibold whitespace-nowrap">Deck do Oponente</span>
+      </div>
     );
   }
 
@@ -178,6 +188,17 @@ export const FloatingOpponentViewer = ({
             <Badge className="absolute -bottom-1 -right-1 text-[6px] h-3 px-0.5 bg-yellow-600">
               {card.materials}
             </Badge>
+          )}
+          {!card.isFaceDown && (card.atk !== undefined || card.def !== undefined) && (
+            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 z-20">
+              <div className="bg-background/90 border border-border text-[8px] sm:text-[9px] font-bold px-1 py-0.5 rounded flex items-center gap-1 whitespace-nowrap">
+                <Swords className="h-3 w-3 text-red-500" />
+                <span className="text-red-500 text-[10px]">{card.atk ?? '?'}</span>
+                <span className="text-muted-foreground">/</span>
+                <Shield className="h-3 w-3 text-blue-500" />
+                <span className="text-blue-500 text-[10px]">{card.def ?? '?'}</span>
+              </div>
+            </div>
           )}
         </div>
       ) : (
@@ -240,6 +261,17 @@ export const FloatingOpponentViewer = ({
                     <EyeOff className="h-2 w-2 text-red-500" />
                   </div>
                 )}
+                {!card.isFaceDown && (card.atk !== undefined || card.def !== undefined) && (
+                  <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 z-20">
+                    <div className="bg-background/90 border border-border text-[8px] sm:text-[9px] font-bold px-1 py-0.5 rounded flex items-center gap-1 whitespace-nowrap">
+                      <Swords className="h-3 w-3 text-red-500" />
+                      <span className="text-red-500 text-[10px]">{card.atk ?? '?'}</span>
+                      <span className="text-muted-foreground">/</span>
+                      <Shield className="h-3 w-3 text-blue-500" />
+                      <span className="text-blue-500 text-[10px]">{card.def ?? '?'}</span>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -252,43 +284,56 @@ export const FloatingOpponentViewer = ({
     <div 
       ref={elementRef}
       className={cn(
-        "fixed z-40 w-80 sm:w-96 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-2xl overflow-hidden",
-        isDragging && "cursor-grabbing"
+        isFullScreen 
+          ? "w-full h-full bg-gradient-to-b from-muted/50 to-card/95 flex flex-col"
+          : "fixed z-40 w-80 sm:w-96 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-2xl overflow-hidden",
+        isDragging && !isFullScreen && "cursor-grabbing"
       )}
-      style={{ left: position.x, top: position.y }}
+      style={!isFullScreen ? { left: position.x, top: position.y } : {}}
     >
       {/* Draggable Header */}
-      <div 
-        className="flex items-center justify-between p-2 border-b border-border bg-muted/30 cursor-grab hover:bg-muted/50"
-        {...dragHandlers}
-      >
-        <div className="flex items-center gap-2">
-          <Move className="h-3 w-3 text-muted-foreground" />
+      {!isFullScreen && (
+        <div 
+          className="flex items-center justify-between p-2 border-b border-border bg-muted/30 cursor-grab hover:bg-muted/50"
+          {...dragHandlers}
+        >
+          <div className="flex items-center gap-2">
+            <Move className="h-3 w-3 text-muted-foreground" />
+            <Eye className="h-4 w-4 text-primary" />
+            <span className="text-sm font-semibold">Deck de {opponentUsername}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={() => setIsMinimized(true)}
+            >
+              <Minimize2 className="h-3 w-3" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={() => setIsVisible(false)}
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Fullscreen Header */}
+      {isFullScreen && (
+        <div className="p-3 border-b border-border bg-muted/30 flex items-center justify-between">
           <Eye className="h-4 w-4 text-primary" />
-          <span className="text-sm font-semibold">Deck de {opponentUsername}</span>
+          <span className="text-lg font-bold">Campo de {opponentUsername}</span>
+          <div className="w-4" />
         </div>
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            onClick={() => setIsMinimized(true)}
-          >
-            <Minimize2 className="h-3 w-3" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            onClick={() => setIsVisible(false)}
-          >
-            <X className="h-3 w-3" />
-          </Button>
-        </div>
-      </div>
+      )}
 
       {/* Content */}
-      <div className="p-2">
+      <div className={isFullScreen ? "flex-1 p-3 overflow-auto" : "p-2"}>
         {!opponentState ? (
           <div className="text-center text-sm text-muted-foreground py-4">
             <Eye className="h-6 w-6 mx-auto mb-2 opacity-50" />

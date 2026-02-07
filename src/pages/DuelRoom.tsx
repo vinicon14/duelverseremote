@@ -5,7 +5,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { PhoneOff, Loader2, Scale, Layers } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
-import { DuelChat } from "@/components/DuelChat";
 import { FloatingCalculator } from "@/components/FloatingCalculator";
 import { RecordMatchButton } from "@/components/RecordMatchButton";
 import { HideElementsButton } from "@/components/HideElementsButton";
@@ -37,7 +36,7 @@ const DuelRoom = () => {
   const lastPauseTime = useRef<number>(0);
   
   const isJudge = searchParams.get('role') === 'judge';
-  const [hideControls, setHideControls] = useState(false);
+  const [hideControls, setHideControls] = useState(true); // Oculto por padrão
   
   // Deck viewer state
   const [showDeckViewer, setShowDeckViewer] = useState(false);
@@ -871,10 +870,20 @@ const DuelRoom = () => {
             )}
             
             <div className="flex gap-1 sm:gap-2">
-              {/* O botão de Ocultar e Gravar ficam sempre visíveis para participantes */}
+              {/* O botão de Ocultar, Gravar e Deck ficam sempre visíveis para participantes */}
               {isParticipant && !isJudge && (
                 <>
-                  <HideElementsButton onToggle={setHideControls} />
+                  {/* Botão do Deck - SEMPRE VISÍVEL */}
+                  <Button
+                    onClick={() => setShowDeckViewer(!showDeckViewer)}
+                    variant="outline"
+                    size="sm"
+                    className="bg-amber-600/95 hover:bg-amber-700 text-white backdrop-blur-sm text-xs sm:text-sm"
+                    title="Abrir Deck"
+                  >
+                    <Layers className="w-3 h-3 sm:w-4 sm:h-4" />
+                  </Button>
+                  <HideElementsButton onToggle={setHideControls} isHidden={hideControls} />
                   <RecordMatchButton duelId={id!} />
                 </>
               )}
@@ -884,16 +893,6 @@ const DuelRoom = () => {
                 <>
                   {isParticipant && !isJudge && (
                     <>
-                      {/* Botão do Deck */}
-                      <Button
-                        onClick={() => setShowDeckViewer(!showDeckViewer)}
-                        variant="outline"
-                        size="sm"
-                        className="bg-amber-600/95 hover:bg-amber-700 text-white backdrop-blur-sm text-xs sm:text-sm"
-                        title="Abrir Deck"
-                      >
-                        <Layers className="w-3 h-3 sm:w-4 sm:h-4" />
-                      </Button>
                       <Button
                         onClick={callJudge}
                         disabled={judgeCalled}
@@ -1002,10 +1001,8 @@ const DuelRoom = () => {
         />
       )}
 
-      {/* Chat Component */}
-      {!hideControls && currentUser && (
-        <DuelChat duelId={id!} currentUserId={currentUser.id} />
-      )}
+      {/* Chat Component REMOVIDO - Usar vídeo chat ao invés */}
+
     </div>
   );
 };
