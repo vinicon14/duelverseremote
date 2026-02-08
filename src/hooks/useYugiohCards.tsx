@@ -72,77 +72,102 @@ export const useYugiohCards = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Helper function to fetch cards with a specific language
+  // - lang 'pt': adds language=pt
+  // - lang 'en': omits language param (default API language)
+  const fetchCardsWithLanguage = async (
+    baseParams: URLSearchParams,
+    lang: 'pt' | 'en'
+  ): Promise<YugiohCard[]> => {
+    try {
+      const params = new URLSearchParams(baseParams);
+      if (lang === 'pt') params.set('language', 'pt');
+      else params.delete('language');
+
+      const url = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${params.toString()}`;
+      const response = await fetch(url);
+      if (!response.ok) return [];
+
+      const data = await response.json();
+      return data.data || [];
+    } catch {
+      return [];
+    }
+  };
+
+  const mergePreferPt = (ptCards: YugiohCard[], enCards: YugiohCard[]) => {
+    const merged: YugiohCard[] = [];
+    const seenIds = new Set<number>();
+
+    ptCards.forEach((card) => {
+      merged.push(card);
+      seenIds.add(card.id);
+    });
+
+    enCards.forEach((card) => {
+      if (!seenIds.has(card.id)) {
+        merged.push(card);
+        seenIds.add(card.id);
+      }
+    });
+
+    merged.sort((a, b) => a.name.localeCompare(b.name));
+    return merged;
+  };
+
   const searchCards = useCallback(async (filters: CardFilters, language: Language = 'pt') => {
     setLoading(true);
     setError(null);
 
     try {
       const params = new URLSearchParams();
-      
-      if (filters.name) {
-        params.append('fname', filters.name);
-      }
-      if (filters.type) {
-        params.append('type', filters.type);
-      }
-      if (filters.race) {
-        params.append('race', filters.race);
-      }
-      if (filters.attribute) {
-        params.append('attribute', filters.attribute);
-      }
-      if (filters.level) {
-        params.append('level', filters.level);
-      }
-      if (filters.atk) {
-        params.append('atk', filters.atk);
-      }
-      if (filters.def) {
-        params.append('def', filters.def);
-      }
-      if (filters.archetype) {
-        params.append('archetype', filters.archetype);
-      }
-      
-      // When searching in Portuguese, we'll search BOTH languages and merge results
-      // This ensures we show all cards even if they don't have Portuguese translations
+
+      if (filters.name) params.append('fname', filters.name);
+      if (filters.type) params.append('type', filters.type);
+      if (filters.race) params.append('race', filters.race);
+      if (filters.attribute) params.append('attribute', filters.attribute);
+      if (filters.level) params.append('level', filters.level);
+      if (filters.atk) params.append('atk', filters.atk);
+      if (filters.def) params.append('def', filters.def);
+      if (filters.archetype) params.append('archetype', filters.archetype);
+
       if (language === 'pt') {
-        const [ptResults, enResults] = await Promise.all([
+        const [ptResults, enSameQuery] = await Promise.all([
           fetchCardsWithLanguage(params, 'pt'),
-          fetchCardsWithLanguage(params, 'en')
+          fetchCardsWithLanguage(params, 'en'),
         ]);
-        
-        // Create a map of Portuguese cards by ID for quick lookup
-        const ptCardsMap = new Map<number, YugiohCard>();
-        ptResults.forEach(card => ptCardsMap.set(card.id, card));
-        
-        // Merge: use Portuguese version if available, otherwise English
-        const mergedCards: YugiohCard[] = [];
-        const seenIds = new Set<number>();
-        
-        // First add all Portuguese cards
-        ptResults.forEach(card => {
-          mergedCards.push(card);
-          seenIds.add(card.id);
-        });
-        
-        // Then add English cards that don't have Portuguese translations
-        enResults.forEach(card => {
-          if (!seenIds.has(card.id)) {
-            mergedCards.push(card);
-            seenIds.add(card.id);
-          }
-        });
-        
-        // Sort by name for better UX
-        mergedCards.sort((a, b) => a.name.localeCompare(b.name));
-        
-        setCards(mergedCards);
-      } else {
-        // English search - just fetch English
-        const enResults = await fetchCardsWithLanguage(params, 'en');
-        setCards(enResults);
+
+        // If the PT query returns cards from a known archetype, also fetch the FULL archetype in EN.
+        // This solves cases like searching "reis de fogo" where many cards exist only in EN.
+        let enArchetypeResults: YugiohCard[] = [];
+
+        const archetypesFromPt = Array.from(
+          new Set(
+            (ptResults
+              .map((c) => c.archetype)
+              .filter((a): a is string => !!a && a.trim().length > 0))
+          )
+        );
+
+        const shouldExpandByArchetype =
+          !!filters.name &&
+          !filters.archetype &&
+          archetypesFromPt.length === 1;
+
+        if (shouldExpandByArchetype) {
+          const archetypeParams = new URLSearchParams(params);
+          archetypeParams.delete('fname');
+          archetypeParams.set('archetype', archetypesFromPt[0]);
+          enArchetypeResults = await fetchCardsWithLanguage(archetypeParams, 'en');
+        }
+
+        setCards(mergePreferPt(ptResults, [...enSameQuery, ...enArchetypeResults]));
+        return;
       }
+
+      // English-only search
+      const enResults = await fetchCardsWithLanguage(params, 'en');
+      setCards(enResults);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro desconhecido');
       setCards([]);
@@ -150,28 +175,6 @@ export const useYugiohCards = () => {
       setLoading(false);
     }
   }, []);
-
-  // Helper function to fetch cards with a specific language
-  const fetchCardsWithLanguage = async (baseParams: URLSearchParams, lang: 'pt' | 'en'): Promise<YugiohCard[]> => {
-    try {
-      const params = new URLSearchParams(baseParams);
-      if (lang === 'pt') {
-        params.append('language', 'pt');
-      }
-      
-      const url = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${params.toString()}`;
-      const response = await fetch(url);
-      
-      if (!response.ok) {
-        return [];
-      }
-      
-      const data = await response.json();
-      return data.data || [];
-    } catch {
-      return [];
-    }
-  };
 
   const getCardById = useCallback(async (id: number, language: Language = 'pt'): Promise<YugiohCard | null> => {
     try {
