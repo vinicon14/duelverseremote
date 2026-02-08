@@ -136,8 +136,7 @@ export const AdminUsers = () => {
           .from('user_roles')
           .insert({ 
             user_id: userId, 
-            role: 'admin',
-            granted_by: session.user.id
+            role: 'admin'
           });
         
         if (error) {

@@ -911,6 +911,7 @@ export type Database = {
           main_deck: Json
           name: string
           side_deck: Json
+          tokens_deck: Json
           updated_at: string
           user_id: string
         }
@@ -923,6 +924,7 @@ export type Database = {
           main_deck?: Json
           name: string
           side_deck?: Json
+          tokens_deck?: Json
           updated_at?: string
           user_id: string
         }
@@ -935,6 +937,7 @@ export type Database = {
           main_deck?: Json
           name?: string
           side_deck?: Json
+          tokens_deck?: Json
           updated_at?: string
           user_id?: string
         }
