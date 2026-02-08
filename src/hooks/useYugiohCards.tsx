@@ -72,102 +72,86 @@ export const useYugiohCards = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Helper function to fetch cards with a specific language
-  // - lang 'pt': adds language=pt
-  // - lang 'en': omits language param (default API language)
-  const fetchCardsWithLanguage = async (
-    baseParams: URLSearchParams,
-    lang: 'pt' | 'en'
-  ): Promise<YugiohCard[]> => {
-    try {
-      const params = new URLSearchParams(baseParams);
-      if (lang === 'pt') params.set('language', 'pt');
-      else params.delete('language');
-
-      const url = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${params.toString()}`;
-      const response = await fetch(url);
-      if (!response.ok) return [];
-
-      const data = await response.json();
-      return data.data || [];
-    } catch {
-      return [];
-    }
-  };
-
-  const mergePreferPt = (ptCards: YugiohCard[], enCards: YugiohCard[]) => {
-    const merged: YugiohCard[] = [];
-    const seenIds = new Set<number>();
-
-    ptCards.forEach((card) => {
-      merged.push(card);
-      seenIds.add(card.id);
-    });
-
-    enCards.forEach((card) => {
-      if (!seenIds.has(card.id)) {
-        merged.push(card);
-        seenIds.add(card.id);
-      }
-    });
-
-    merged.sort((a, b) => a.name.localeCompare(b.name));
-    return merged;
-  };
-
   const searchCards = useCallback(async (filters: CardFilters, language: Language = 'pt') => {
     setLoading(true);
     setError(null);
 
     try {
       const params = new URLSearchParams();
-
-      if (filters.name) params.append('fname', filters.name);
-      if (filters.type) params.append('type', filters.type);
-      if (filters.race) params.append('race', filters.race);
-      if (filters.attribute) params.append('attribute', filters.attribute);
-      if (filters.level) params.append('level', filters.level);
-      if (filters.atk) params.append('atk', filters.atk);
-      if (filters.def) params.append('def', filters.def);
-      if (filters.archetype) params.append('archetype', filters.archetype);
-
+      
+      if (filters.name) {
+        params.append('fname', filters.name);
+      }
+      if (filters.type) {
+        params.append('type', filters.type);
+      }
+      if (filters.race) {
+        params.append('race', filters.race);
+      }
+      if (filters.attribute) {
+        params.append('attribute', filters.attribute);
+      }
+      if (filters.level) {
+        params.append('level', filters.level);
+      }
+      if (filters.atk) {
+        params.append('atk', filters.atk);
+      }
+      if (filters.def) {
+        params.append('def', filters.def);
+      }
+      if (filters.archetype) {
+        params.append('archetype', filters.archetype);
+      }
+      
+      // Language parameter - start with requested language
       if (language === 'pt') {
-        const [ptResults, enSameQuery] = await Promise.all([
-          fetchCardsWithLanguage(params, 'pt'),
-          fetchCardsWithLanguage(params, 'en'),
-        ]);
-
-        // If the PT query returns cards from a known archetype, also fetch the FULL archetype in EN.
-        // This solves cases like searching "reis de fogo" where many cards exist only in EN.
-        let enArchetypeResults: YugiohCard[] = [];
-
-        const archetypesFromPt = Array.from(
-          new Set(
-            (ptResults
-              .map((c) => c.archetype)
-              .filter((a): a is string => !!a && a.trim().length > 0))
-          )
-        );
-
-        const shouldExpandByArchetype =
-          !!filters.name &&
-          !filters.archetype &&
-          archetypesFromPt.length === 1;
-
-        if (shouldExpandByArchetype) {
-          const archetypeParams = new URLSearchParams(params);
-          archetypeParams.delete('fname');
-          archetypeParams.set('archetype', archetypesFromPt[0]);
-          enArchetypeResults = await fetchCardsWithLanguage(archetypeParams, 'en');
-        }
-
-        setCards(mergePreferPt(ptResults, [...enSameQuery, ...enArchetypeResults]));
-        return;
+        params.append('language', 'pt');
       }
 
-      // English-only search
-      const enResults = await fetchCardsWithLanguage(params, 'en');
-      setCards(enResults);
+      const url = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${params.toString()}`;
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        if (response.status === 400) {
+          // If Portuguese search returns 400, try English
+          if (language === 'pt') {
+            const englishParams = new URLSearchParams(params);
+            englishParams.delete('language');
+            const englishUrl = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${englishParams.toString()}`;
+            const englishResponse = await fetch(englishUrl);
+            
+            if (englishResponse.ok) {
+              const englishData = await englishResponse.json();
+              setCards(englishData.data || []);
+              return;
+            }
+          }
+          setCards([]);
+          return;
+        }
+        throw new Error('Erro ao buscar cartas');
+      }
+
+      const data = await response.json();
+      
+      // If Portuguese search returns no results, try English
+      if ((!data.data || data.data.length === 0) && language === 'pt') {
+        const englishParams = new URLSearchParams(params);
+        englishParams.delete('language');
+        const englishUrl = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${englishParams.toString()}`;
+        
+        try {
+          const englishResponse = await fetch(englishUrl);
+          if (englishResponse.ok) {
+            const englishData = await englishResponse.json();
+            setCards(englishData.data || []);
+            return;
+          }
+        } catch {}
+      }
+      
+      setCards(data.data || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro desconhecido');
       setCards([]);
