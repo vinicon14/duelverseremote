@@ -449,6 +449,7 @@ export const FloatingOpponentViewer = ({
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         card={selectedCard ? {
+          id: selectedCard.id,
           name: selectedCard.name,
           type: '',
           desc: '',

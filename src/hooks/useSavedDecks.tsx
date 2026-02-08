@@ -110,6 +110,7 @@ export const useSavedDecks = () => {
           id: card.id,
           name: card.name,
           quantity: card.quantity,
+          desc: card.desc ?? '',
           card_images: card.card_images || [],
           type: card.type || '',
           atk: card.atk,
