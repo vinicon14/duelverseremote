@@ -9,7 +9,6 @@ import { Save } from "lucide-react";
 
 export const AdminSettings = () => {
   const [supportEmail, setSupportEmail] = useState("");
-  const [pixKey, setPixKey] = useState("");
   const [storeUrl, setStoreUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -23,16 +22,14 @@ export const AdminSettings = () => {
       const { data, error } = await supabase
         .from('system_settings')
         .select('*');
-      
+
       if (error) throw error;
-      
+
       if (data) {
         const emailSetting = data.find(s => s.key === 'support_email');
-        const pixSetting = data.find(s => s.key === 'pix_key');
         const storeSetting = data.find(s => s.key === 'store_url');
-        
+
         if (emailSetting) setSupportEmail(emailSetting.value || '');
-        if (pixSetting) setPixKey(pixSetting.value || '');
         if (storeSetting) setStoreUrl(storeSetting.value || '');
       }
     } catch (error) {
@@ -50,18 +47,8 @@ export const AdminSettings = () => {
           { key: 'support_email', value: supportEmail, updated_at: new Date().toISOString() },
           { onConflict: 'key' }
         );
-      
-      if (emailError) throw emailError;
 
-      // Upsert pix_key
-      const { error: pixError } = await supabase
-        .from('system_settings')
-        .upsert(
-          { key: 'pix_key', value: pixKey, updated_at: new Date().toISOString() },
-          { onConflict: 'key' }
-        );
-      
-      if (pixError) throw pixError;
+      if (emailError) throw emailError;
 
       // Upsert store_url
       const { error: storeError } = await supabase
@@ -70,16 +57,16 @@ export const AdminSettings = () => {
           { key: 'store_url', value: storeUrl, updated_at: new Date().toISOString() },
           { onConflict: 'key' }
         );
-      
+
       if (storeError) throw storeError;
 
-      toast({ 
+      toast({
         title: "Configurações salvas",
         description: "As configurações foram atualizadas com sucesso!"
       });
     } catch (error: any) {
       console.error('Error saving settings:', error);
-      toast({ 
+      toast({
         title: "Erro ao salvar",
         description: error.message || "Não foi possível salvar as configurações",
         variant: "destructive"
@@ -116,19 +103,6 @@ export const AdminSettings = () => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="pix-key">Chave PIX (Cópia e Cola)</Label>
-            <Input
-              id="pix-key"
-              placeholder="00020126580014br.gov.bcb.pix..."
-              value={pixKey}
-              onChange={(e) => setPixKey(e.target.value)}
-            />
-            <p className="text-sm text-muted-foreground">
-              Chave PIX no formato cópia e cola para pagamentos
-            </p>
-          </div>
-
-          <div className="space-y-2">
             <Label htmlFor="store-url">Link da Loja</Label>
             <Input
               id="store-url"
@@ -142,8 +116,8 @@ export const AdminSettings = () => {
             </p>
           </div>
 
-          <Button 
-            onClick={saveSettings} 
+          <Button
+            onClick={saveSettings}
             disabled={loading}
             className="w-full"
           >
