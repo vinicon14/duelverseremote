@@ -104,54 +104,45 @@ export const useYugiohCards = () => {
         params.append('archetype', filters.archetype);
       }
       
-      // Language parameter - start with requested language
+      // When searching in Portuguese, we'll search BOTH languages and merge results
+      // This ensures we show all cards even if they don't have Portuguese translations
       if (language === 'pt') {
-        params.append('language', 'pt');
-      }
-
-      const url = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${params.toString()}`;
-      const response = await fetch(url);
-      
-      if (!response.ok) {
-        if (response.status === 400) {
-          // If Portuguese search returns 400, try English
-          if (language === 'pt') {
-            const englishParams = new URLSearchParams(params);
-            englishParams.delete('language');
-            const englishUrl = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${englishParams.toString()}`;
-            const englishResponse = await fetch(englishUrl);
-            
-            if (englishResponse.ok) {
-              const englishData = await englishResponse.json();
-              setCards(englishData.data || []);
-              return;
-            }
-          }
-          setCards([]);
-          return;
-        }
-        throw new Error('Erro ao buscar cartas');
-      }
-
-      const data = await response.json();
-      
-      // If Portuguese search returns no results, try English
-      if ((!data.data || data.data.length === 0) && language === 'pt') {
-        const englishParams = new URLSearchParams(params);
-        englishParams.delete('language');
-        const englishUrl = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${englishParams.toString()}`;
+        const [ptResults, enResults] = await Promise.all([
+          fetchCardsWithLanguage(params, 'pt'),
+          fetchCardsWithLanguage(params, 'en')
+        ]);
         
-        try {
-          const englishResponse = await fetch(englishUrl);
-          if (englishResponse.ok) {
-            const englishData = await englishResponse.json();
-            setCards(englishData.data || []);
-            return;
+        // Create a map of Portuguese cards by ID for quick lookup
+        const ptCardsMap = new Map<number, YugiohCard>();
+        ptResults.forEach(card => ptCardsMap.set(card.id, card));
+        
+        // Merge: use Portuguese version if available, otherwise English
+        const mergedCards: YugiohCard[] = [];
+        const seenIds = new Set<number>();
+        
+        // First add all Portuguese cards
+        ptResults.forEach(card => {
+          mergedCards.push(card);
+          seenIds.add(card.id);
+        });
+        
+        // Then add English cards that don't have Portuguese translations
+        enResults.forEach(card => {
+          if (!seenIds.has(card.id)) {
+            mergedCards.push(card);
+            seenIds.add(card.id);
           }
-        } catch {}
+        });
+        
+        // Sort by name for better UX
+        mergedCards.sort((a, b) => a.name.localeCompare(b.name));
+        
+        setCards(mergedCards);
+      } else {
+        // English search - just fetch English
+        const enResults = await fetchCardsWithLanguage(params, 'en');
+        setCards(enResults);
       }
-      
-      setCards(data.data || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro desconhecido');
       setCards([]);
@@ -159,6 +150,28 @@ export const useYugiohCards = () => {
       setLoading(false);
     }
   }, []);
+
+  // Helper function to fetch cards with a specific language
+  const fetchCardsWithLanguage = async (baseParams: URLSearchParams, lang: 'pt' | 'en'): Promise<YugiohCard[]> => {
+    try {
+      const params = new URLSearchParams(baseParams);
+      if (lang === 'pt') {
+        params.append('language', 'pt');
+      }
+      
+      const url = `https://db.ygoprodeck.com/api/v7/cardinfo.php?${params.toString()}`;
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        return [];
+      }
+      
+      const data = await response.json();
+      return data.data || [];
+    } catch {
+      return [];
+    }
+  };
 
   const getCardById = useCallback(async (id: number, language: Language = 'pt'): Promise<YugiohCard | null> => {
     try {
