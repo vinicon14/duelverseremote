@@ -2,5 +2,4 @@
 
 interface Window {
   isProUser: boolean;
-  shouldShowAds: boolean;
 }

@@ -164,7 +164,11 @@
 
     <!-- ADS - Only for non-Pro users -->
     <script>
-      // Pro users don't see any ads
+      // Default: assume user is Pro (no ads)
+      window.isProUser = true;
+    </script>
+    <script>
+      // Free users will have isProUser set to false by React app
       if (window.isProUser !== true) {
         // Google AdSense
         (function() {
