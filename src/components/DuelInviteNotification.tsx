@@ -2,10 +2,9 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Swords, X, Check, Video } from "lucide-react";
+import { Check, Video, X } from "lucide-react";
 
 interface DuelInvite {
   id: string;
@@ -132,50 +131,62 @@ export const DuelInviteNotification = ({ currentUserId }: { currentUserId?: stri
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <Card className="card-mystic w-full max-w-md animate-in fade-in zoom-in duration-300">
-        <CardContent className="p-6 sm:p-8 space-y-6">
-          <div className="text-center space-y-2">
-            <div className="relative inline-block">
-              <Swords className="h-12 w-12 sm:h-16 sm:w-16 mx-auto mb-4 text-primary animate-pulse" />
-              <div className="absolute inset-0 h-12 w-12 sm:h-16 sm:w-16 mx-auto rounded-full bg-primary/20 animate-ping" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+      <div className="w-full max-w-md bg-[#1a1a2e] rounded-2xl border border-purple-500/20 shadow-2xl animate-in fade-in zoom-in duration-300 overflow-hidden">
+        <div className="p-8 flex flex-col items-center text-center">
+          {/* Check Icon */}
+          <div className="relative mb-6">
+            <div className="w-20 h-20 rounded-full border-4 border-emerald-500 flex items-center justify-center">
+              <Check className="w-10 h-10 text-emerald-500" strokeWidth={3} />
             </div>
-            <h3 className="text-xl sm:text-2xl font-bold text-gradient-mystic">
-              Desafio de Duelo!
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              {pendingInvite.sender.username} te desafiou para um duelo!
-            </p>
+            <div className="absolute inset-0 w-20 h-20 rounded-full border-4 border-emerald-500/30 animate-ping" />
           </div>
 
-          <div className="flex items-center justify-center gap-4 p-4 rounded-lg bg-background/50">
-            <Avatar className="w-16 h-16 border-2 border-primary/30">
+          {/* Title */}
+          <h2 className="text-2xl font-bold text-emerald-400 mb-2">
+            Oponente Encontrado!
+          </h2>
+
+          {/* VS Username */}
+          <p className="text-white font-semibold mb-4">
+            vs {pendingInvite.sender.username}
+          </p>
+
+          {/* Description */}
+          <p className="text-gray-400 text-sm mb-8">
+            Clique no botão abaixo para entrar na chamada de vídeo
+          </p>
+
+          {/* Avatar */}
+          <div className="mb-8">
+            <Avatar className="w-24 h-24 border-4 border-purple-500/50 shadow-lg shadow-purple-500/20">
               <AvatarImage src={pendingInvite.sender.avatar_url || ""} />
-              <AvatarFallback className="bg-primary/20 text-lg">
+              <AvatarFallback className="bg-gradient-to-br from-purple-600 to-pink-600 text-white text-2xl font-bold">
                 {pendingInvite.sender.username?.charAt(0).toUpperCase() || "U"}
               </AvatarFallback>
             </Avatar>
           </div>
 
-          <div className="flex gap-3">
-            <Button
-              onClick={handleReject}
-              variant="outline"
-              className="flex-1 border-destructive text-destructive hover:bg-destructive hover:text-white"
-            >
-              <X className="w-4 h-4 mr-2" />
-              Recusar
-            </Button>
-            <Button
-              onClick={handleAccept}
-              className="flex-1 btn-mystic text-white"
-            >
-              <Check className="w-4 h-4 mr-2" />
-              Aceitar
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          {/* Join Video Button */}
+          <Button
+            onClick={handleAccept}
+            className="w-full h-14 bg-gradient-to-r from-purple-600 via-purple-500 to-pink-500 hover:from-purple-700 hover:via-purple-600 hover:to-pink-600 text-white font-semibold text-lg rounded-xl shadow-lg shadow-purple-500/30 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] mb-4"
+          >
+            <Video className="w-5 h-5 mr-3" />
+            Entrar na Chamada de Vídeo
+          </Button>
+
+          {/* Cancel Button */}
+          <Button
+            onClick={handleReject}
+            variant="ghost"
+            className="w-full h-12 text-gray-400 hover:text-white hover:bg-white/5 rounded-xl transition-all duration-200"
+          >
+            <X className="w-4 h-4 mr-2" />
+            Cancelar
+          </Button>
+        </div>
+      </div>
     </div>
   );
 };
