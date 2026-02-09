@@ -1,5 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { handleError, securityHeaders, sanitizeString } from '../_utils/security.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,39 +9,39 @@ const corsHeaders = {
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: { ...corsHeaders, ...securityHeaders } });
   }
 
   try {
     const { roomName } = await req.json();
+    const sanitizedRoomName = sanitizeString(roomName, 100);
     const DAILY_API_KEY = Deno.env.get('DAILY_API_KEY');
 
     if (!DAILY_API_KEY) {
-      throw new Error('DAILY_API_KEY not configured');
+      return new Response(JSON.stringify({ error: 'DAILY_API_KEY not configured' }), {
+        status: 500,
+        headers: { ...corsHeaders, ...securityHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    console.log('Checking if Daily.co room exists:', roomName);
+    if (!sanitizedRoomName) {
+      return new Response(JSON.stringify({ error: 'roomName is required' }), {
+        status: 400,
+        headers: { ...corsHeaders, ...securityHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
-    // Tentar obter sala existente primeiro
-    const getResponse = await fetch(`https://api.daily.co/v1/rooms/${roomName}`, {
+    const getResponse = await fetch(`https://api.daily.co/v1/rooms/${sanitizedRoomName}`, {
       method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${DAILY_API_KEY}`,
-      },
+      headers: { 'Authorization': `Bearer ${DAILY_API_KEY}` },
     });
 
-    // Se a sala existir, retornar ela
     if (getResponse.ok) {
       const existingRoom = await getResponse.json();
-      console.log('Using existing room:', existingRoom.url);
-      return new Response(
-        JSON.stringify({ url: existingRoom.url, name: existingRoom.name }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ url: existingRoom.url, name: existingRoom.name }), {
+        headers: { ...corsHeaders, ...securityHeaders, 'Content-Type': 'application/json' },
+      });
     }
-
-    // Se não existir, criar nova sala
-    console.log('Creating new Daily.co room:', roomName);
 
     const createResponse = await fetch('https://api.daily.co/v1/rooms', {
       method: 'POST',
@@ -49,8 +50,8 @@ serve(async (req) => {
         'Authorization': `Bearer ${DAILY_API_KEY}`,
       },
       body: JSON.stringify({
-        name: roomName,
-        privacy: 'public',
+        name: sanitizedRoomName,
+        privacy: 'private',
         properties: {
           enable_screenshare: true,
           enable_chat: false,
@@ -62,24 +63,19 @@ serve(async (req) => {
     });
 
     if (!createResponse.ok) {
-      const error = await createResponse.text();
-      console.error('Daily.co API error:', error);
-      throw new Error(`Failed to create room: ${error}`);
+      const errorText = await createResponse.text();
+      return new Response(JSON.stringify({ error: 'Failed to create room' }), {
+        status: 500,
+        headers: { ...corsHeaders, ...securityHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const data = await createResponse.json();
-    console.log('Room created successfully:', data.url);
+    return new Response(JSON.stringify({ url: data.url, name: data.name }), {
+      headers: { ...corsHeaders, ...securityHeaders, 'Content-Type': 'application/json' },
+    });
 
-    return new Response(
-      JSON.stringify({ url: data.url, name: data.name }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
   } catch (error) {
-    console.error('Error in create-daily-room:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return new Response(
-      JSON.stringify({ error: errorMessage }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return handleError(error, 'create-daily-room');
   }
 });

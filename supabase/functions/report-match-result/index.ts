@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
+import { isValidUUID, handleError, securityHeaders } from '../_utils/security.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,7 +9,7 @@ const corsHeaders = {
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: { ...corsHeaders, ...securityHeaders } });
   }
 
   try {
@@ -17,27 +18,40 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const authHeader = req.headers.get('Authorization')!;
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ success: false, error: 'Não autenticado' }), {
+        status: 401,
+        headers: { ...corsHeaders, ...securityHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
     if (authError || !user) {
-      return new Response(JSON.stringify({ success: false, message: 'Não autenticado' }), {
+      return new Response(JSON.stringify({ success: false, error: 'Não autenticado' }), {
         status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, ...securityHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     const { match_id, winner_id } = await req.json();
 
     if (!match_id || !winner_id) {
-      return new Response(JSON.stringify({ success: false, message: 'Dados inválidos' }), {
+      return new Response(JSON.stringify({ success: false, error: 'Dados inválidos' }), {
         status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, ...securityHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Get match details
+    if (!isValidUUID(match_id) || !isValidUUID(winner_id)) {
+      return new Response(JSON.stringify({ success: false, error: 'Invalid ID format' }), {
+        status: 400,
+        headers: { ...corsHeaders, ...securityHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const { data: match, error: matchError } = await supabase
       .from('tournament_matches')
       .select('*, tournaments!inner(created_by, status, current_round, total_rounds)')
@@ -45,45 +59,33 @@ serve(async (req) => {
       .single();
 
     if (matchError || !match) {
-      return new Response(JSON.stringify({ success: false, message: 'Partida não encontrada' }), {
+      return new Response(JSON.stringify({ success: false, error: 'Partida não encontrada' }), {
         status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, ...securityHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Check if user is the tournament creator
     if (match.tournaments.created_by !== user.id) {
-      return new Response(JSON.stringify({ success: false, message: 'Apenas o criador do torneio pode reportar resultados' }), {
+      return new Response(JSON.stringify({ success: false, error: 'Apenas o criador do torneio pode reportar resultados' }), {
         status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, ...securityHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Validate winner is one of the players
     if (winner_id !== match.player1_id && winner_id !== match.player2_id) {
-      return new Response(JSON.stringify({ success: false, message: 'Vencedor inválido' }), {
+      return new Response(JSON.stringify({ success: false, error: 'Vencedor inválido' }), {
         status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, ...securityHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Update match with winner
-    const { error: updateError } = await supabase
+    await supabase
       .from('tournament_matches')
-      .update({ 
-        winner_id,
-        status: 'completed'
-      })
+      .update({ winner_id, status: 'completed' })
       .eq('id', match_id);
 
-    if (updateError) {
-      throw updateError;
-    }
-
-    // Update participant stats - winner gets +1 win and +3 points
     const loser_id = winner_id === match.player1_id ? match.player2_id : match.player1_id;
 
-    // Get current stats for winner
     const { data: winnerData } = await supabase
       .from('tournament_participants')
       .select('wins, score')
@@ -94,15 +96,11 @@ serve(async (req) => {
     if (winnerData) {
       await supabase
         .from('tournament_participants')
-        .update({ 
-          wins: winnerData.wins + 1,
-          score: (winnerData.score || 0) + 3  // 3 points per win
-        })
+        .update({ wins: winnerData.wins + 1, score: (winnerData.score || 0) + 3 })
         .eq('tournament_id', match.tournament_id)
         .eq('user_id', winner_id);
     }
 
-    // Get current stats for loser
     const { data: loserData } = await supabase
       .from('tournament_participants')
       .select('losses, score')
@@ -113,15 +111,11 @@ serve(async (req) => {
     if (loserData) {
       await supabase
         .from('tournament_participants')
-        .update({ 
-          losses: loserData.losses + 1,
-          score: loserData.score || 0  // Loser keeps same score
-        })
+        .update({ losses: loserData.losses + 1, score: loserData.score || 0 })
         .eq('tournament_id', match.tournament_id)
         .eq('user_id', loser_id);
     }
 
-    // Check if all matches in current round are completed
     const { data: roundMatches } = await supabase
       .from('tournament_matches')
       .select('id, status, winner_id')
@@ -131,7 +125,6 @@ serve(async (req) => {
     const allCompleted = roundMatches?.every(m => m.status === 'completed');
 
     if (allCompleted && roundMatches && match.round < match.tournaments.total_rounds) {
-      // Generate next round matches
       const winners = roundMatches.map(m => m.winner_id).filter(Boolean);
       const nextRoundMatches = [];
 
@@ -145,7 +138,6 @@ serve(async (req) => {
             status: 'pending',
           });
         } else {
-          // Bye - player advances automatically
           nextRoundMatches.push({
             tournament_id: match.tournament_id,
             round: match.round + 1,
@@ -158,18 +150,9 @@ serve(async (req) => {
       }
 
       await supabase.from('tournament_matches').insert(nextRoundMatches);
-
-      // Update tournament current round
-      await supabase
-        .from('tournaments')
-        .update({ current_round: match.round + 1 })
-        .eq('id', match.tournament_id);
+      await supabase.from('tournaments').update({ current_round: match.round + 1 }).eq('id', match.tournament_id);
     } else if (allCompleted && match.round === match.tournaments.total_rounds) {
-      // Tournament finished - final match completed
-      await supabase
-        .from('tournaments')
-        .update({ status: 'completed' })
-        .eq('id', match.tournament_id);
+      await supabase.from('tournaments').update({ status: 'completed' }).eq('id', match.tournament_id);
     }
 
     return new Response(JSON.stringify({ 
@@ -178,18 +161,10 @@ serve(async (req) => {
       next_round_generated: allCompleted && match.round < match.tournaments.total_rounds
     }), {
       status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, ...securityHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
-    console.error('Error reporting match result:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Erro ao reportar resultado';
-    return new Response(JSON.stringify({ 
-      success: false, 
-      message: errorMessage 
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return handleError(error, 'report-match-result');
   }
 });
