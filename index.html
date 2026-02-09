@@ -168,36 +168,41 @@
       window.isProUser = true;
     </script>
     <script>
-      // Free users will have isProUser set to false by React app
-      if (window.isProUser !== true) {
-        // Google AdSense
-        (function() {
-          var adsense = document.createElement('script');
-          adsense.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js';
-          adsense.async = true;
-          adsense.setAttribute('crossorigin', 'anonymous');
-          adsense.setAttribute('data-ad-client', 'ca-pub-5741796577623184');
-          document.head.appendChild(adsense);
-        })();
+      // Wait for React to set isProUser, then load ads if user is free
+      function loadAds() {
+        if (window.isProUser !== true) {
+          // Google AdSense
+          (function() {
+            var adsense = document.createElement('script');
+            adsense.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js';
+            adsense.async = true;
+            adsense.setAttribute('crossorigin', 'anonymous');
+            adsense.setAttribute('data-ad-client', 'ca-pub-5741796577623184');
+            document.head.appendChild(adsense);
+          })();
 
-        // Quge5
-        (function() {
-          var quge5 = document.createElement('script');
-          quge5.src = 'https://quge5.com/88/tag.min.js';
-          quge5.setAttribute('data-zone', '209658');
-          quge5.async = true;
-          quge5.setAttribute('data-cfasync', 'false');
-          document.head.appendChild(quge5);
-        })();
+          // Quge5
+          (function() {
+            var quge5 = document.createElement('script');
+            quge5.src = 'https://quge5.com/88/tag.min.js';
+            quge5.setAttribute('data-zone', '209658');
+            quge5.async = true;
+            quge5.setAttribute('data-cfasync', 'false');
+            document.head.appendChild(quge5);
+          })();
 
-        // Monetag
-        (function() {
-          var monetag = document.createElement('meta');
-          monetag.name = 'monetag';
-          monetag.content = '09f97271827dfd1ba93f4d998dc18d71';
-          document.head.appendChild(monetag);
-        })();
+          // Monetag
+          (function() {
+            var monetag = document.createElement('meta');
+            monetag.name = 'monetag';
+            monetag.content = '09f97271827dfd1ba93f4d998dc18d71';
+            document.head.appendChild(monetag);
+          })();
+        }
       }
+      
+      // Wait 500ms for React to load and set isProUser
+      setTimeout(loadAds, 500);
     </script>
   </head>
 
