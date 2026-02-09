@@ -166,8 +166,6 @@
     <script>
       // By default, show ads (free user)
       // Only Pro users will have isProUser = true set by React
-      // If isProUser is undefined or false, ads will show
-      // If isProUser is explicitly true, ads will be blocked
       if (window.isProUser !== true) {
         // Google AdSense
         (function() {
@@ -179,7 +177,7 @@
           document.head.appendChild(adsense);
         })();
 
-        // Quge5
+        // Quge5 Popup Ads
         (function() {
           var quge5 = document.createElement('script');
           quge5.src = 'https://quge5.com/88/tag.min.js';
@@ -188,16 +186,12 @@
           quge5.setAttribute('data-cfasync', 'false');
           document.head.appendChild(quge5);
         })();
-
-        // Monetag
-        (function() {
-          var monetag = document.createElement('meta');
-          monetag.name = 'monetag';
-          monetag.content = '09f97271827dfd1ba93f4d998dc18d71';
-          document.head.appendChild(monetag);
-        })();
       }
     </script>
+
+    <!-- Monetag - Site ID 3224557 -->
+    <meta name="monetag" content="09f97271827dfd1ba93f4d998dc18d71">
+    <script src="https://publishers.monetag.com/3224557.js" async></script>
   </head>
 
   <body>
