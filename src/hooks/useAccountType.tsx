@@ -20,9 +20,10 @@ export const useAccountType = () => {
           const accountTypeValue = data.account_type as 'free' | 'pro';
           setAccountType(accountTypeValue);
           
-          // Free users see ads, Pro users don't
-          if (typeof window !== 'undefined') {
-            window.isProUser = accountTypeValue === 'pro';
+          // Only set isProUser = true for Pro users
+          // Free users will have isProUser undefined, so ads will show
+          if (typeof window !== 'undefined' && accountTypeValue === 'pro') {
+            window.isProUser = true;
           }
         }
       }
