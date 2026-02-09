@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,11 @@ interface DuelInvite {
 
 export const DuelInviteNotification = ({ currentUserId }: { currentUserId?: string }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
+  
+  // Não mostrar na página de duelo (/duel/:id)
+  const isInDuelRoom = location.pathname.startsWith('/duel/');
   const [pendingInvite, setPendingInvite] = useState<DuelInvite | null>(null);
   const [isReady, setIsReady] = useState(false);
 
@@ -126,7 +130,8 @@ export const DuelInviteNotification = ({ currentUserId }: { currentUserId?: stri
     setPendingInvite(null);
   };
 
-  if (!pendingInvite || !isReady) {
+  // Não mostrar se não houver convite, não estiver pronto, ou estiver na sala de duelo
+  if (!pendingInvite || !isReady || isInDuelRoom) {
     return null;
   }
 

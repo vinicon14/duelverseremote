@@ -10,6 +10,7 @@ import { DuelInviteNotification } from "@/components/DuelInviteNotification";
 import { NotificationPrompt } from "@/components/NotificationPrompt";
 import { useRealtimeNotifications } from "@/hooks/useRealtimeNotifications";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { useAccountType } from "@/hooks/useAccountType";
 import Home from "./pages/Home";
 import Landing from "./pages/Landing";
 import Admin from "./pages/Admin";
@@ -75,9 +76,12 @@ const AppContent = () => {
 
   // Enable realtime notifications
   useRealtimeNotifications(user?.id);
-  
+
   // Enable online status tracking
   useOnlineStatus();
+
+  // Check account type to remove ads for PRO users
+  useAccountType();
 
   useEffect(() => {
     // Set up auth state listener FIRST

@@ -24,6 +24,11 @@ export const useAccountType = () => {
           // Free users will have isProUser undefined, so ads will show
           if (typeof window !== 'undefined' && accountTypeValue === 'pro') {
             window.isProUser = true;
+            
+            // Remove all ads for PRO users
+            if (typeof window.removeAllAds === 'function') {
+              window.removeAllAds();
+            }
           }
         }
       }

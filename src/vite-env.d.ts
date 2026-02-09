@@ -2,4 +2,6 @@
 
 interface Window {
   isProUser: boolean;
+  adElements: HTMLElement[];
+  removeAllAds: () => void;
 }
