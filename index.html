@@ -153,7 +153,7 @@
     }
     </script>
     
-    <!-- Google tag (gtag.js) -->
+    <!-- Google Analytics -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-K1XY1SED02"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
@@ -162,95 +162,26 @@
       gtag('config', 'G-K1XY1SED02');
     </script>
 
-    <!-- ADS - Only for non-Pro users -->
+    <!-- ADS - Sempre carregados (removidos automaticamente apenas em rotas /pro/*) -->
     <script>
-      // Store references to ad elements for potential removal
-      window.adElements = [];
-      
-      // Wait for React to load and set isProUser before loading ads
-      function loadAdsForFreeUsers() {
-        if (window.isProUser !== true) {
-          // Google AdSense
-          var adsense = document.createElement('script');
-          adsense.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js';
-          adsense.async = true;
-          adsense.setAttribute('crossorigin', 'anonymous');
-          adsense.setAttribute('data-ad-client', 'ca-pub-5741796577623184');
-          adsense.className = 'ad-script google-adsense';
-          document.head.appendChild(adsense);
-          window.adElements.push(adsense);
+      // Google AdSense - Sempre carregar
+      var adsense = document.createElement('script');
+      adsense.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js';
+      adsense.async = true;
+      adsense.setAttribute('crossorigin', 'anonymous');
+      adsense.setAttribute('data-ad-client', 'ca-pub-5741796577623184');
+      document.head.appendChild(adsense);
 
-          // Quge5 Popup Ads
-          var quge5 = document.createElement('script');
-          quge5.src = 'https://quge5.com/88/tag.min.js';
-          quge5.setAttribute('data-zone', '209658');
-          quge5.async = true;
-          quge5.setAttribute('data-cfasync', 'false');
-          quge5.className = 'ad-script quge5-ads';
-          document.head.appendChild(quge5);
-          window.adElements.push(quge5);
+      // Monetag - Sempre carregar
+      var monetagMeta = document.createElement('meta');
+      monetagMeta.name = 'monetag';
+      monetagMeta.content = '09f97271827dfd1ba93f4d998dc18d71';
+      document.head.appendChild(monetagMeta);
 
-          // Monetag - Site ID 3224557
-          var monetagMeta = document.createElement('meta');
-          monetagMeta.name = 'monetag';
-          monetagMeta.content = '09f97271827dfd1ba93f4d998dc18d71';
-          monetagMeta.className = 'ad-meta monetag-meta';
-          document.head.appendChild(monetagMeta);
-          window.adElements.push(monetagMeta);
-
-          var monetagScript = document.createElement('script');
-          monetagScript.src = 'https://publishers.monetag.com/3224557.js';
-          monetagScript.async = true;
-          monetagScript.className = 'ad-script monetag-script';
-          document.head.appendChild(monetagScript);
-          window.adElements.push(monetagScript);
-        }
-      }
-      
-      // Function to remove all ads when user becomes PRO
-      window.removeAllAds = function() {
-        // Remove all tracked ad elements
-        if (window.adElements && window.adElements.length > 0) {
-          window.adElements.forEach(function(element) {
-            if (element && element.parentNode) {
-              element.parentNode.removeChild(element);
-            }
-          });
-          window.adElements = [];
-        }
-        
-        // Also remove any ad elements by class
-        var adSelectors = [
-          '.ad-script', 
-          '.ad-meta', 
-          'script[src*="monetag.com"]', 
-          'script[src*="quge5.com"]',
-          'script[src*="pagead2.googlesyndication.com"]',
-          'meta[name="monetag"]'
-        ];
-        
-        adSelectors.forEach(function(selector) {
-          var elements = document.querySelectorAll(selector);
-          elements.forEach(function(el) {
-            if (el.parentNode) {
-              el.parentNode.removeChild(el);
-            }
-          });
-        });
-        
-        // Remove any iframes created by ads
-        var adIframes = document.querySelectorAll('iframe[id*="google_ads_iframe"], iframe[src*="monetag"], iframe[src*="quge5"]');
-        adIframes.forEach(function(iframe) {
-          if (iframe.parentNode) {
-            iframe.parentNode.removeChild(iframe);
-          }
-        });
-        
-        console.log('[Duelverse] All ads removed for PRO user');
-      };
-      
-      // Wait 1500ms for React to load and set isProUser
-      setTimeout(loadAdsForFreeUsers, 1500);
+      var monetagScript = document.createElement('script');
+      monetagScript.src = 'https://publishers.monetag.com/3224557.js';
+      monetagScript.async = true;
+      document.head.appendChild(monetagScript);
     </script>
   </head>
 

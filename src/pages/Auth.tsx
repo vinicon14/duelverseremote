@@ -8,12 +8,39 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useProMode } from "@/hooks/useProMode";
 import { Swords } from "lucide-react";
 
 const Auth = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { setProMode } = useProMode();
   const [loading, setLoading] = useState(false);
+
+  // Função para verificar se usuário é PRO e redirecionar
+  const checkProAndRedirect = async (userId: string) => {
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('account_type')
+        .eq('user_id', userId)
+        .single();
+
+      if (profile?.account_type === 'pro') {
+        // Usuário é PRO, definir modo PRO e redirecionar
+        setProMode(true);
+        navigate('/pro/duels', { replace: true });
+      } else {
+        // Usuário é FREE, definir modo FREE e redirecionar normalmente
+        setProMode(false);
+        navigate('/duels', { replace: true });
+      }
+    } catch {
+      // Em caso de erro, redirecionar normalmente
+      setProMode(false);
+      navigate('/duels', { replace: true });
+    }
+  };
 
   // Verificar se usuário já está logado e redirecionar
   useEffect(() => {
@@ -21,8 +48,8 @@ const Auth = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (session?.user) {
-          // Usuário logado, redirecionar para /duels
-          navigate('/duels', { replace: true });
+          // Verificar se é PRO e redirecionar apropriadamente
+          checkProAndRedirect(session.user.id);
         }
       }
     );
@@ -30,12 +57,12 @@ const Auth = () => {
     // DEPOIS verificar sessão existente
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        navigate('/duels', { replace: true });
+        checkProAndRedirect(session.user.id);
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, setProMode]);
 
   const handleGoogleSignIn = async () => {
     try {
@@ -84,12 +111,12 @@ const Auth = () => {
 
       console.log("✅ Login bem-sucedido:", data);
 
-      // Verificar se o usuário está banido
+      // Verificar se o usuário está banido e se é PRO
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
-          .select('is_banned')
+          .select('is_banned, account_type')
           .eq('user_id', session.user.id)
           .maybeSingle();
 
@@ -114,14 +141,19 @@ const Auth = () => {
           .from('profiles')
           .update({ is_online: true, last_seen: new Date().toISOString() })
           .eq('user_id', session.user.id);
+
+        toast({
+          title: "Login realizado!",
+          description: "Bem-vindo de volta, duelista!",
+        });
+
+        // Redirecionar baseado no tipo de conta
+        if (profile?.account_type === 'pro') {
+          navigate('/pro/duels');
+        } else {
+          navigate('/duels');
+        }
       }
-
-      toast({
-        title: "Login realizado!",
-        description: "Bem-vindo de volta, duelista!",
-      });
-
-      navigate('/duels');
     } catch (error: any) {
       toast({
         title: "Erro ao fazer login",

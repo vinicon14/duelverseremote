@@ -1,5 +1,4 @@
 import { useEffect, useRef } from "react";
-import { useAccountType } from "@/hooks/useAccountType";
 
 // Declaração de tipo para Google AdSense
 declare global {
@@ -21,13 +20,9 @@ export const GoogleAd = ({
   style = { display: "block" },
   className = ""
 }: GoogleAdProps) => {
-  const { isPro } = useAccountType();
   const adRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Não exibir anúncios para usuários PRO
-    if (isPro) return;
-
     try {
       if (window.adsbygoogle && adRef.current) {
         (window.adsbygoogle = window.adsbygoogle || []).push({});
@@ -35,10 +30,7 @@ export const GoogleAd = ({
     } catch (error) {
       console.error("Error loading Google Ad:", error);
     }
-  }, [isPro]);
-
-  // Não renderizar nada para usuários PRO
-  if (isPro) return null;
+  }, []);
 
   return (
     <div ref={adRef} className={`google-ad-container ${className}`}>
