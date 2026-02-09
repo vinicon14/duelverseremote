@@ -1,8 +1,42 @@
 <!doctype html>
 <html lang="pt-BR">
   <head>
-    <!-- Quge5 Monetization -->
-    <script src="https://quge5.com/88/tag.min.js" data-zone="209658" async data-cfasync="false"></script>
+    <!-- Monetag: loaded dynamically on free routes only -->
+    <script>
+      (function(){
+        function isProRoute(){
+          return window.location.pathname.startsWith('/pro');
+        }
+        function loadMonetag(){
+          if (window.__MONETAG_LOADED__) return;
+          var s = document.createElement('script');
+          s.src = 'https://quge5.com/88/tag.min.js';
+          s.async = true;
+          s.setAttribute('data-zone','209658');
+          s.setAttribute('data-cfasync','false');
+          document.head.appendChild(s);
+          window.__MONETAG_LOADED__ = true;
+        }
+        function unloadMonetag(){
+          document.querySelectorAll('script[src*="tag.min.js"]').forEach(function(el){ el.remove(); });
+          document.querySelectorAll('iframe[src*="monetag"]').forEach(function(el){ el.remove(); });
+        }
+        if (!isProRoute()) loadMonetag();
+        var origPush = history.pushState;
+        history.pushState = function(){
+          origPush.apply(this, arguments);
+          setTimeout(function(){ if (isProRoute()) unloadMonetag(); else loadMonetag(); }, 0);
+        };
+        var origReplace = history.replaceState;
+        history.replaceState = function(){
+          origReplace.apply(this, arguments);
+          setTimeout(function(){ if (isProRoute()) unloadMonetag(); else loadMonetag(); }, 0);
+        };
+        window.addEventListener('popstate', function(){
+          setTimeout(function(){ if (isProRoute()) unloadMonetag(); else loadMonetag(); }, 0);
+        });
+      })();
+    </script>
     
     <meta charset="UTF-8" />
     <link rel="icon" href="/favicon.png" type="image/png" />
@@ -171,8 +205,6 @@
       gtag('config', 'G-K1XY1SED02');
     </script>
 
-    <!-- Monetag -->
-    <meta name="monetag" content="09f97271827dfd1ba93f4d998dc18d71" />
   </head>
 
   <body>

@@ -121,7 +121,25 @@ const Auth = () => {
         description: "Bem-vindo de volta, duelista!",
       });
 
-      navigate('/duels');
+      // Redirect based on account type after login
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('account_type')
+            .eq('user_id', session.user.id)
+            .maybeSingle();
+
+          if (profile?.account_type === 'pro') {
+            navigate('/pro/home', { replace: true });
+            return;
+          }
+        }
+      } catch {
+        // ignore and fall back
+      }
+      navigate('/home');
     } catch (error: any) {
       toast({
         title: "Erro ao fazer login",

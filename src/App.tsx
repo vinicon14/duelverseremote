@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from '@supabase/supabase-js';
@@ -33,13 +34,46 @@ import News from "./pages/News";
 import NotFound from "./pages/NotFound";
 import InstallApp from "./pages/InstallApp";
 import DeckBuilder from "./pages/DeckBuilder";
+import { useAccountType } from "@/hooks/useAccountType";
 
 const queryClient = new QueryClient();
 
 // Componente interno que fica dentro do Router para usar useNavigate
 const RouterContent = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { isPro } = useAccountType();
+  // Route guards based on plan and path
+  useEffect(() => {
+    const guard = async () => {
+      try {
+        const { data: { session } } = await (supabase as any).auth.getSession();
+        const path = location.pathname;
+        const tryingPro = path.startsWith('/pro');
+        const loggedIn = !!session?.user;
+        if (tryingPro && !loggedIn) {
+          navigate('/auth', { replace: true });
+          return;
+        }
+        if (tryingPro && loggedIn && isPro === false) {
+          navigate('/home', { replace: true });
+          return;
+        }
+        const isFreeRoute = path === '/' || path === '/home' || path === '/duels' || path === '/profile' || path === '/login';
+        if (path && isFreeRoute && loggedIn && isPro === true) {
+          navigate('/pro/home', { replace: true });
+          return;
+        }
+      } catch {
+        // ignore
+      }
+    };
+    guard();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname, isPro]);
   return (
-    <Routes>
+  <>
+  <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/landing" element={<Landing />} />
       <Route path="/admin" element={<Admin />} />
@@ -63,9 +97,14 @@ const RouterContent = () => {
       <Route path="/video/:id" element={<VideoShare />} />
       <Route path="/install" element={<InstallApp />} />
       <Route path="/deck-builder" element={<DeckBuilder />} />
+      <Route path="/home" element={<Home />} />
+      <Route path="/pro/home" element={<Home />} />
+      <Route path="/pro/duels" element={<Duels />} />
+      <Route path="/pro/profile" element={<Profile />} />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
     </Routes>
+   </>
   );
 };
 
