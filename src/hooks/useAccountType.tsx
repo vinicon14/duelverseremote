@@ -17,7 +17,14 @@ export const useAccountType = () => {
           .single();
         
         if (data) {
-          setAccountType(data.account_type as 'free' | 'pro');
+          const accountTypeValue = data.account_type as 'free' | 'pro';
+          setAccountType(accountTypeValue);
+          
+          // Disable ads for Pro users
+          if (typeof window !== 'undefined') {
+            window.isProUser = accountTypeValue === 'pro';
+            window.shouldShowAds = accountTypeValue !== 'pro';
+          }
         }
       }
       setLoading(false);
