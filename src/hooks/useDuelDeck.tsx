@@ -142,11 +142,15 @@ export const useDuelDeck = () => {
     tokens: DeckCard[],
     side: DeckCard[]
   ) => {
+    console.log('[useDuelDeck] Carregando deck:', { main: main.length, extra: extra.length, tokens: tokens?.length || 0, side: side.length });
     setMainDeck(main);
     // Mesclar fichas com extra deck para exibição no duel
-    const mergedExtra = [...extra, ...tokens];
+    // Garantir que tokens seja um array válido
+    const validTokens = Array.isArray(tokens) ? tokens : [];
+    const mergedExtra = [...extra, ...validTokens];
+    console.log('[useDuelDeck] Extra deck mesclado com tokens:', mergedExtra.length);
     setExtraDeck(mergedExtra);
-    setTokensDeck(tokens);
+    setTokensDeck(validTokens);
     setSideDeck(side);
   }, []);
 
