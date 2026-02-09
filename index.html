@@ -162,13 +162,171 @@
       gtag('config', 'G-K1XY1SED02');
     </script>
 
-    <!-- ADS - Only for non-Pro users -->
+    <!-- CSS to block ads for Pro users -->
+    <style>
+      /* Block ad elements by common selectors */
+      body.pro-user-ads-blocked [class*="ads-"],
+      body.pro-user-ads-blocked [class*="ad-"],
+      body.pro-user-ads-blocked [id*="ads-"],
+      body.pro-user-ads-blocked [id*="ad-"],
+      body.pro-user-ads-blocked [class*="monetag"],
+      body.pro-user-ads-blocked [id*="monetag"],
+      body.pro-user-ads-blocked [class*="quge5"],
+      body.pro-user-ads-blocked [id*="quge5"],
+      body.pro-user-ads-blocked [class*="googlesyndication"],
+      body.pro-user-ads-blocked [id*="googlesyndication"],
+      body.pro-user-ads-blocked [class*="doubleclick"],
+      body.pro-user-ads-blocked [id*="doubleclick"],
+      body.pro-user-ads-blocked iframe[src*="ads"],
+      body.pro-user-ads-blocked iframe[src*="doubleclick"],
+      body.pro-user-ads-blocked iframe[src*="googlesyndication"],
+      body.pro-user-ads-blocked iframe[src*="monetag"],
+      body.pro-user-ads-blocked iframe[src*="quge5"],
+      body.pro-user-ads-blocked [data-ad],
+      body.pro-user-ads-blocked [data-ad-client],
+      body.pro-user-ads-blocked [data-google-query-id],
+      body.pro-user-ads-blocked .mn-ad,
+      body.pro-user-ads-blocked .monetag-ad,
+      body.pro-user-ads-blocked .popup-ad,
+      body.pro-user-ads-blocked [onclick*="ads"],
+      body.pro-user-ads-blocked [onclick*="monetag"],
+      body.pro-user-ads-blocked [onclick*="quge5"] {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        position: absolute !important;
+        left: -9999px !important;
+        width: 0 !important;
+        height: 0 !important;
+        overflow: hidden !important;
+      }
+      
+      /* Also hide the ad containers */
+      body.pro-user-ads-blocked > div[class*="ads-"],
+      body.pro-user-ads-blocked > div[class*="ad-"],
+      body.pro-user-ads-blocked > div[id*="ads-"],
+      body.pro-user-ads-blocked > div[id*="ad-"],
+      body.pro-user-ads-blocked [class*="mn-overlay"],
+      body.pro-user-ads-blocked [class*="mn-popup"],
+      body.pro-user-ads-blocked [class*="monetag-popup"],
+      body.pro-user-ads-blocked [class*="mn-modal"],
+      body.pro-user-ads-blocked [class*="interstitial"],
+      body.pro-user-ads-blocked [class*="modal-ad"] {
+        display: none !important;
+        visibility: hidden !important;
+      }
+    </style>
+
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-K1XY1SED02"></script>
     <script>
-      // Wait for React to load and set isProUser before loading ads
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-K1XY1SED02');
+    </script>
+
+    <!-- ADS System with Pro User Blocking -->
+    <script>
+      // Anti-ad system for Pro users
+      window.adBlockerActive = false;
+      
+      // Function to block all ads for Pro users
+      function blockAllAds() {
+        if (window.isProUser !== true) return;
+        
+        console.log('🛑 Blocking ads for Pro user');
+        window.adBlockerActive = true;
+        document.body.classList.add('pro-user-ads-blocked');
+        
+        // Remove ad scripts
+        const adScripts = document.querySelectorAll('script[src*="adsbygoogle"], script[src*="googlesyndication"], script[src*="quge5"], script[src*="monetag"], script[src*="momntx"], script[src*="mts.ru"]');
+        adScripts.forEach(script => script.remove());
+        
+        // Remove ad iframes
+        const adIframes = document.querySelectorAll('iframe[src*="ads"], iframe[src*="doubleclick"], iframe[src*="googlesyndication"], iframe[src*="monetag"], iframe[src*="quge5"]');
+        adIframes.forEach(iframe => iframe.remove());
+        
+        // Remove ad divs by class/id patterns
+        const adSelectors = [
+          '[class*="ads-"]', '[class*="-ads"]', '[class*="ads "]',
+          '[id*="ads-"]', '[id*="-ads"]',
+          '[class*="monetag"]', '[id*="monetag"]',
+          '[class*="quge5"]', '[id*="quge5"]',
+          '[class*="popup"]', '[class*="interstitial"]',
+          '[class*="modal-ad"]', '[class*="mn-"]',
+          '[data-ad]', '[data-ad-client]', '[data-google-query-id]',
+          '[onclick*="ads"]', '[onclick*="popup"]'
+        ];
+        
+        adSelectors.forEach(selector => {
+          try {
+            document.querySelectorAll(selector).forEach(el => {
+              el.remove();
+            });
+          } catch(e) {}
+        });
+        
+        // Block new MutationObserver approach for dynamically added ads
+        window.blockedAdElements = new Set();
+        
+        const observer = new MutationObserver((mutations) => {
+          if (!window.adBlockerActive) return;
+          
+          mutations.forEach(mutation => {
+            mutation.addedNodes.forEach(node => {
+              if (node.nodeType === 1) {
+                adSelectors.forEach(selector => {
+                  try {
+                    if (node.matches && node.matches(selector)) {
+                      node.remove();
+                      window.blockedAdElements.add(node);
+                    }
+                    node.querySelectorAll && node.querySelectorAll(selector).forEach(el => {
+                      el.remove();
+                      window.blockedAdElements.add(el);
+                    });
+                  } catch(e) {}
+                });
+              }
+            });
+          });
+        });
+        
+        observer.observe(document.body, {
+          childList: true,
+          subtree: true
+        });
+        
+        // Also monitor document head for new scripts
+        const headObserver = new MutationObserver((mutations) => {
+          if (!window.adBlockerActive) return;
+          
+          mutations.forEach(mutation => {
+            mutation.addedNodes.forEach(node => {
+              if (node.nodeType === 1 && node.tagName === 'SCRIPT') {
+                const src = node.src || '';
+                if (src.includes('ads') || src.includes('monetag') || src.includes('quge5') || src.includes('googlesyndication')) {
+                  console.log('🛑 Blocking ad script:', src);
+                  node.remove();
+                }
+              }
+            });
+          });
+        });
+        
+        headObserver.observe(document.head, {
+          childList: true,
+          subtree: true
+        });
+      }
+      
+      // Function to load ads for free users
       function loadAdsForFreeUsers() {
-        // Double check - don't load if user is Pro
         if (window.isProUser === true) {
-          console.log('Pro user detected - skipping ads');
+          console.log('Pro user - blocking ads');
+          blockAllAds();
           return;
         }
         
@@ -190,20 +348,42 @@
         quge5.setAttribute('data-cfasync', 'false');
         document.head.appendChild(quge5);
 
-        // Monetag - Site ID 3224557
-        var monetagMeta = document.createElement('meta');
-        monetagMeta.name = 'monetag';
-        monetagMeta.content = '09f97271827dfd1ba93f4d998dc18d71';
-        document.head.appendChild(monetagMeta);
-
+        // Monetag
         var monetagScript = document.createElement('script');
         monetagScript.src = 'https://publishers.monetag.com/3224557.js';
         monetagScript.async = true;
         document.head.appendChild(monetagScript);
       }
       
-      // Wait 2000ms for React to load and set isProUser
-      setTimeout(loadAdsForFreeUsers, 2000);
+      // Check initially
+      setTimeout(() => {
+        if (window.isProUser === true) {
+          blockAllAds();
+        }
+      }, 500);
+      
+      // Check again after React loads
+      setTimeout(() => {
+        if (window.isProUser === true) {
+          blockAllAds();
+        } else {
+          loadAdsForFreeUsers();
+        }
+      }, 2000);
+      
+      // Final check and continuous monitoring
+      setTimeout(() => {
+        if (window.isProUser === true) {
+          blockAllAds();
+        }
+      }, 3000);
+      
+      // Monitor periodically for Pro users
+      setInterval(() => {
+        if (window.isProUser === true && !window.adBlockerActive) {
+          blockAllAds();
+        }
+      }, 5000);
     </script>
   </head>
 
