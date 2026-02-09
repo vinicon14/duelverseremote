@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Heart, Shield, Minus, Plus, GripVertical, X, Maximize2, Minimize2 } from "lucide-react";
+import { Heart, Shield, Minus, Plus, GripVertical, X, Maximize2, Minimize2, RotateCcw } from "lucide-react";
 
 interface FloatingCalculatorProps {
   player1Name: string;
@@ -259,7 +259,7 @@ export const FloatingCalculator = ({
                     </Button>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-3 gap-2">
                     <Button
                       size="sm"
                       variant="outline"
@@ -277,6 +277,15 @@ export const FloatingCalculator = ({
                     >
                       <Plus className="w-3 h-3 mr-1" />
                       100
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => onSetLP('player1', 8000)}
+                      className="text-xs"
+                      title="Reset para 8000"
+                    >
+                      <RotateCcw className="w-3 h-3" />
                     </Button>
                   </div>
                 </>
@@ -362,7 +371,7 @@ export const FloatingCalculator = ({
                     </Button>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-3 gap-2">
                     <Button
                       size="sm"
                       variant="outline"
@@ -380,6 +389,15 @@ export const FloatingCalculator = ({
                     >
                       <Plus className="w-3 h-3 mr-1" />
                       100
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => onSetLP('player2', 8000)}
+                      className="text-xs"
+                      title="Reset para 8000"
+                    >
+                      <RotateCcw className="w-3 h-3" />
                     </Button>
                   </div>
                 </>
