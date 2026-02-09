@@ -1,0 +1,16 @@
+{
+  "name": "duelverse-ads-blocker",
+  "version": "1.0.0",
+  "description": "Cloudflare Worker to block ads for Pro users",
+  "main": "worker.js",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev"
+  },
+  "dependencies": {
+    "@cloudflare/workers-types": "^4.20240117.0"
+  },
+  "devDependencies": {
+    "wrangler": "^3.24.0"
+  }
+}
