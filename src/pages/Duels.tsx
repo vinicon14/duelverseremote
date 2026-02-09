@@ -9,14 +9,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Swords, Plus, Users, Clock } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { GlobalChat } from "@/components/GlobalChat";
 import { useBanCheck } from "@/hooks/useBanCheck";
 import { AdPopup } from "@/components/AdPopup";
-import { GlobalChat } from "@/components/GlobalChat";
 
 const Duels = () => {
-  useBanCheck(); // Proteger contra usuários banidos
   const navigate = useNavigate();
   const { toast } = useToast();
+  useBanCheck();
   const [duels, setDuels] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [roomName, setRoomName] = useState("");
@@ -27,7 +27,6 @@ const Duels = () => {
   const [pendingAction, setPendingAction] = useState<{ type: 'create' | 'join', duelId?: string } | null>(null);
 
   useEffect(() => {
-    checkAuth();
     fetchDuels();
     
     // Limpar salas vazias ao carregar a página
@@ -64,13 +63,6 @@ const Duels = () => {
     };
   }, []);
 
-  const checkAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      navigate('/auth');
-    }
-  };
-
   const fetchDuels = async () => {
     try {
       const { data, error } = await supabase
@@ -96,6 +88,16 @@ const Duels = () => {
     }
   };
 
+const checkAuth = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      navigate('/auth');
+      return null;
+    }
+    const { data: { user } } = await supabase.auth.getUser();
+    return user;
+  };
+
   const handleCreateDuel = () => {
     if (!roomName.trim()) {
       toast({
@@ -106,15 +108,20 @@ const Duels = () => {
       return;
     }
     
-    // Mostrar anúncio antes de criar
-    setPendingAction({ type: 'create' });
     setShowCreateDialog(false);
-    setShowAdPopup(true);
+    
+    // Se for rota PRO, executar diretamente sem anúncio
+    if (window.location.pathname.startsWith('/pro/')) {
+      createDuel();
+    } else {
+      setPendingAction({ type: 'create' });
+      setShowAdPopup(true);
+    }
   };
 
   const createDuel = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await checkAuth();
       if (!user) return;
 
       // Verificar se o usuário já está em algum duelo ativo
@@ -130,7 +137,8 @@ const Duels = () => {
           description: "Termine ou saia do duelo atual antes de criar outro.",
           variant: "destructive",
         });
-        navigate(`/duel/${existingDuels[0].id}`);
+        const isProRoute = window.location.pathname.startsWith('/pro/');
+        navigate(`${isProRoute ? '/pro' : ''}/duel/${existingDuels[0].id}`);
         return;
       }
 
@@ -154,7 +162,8 @@ const Duels = () => {
       });
 
       // Redirecionar diretamente para a sala
-      navigate(`/duel/${data.id}`);
+      const isProRoute = window.location.pathname.startsWith('/pro/');
+      navigate(`${isProRoute ? '/pro' : ''}/duel/${data.id}`);
     } catch (error: any) {
       toast({
         title: "Erro ao criar duelo",
@@ -165,22 +174,12 @@ const Duels = () => {
   };
 
   const handleJoinDuel = (duelId: string) => {
-    // Mostrar anúncio antes de entrar
-    setPendingAction({ type: 'join', duelId });
-    setShowAdPopup(true);
-  };
-
-  const handleAdClose = () => {
-    setShowAdPopup(false);
-    
-    // Executar ação pendente após fechar o anúncio
-    if (pendingAction) {
-      if (pendingAction.type === 'create') {
-        createDuel();
-      } else if (pendingAction.type === 'join' && pendingAction.duelId) {
-        joinDuel(pendingAction.duelId);
-      }
-      setPendingAction(null);
+    // Se for rota PRO, executar diretamente sem anúncio
+    if (window.location.pathname.startsWith('/pro/')) {
+      joinDuel(duelId);
+    } else {
+      setPendingAction({ type: 'join', duelId });
+      setShowAdPopup(true);
     }
   };
 
@@ -188,7 +187,7 @@ const Duels = () => {
     try {
       console.log('[Duels] Tentando entrar no duelo:', duelId);
       
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await checkAuth();
       if (!user) {
         console.log('[Duels] Usuário não autenticado');
         return;
@@ -219,7 +218,8 @@ const Duels = () => {
           title: "Você já está neste duelo",
           description: "Redirecionando...",
         });
-        navigate(`/duel/${duelId}`);
+        const isProRoute = window.location.pathname.startsWith('/pro/');
+        navigate(`${isProRoute ? '/pro' : ''}/duel/${duelId}`);
         return;
       }
 
@@ -238,7 +238,8 @@ const Duels = () => {
           description: "Termine ou saia do duelo atual antes de entrar em outro.",
           variant: "destructive",
         });
-        navigate(`/duel/${otherDuels[0].id}`);
+        const isProRoute = window.location.pathname.startsWith('/pro/');
+        navigate(`${isProRoute ? '/pro' : ''}/duel/${otherDuels[0].id}`);
         return;
       }
 
@@ -276,7 +277,8 @@ const Duels = () => {
       // Aguardar um pouco para o banco processar
       await new Promise(resolve => setTimeout(resolve, 800));
       
-      navigate(`/duel/${duelId}`);
+      const isProRoute = window.location.pathname.startsWith('/pro/');
+      navigate(`${isProRoute ? '/pro' : ''}/duel/${duelId}`);
     } catch (error: any) {
       console.error('[Duels] Erro em joinDuel:', error);
       toast({
@@ -466,7 +468,10 @@ const Duels = () => {
 
                         {duel.status === 'in_progress' && duel.opponent_id && (
                           <Button
-                            onClick={() => navigate(`/duel/${duel.id}`)}
+                            onClick={() => {
+                              const isProRoute = window.location.pathname.startsWith('/pro/');
+                              navigate(`${isProRoute ? '/pro' : ''}/duel/${duel.id}`);
+                            }}
                             className="w-full btn-mystic text-white"
                           >
                             <Users className="mr-2 h-4 w-4" />
@@ -481,16 +486,35 @@ const Duels = () => {
             )}
           </div>
 
-          {/* Chat Global */}
+      {/* Chat Global */}
           <div className="h-[600px]">
             <GlobalChat />
           </div>
         </div>
       </main>
-
-      {/* Popup de anúncio */}
-      {showAdPopup && (
-        <AdPopup onClose={handleAdClose} />
+      
+      {/* Só mostrar AdPopup em rotas normais (não PRO) */}
+      {!window.location.pathname.startsWith('/pro/') && (
+        <AdPopup 
+          isOpen={showAdPopup}
+          onClose={() => {
+            setShowAdPopup(false);
+            setPendingAction(null);
+          }}
+          onComplete={() => {
+            setShowAdPopup(false);
+            if (pendingAction) {
+              if (pendingAction.type === 'create') {
+                createDuel();
+              } else if (pendingAction.type === 'join' && pendingAction.duelId) {
+                joinDuel(pendingAction.duelId);
+              }
+              setPendingAction(null);
+            }
+          }}
+          title={pendingAction?.type === 'create' ? 'Criar Duelo' : 'Entrar no Duelo'}
+          description="Assista ao anúncio para continuar"
+        />
       )}
     </div>
   );

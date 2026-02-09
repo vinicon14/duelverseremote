@@ -1,11 +1,12 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Swords, Trophy, User, LogOut, Menu, Users, Zap, Shield, Store, Newspaper, Coins, Scale, Video, Layers } from "lucide-react";
+import { Swords, Trophy, User, LogOut, Menu, Users, Zap, Shield, Store, Newspaper, Coins, Scale, Video, Layers, Crown } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useJudge } from "@/hooks/useJudge";
+import { useProMode } from "@/hooks/useProMode";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,6 +19,8 @@ import { OnlineUsersCounter } from "@/components/OnlineUsersCounter";
 
 export const Navbar = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { isProMode } = useProMode();
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const { isAdmin } = useAdmin();
@@ -68,70 +71,78 @@ export const Navbar = () => {
     navigate('/auth');
   };
 
+  // Função para gerar links corretos baseado no modo PRO
+  const getLink = (path: string): string => {
+    if (isProMode && !path.startsWith('/pro/')) {
+      return `/pro${path}`;
+    }
+    return path;
+  };
+
   const NavLinks = () => (
     <>
-      <Link to="/duels">
+      <Link to={getLink("/duels")}>
         <Button variant="ghost" className="text-foreground hover:text-primary">
           <Swords className="mr-2 h-4 w-4" />
           Duelos
         </Button>
       </Link>
-      <Link to="/matchmaking">
+      <Link to={getLink("/matchmaking")}>
         <Button variant="ghost" className="text-foreground hover:text-primary">
           <Zap className="mr-2 h-4 w-4" />
           Fila Rápida
         </Button>
       </Link>
-      <Link to="/tournaments">
+      <Link to={getLink("/tournaments")}>
         <Button variant="ghost" className="text-foreground hover:text-primary">
           <Trophy className="mr-2 h-4 w-4" />
           Torneios
         </Button>
       </Link>
-      <Link to="/friends">
+      <Link to={getLink("/friends")}>
         <Button variant="ghost" className="text-foreground hover:text-primary">
           <Users className="mr-2 h-4 w-4" />
           Amigos
         </Button>
       </Link>
-      <Link to="/ranking">
+      <Link to={getLink("/ranking")}>
         <Button variant="ghost" className="text-foreground hover:text-primary">
           <Trophy className="mr-2 h-4 w-4" />
           Ranking
         </Button>
       </Link>
-      <Link to="/news">
+      <Link to={getLink("/news")}>
         <Button variant="ghost" className="text-foreground hover:text-primary">
           <Newspaper className="mr-2 h-4 w-4" />
           Notícias
         </Button>
       </Link>
-      <Link to="/gallery">
+      <Link to={getLink("/gallery")}>
         <Button variant="ghost" className="text-foreground hover:text-primary">
           <Video className="mr-2 h-4 w-4" />
           Galeria
         </Button>
       </Link>
-      <Link to="/deck-builder">
+      <Link to={getLink("/deck-builder")}>
         <Button variant="ghost" className="text-foreground hover:text-primary">
           <Layers className="mr-2 h-4 w-4" />
           Deck Build
         </Button>
       </Link>
-      <Link to="/duelcoins">
+      <Link to={getLink("/duelcoins")}>
         <Button variant="ghost" className="text-foreground hover:text-primary">
           <Coins className="mr-2 h-4 w-4" />
           DuelCoins
         </Button>
       </Link>
-      <Link to="/store">
+      <Link to={getLink("/store")}>
         <Button variant="ghost" className="text-foreground hover:text-primary">
           <Store className="mr-2 h-4 w-4" />
           Loja
         </Button>
       </Link>
       {isAdmin && (
-        <Link to="/admin">
+        <Link to={getLink("/admin")}>
           <Button variant="ghost" className="text-foreground hover:text-primary">
             <Shield className="mr-2 h-4 w-4" />
             Admin
@@ -139,7 +150,7 @@ export const Navbar = () => {
         </Link>
       )}
       {isJudge && (
-        <Link to="/judge-panel">
+        <Link to={getLink("/judge-panel")}>
           <Button variant="ghost" className="text-foreground hover:text-primary">
             <Scale className="mr-2 h-4 w-4" />
             Juiz
@@ -150,11 +161,13 @@ export const Navbar = () => {
   );
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 border-b border-primary/20 bg-card/80 backdrop-blur-lg">
+    <nav className="fixed top-6 left-0 right-0 z-50 border-b border-primary/20 bg-card/80 backdrop-blur-lg">
       <div className="container flex h-16 items-center justify-between px-4">
-        <Link to="/" className="flex items-center space-x-2">
-          <div className="text-2xl font-bold text-gradient-mystic">
+        <Link to={getLink("/")} className="flex items-center space-x-2">
+          <div className="text-2xl font-bold text-gradient-mystic flex items-center gap-2">
+            {isProMode && <Crown className="w-6 h-6 text-yellow-500" />}
             DUELVERSE
+            {isProMode && <span className="text-sm text-yellow-500">PRO</span>}
           </div>
         </Link>
 
@@ -180,12 +193,18 @@ export const Navbar = () => {
                       {profile?.username?.charAt(0).toUpperCase() || "U"}
                     </AvatarFallback>
                   </Avatar>
+                  {isProMode && (
+                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-500 rounded-full flex items-center justify-center">
+                      <Crown className="w-2.5 h-2.5 text-black" />
+                    </div>
+                  )}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem onClick={() => navigate('/profile')}>
+                <DropdownMenuItem onClick={() => navigate(getLink('/profile'))}>
                   <User className="mr-2 h-4 w-4" />
                   Perfil
+                  {isProMode && <span className="ml-auto text-xs text-yellow-500">PRO</span>}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleLogout}>
                   <LogOut className="mr-2 h-4 w-4" />
@@ -211,10 +230,16 @@ export const Navbar = () => {
           </SheetTrigger>
           <SheetContent side="right" className="w-64">
             <div className="flex flex-col space-y-4 mt-8">
+              {isProMode && (
+                <div className="flex items-center gap-2 px-2 py-2 bg-yellow-500/10 rounded-lg">
+                  <Crown className="w-5 h-5 text-yellow-500" />
+                  <span className="text-yellow-500 font-semibold">Modo PRO</span>
+                </div>
+              )}
               <NavLinks />
               {user ? (
                 <>
-                  <Button variant="ghost" onClick={() => navigate('/profile')} className="justify-start">
+                  <Button variant="ghost" onClick={() => navigate(getLink('/profile'))} className="justify-start">
                     <User className="mr-2 h-4 w-4" />
                     Perfil
                   </Button>

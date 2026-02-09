@@ -2,14 +2,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { User, Session } from '@supabase/supabase-js';
-import { DuelInviteNotification } from "@/components/DuelInviteNotification";
-import { NotificationPrompt } from "@/components/NotificationPrompt";
-import { useRealtimeNotifications } from "@/hooks/useRealtimeNotifications";
-import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { ProGuard } from "@/components/ProGuard";
+import { ProModeProvider } from "@/hooks/useProMode";
 import Home from "./pages/Home";
 import Landing from "./pages/Landing";
 import Admin from "./pages/Admin";
@@ -36,84 +31,69 @@ import DeckBuilder from "./pages/DeckBuilder";
 
 const queryClient = new QueryClient();
 
-// Componente interno que fica dentro do Router para usar useNavigate
-const RouterContent = () => {
-  return (
-    <Routes>
-      <Route path="/" element={<Home />} />
-      <Route path="/landing" element={<Landing />} />
-      <Route path="/admin" element={<Admin />} />
-      <Route path="/auth" element={<Auth />} />
-      <Route path="/duels" element={<Duels />} />
-      <Route path="/duel/:id" element={<DuelRoom />} />
-      <Route path="/profile" element={<Profile />} />
-      <Route path="/profile/:userId" element={<Profile />} />
-      <Route path="/ranking" element={<Ranking />} />
-      <Route path="/friends" element={<Friends />} />
-      <Route path="/chat/:friendId" element={<FriendChat />} />
-      <Route path="/tournaments" element={<Tournaments />} />
-      <Route path="/create-tournament" element={<CreateTournament />} />
-      <Route path="/tournaments/:id" element={<TournamentDetail />} />
-      <Route path="/matchmaking" element={<Matchmaking />} />
-      <Route path="/duelcoins" element={<DuelCoins />} />
-      <Route path="/judge-panel" element={<JudgePanel />} />
-      <Route path="/store" element={<Store />} />
-      <Route path="/news" element={<News />} />
-      <Route path="/gallery" element={<MatchGallery />} />
-      <Route path="/video/:id" element={<VideoShare />} />
-      <Route path="/install" element={<InstallApp />} />
-      <Route path="/deck-builder" element={<DeckBuilder />} />
-      {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-      <Route path="*" element={<NotFound />} />
-    </Routes>
-  );
-};
-
-const AppContent = () => {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-
-  // Enable realtime notifications
-  useRealtimeNotifications(user?.id);
-  
-  // Enable online status tracking
-  useOnlineStatus();
-
-  useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-      }
-    );
-
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  return (
-    <BrowserRouter>
-      <DuelInviteNotification currentUserId={user?.id} />
-      <NotificationPrompt />
-      <RouterContent />
-    </BrowserRouter>
-  );
-};
-
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <AppContent />
+      <ProModeProvider>
+        <BrowserRouter>
+          <Routes>
+          {/* ============ ROTAS NORMAIS (com anúncios) ============ */}
+          <Route path="/" element={<Home />} />
+          <Route path="/landing" element={<Landing />} />
+          <Route path="/auth" element={<Auth />} />
+          <Route path="/duels" element={<Duels />} />
+          <Route path="/duel/:id" element={<DuelRoom />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/profile/:userId" element={<Profile />} />
+          <Route path="/ranking" element={<Ranking />} />
+          <Route path="/friends" element={<Friends />} />
+          <Route path="/chat/:friendId" element={<FriendChat />} />
+          <Route path="/tournaments" element={<Tournaments />} />
+          <Route path="/create-tournament" element={<CreateTournament />} />
+          <Route path="/tournaments/:id" element={<TournamentDetail />} />
+          <Route path="/matchmaking" element={<Matchmaking />} />
+          <Route path="/duelcoins" element={<DuelCoins />} />
+          <Route path="/judge-panel" element={<JudgePanel />} />
+          <Route path="/store" element={<Store />} />
+          <Route path="/news" element={<News />} />
+          <Route path="/gallery" element={<MatchGallery />} />
+          <Route path="/video/:id" element={<VideoShare />} />
+          <Route path="/install" element={<InstallApp />} />
+          <Route path="/deck-builder" element={<DeckBuilder />} />
+          <Route path="/admin" element={<Admin />} />
+
+          {/* ============ ROTAS PRO (sem anúncios + verificação) ============ */}
+          <Route path="/pro" element={<Navigate to="/pro/duels" replace />} />
+          <Route path="/pro/home" element={<ProGuard><Home /></ProGuard>} />
+          <Route path="/pro/landing" element={<ProGuard><Landing /></ProGuard>} />
+          <Route path="/pro/duels" element={<ProGuard><Duels /></ProGuard>} />
+          <Route path="/pro/duel/:id" element={<ProGuard><DuelRoom /></ProGuard>} />
+          <Route path="/pro/profile" element={<ProGuard><Profile /></ProGuard>} />
+          <Route path="/pro/profile/:userId" element={<ProGuard><Profile /></ProGuard>} />
+          <Route path="/pro/ranking" element={<ProGuard><Ranking /></ProGuard>} />
+          <Route path="/pro/friends" element={<ProGuard><Friends /></ProGuard>} />
+          <Route path="/pro/chat/:friendId" element={<ProGuard><FriendChat /></ProGuard>} />
+          <Route path="/pro/tournaments" element={<ProGuard><Tournaments /></ProGuard>} />
+          <Route path="/pro/create-tournament" element={<ProGuard><CreateTournament /></ProGuard>} />
+          <Route path="/pro/tournaments/:id" element={<ProGuard><TournamentDetail /></ProGuard>} />
+          <Route path="/pro/matchmaking" element={<ProGuard><Matchmaking /></ProGuard>} />
+          <Route path="/pro/duelcoins" element={<ProGuard><DuelCoins /></ProGuard>} />
+          <Route path="/pro/judge-panel" element={<ProGuard><JudgePanel /></ProGuard>} />
+          <Route path="/pro/store" element={<ProGuard><Store /></ProGuard>} />
+          <Route path="/pro/news" element={<ProGuard><News /></ProGuard>} />
+          <Route path="/pro/gallery" element={<ProGuard><MatchGallery /></ProGuard>} />
+          <Route path="/pro/video/:id" element={<ProGuard><VideoShare /></ProGuard>} />
+          <Route path="/pro/install" element={<ProGuard><InstallApp /></ProGuard>} />
+          <Route path="/pro/deck-builder" element={<ProGuard><DeckBuilder /></ProGuard>} />
+          <Route path="/pro/admin" element={<ProGuard><Admin /></ProGuard>} />
+
+          {/* Rota 404 */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </BrowserRouter>
+      </ProModeProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
