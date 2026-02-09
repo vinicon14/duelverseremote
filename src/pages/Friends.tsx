@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Users, UserPlus, Check, X, Search, Swords } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useFriendsOnlineStatus } from "@/hooks/useFriendsOnlineStatus";
 
 const Friends = () => {
   const navigate = useNavigate();
@@ -20,6 +21,12 @@ const Friends = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Extrair IDs dos amigos para o hook de status online
+  const friendIds = useMemo(() => friends.map(f => f.user_id), [friends]);
+  
+  // Hook que usa Presence para verificar status online real
+  const { isOnline } = useFriendsOnlineStatus(friendIds);
 
   useEffect(() => {
     checkAuth();
@@ -311,57 +318,60 @@ const Friends = () => {
               </Card>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {friends.map((friend) => (
-                  <Card key={friend.user_id} className="card-mystic hover:border-primary/40 transition-all">
-                    <CardContent className="py-6">
-                      <div className="flex items-center gap-4">
-                        <div className="relative">
-                          <Avatar className="w-16 h-16 border-2 border-primary/30">
-                            <AvatarImage src={friend.avatar_url || ""} />
-                            <AvatarFallback className="bg-primary/20 text-lg">
-                              {friend.username?.charAt(0).toUpperCase() || "U"}
-                            </AvatarFallback>
-                          </Avatar>
-                          {friend.is_online && (
-                            <div className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 border-2 border-background rounded-full" />
-                          )}
-                        </div>
-
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-lg text-gradient-mystic flex items-center gap-2">
-                            {friend.username}
-                            {friend.is_online && (
-                              <span className="text-xs text-green-500 font-normal">● Online</span>
+                {friends.map((friend) => {
+                  const friendOnline = isOnline(friend.user_id);
+                  return (
+                    <Card key={friend.user_id} className="card-mystic hover:border-primary/40 transition-all">
+                      <CardContent className="py-6">
+                        <div className="flex items-center gap-4">
+                          <div className="relative">
+                            <Avatar className="w-16 h-16 border-2 border-primary/30">
+                              <AvatarImage src={friend.avatar_url || ""} />
+                              <AvatarFallback className="bg-primary/20 text-lg">
+                                {friend.username?.charAt(0).toUpperCase() || "U"}
+                              </AvatarFallback>
+                            </Avatar>
+                            {friendOnline && (
+                              <div className="absolute bottom-0 right-0 w-4 h-4 bg-emerald-500 border-2 border-background rounded-full" />
                             )}
-                          </h3>
-                          <p className="text-sm text-muted-foreground">
-                            {friend.is_online 
-                              ? 'Online agora' 
-                              : `Visto ${new Date(friend.last_seen).toLocaleDateString()}`
-                            }
-                          </p>
-                        </div>
+                          </div>
 
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            onClick={() => navigate(`/chat/${friend.user_id}`)}
-                          >
-                            💬 Chat
-                          </Button>
-                          <Button
-                            onClick={() => challengeFriend(friend.user_id)}
-                            className="btn-mystic text-white"
-                            disabled={!friend.is_online}
-                          >
-                            <Swords className="w-4 h-4 mr-2" />
-                            Desafiar
-                          </Button>
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-lg text-gradient-mystic flex items-center gap-2">
+                              {friend.username}
+                              {friendOnline && (
+                                <span className="text-xs text-emerald-500 font-normal">● Online</span>
+                              )}
+                            </h3>
+                            <p className="text-sm text-muted-foreground">
+                              {friendOnline 
+                                ? 'Online agora' 
+                                : `Visto ${new Date(friend.last_seen).toLocaleDateString()}`
+                              }
+                            </p>
+                          </div>
+
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              onClick={() => navigate(`/chat/${friend.user_id}`)}
+                            >
+                              💬 Chat
+                            </Button>
+                            <Button
+                              onClick={() => challengeFriend(friend.user_id)}
+                              className="btn-mystic text-white"
+                              disabled={!friendOnline}
+                            >
+                              <Swords className="w-4 h-4 mr-2" />
+                              Desafiar
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             )}
           </TabsContent>
