@@ -11,7 +11,6 @@ import { AdminSettings } from "@/components/admin/AdminSettings";
 import { AdminDuels } from "@/components/admin/AdminDuels";
 import { AdminDuelCoins } from "@/components/admin/AdminDuelCoins";
 import { AdminJudges } from "@/components/admin/AdminJudges";
-import { AdminProTokens } from "@/components/admin/AdminProTokens";
 import { Shield, Loader2 } from "lucide-react";
 
 export default function Admin() {
@@ -52,7 +51,7 @@ export default function Admin() {
         </div>
 
         <Tabs defaultValue="news" className="w-full">
-          <TabsList className="grid w-full grid-cols-9">
+          <TabsList className="grid w-full grid-cols-8">
             <TabsTrigger value="news">Notícias</TabsTrigger>
             <TabsTrigger value="ads">Anúncios</TabsTrigger>
             <TabsTrigger value="users">Usuários</TabsTrigger>
@@ -60,7 +59,6 @@ export default function Admin() {
             <TabsTrigger value="tournaments">Torneios</TabsTrigger>
             <TabsTrigger value="duelcoins">DuelCoins</TabsTrigger>
             <TabsTrigger value="judges">Juízes</TabsTrigger>
-            <TabsTrigger value="protokens">Tokens PRO</TabsTrigger>
             <TabsTrigger value="settings">Configurações</TabsTrigger>
           </TabsList>
           
@@ -91,11 +89,7 @@ export default function Admin() {
           <TabsContent value="judges" className="mt-6">
             <AdminJudges />
           </TabsContent>
-
-          <TabsContent value="protokens" className="mt-6">
-            <AdminProTokens />
-          </TabsContent>
-
+          
           <TabsContent value="settings" className="mt-6">
             <AdminSettings />
           </TabsContent>

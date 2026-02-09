@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { ExternalLink, X, Clock } from "lucide-react";
+import { ExternalLink, X } from "lucide-react";
 import { useAccountType } from "@/hooks/useAccountType";
 
 interface Ad {
@@ -14,33 +14,20 @@ interface Ad {
 }
 
 interface AdPopupProps {
-  isOpen: boolean;
   onClose: () => void;
-  onComplete: () => void;
-  title: string;
-  description: string;
 }
 
-export const AdPopup = ({ isOpen, onClose, onComplete, title, description }: AdPopupProps) => {
+export const AdPopup = ({ onClose }: AdPopupProps) => {
   const [ad, setAd] = useState<Ad | null>(null);
   const [open, setOpen] = useState(false);
-  const [countdown, setCountdown] = useState(5);
-  const [canSkip, setCanSkip] = useState(false);
   const { isPro, loading } = useAccountType();
 
   useEffect(() => {
-    if (!isOpen) {
-      setOpen(false);
-      setCountdown(5);
-      setCanSkip(false);
-      return;
-    }
-
     const fetchAd = async () => {
       // Não mostrar para usuários pro
       if (loading) return;
       if (isPro) {
-        onComplete();
+        onClose();
         return;
       }
 
@@ -52,7 +39,7 @@ export const AdPopup = ({ isOpen, onClose, onComplete, title, description }: AdP
         .limit(10);
 
       if (error || !data || data.length === 0) {
-        onComplete();
+        onClose();
         return;
       }
 
@@ -60,36 +47,14 @@ export const AdPopup = ({ isOpen, onClose, onComplete, title, description }: AdP
       const randomAd = data[Math.floor(Math.random() * data.length)];
       setAd(randomAd);
       setOpen(true);
-      
-      // Iniciar countdown
-      setCountdown(5);
-      setCanSkip(false);
-      
-      const timer = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            setCanSkip(true);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-
-      return () => clearInterval(timer);
     };
 
     fetchAd();
-  }, [isOpen, isPro, loading, onClose, onComplete]);
+  }, [isPro, loading, onClose]);
 
   const handleClose = () => {
     setOpen(false);
     onClose();
-  };
-
-  const handleComplete = () => {
-    setOpen(false);
-    onComplete();
   };
 
   const handleAdClick = () => {
@@ -98,17 +63,14 @@ export const AdPopup = ({ isOpen, onClose, onComplete, title, description }: AdP
     }
   };
 
-  if (!isOpen || !ad) return null;
+  if (!ad) return null;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
-            <div>
-              <span className="block text-lg">{title}</span>
-              <span className="block text-sm font-normal text-muted-foreground">{description}</span>
-            </div>
+            <span>Anúncio</span>
             <Button
               variant="ghost"
               size="icon"
@@ -119,16 +81,6 @@ export const AdPopup = ({ isOpen, onClose, onComplete, title, description }: AdP
             </Button>
           </DialogTitle>
         </DialogHeader>
-        
-        <div className="bg-muted p-3 rounded-lg mb-4">
-          <p className="text-sm text-center text-muted-foreground flex items-center justify-center gap-2">
-            <Clock className="w-4 h-4" />
-            {canSkip 
-              ? "Você pode fechar o anúncio agora"
-              : `Aguarde ${countdown} segundos para continuar...`
-            }
-          </p>
-        </div>
         
         <div 
           className={`space-y-4 ${ad.link_url ? 'cursor-pointer' : ''}`}
@@ -152,17 +104,11 @@ export const AdPopup = ({ isOpen, onClose, onComplete, title, description }: AdP
         </div>
 
         <div className="flex justify-end gap-2 mt-4">
-          <Button 
-            onClick={handleComplete} 
-            variant="default"
-            disabled={!canSkip}
-          >
-            {canSkip ? 'Continuar' : `Aguarde ${countdown}s...`}
+          <Button onClick={handleClose} variant="default">
+            Continuar para o duelo
           </Button>
         </div>
       </DialogContent>
     </Dialog>
   );
 };
-
-export default AdPopup;

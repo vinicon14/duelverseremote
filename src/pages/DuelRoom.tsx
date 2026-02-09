@@ -363,8 +363,7 @@ const DuelRoom = () => {
           description: "Este duelo não existe ou foi removido.",
           variant: "destructive",
         });
-        const isProRoute = window.location.pathname.startsWith('/pro/');
-        navigate(`${isProRoute ? '/pro' : ''}/duels`);
+        navigate('/duels');
         return;
       }
 
@@ -393,8 +392,7 @@ const DuelRoom = () => {
                 description: "Não foi possível entrar nesta sala.",
                 variant: "destructive",
               });
-              const isProRoute = window.location.pathname.startsWith('/pro/');
-        navigate(`${isProRoute ? '/pro' : ''}/duels`);
+              navigate('/duels');
               return;
             }
 
@@ -422,8 +420,7 @@ const DuelRoom = () => {
               description: "Ocorreu um erro ao tentar entrar na sala.",
               variant: "destructive",
             });
-            const isProRoute = window.location.pathname.startsWith('/pro/');
-        navigate(`${isProRoute ? '/pro' : ''}/duels`);
+            navigate('/duels');
             return;
           }
         }
@@ -689,8 +686,7 @@ const DuelRoom = () => {
       // Se for espectador, apenas sair (não encerrar partida)
       if (isSpectator) {
         console.log('[DuelRoom] Espectador saindo, partida continua');
-        const isProRoute = window.location.pathname.startsWith('/pro/');
-        navigate(`${isProRoute ? '/pro' : ''}/duels`);
+        navigate('/duels');
         return;
       }
 

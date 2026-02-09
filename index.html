@@ -1,6 +1,9 @@
 <!doctype html>
 <html lang="pt-BR">
   <head>
+    <!-- Quge5 Monetization -->
+    <script src="https://quge5.com/88/tag.min.js" data-zone="209658" async data-cfasync="false"></script>
+    
     <meta charset="UTF-8" />
     <link rel="icon" href="/favicon.png" type="image/png" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
@@ -153,7 +156,13 @@
     }
     </script>
     
-    <!-- Google Analytics -->
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5741796577623184" crossorigin="anonymous"></script>
+    
+    <!-- AMP Auto Ads -->
+    <script async custom-element="amp-auto-ads" src="https://cdn.ampproject.org/v0/amp-auto-ads-0.1.js"></script>
+    
+    <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-K1XY1SED02"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
@@ -162,30 +171,12 @@
       gtag('config', 'G-K1XY1SED02');
     </script>
 
-    <!-- ADS - Sempre carregados (removidos automaticamente apenas em rotas /pro/*) -->
-    <script>
-      // Google AdSense - Sempre carregar
-      var adsense = document.createElement('script');
-      adsense.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js';
-      adsense.async = true;
-      adsense.setAttribute('crossorigin', 'anonymous');
-      adsense.setAttribute('data-ad-client', 'ca-pub-5741796577623184');
-      document.head.appendChild(adsense);
-
-      // Monetag - Sempre carregar
-      var monetagMeta = document.createElement('meta');
-      monetagMeta.name = 'monetag';
-      monetagMeta.content = '09f97271827dfd1ba93f4d998dc18d71';
-      document.head.appendChild(monetagMeta);
-
-      var monetagScript = document.createElement('script');
-      monetagScript.src = 'https://publishers.monetag.com/3224557.js';
-      monetagScript.async = true;
-      document.head.appendChild(monetagScript);
-    </script>
+    <!-- Monetag -->
+    <meta name="monetag" content="09f97271827dfd1ba93f4d998dc18d71" />
   </head>
 
   <body>
+    <amp-auto-ads type="adsense" data-ad-client="ca-pub-5741796577623184"></amp-auto-ads>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

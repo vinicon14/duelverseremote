@@ -320,21 +320,11 @@ const TournamentDetail = () => {
                           });
 
                           if (error) throw new Error(error.message);
-                          if (!data.success) {
-                            if (data.message?.includes('already registered') || data.message?.includes('already_signup')) {
-                              throw new Error("Você já está inscrito neste torneio!");
-                            } else if (data.message?.includes('insufficient') || data.message?.includes('balance')) {
-                              throw new Error("DuelCoins insuficientes para participar.");
-                            } else if (data.message?.includes('own tournament')) {
-                              throw new Error("Você não pode se inscrever no seu próprio torneio.");
-                            } else {
-                              throw new Error(data.message);
-                            }
-                          }
+                          if (!data.success) throw new Error(data.message);
 
                           toast({
-                            title: "Inscrição confirmada!",
-                            description: "Você está participar deste torneio. Boa sorte!",
+                            title: "Sucesso!",
+                            description: data.message,
                           });
 
                           await fetchTournamentData();

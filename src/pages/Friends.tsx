@@ -159,19 +159,9 @@ const Friends = () => {
       setSearchResults([]);
       setSearchQuery("");
     } catch (error: any) {
-      let errorMessage = "Ocorreu um erro. Tente novamente.";
-      
-      if (error.message?.includes('duplicate key') || error.message?.includes('already_friends')) {
-        errorMessage = "Vocês já são amigos!";
-      } else if (error.message?.includes('foreign key violation') || error.message?.includes('invalid input')) {
-        errorMessage = "Usuário não encontrado.";
-      } else if (error.message?.includes('permission denied') || error.message?.includes('RLS')) {
-        errorMessage = "Erro de permissão. Faça login novamente.";
-      }
-      
       toast({
         title: "Erro ao enviar pedido",
-        description: errorMessage,
+        description: error.message,
         variant: "destructive",
       });
     }
@@ -233,35 +223,26 @@ const Friends = () => {
       if (friendDuels && friendDuels.length > 0) {
         toast({
           title: "Amigo ocupado",
-          description: "Seu amigo já está em um duelo ativo. Aguarde ele terminar.",
+          description: "Seu amigo já está em um duelo ativo.",
           variant: "destructive",
         });
         return;
       }
 
+      // Partidas entre amigos são sempre casuais
       const { data: duelData, error: duelError } = await supabase
         .from('live_duels')
         .insert({
           creator_id: currentUser.id,
           status: 'waiting',
-          is_ranked: false,
+          is_ranked: false, // Sempre casual entre amigos
         })
         .select()
         .single();
 
-      if (duelError) {
-        if (duelError.message?.includes('too many')) {
-          toast({
-            title: "Limite atingido",
-            description: "Você criou muitos duelos recentemente. Aguarde um momento.",
-            variant: "destructive",
-          });
-        } else {
-          throw duelError;
-        }
-        return;
-      }
+      if (duelError) throw duelError;
 
+      // Criar convite de duelo
       const { error: inviteError } = await supabase
         .from('duel_invites')
         .insert({
@@ -272,29 +253,21 @@ const Friends = () => {
         });
 
       if (inviteError) {
-        await supabase.from('live_duels').delete().eq('id', duelData.id);
-        toast({
-          title: "Não foi possível enviar o desafio",
-          description: "Tente novamente em alguns segundos.",
-          variant: "destructive",
-        });
-        return;
+        console.error('Erro ao criar convite:', inviteError);
       }
 
       toast({
         title: "Desafio enviado!",
-        description: `Desafio enviado para ${friends.find(f => f.user_id === friendUserId)?.username || 'seu amigo'}. Aguarde na sala de duelo!`,
+        description: "Convite casual enviado para seu amigo.",
       });
 
       navigate(`/duel/${duelData.id}`);
     } catch (error: any) {
-      if (!error.message?.includes('too many')) {
-        toast({
-          title: "Erro ao criar desafio",
-          description: "Não foi possível enviar o desafio. Tente novamente.",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Erro ao criar desafio",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   };
 
