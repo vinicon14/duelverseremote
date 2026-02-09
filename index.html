@@ -166,38 +166,44 @@
     <script>
       // Wait for React to load and set isProUser before loading ads
       function loadAdsForFreeUsers() {
-        if (window.isProUser !== true) {
-          // Google AdSense
-          var adsense = document.createElement('script');
-          adsense.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js';
-          adsense.async = true;
-          adsense.setAttribute('crossorigin', 'anonymous');
-          adsense.setAttribute('data-ad-client', 'ca-pub-5741796577623184');
-          document.head.appendChild(adsense);
-
-          // Quge5 Popup Ads
-          var quge5 = document.createElement('script');
-          quge5.src = 'https://quge5.com/88/tag.min.js';
-          quge5.setAttribute('data-zone', '209658');
-          quge5.async = true;
-          quge5.setAttribute('data-cfasync', 'false');
-          document.head.appendChild(quge5);
-
-          // Monetag - Site ID 3224557
-          var monetagMeta = document.createElement('meta');
-          monetagMeta.name = 'monetag';
-          monetagMeta.content = '09f97271827dfd1ba93f4d998dc18d71';
-          document.head.appendChild(monetagMeta);
-
-          var monetagScript = document.createElement('script');
-          monetagScript.src = 'https://publishers.monetag.com/3224557.js';
-          monetagScript.async = true;
-          document.head.appendChild(monetagScript);
+        // Double check - don't load if user is Pro
+        if (window.isProUser === true) {
+          console.log('Pro user detected - skipping ads');
+          return;
         }
+        
+        console.log('Free user - loading ads');
+        
+        // Google AdSense
+        var adsense = document.createElement('script');
+        adsense.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js';
+        adsense.async = true;
+        adsense.setAttribute('crossorigin', 'anonymous');
+        adsense.setAttribute('data-ad-client', 'ca-pub-5741796577623184');
+        document.head.appendChild(adsense);
+
+        // Quge5 Popup Ads
+        var quge5 = document.createElement('script');
+        quge5.src = 'https://quge5.com/88/tag.min.js';
+        quge5.setAttribute('data-zone', '209658');
+        quge5.async = true;
+        quge5.setAttribute('data-cfasync', 'false');
+        document.head.appendChild(quge5);
+
+        // Monetag - Site ID 3224557
+        var monetagMeta = document.createElement('meta');
+        monetagMeta.name = 'monetag';
+        monetagMeta.content = '09f97271827dfd1ba93f4d998dc18d71';
+        document.head.appendChild(monetagMeta);
+
+        var monetagScript = document.createElement('script');
+        monetagScript.src = 'https://publishers.monetag.com/3224557.js';
+        monetagScript.async = true;
+        document.head.appendChild(monetagScript);
       }
       
-      // Wait 1500ms for React to load and set isProUser
-      setTimeout(loadAdsForFreeUsers, 1500);
+      // Wait 2000ms for React to load and set isProUser
+      setTimeout(loadAdsForFreeUsers, 2000);
     </script>
   </head>
 
