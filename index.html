@@ -1,14 +1,6 @@
 <!doctype html>
 <html lang="pt-BR">
   <head>
-    <!-- Quge5 Monetization -->
-    <script>
-      // Disable ads for Pro users
-      window.isProUser = false;
-      window.shouldShowAds = true;
-    </script>
-    <script src="https://quge5.com/88/tag.min.js" data-zone="209658" async data-cfasync="false"></script>
-    
     <meta charset="UTF-8" />
     <link rel="icon" href="/favicon.png" type="image/png" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
@@ -161,12 +153,6 @@
     }
     </script>
     
-    <!-- Google AdSense -->
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5741796577623184" crossorigin="anonymous"></script>
-    
-    <!-- AMP Auto Ads -->
-    <script async custom-element="amp-auto-ads" src="https://cdn.ampproject.org/v0/amp-auto-ads-0.1.js"></script>
-    
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-K1XY1SED02"></script>
     <script>
@@ -176,12 +162,37 @@
       gtag('config', 'G-K1XY1SED02');
     </script>
 
-    <!-- Monetag -->
-    <meta name="monetag" content="09f97271827dfd1ba93f4d998dc18d71" />
+    <!-- ADS - Disabled for Pro users -->
+    <script>
+      (function() {
+        if (window.shouldShowAds !== false) {
+          // Google AdSense
+          var adsense = document.createElement('script');
+          adsense.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js';
+          adsense.async = true;
+          adsense.setAttribute('crossorigin', 'anonymous');
+          adsense.setAttribute('data-ad-client', 'ca-pub-5741796577623184');
+          document.head.appendChild(adsense);
+
+          // Quge5
+          var quge5 = document.createElement('script');
+          quge5.src = 'https://quge5.com/88/tag.min.js';
+          quge5.setAttribute('data-zone', '209658');
+          quge5.async = true;
+          quge5.setAttribute('data-cfasync', 'false');
+          document.head.appendChild(quge5);
+
+          // Monetag
+          var monetag = document.createElement('meta');
+          monetag.name = 'monetag';
+          monetag.content = '09f97271827dfd1ba93f4d998dc18d71';
+          document.head.appendChild(monetag);
+        }
+      })();
+    </script>
   </head>
 
   <body>
-    <amp-auto-ads type="adsense" data-ad-client="ca-pub-5741796577623184"></amp-auto-ads>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
