@@ -68,8 +68,8 @@ export default function JudgePanel() {
       // Buscar dados adicionais manualmente
       const enrichedData = await Promise.all((data || []).map(async (log) => {
         const [playerData, judgeData, matchData] = await Promise.all([
-          supabase.from('profiles').select('username').eq('user_id', log.player_id).single(),
-          log.judge_id ? supabase.from('profiles').select('username').eq('user_id', log.judge_id).single() : null,
+          supabase.rpc('get_user_profile', { p_user_id: log.player_id }).single(),
+          log.judge_id ? supabase.rpc('get_user_profile', { p_user_id: log.judge_id }).single() : null,
           supabase.from('live_duels').select('id, status').eq('id', log.match_id).single()
         ]);
 

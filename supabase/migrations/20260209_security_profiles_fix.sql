@@ -12,15 +12,15 @@ DROP POLICY IF EXISTS "Public profiles viewable by all" ON public.profiles;
 -- ============================================================================
 
 -- Users can view their own complete profile
-CREATE POLICY "Users view own profile" 
-ON public.profiles FOR SELECT 
-TO authenticated 
+CREATE POLICY "Users view own profile"
+ON public.profiles FOR SELECT
+TO authenticated
 USING (auth.uid() = user_id);
 
 -- Admins can view all profiles
-CREATE POLICY "Admins view all profiles" 
-ON public.profiles FOR SELECT 
-TO authenticated 
+CREATE POLICY "Admins view all profiles"
+ON public.profiles FOR SELECT
+TO authenticated
 USING (public.is_admin(auth.uid()));
 
 -- ============================================================================
@@ -29,7 +29,7 @@ USING (public.is_admin(auth.uid()));
 DROP VIEW IF EXISTS public.leaderboard;
 
 CREATE VIEW public.leaderboard AS
-SELECT 
+SELECT
     user_id,
     username,
     avatar_url,
@@ -56,7 +56,7 @@ GRANT SELECT ON public.leaderboard TO authenticated, anon;
 DROP VIEW IF EXISTS public.friend_profiles;
 
 CREATE VIEW public.friend_profiles AS
-SELECT 
+SELECT
     p.user_id,
     p.username,
     p.avatar_url,
@@ -74,22 +74,17 @@ INNER JOIN public.friends f ON (
 GRANT SELECT ON public.friend_profiles TO authenticated;
 
 -- ============================================================================
--- STEP 5: Add additional security - mask sensitive data in any unexpected queries
+-- STEP 5: Create function to get online status by ID
 -- ============================================================================
--- This function can be used by edge functions that need to return profile data
-CREATE OR REPLACE FUNCTION public.get_public_profile(p_user_id uuid)
+DROP FUNCTION IF EXISTS public.get_online_status;
+
+CREATE OR REPLACE FUNCTION public.get_online_status(p_user_id uuid)
 RETURNS TABLE (
     user_id uuid,
     username text,
     avatar_url text,
-    account_type text,
-    level integer,
-    points bigint,
-    wins integer,
-    losses integer,
-    draws integer,
-    win_rate numeric(5,2),
-    created_at timestamptz
+    is_online boolean,
+    last_seen_at timestamptz
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -97,35 +92,26 @@ SET search_path TO 'public'
 AS $$
 BEGIN
     RETURN QUERY
-    SELECT 
+    SELECT
         p.user_id,
         p.username,
         p.avatar_url,
-        p.account_type,
-        p.level,
-        p.points,
-        p.wins,
-        p.losses,
-        p.draws,
-        CASE 
-            WHEN (p.wins + p.losses + p.draws) > 0 
-            THEN ROUND((p.wins::numeric / (p.wins + p.losses + p.draws)) * 100, 2)
-            ELSE 0 
-        END as win_rate,
-        p.created_at
+        p.is_online,
+        p.last_seen_at
     FROM public.profiles p
-    WHERE p.user_id = p_user_id
-    AND p.account_type != 'banned';
+    WHERE p.user_id = p_user_id;
 END;
 $$;
 
+GRANT EXECUTE ON FUNCTION public.get_online_status TO authenticated;
+
 -- ============================================================================
--- STEP 6: Create function to get online users for leaderboard
+-- STEP 6: Create public online users view
 -- ============================================================================
 DROP VIEW IF EXISTS public.online_users;
 
 CREATE VIEW public.online_users AS
-SELECT 
+SELECT
     user_id,
     username,
     avatar_url,
@@ -137,9 +123,8 @@ AND account_type != 'banned';
 GRANT SELECT ON public.online_users TO authenticated;
 
 -- ============================================================================
--- STEP 7: Secure the profiles table structure for reference purposes
+-- Security: Add comments for documentation
 -- ============================================================================
--- Note: These indexes are kept for internal use
 COMMENT ON TABLE public.profiles IS 'Contains user profile data. Access restricted: users can only view their own data. Use public.leaderboard view for leaderboard data.';
 COMMENT ON VIEW public.leaderboard IS 'Public leaderboard with non-sensitive fields only. Safe for public access.';
 COMMENT ON VIEW public.friend_profiles IS 'Limited profile info for friends only. Shows online status and basic info.';

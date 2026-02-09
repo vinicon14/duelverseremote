@@ -91,8 +91,8 @@ const TournamentDetail = () => {
       const matchesWithProfiles = await Promise.all(
         (matchesData || []).map(async (match) => {
           const [p1, p2] = await Promise.all([
-            match.player1_id ? supabase.from('profiles').select('username, points').eq('user_id', match.player1_id).maybeSingle() : null,
-            match.player2_id ? supabase.from('profiles').select('username, points').eq('user_id', match.player2_id).maybeSingle() : null
+            match.player1_id ? supabase.rpc('get_user_profile', { p_user_id: match.player1_id }).maybeSingle() : null,
+            match.player2_id ? supabase.rpc('get_user_profile', { p_user_id: match.player2_id }).maybeSingle() : null
           ]);
 
           return {
