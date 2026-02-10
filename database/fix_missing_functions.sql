@@ -2,10 +2,9 @@
 -- Fix: get_my_created_tournaments function
 -- ============================================
 -- Run this in Supabase SQL Editor to fix the error
--- "Could not find the function public.get_my_created_tournaments without parameters"
 
 CREATE OR REPLACE FUNCTION get_my_created_tournaments()
-RETURNS JSON AS $
+RETURNS JSON LANGUAGE plpgsql AS $$
 DECLARE
   v_user_id UUID;
 BEGIN
@@ -36,7 +35,7 @@ BEGIN
     ORDER BY t.created_at DESC
   );
 END;
-$ LANGUAGE plpgsql;
+$$;
 
 -- ============================================
 -- Fix: create_weekly_tournament function
@@ -49,7 +48,7 @@ CREATE OR REPLACE FUNCTION create_weekly_tournament(
   p_entry_fee DECIMAL,
   p_max_participants INTEGER DEFAULT 32
 )
-RETURNS JSON AS $
+RETURNS JSON LANGUAGE plpgsql SECURITY DEFINER AS $$
 DECLARE
   v_user_id UUID;
   v_user_balance DECIMAL;
@@ -95,4 +94,4 @@ BEGIN
 EXCEPTION WHEN OTHERS THEN
   RETURN json_build_object('success', FALSE, 'message', SQLERRM);
 END;
-$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
