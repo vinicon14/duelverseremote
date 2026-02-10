@@ -8,7 +8,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from '@supabase/supabase-js';
 import { DuelInviteNotification } from "@/components/DuelInviteNotification";
 import { NotificationPrompt } from "@/components/NotificationPrompt";
-import { MonetagAdController } from "@/components/MonetagAdController";
 import { useRealtimeNotifications } from "@/hooks/useRealtimeNotifications";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import Home from "./pages/Home";
@@ -102,7 +101,6 @@ const AppContent = () => {
 
   return (
     <BrowserRouter>
-      <MonetagAdController />
       <DuelInviteNotification currentUserId={user?.id} />
       <NotificationPrompt />
       <RouterContent />

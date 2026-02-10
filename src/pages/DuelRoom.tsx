@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { PhoneOff, Loader2, Scale, Layers } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
+import { DuelChat } from "@/components/DuelChat";
 import { FloatingCalculator } from "@/components/FloatingCalculator";
 import { RecordMatchButton } from "@/components/RecordMatchButton";
 import { HideElementsButton } from "@/components/HideElementsButton";
@@ -36,7 +37,7 @@ const DuelRoom = () => {
   const lastPauseTime = useRef<number>(0);
   
   const isJudge = searchParams.get('role') === 'judge';
-  const [hideControls, setHideControls] = useState(true); // Oculto por padrão
+  const [hideControls, setHideControls] = useState(false);
   
   // Deck viewer state
   const [showDeckViewer, setShowDeckViewer] = useState(false);
@@ -195,66 +196,6 @@ const DuelRoom = () => {
     };
   }, [id, currentUser]);
 
-
-  // Detecção de desconexão - remove usuário da sala se ele fechar a aba
-  useEffect(() => {
-    if (!id || !currentUser || !duel) return;
-
-    const isParticipant = currentUser.id === duel.creator_id || currentUser.id === duel.opponent_id;
-    if (!isParticipant) return;
-
-    const handleBeforeUnload = async () => {
-      if (currentUser.id === duel.creator_id) {
-        await supabase
-          .from('live_duels')
-          .delete()
-          .eq('id', id);
-      } else if (currentUser.id === duel.opponent_id) {
-        await supabase
-          .from('live_duels')
-          .update({
-            opponent_id: null,
-            status: duel.creator_id ? 'waiting' : 'finished'
-          })
-          .eq('id', id);
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, [id, currentUser, duel]);
-
-  // Verificar periodicamente se ainda há participantes na sala (apenas criador)
-  useEffect(() => {
-    if (!id || !currentUser || !duel) return;
-
-    const isCreator = currentUser.id === duel.creator_id;
-    if (!isCreator) return;
-
-    const checkParticipants = setInterval(async () => {
-      const { data: currentDuel } = await supabase
-        .from('live_duels')
-        .select('creator_id, opponent_id')
-        .eq('id', id)
-        .maybeSingle();
-
-      if (currentDuel && !currentDuel.opponent_id && !currentDuel.creator_id) {
-        await supabase
-          .from('live_duels')
-          .delete()
-          .eq('id', id);
-        clearInterval(checkParticipants);
-      }
-    }, 10000);
-
-    return () => {
-      clearInterval(checkParticipants);
-    };
-  }, [id, currentUser, duel]);
-
   const startCallTimer = (startedAt: string, durationMinutes: number = 50, remainingSecs?: number) => {
     const startTime = new Date(startedAt).getTime();
     callStartTime.current = startTime;
@@ -306,22 +247,26 @@ const DuelRoom = () => {
           .then(() => {});
       }
 
-      // AVISO quando restar 5 minutos (300 segundos) - apenas aviso, não encerra
+      // Aviso quando restar 5 minutos (300 segundos)
       if (remaining === 300 && !showTimeWarning) {
         setShowTimeWarning(true);
         toast({
-          title: "⏰ Atenção: Tempo de partida",
-          description: "Restam apenas 5 minutos de partida.",
+          title: "⏰ Atenção: Tempo de chamada",
+          description: "Restam apenas 5 minutos. A chamada será encerrada automaticamente em 0:00.",
           duration: 10000,
         });
       }
 
-      // NÃO encerrar automaticamente quando chegar a 0:00 - apenas mostrar aviso
+      // Finalizar automaticamente quando chegar a 0:00
       if (remaining === 0) {
+        if (timerInterval.current) {
+          clearInterval(timerInterval.current);
+        }
         toast({
           title: "⏱️ Tempo de partida esgotado",
-          description: `O tempo de ${durationMinutes} minutos acabou. A partida pode continuar até que ambos concordem em encerrar.`,
+          description: `O tempo de ${durationMinutes} minutos acabou. A sala permanece aberta até que ambos saiam.`,
         });
+        // Não fecha automaticamente - apenas quando não houver players por 3 min
       }
     }, 1000);
   };
@@ -926,20 +871,10 @@ const DuelRoom = () => {
             )}
             
             <div className="flex gap-1 sm:gap-2">
-              {/* O botão de Ocultar, Gravar e Deck ficam sempre visíveis para participantes */}
+              {/* O botão de Ocultar e Gravar ficam sempre visíveis para participantes */}
               {isParticipant && !isJudge && (
                 <>
-                  {/* Botão do Deck - SEMPRE VISÍVEL */}
-                  <Button
-                    onClick={() => setShowDeckViewer(!showDeckViewer)}
-                    variant="outline"
-                    size="sm"
-                    className="bg-amber-600/95 hover:bg-amber-700 text-white backdrop-blur-sm text-xs sm:text-sm"
-                    title="Abrir Deck"
-                  >
-                    <Layers className="w-3 h-3 sm:w-4 sm:h-4" />
-                  </Button>
-                  <HideElementsButton onToggle={setHideControls} isHidden={hideControls} />
+                  <HideElementsButton onToggle={setHideControls} />
                   <RecordMatchButton duelId={id!} />
                 </>
               )}
@@ -949,6 +884,16 @@ const DuelRoom = () => {
                 <>
                   {isParticipant && !isJudge && (
                     <>
+                      {/* Botão do Deck */}
+                      <Button
+                        onClick={() => setShowDeckViewer(!showDeckViewer)}
+                        variant="outline"
+                        size="sm"
+                        className="bg-amber-600/95 hover:bg-amber-700 text-white backdrop-blur-sm text-xs sm:text-sm"
+                        title="Abrir Deck"
+                      >
+                        <Layers className="w-3 h-3 sm:w-4 sm:h-4" />
+                      </Button>
                       <Button
                         onClick={callJudge}
                         disabled={judgeCalled}
@@ -1057,8 +1002,10 @@ const DuelRoom = () => {
         />
       )}
 
-      {/* Chat Component REMOVIDO - Usar vídeo chat ao invés */}
-
+      {/* Chat Component */}
+      {!hideControls && currentUser && (
+        <DuelChat duelId={id!} currentUserId={currentUser.id} />
+      )}
     </div>
   );
 };

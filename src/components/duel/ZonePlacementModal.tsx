@@ -2,22 +2,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { Eye, EyeOff, Shield, Sword, Sparkles, AlertTriangle } from 'lucide-react';
+import { Eye, EyeOff, Shield, Sword, Sparkles } from 'lucide-react';
 import { FieldZoneType, GameCard } from './DuelFieldBoard';
-import { 
-  canPlaceInZone, 
-  getAvailableZonesForCard,
-  canNormalSummon,
-  canNormalSet,
-  canSpecialSummon,
-  getRequiredTributes,
-  isMonsterCard as isMonsterCardUtil,
-  isSpellCard as isSpellCardUtil,
-  isTrapCard as isTrapCardUtil,
-  isExtraDeckCardType as isExtraDeckCardTypeUtil,
-  isFieldSpell as isFieldSpellUtil
-} from '../../utils/cardValidation';
-import { useGameState } from '../../store/gameState';
 
 interface ZonePlacementModalProps {
   open: boolean;
@@ -25,9 +11,6 @@ interface ZonePlacementModalProps {
   card: GameCard | null;
   onPlaceCard: (zone: FieldZoneType, faceDown: boolean, position: 'attack' | 'defense') => void;
   occupiedZones: FieldZoneType[];
-  fromZone?: FieldZoneType | 'hand';
-  currentPlayer?: 'player' | 'opponent';
-  fieldState?: Record<string, unknown>;
 }
 
 const MONSTER_ZONES: FieldZoneType[] = ['monster1', 'monster2', 'monster3', 'monster4', 'monster5'];
@@ -63,53 +46,15 @@ export const ZonePlacementModal = ({
   card,
   onPlaceCard,
   occupiedZones,
-  fromZone = 'hand',
-  currentPlayer = 'player',
-  fieldState,
 }: ZonePlacementModalProps) => {
-  const gameState = useGameState();
-  
   if (!card) return null;
+
   const isMonster = isMonsterCard(card.type);
   const isSpell = isSpellCard(card.type);
   const isTrap = isTrapCard(card.type);
   const isField = isFieldSpell(card.type, card.race);
   const isExtraDeck = isExtraDeckCardType(card.type);
   const isLinkMonster = card.type.includes('Link');
-
-  // Check if this is a valid move based on game rules
-  const isValidPlacement = (zone: FieldZoneType, faceDown: boolean, position: 'attack' | 'defense'): boolean => {
-    // Basic zone compatibility
-    if (!canPlaceInZone(card, zone, fromZone)) return false;
-
-    // Check summoning rules for monster zones
-    if (zone.startsWith('monster') || zone.startsWith('extraMonster')) {
-      // Normal summon/set from hand
-      if (fromZone === 'hand') {
-        if (faceDown) {
-          return canNormalSet(card, fromZone, currentPlayer);
-        } else {
-          return canNormalSummon(card, fromZone, currentPlayer);
-        }
-      }
-      
-      // Special summon from other zones
-      return canSpecialSummon(card, fromZone, currentPlayer);
-    }
-
-    // Spell/Trap activation rules
-    if (zone.startsWith('spell') || zone === 'fieldSpell') {
-      if (faceDown) {
-        // Setting spells/traps is generally allowed
-        return gameState.currentPhase === 'main1' || gameState.currentPhase === 'main2';
-      } else {
-        // Activation requires specific conditions
-        return gameState.turnPlayer === currentPlayer;
-      }
-    }
-
-    return true;
-  };
 
   const getAvailableMonsterZones = (): FieldZoneType[] => {
     const zones = MONSTER_ZONES.filter(z => !occupiedZones.includes(z));
@@ -124,47 +69,7 @@ export const ZonePlacementModal = ({
     return SPELL_TRAP_ZONES.filter(z => !occupiedZones.includes(z));
   };
 
-  const getRequiredTributesForCard = (): number => {
-    return getRequiredTributes(card, currentPlayer);
-  };
-
-  const getAvailableTributes = (): GameCard[] => {
-    const tributes: GameCard[] = [];
-    
-    // Get monsters from field
-    for (let i = 1; i <= 5; i++) {
-      const monster = fieldState?.[`monster${i}`] as GameCard | undefined;
-      if (monster && monster.instanceId !== card.instanceId) {
-        tributes.push(monster);
-      }
-    }
-    
-    return tributes;
-  };
-
   const handlePlace = (zone: FieldZoneType, faceDown: boolean, position: 'attack' | 'defense') => {
-    // Check if placement is valid
-    if (!isValidPlacement(zone, faceDown, position)) {
-      return;
-    }
-
-    // Check for tribute requirements
-    const requiredTributes = getRequiredTributesForCard();
-    if (requiredTributes > 0 && fromZone === 'hand' && !faceDown) {
-      // Would need to show tribute selection modal here
-      // For now, we'll proceed but this should be handled
-      console.log(`Requires ${requiredTributes} tributes`);
-    }
-
-    // Update game state for normal summons/sets
-    if (fromZone === 'hand' && zone.startsWith('monster')) {
-      if (faceDown) {
-        gameState.recordNormalSet(currentPlayer);
-      } else {
-        gameState.recordNormalSummon(currentPlayer);
-      }
-    }
-
     onPlaceCard(zone, faceDown, position);
     onClose();
   };
@@ -205,36 +110,6 @@ export const ZonePlacementModal = ({
                   {card.def !== undefined && ` DEF/${card.def}`}
                 </p>
               )}
-              
-              {/* Game state warnings */}
-              {gameState.turnPlayer !== currentPlayer && (
-                <div className="flex items-center gap-1 text-xs text-amber-600 bg-amber-50 p-2 rounded">
-                  <AlertTriangle className="h-3 w-3" />
-                  Não é seu turno
-                </div>
-              )}
-              
-              {fromZone === 'hand' && isMonster && !['main1', 'main2'].includes(gameState.currentPhase) && (
-                <div className="flex items-center gap-1 text-xs text-amber-600 bg-amber-50 p-2 rounded">
-                  <AlertTriangle className="h-3 w-3" />
-                  Só pode invocar na Fase Principal
-                </div>
-              )}
-              
-              {fromZone === 'hand' && isMonster && gameState.currentPhase === 'main1' && 
-               gameState.playerSummonState.hasNormalSummoned && !isExtraDeck && (
-                <div className="flex items-center gap-1 text-xs text-amber-600 bg-amber-50 p-2 rounded">
-                  <AlertTriangle className="h-3 w-3" />
-                  Já usou sua Invocação Normal deste turno
-                </div>
-              )}
-              
-              {getRequiredTributesForCard() > 0 && fromZone === 'hand' && !isExtraDeck && (
-                <div className="flex items-center gap-1 text-xs text-blue-600 bg-blue-50 p-2 rounded">
-                  <AlertTriangle className="h-3 w-3" />
-                  Requer {getRequiredTributesForCard()} tributo(s)
-                </div>
-              )}
             </div>
 
             {/* Field Spell Placement - Priority for Field Spells */}
@@ -265,21 +140,17 @@ export const ZonePlacementModal = ({
                     <Sword className="h-3 w-3" /> Posição de Ataque (Face para cima)
                   </p>
                   <div className="flex flex-wrap gap-1">
-                    {getAvailableMonsterZones().map((zone) => {
-                      const isValid = isValidPlacement(zone, false, 'attack');
-                      return (
-                        <Button
-                          key={zone}
-                          variant={isValid ? "outline" : "secondary"}
-                          size="sm"
-                          className="h-7 px-2 text-xs"
-                          onClick={() => handlePlace(zone, false, 'attack')}
-                          disabled={!isValid}
-                        >
-                          {zone.includes('extra') ? 'EMZ' : `M${MONSTER_ZONES.indexOf(zone as FieldZoneType) + 1}`}
-                        </Button>
-                      );
-                    })}
+                    {getAvailableMonsterZones().map((zone) => (
+                      <Button
+                        key={zone}
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => handlePlace(zone, false, 'attack')}
+                      >
+                        {zone.includes('extra') ? 'EMZ' : `M${MONSTER_ZONES.indexOf(zone as any) + 1}`}
+                      </Button>
+                    ))}
                   </div>
                 </div>
 
@@ -290,21 +161,17 @@ export const ZonePlacementModal = ({
                       <Shield className="h-3 w-3" /> Posição de Defesa (Face para cima)
                     </p>
                     <div className="flex flex-wrap gap-1">
-                      {getAvailableMonsterZones().filter(z => !z.includes('extra')).map((zone) => {
-                        const isValid = isValidPlacement(zone, false, 'defense');
-                        return (
-                          <Button
-                            key={zone}
-                            variant={isValid ? "outline" : "secondary"}
-                            size="sm"
-                            className="h-7 px-2 text-xs"
-                            onClick={() => handlePlace(zone, false, 'defense')}
-                            disabled={!isValid}
-                          >
-                            M{MONSTER_ZONES.indexOf(zone as FieldZoneType) + 1}
-                          </Button>
-                        );
-                      })}
+                      {getAvailableMonsterZones().filter(z => !z.includes('extra')).map((zone) => (
+                        <Button
+                          key={zone}
+                          variant="outline"
+                          size="sm"
+                          className="h-7 px-2 text-xs"
+                          onClick={() => handlePlace(zone, false, 'defense')}
+                        >
+                          M{MONSTER_ZONES.indexOf(zone as any) + 1}
+                        </Button>
+                      ))}
                     </div>
                   </div>
                 )}
@@ -316,21 +183,17 @@ export const ZonePlacementModal = ({
                       <EyeOff className="h-3 w-3" /> Baixar (Face para baixo em Defesa)
                     </p>
                     <div className="flex flex-wrap gap-1">
-                      {getAvailableMonsterZones().filter(z => !z.includes('extra')).map((zone) => {
-                        const isValid = isValidPlacement(zone, true, 'defense');
-                        return (
-                          <Button
-                            key={zone}
-                            variant={isValid ? "secondary" : "outline"}
-                            size="sm"
-                            className="h-7 px-2 text-xs"
-                            onClick={() => handlePlace(zone, true, 'defense')}
-                            disabled={!isValid}
-                          >
-                            M{MONSTER_ZONES.indexOf(zone as FieldZoneType) + 1}
-                          </Button>
-                        );
-                      })}
+                      {getAvailableMonsterZones().filter(z => !z.includes('extra')).map((zone) => (
+                        <Button
+                          key={zone}
+                          variant="secondary"
+                          size="sm"
+                          className="h-7 px-2 text-xs"
+                          onClick={() => handlePlace(zone, true, 'defense')}
+                        >
+                          M{MONSTER_ZONES.indexOf(zone as any) + 1}
+                        </Button>
+                      ))}
                     </div>
                   </div>
                 )}
@@ -348,21 +211,17 @@ export const ZonePlacementModal = ({
                     <Eye className="h-3 w-3" /> Ativar (Face para cima)
                   </p>
                   <div className="flex flex-wrap gap-1">
-                    {getAvailableSpellTrapZones().map((zone) => {
-                      const isValid = isValidPlacement(zone, false, 'attack');
-                      return (
-                        <Button
-                          key={zone}
-                          variant={isValid ? "outline" : "secondary"}
-                          size="sm"
-                          className="h-7 px-2 text-xs"
-                          onClick={() => handlePlace(zone, false, 'attack')}
-                          disabled={!isValid}
-                        >
-                          S/T{SPELL_TRAP_ZONES.indexOf(zone as FieldZoneType) + 1}
-                        </Button>
-                      );
-                    })}
+                    {getAvailableSpellTrapZones().map((zone) => (
+                      <Button
+                        key={zone}
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => handlePlace(zone, false, 'attack')}
+                      >
+                        S/T{SPELL_TRAP_ZONES.indexOf(zone as any) + 1}
+                      </Button>
+                    ))}
                   </div>
                 </div>
 
@@ -372,21 +231,17 @@ export const ZonePlacementModal = ({
                     <EyeOff className="h-3 w-3" /> Setar (Face para baixo)
                   </p>
                   <div className="flex flex-wrap gap-1">
-                    {getAvailableSpellTrapZones().map((zone) => {
-                      const isValid = isValidPlacement(zone, true, 'attack');
-                      return (
-                        <Button
-                          key={zone}
-                          variant={isValid ? "secondary" : "outline"}
-                          size="sm"
-                          className="h-7 px-2 text-xs"
-                          onClick={() => handlePlace(zone, true, 'attack')}
-                          disabled={!isValid}
-                        >
-                          S/T{SPELL_TRAP_ZONES.indexOf(zone as FieldZoneType) + 1}
-                        </Button>
-                      );
-                    })}
+                    {getAvailableSpellTrapZones().map((zone) => (
+                      <Button
+                        key={zone}
+                        variant="secondary"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => handlePlace(zone, true, 'attack')}
+                      >
+                        S/T{SPELL_TRAP_ZONES.indexOf(zone as any) + 1}
+                      </Button>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -395,14 +250,6 @@ export const ZonePlacementModal = ({
             {/* Warning messages */}
             {getAvailableMonsterZones().length === 0 && getAvailableSpellTrapZones().length === 0 && (
               <p className="text-xs text-destructive">Todas as zonas estão ocupadas!</p>
-            )}
-            
-            {/* Special summon hint for extra deck cards */}
-            {isExtraDeck && fromZone === 'extraDeck' && (
-              <div className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
-                <Sparkles className="h-3 w-3 inline mr-1" />
-                Monstros do Extra Deck requerem Invocação Especial
-              </div>
             )}
           </div>
         </div>

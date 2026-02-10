@@ -104,30 +104,15 @@ export const useSavedDecks = () => {
 
     setIsLoading(true);
     try {
-      // Prepare deck data for storage (serialize card data, keeping only necessary fields)
-      const cleanDeckCards = (cards: DeckCard[]) => {
-        return cards.map(card => ({
-          id: card.id,
-          name: card.name,
-          quantity: card.quantity,
-          desc: card.desc ?? '',
-          card_images: card.card_images || [],
-          type: card.type || '',
-          atk: card.atk,
-          def: card.def,
-          race: card.race || '',
-          attribute: card.attribute || ''
-        }));
-      };
-
+      // Prepare deck data for storage (serialize card data)
       const deckData = {
         user_id: currentUser,
-        name: name.trim(),
-        description: description && description.trim() ? description.trim() : null,
-        main_deck: cleanDeckCards(mainDeck),
-        extra_deck: cleanDeckCards(extraDeck),
-        side_deck: cleanDeckCards(sideDeck),
-        tokens_deck: cleanDeckCards(tokensDeck),
+        name,
+        description: description || null,
+        main_deck: JSON.parse(JSON.stringify(mainDeck)),
+        extra_deck: JSON.parse(JSON.stringify(extraDeck)),
+        side_deck: JSON.parse(JSON.stringify(sideDeck)),
+        tokens_deck: JSON.parse(JSON.stringify(tokensDeck)),
         is_public: isPublic || false,
       };
 
@@ -141,10 +126,7 @@ export const useSavedDecks = () => {
           .select()
           .single();
 
-        if (error) {
-          console.error('Supabase update error:', error.message, error.details);
-          throw new Error(`Erro ao atualizar: ${error.message}`);
-        }
+        if (error) throw error;
         
         toast.success('Deck atualizado com sucesso!');
         await fetchDecks();
@@ -161,14 +143,11 @@ export const useSavedDecks = () => {
         // Create new deck
         const { data, error } = await supabase
           .from('saved_decks')
-          .insert([deckData])
+          .insert(deckData)
           .select()
           .single();
 
-        if (error) {
-          console.error('Supabase insert error:', error.message, error.details);
-          throw new Error(`Erro ao salvar: ${error.message}`);
-        }
+        if (error) throw error;
         
         toast.success('Deck salvo com sucesso!');
         await fetchDecks();
@@ -184,8 +163,7 @@ export const useSavedDecks = () => {
       }
     } catch (error: any) {
       console.error('Error saving deck:', error);
-      const errorMessage = error.message || 'Erro ao salvar deck. Tente novamente.';
-      toast.error(errorMessage);
+      toast.error('Erro ao salvar deck');
       return null;
     } finally {
       setIsLoading(false);

@@ -1,15 +1,13 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Swords, Shield, Star, Sparkles, BookOpen, ChevronDown, Loader2 } from 'lucide-react';
+import { Swords, Shield, Star, Sparkles, BookOpen, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useState, useEffect } from 'react';
-import { useYugiohCards } from '@/hooks/useYugiohCards';
+import { useState } from 'react';
 
 interface CardEffectModalProps {
   open: boolean;
   onClose: () => void;
   card: {
-    id?: number;
     name: string;
     type: string;
     desc: string;
@@ -29,42 +27,11 @@ interface CardEffectModalProps {
 
 export const CardEffectModal = ({ open, onClose, card, onPlaceCard, showPlaceButton, initialShowEffect = false }: CardEffectModalProps) => {
   const [showEffect, setShowEffect] = useState(initialShowEffect);
-  const [fetchedDesc, setFetchedDesc] = useState<string | null>(null);
-  const { getCardById } = useYugiohCards();
-
-  // Quando a carta não tem descrição (ex.: deck salvo antigo), buscar da API pelo id
-  useEffect(() => {
-    if (!open || !card) {
-      setFetchedDesc(null);
-      return;
-    }
-    const hasDesc = card.desc && card.desc.trim().length > 0;
-    if (hasDesc) {
-      setFetchedDesc(null);
-      return;
-    }
-    const cardId = card.id;
-    if (!cardId) {
-      setFetchedDesc(null);
-      return;
-    }
-    setFetchedDesc(null);
-    let cancelled = false;
-    getCardById(cardId, 'pt').then((full) => {
-      if (!cancelled && full?.desc) setFetchedDesc(full.desc);
-    }).catch(() => {
-      if (!cancelled) getCardById(cardId, 'en').then((full) => {
-        if (!cancelled && full?.desc) setFetchedDesc(full.desc);
-      });
-    });
-    return () => { cancelled = true; };
-  }, [open, card?.id, getCardById]);
-
+  
   if (!card) return null;
 
   const isMonster = card.atk !== undefined;
-  const effectText = (card.desc && card.desc.trim()) || fetchedDesc || '';
-  const isLoadingDesc = !effectText && !!card.id;
+  const effectText = card.desc;
   const isLong = effectText && effectText.length > 150;
 
   return (
@@ -133,18 +100,9 @@ export const CardEffectModal = ({ open, onClose, card, onPlaceCard, showPlaceBut
             <div className="border-t pt-4 flex-1 flex flex-col min-h-0 overflow-hidden">
               <h4 className="text-xs font-semibold text-muted-foreground mb-2">EFEITO</h4>
               <div className="flex-1 overflow-y-auto">
-                {isLoadingDesc ? (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Carregando efeito...
-                  </div>
-                ) : effectText ? (
-                  <div className="text-sm leading-relaxed whitespace-pre-wrap pr-4 pb-2">
-                    {effectText}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground italic">Efeito não disponível para esta carta.</p>
-                )}
+                <div className="text-sm leading-relaxed whitespace-pre-wrap pr-4 pb-2">
+                  {effectText}
+                </div>
               </div>
             </div>
           )}
