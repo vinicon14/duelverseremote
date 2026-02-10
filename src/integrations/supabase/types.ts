@@ -1384,6 +1384,14 @@ export type Database = {
         Args: { p_tournament_id: string }
         Returns: boolean
       }
+      get_my_created_tournaments: {
+        Args: never
+        Returns: Json
+      }
+      get_tournament_participants: {
+        Args: { p_tournament_id: string }
+        Returns: Json
+      }
     }
     Enums: {
       account_type: "free" | "pro"
