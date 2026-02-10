@@ -94,4 +94,35 @@ BEGIN
 EXCEPTION WHEN OTHERS THEN
   RETURN json_build_object('success', FALSE, 'message', SQLERRM);
 END;
-$$;
+$;
+
+-- ============================================
+-- Fix: get_tournament_participants function
+-- ============================================
+
+CREATE OR REPLACE FUNCTION get_tournament_participants(p_tournament_id UUID)
+RETURNS JSON AS $
+BEGIN
+  RETURN (
+    SELECT json_agg(
+      json_build_object(
+        'user_id', tp.user_id,
+        'username', p.username,
+        'avatar_url', p.avatar_url,
+        'joined_at', tp.joined_at,
+        'wins', COALESCE(tm.wins, 0),
+        'losses', COALESCE(tm.losses, 0)
+      )
+    )
+    FROM tournament_participants tp
+    LEFT JOIN profiles p ON p.user_id = tp.user_id
+    LEFT JOIN tournament_matches tm ON (
+      tm.tournament_id = p_tournament_id AND 
+      (tm.player1_id = tp.user_id OR tm.player2_id = tp.user_id)
+    )
+    WHERE tp.tournament_id = p_tournament_id
+    GROUP BY tp.user_id, p.username, p.avatar_url, tp.joined_at, tm.wins, tm.losses
+    ORDER BY tp.joined_at ASC
+  );
+END;
+$ LANGUAGE plpgsql;
