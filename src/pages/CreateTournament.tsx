@@ -50,27 +50,29 @@ const CreateTournament = () => {
     }
 
     try {
-      const { error } = await supabase.from("tournaments").insert({
-        name,
-        description,
-        start_date: startDate,
-        end_date: endDate,
-        max_participants: maxParticipants,
-        prize_pool: prizePool,
-        entry_fee: entryFee,
-        created_by: user.id,
-        status: 'upcoming',
-        tournament_type: tournamentType,
-        total_rounds: tournamentType === 'swiss' ? swissRounds : null,
+      // Use RPC function to handle prize pool deduction atomically
+      const { data, error } = await supabase.rpc("create_normal_tournament", {
+        p_name: name,
+        p_description: description,
+        p_start_date: startDate,
+        p_end_date: endDate,
+        p_prize_pool: prizePool,
+        p_entry_fee: entryFee,
+        p_max_participants: maxParticipants,
+        p_tournament_type: tournamentType,
       });
 
       if (error) throw error;
+      
+      if (!data?.success) {
+        throw new Error(data?.message || "Erro ao criar torneio");
+      }
 
       toast({
         title: "Torneio criado com sucesso!",
         description: tournamentType === 'swiss' 
-          ? `Torneio Suíço com ${swissRounds} rodadas + Top 4 eliminatório.`
-          : "O novo torneio já está visível para os jogadores.",
+          ? `Torneio Suíço com ${swissRounds} rodadas + Top 4 eliminatório.\nPrêmio de ${prizePool} DC foi deduzido do seu saldo.`
+          : `O novo torneio já está visível para os jogadores.\nPrêmio de ${prizePool} DC foi deduzido do seu saldo.`,
       });
       navigate("/tournaments");
     } catch (error: any) {
