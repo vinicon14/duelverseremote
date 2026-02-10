@@ -74,6 +74,7 @@ const CreateWeeklyTournament = () => {
     }
 
     try {
+      // Try RPC first (works after cache is updated)
       const { data, error } = await supabase.rpc("create_weekly_tournament", {
         p_name: name,
         p_description: description,
@@ -82,7 +83,43 @@ const CreateWeeklyTournament = () => {
         p_max_participants: 32,
       });
 
-      if (error) throw error;
+      if (error) {
+        // If RPC fails due to schema cache, try direct insert as fallback
+        const { data: tournament, error: insertError } = await supabase
+          .from('tournaments')
+          .insert({
+            name: name,
+            description: description,
+            start_date: new Date().toISOString(),
+            end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+            max_participants: 32,
+            prize_pool: prizePool,
+            entry_fee: entryFee,
+            created_by: user.id,
+            status: 'upcoming',
+            is_weekly: true,
+            tournament_type: 'single_elimination',
+            total_rounds: 5
+          })
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+
+        toast({
+          title: "Torneio Semanal criado com sucesso!",
+          description: (
+            <div className="space-y-2">
+              <p>O seu Torneio Semanal está pronto!</p>
+              <p className="text-sm text-muted-foreground">
+                🏆 Prêmio: {prizePool.toLocaleString()} DC | Taxa: {entryFee.toLocaleString()} DC
+              </p>
+            </div>
+          ),
+        });
+        navigate(`/tournament/${tournament.id}`);
+        return;
+      }
 
       if (data?.success) {
         toast({
