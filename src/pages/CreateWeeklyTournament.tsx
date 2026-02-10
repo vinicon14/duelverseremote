@@ -261,7 +261,13 @@ const CreateWeeklyTournament = () => {
                     id="prizePool"
                     type="number"
                     value={prizePool}
-                    onChange={(e) => setPrizePool(parseInt(e.target.value) || 0)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      const parsed = parseInt(value);
+                      if (!isNaN(parsed) && parsed >= 0) {
+                        setPrizePool(parsed);
+                      }
+                    }}
                     min={1}
                     required
                     className="border-yellow-500/50 focus:border-yellow-500"
@@ -280,7 +286,13 @@ const CreateWeeklyTournament = () => {
                     id="entryFee"
                     type="number"
                     value={entryFee}
-                    onChange={(e) => setEntryFee(parseInt(e.target.value) || 0)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      const parsed = parseInt(value);
+                      if (!isNaN(parsed) && parsed >= 0) {
+                        setEntryFee(parsed);
+                      }
+                    }}
                     min={0}
                     required
                     className="border-blue-500/50 focus:border-blue-500"
