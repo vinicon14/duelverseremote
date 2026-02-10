@@ -47,7 +47,8 @@ export type FieldZoneType =
   | 'banished'
   | 'extraDeck'
   | 'deck'
-  | 'sideDeck';
+  | 'sideDeck'
+  | 'hand';
 
 export interface FieldState {
   monster1: GameCard | null;

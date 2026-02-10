@@ -1,8 +1,8 @@
 import React from 'react';
-import { Button } from '../components/ui/button';
-import { Badge } from '../components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { useGameState, GamePhase, TurnPlayer } from '../store/gameState';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useGameState, GamePhase, TurnPlayer } from '@/store/gameState';
 import { Play, SkipForward, RotateCcw, Sword } from 'lucide-react';
 
 export const PhaseControl: React.FC = () => {

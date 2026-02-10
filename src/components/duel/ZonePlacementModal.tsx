@@ -11,11 +11,11 @@ import {
   canNormalSet,
   canSpecialSummon,
   getRequiredTributes,
-  isMonsterCard,
-  isSpellCard,
-  isTrapCard,
-  isExtraDeckCardType,
-  isFieldSpell
+  isMonsterCard as isMonsterCardUtil,
+  isSpellCard as isSpellCardUtil,
+  isTrapCard as isTrapCardUtil,
+  isExtraDeckCardType as isExtraDeckCardTypeUtil,
+  isFieldSpell as isFieldSpellUtil
 } from '../../utils/cardValidation';
 import { useGameState } from '../../store/gameState';
 
@@ -25,7 +25,7 @@ interface ZonePlacementModalProps {
   card: GameCard | null;
   onPlaceCard: (zone: FieldZoneType, faceDown: boolean, position: 'attack' | 'defense') => void;
   occupiedZones: FieldZoneType[];
-  fromZone?: FieldZoneType;
+  fromZone?: FieldZoneType | 'hand';
   currentPlayer?: 'player' | 'opponent';
   fieldState?: Record<string, unknown>;
 }
