@@ -1,6 +1,5 @@
-import { GameCard } from '../types/game';
-import { FieldZoneType } from '../types/field';
-import { useGameState } from '../store/gameState';
+import { GameCard, FieldZoneType } from '@/components/duel/DuelFieldBoard';
+import { useGameState } from '@/store/gameState';
 
 export const isMonsterCard = (type: string): boolean => {
   if (isSpellCard(type) || isTrapCard(type)) return false;

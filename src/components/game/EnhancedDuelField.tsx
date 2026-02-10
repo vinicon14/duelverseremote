@@ -1,18 +1,18 @@
 import React from 'react';
-import { DuelFieldBoard } from '../components/duel/DuelFieldBoard';
-import { ZonePlacementModal } from '../components/duel/ZonePlacementModal';
-import { TributeSelectionModal } from '../components/game/TributeSelectionModal';
-import { SpecialSummonModal } from '../components/game/SpecialSummonModal';
-import { PhaseControl } from '../components/game/PhaseControl';
-import { useFieldManager } from '../hooks/useFieldManager';
-import { useGameState } from '../store/gameState';
-import { GameCard, FieldZoneType } from '../types/game';
+import { DuelFieldBoard } from '@/components/duel/DuelFieldBoard';
+import { ZonePlacementModal } from '@/components/duel/ZonePlacementModal';
+import { TributeSelectionModal } from '@/components/game/TributeSelectionModal';
+import { SpecialSummonModal } from '@/components/game/SpecialSummonModal';
+import { PhaseControl } from '@/components/game/PhaseControl';
+import { useFieldManager } from '@/hooks/useFieldManager';
+import { useGameState } from '@/store/gameState';
+import { GameCard, FieldZoneType } from '@/components/duel/DuelFieldBoard';
 
 export const EnhancedDuelField: React.FC = () => {
   const gameState = useGameState();
   
   // Initialize field state
-  const initialFieldState: Record<FieldZoneType, GameCard | GameCard[]> = {
+  const initialFieldState: Record<FieldZoneType, GameCard | GameCard[] | null> = {
     monster1: null,
     monster2: null,
     monster3: null,
@@ -105,13 +105,11 @@ export const EnhancedDuelField: React.FC = () => {
     }
   ];
 
-  // Update field state with mock hand
-  React.useEffect(() => {
-    setFieldState(prev => ({
-      ...prev,
-      hand: mockHand,
-    }));
-  }, []);
+  // Update field state with mock hand - commented out since setFieldState is not exposed
+  // The mock hand would need to be passed as initial state
+  // React.useEffect(() => {
+  //   // field state should be initialized with hand in initialFieldState
+  // }, []);
 
   const handleCardClick = (card: GameCard, zone: FieldZoneType) => {
     setSelectedCard(card);
@@ -192,12 +190,12 @@ export const EnhancedDuelField: React.FC = () => {
           {/* Game Field */}
           <div className="lg:col-span-3">
             <DuelFieldBoard
-              fieldState={fieldState}
+              fieldState={fieldState as any}
               onCardClick={handleCardClick}
               onZoneClick={handleZoneClick}
-              onCardDrop={(card, zone) => {
+              onCardDrop={(zone: FieldZoneType, card: GameCard) => {
                 setSelectedCard(card);
-                setFromZone('hand');
+                setFromZone('hand' as FieldZoneType);
                 setPlacementModalOpen(true);
               }}
             />

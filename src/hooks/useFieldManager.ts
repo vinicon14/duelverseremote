@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
-import { GameCard, FieldZoneType } from '../types/game';
-import { useGameState } from '../store/gameState';
+import { GameCard, FieldZoneType } from '@/components/duel/DuelFieldBoard';
+import { useGameState } from '@/store/gameState';
 import { 
   canPlaceInZone, 
   canNormalSummon, 
@@ -9,7 +9,7 @@ import {
   getRequiredTributes
 } from '../utils/cardValidation';
 
-export const useFieldManager = (initialFieldState: Record<FieldZoneType, GameCard | GameCard[]>) => {
+export const useFieldManager = (initialFieldState: Record<string, GameCard | GameCard[] | null>) => {
   const [fieldState, setFieldState] = useState(initialFieldState);
   const gameState = useGameState();
 
@@ -138,7 +138,8 @@ export const useFieldManager = (initialFieldState: Record<FieldZoneType, GameCar
       // Find and remove the monster from field
       for (let i = 1; i <= 5; i++) {
         const zone = `monster${i}` as FieldZoneType;
-        if (newState[zone]?.instanceId === monster.instanceId) {
+        const zoneContent = newState[zone];
+        if (zoneContent && !Array.isArray(zoneContent) && (zoneContent as GameCard).instanceId === monster.instanceId) {
           newState[zone] = null;
           break;
         }

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { GameCard } from '../types/game';
+import { GameCard } from '@/components/duel/DuelFieldBoard';
 
 export type GamePhase = 'draw' | 'standby' | 'main1' | 'battle' | 'main2' | 'end';
 export type TurnPlayer = 'player' | 'opponent';
