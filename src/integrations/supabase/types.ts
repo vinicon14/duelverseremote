@@ -365,7 +365,6 @@ export type Database = {
           created_at: string
           creator_id: string
           duration_minutes: number
-          empty_since: string | null
           finished_at: string | null
           id: string
           is_ranked: boolean
@@ -384,7 +383,6 @@ export type Database = {
           created_at?: string
           creator_id: string
           duration_minutes?: number
-          empty_since?: string | null
           finished_at?: string | null
           id?: string
           is_ranked?: boolean
@@ -403,7 +401,6 @@ export type Database = {
           created_at?: string
           creator_id?: string
           duration_minutes?: number
-          empty_since?: string | null
           finished_at?: string | null
           id?: string
           is_ranked?: boolean
