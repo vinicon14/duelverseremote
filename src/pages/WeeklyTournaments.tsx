@@ -62,15 +62,35 @@ const WeeklyTournaments = () => {
   const fetchTournaments = async () => {
     setLoading(true);
     try {
+      // Try RPC first (works after cache is updated)
       const { data, error } = await supabase.rpc("get_weekly_tournaments");
 
-      if (error) throw error;
-
-      if (data) {
+      if (!error && data) {
         const tournamentsData = data as unknown as WeeklyTournament[];
         setTournaments(tournamentsData);
         
         // Verificar quais torneios o usuário está inscrito
+        await fetchUserJoinedTournaments(tournamentsData);
+        setLoading(false);
+        return;
+      }
+
+      // Fallback: direct query if RPC fails
+      const { data: directData, error: directError } = await supabase
+        .from('tournaments')
+        .select('*')
+        .eq('is_weekly', true)
+        .order('created_at', { ascending: false });
+
+      if (directError) throw directError;
+
+      if (directData) {
+        const tournamentsData = directData.map(t => ({
+          ...t,
+          participant_count: 0, // Will be updated by fetchUserJoinedTournaments
+        })) as unknown as WeeklyTournament[];
+        setTournaments(tournamentsData);
+        
         await fetchUserJoinedTournaments(tournamentsData);
       }
     } catch (error) {

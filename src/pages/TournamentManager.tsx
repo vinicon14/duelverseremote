@@ -59,13 +59,31 @@ const TournamentManager = () => {
   const fetchMyCreatedTournaments = async (userId: string) => {
     setLoading(true);
     try {
+      // Try RPC first (works after cache is updated)
       const { data, error } = await supabase
         .rpc('get_my_created_tournaments');
 
-      if (error) throw error;
-
-      if (data) {
+      if (!error && data) {
         setTournaments(data as unknown as ManagedTournament[]);
+        setLoading(false);
+        return;
+      }
+
+      // Fallback: direct query if RPC fails
+      const { data: directData, error: directError } = await supabase
+        .from('tournaments')
+        .select('*')
+        .eq('created_by', userId)
+        .order('created_at', { ascending: false });
+
+      if (directError) throw directError;
+
+      if (directData) {
+        const tournamentsData = directData.map(t => ({
+          ...t,
+          participant_count: 0,
+        })) as unknown as ManagedTournament[];
+        setTournaments(tournamentsData);
       }
     } catch (error: any) {
       toast({
