@@ -84,7 +84,36 @@ const CreateWeeklyTournament = () => {
       });
 
       if (error) {
-        // If RPC fails due to schema cache, try direct insert as fallback
+        // If RPC fails due to schema cache, try direct insert with balance deduction
+        
+        // Check balance first
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('duelcoins_balance')
+          .eq('user_id', user.id)
+          .single();
+        
+        if (profileError || (profile.duelcoins_balance || 0) < prizePool) {
+          throw new Error('Saldo insuficiente para criar este torneio');
+        }
+        
+        // Deduct prize from balance
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ duelcoins_balance: profile.duelcoins_balance - prizePool })
+          .eq('user_id', user.id);
+        
+        if (updateError) throw updateError;
+        
+        // Record transaction
+        await supabase.from('duelcoins_transactions').insert({
+          sender_id: user.id,
+          amount: prizePool,
+          transaction_type: 'tournament_prize',
+          description: 'Pagamento antecipado de premio - Torneio Semanal: ' + name
+        });
+        
+        // Create tournament
         const { data: tournament, error: insertError } = await supabase
           .from('tournaments')
           .insert({
