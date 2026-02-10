@@ -265,14 +265,14 @@ const CreateWeeklyTournament = () => {
                   <Input
                     id="prizePool"
                     type="number"
-                    step="0.01"
+                    step="1"
                     value={prizePool}
                     onChange={(e) => {
                       const value = e.target.value;
-                      // Use parseFloat to handle decimal values correctly
-                      const parsed = parseFloat(value);
+                      // Use parseFloat and round to ensure integer value
+                      const parsed = Math.round(parseFloat(value));
                       if (!isNaN(parsed) && parsed >= 0) {
-                        setPrizePool(Math.round(parsed * 100) / 100); // Round to 2 decimal places
+                        setPrizePool(parsed);
                       }
                     }}
                     min={1}
@@ -292,13 +292,13 @@ const CreateWeeklyTournament = () => {
                   <Input
                     id="entryFee"
                     type="number"
-                    step="0.01"
+                    step="1"
                     value={entryFee}
                     onChange={(e) => {
                       const value = e.target.value;
-                      const parsed = parseFloat(value);
+                      const parsed = Math.round(parseFloat(value));
                       if (!isNaN(parsed) && parsed >= 0) {
-                        setEntryFee(Math.round(parsed * 100) / 100);
+                        setEntryFee(parsed);
                       }
                     }}
                     min={0}
