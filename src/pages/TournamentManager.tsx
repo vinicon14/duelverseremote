@@ -59,12 +59,22 @@ const TournamentManager = () => {
   const fetchMyCreatedTournaments = async (userId: string) => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.rpc('get_my_created_tournaments');
+      // Usando query direta em vez de RPC para evitar problemas de cache
+      const { data, error } = await supabase
+        .from('tournaments')
+        .select(`*
+          participant_count: tournament_participants(count)
+        `)
+        .eq('created_by', userId)
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
 
       if (data) {
-        const tournamentsData = data as unknown as ManagedTournament[];
+        const tournamentsData = data.map((t: any) => ({
+          ...t,
+          participant_count: t.participant_count?.[0]?.count || 0
+        })) as unknown as ManagedTournament[];
         setTournaments(tournamentsData);
       }
     } catch (error: any) {
