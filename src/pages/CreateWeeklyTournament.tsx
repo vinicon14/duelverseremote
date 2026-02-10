@@ -42,7 +42,7 @@ const CreateWeeklyTournament = () => {
         .from("profiles")
         .select("duelcoins_balance")
         .eq("user_id", user.id)
-        .single();
+        .single({ count: null });
       if (data) {
         setUserBalance(data.duelcoins_balance || 0);
       }
@@ -75,12 +75,7 @@ const CreateWeeklyTournament = () => {
     }
 
     try {
-      // Try RPC first
-      console.log('Criando torneio semanal com prêmio:', prizePool, 'DC');
-      
-      // Force fresh authentication data
-      await supabase.auth.getSession();
-      
+      // Try RPC first (works after cache is updated)
       const { data, error } = await supabase.rpc("create_weekly_tournament", {
         p_name: name,
         p_description: description,
@@ -89,11 +84,8 @@ const CreateWeeklyTournament = () => {
         p_max_participants: 32,
       });
 
-      console.log('RPC response:', { data, error });
-
-      if (error || !data?.success) {
-        console.log('RPC failed or returned error, using fallback...');
-        // If RPC fails, use direct insert with balance deduction
+      if (error) {
+        // If RPC fails due to schema cache, try direct insert with balance deduction
         
         // Check balance first
         const { data: profile, error: profileError } = await supabase
@@ -102,9 +94,7 @@ const CreateWeeklyTournament = () => {
           .eq('user_id', user.id)
           .single();
         
-        console.log('Profile balance:', profile?.duelcoins_balance);
-        
-        if (profileError || (profile?.duelcoins_balance || 0) < prizePool) {
+        if (profileError || (profile.duelcoins_balance || 0) < prizePool) {
           throw new Error('Saldo insuficiente para criar este torneio');
         }
         
@@ -114,7 +104,6 @@ const CreateWeeklyTournament = () => {
           .update({ duelcoins_balance: profile.duelcoins_balance - prizePool })
           .eq('user_id', user.id);
         
-        console.log('Balance update result:', { updateError });
         if (updateError) throw updateError;
         
         // Record transaction
@@ -126,16 +115,13 @@ const CreateWeeklyTournament = () => {
         });
         
         // Create tournament
-        const startDate = new Date().toISOString();
-        const endDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-        
         const { data: tournament, error: insertError } = await supabase
           .from('tournaments')
           .insert({
             name: name,
             description: description,
-            start_date: startDate,
-            end_date: endDate,
+            start_date: new Date().toISOString(),
+            end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
             max_participants: 32,
             prize_pool: prizePool,
             entry_fee: entryFee,
@@ -148,7 +134,6 @@ const CreateWeeklyTournament = () => {
           .select()
           .single();
 
-        console.log('Tournament created:', { tournament, insertError });
         if (insertError) throw insertError;
 
         toast({
@@ -168,21 +153,24 @@ const CreateWeeklyTournament = () => {
         return;
       }
 
-      console.log('RPC success, tournament_id:', data.tournament_id);
-      toast({
-        title: "Torneio Semanal criado com sucesso!",
-        description: (
-          <div className="space-y-2">
-            <p>O seu Torneio Semanal está pronto!</p>
-            <p className="text-sm text-muted-foreground">
-              🏆 Prêmio: {prizePool.toLocaleString()} DC | Taxa: {entryFee.toLocaleString()} DC
-            </p>
-          </div>
-        ),
-      });
-      // Refresh balance to show deducted amount
-      await fetchUserBalance();
-      navigate(`/tournament/${data.tournament_id}`);
+      if (data?.success) {
+        toast({
+          title: "Torneio Semanal criado com sucesso!",
+          description: (
+            <div className="space-y-2">
+              <p>O seu Torneio Semanal está pronto!</p>
+              <p className="text-sm text-muted-foreground">
+                🏆 Prêmio: {prizePool.toLocaleString()} DC | Taxa: {entryFee.toLocaleString()} DC
+              </p>
+            </div>
+          ),
+        });
+        // Refresh balance to show deducted amount
+        await fetchUserBalance();
+        navigate(`/tournament/${data.tournament_id}`);
+      } else {
+        throw new Error(data?.message || "Erro ao criar torneio");
+      }
     } catch (error: any) {
       toast({
         title: "Erro ao criar torneio",
@@ -277,12 +265,10 @@ const CreateWeeklyTournament = () => {
                   <Input
                     id="prizePool"
                     type="number"
-                    step="1"
                     value={prizePool}
                     onChange={(e) => {
                       const value = e.target.value;
-                      // Use parseFloat and round to ensure integer value
-                      const parsed = Math.round(parseFloat(value));
+                      const parsed = parseInt(value);
                       if (!isNaN(parsed) && parsed >= 0) {
                         setPrizePool(parsed);
                       }
@@ -304,11 +290,10 @@ const CreateWeeklyTournament = () => {
                   <Input
                     id="entryFee"
                     type="number"
-                    step="1"
                     value={entryFee}
                     onChange={(e) => {
                       const value = e.target.value;
-                      const parsed = Math.round(parseFloat(value));
+                      const parsed = parseInt(value);
                       if (!isNaN(parsed) && parsed >= 0) {
                         setEntryFee(parsed);
                       }
