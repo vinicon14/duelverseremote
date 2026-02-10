@@ -55,11 +55,10 @@ const MyTournaments = () => {
   const fetchMyTournaments = async (userId: string) => {
     setLoading(true);
     try {
+      // Try RPC first (works after cache is updated)
       const { data, error } = await supabase.rpc('get_my_tournaments');
 
-      if (error) throw error;
-
-      if (data) {
+      if (!error && data) {
         const tournaments = data as unknown as MyTournament[];
         setMyTournaments(tournaments);
 
@@ -71,6 +70,27 @@ const MyTournaments = () => {
         // Fetch opponents for active tournaments
         const activeIds = tournaments.filter(t => t.status === 'active').map(t => t.id);
         await fetchOpponentsForTournaments(activeIds, userId);
+        setLoading(false);
+        return;
+      }
+
+      // Fallback: direct query if RPC fails
+      const { data: directData, error: directError } = await supabase
+        .from('tournament_participants')
+        .select('tournaments(*)')
+        .eq('user_id', userId);
+
+      if (directError) throw directError;
+
+      if (directData) {
+        const tournaments = directData
+          .map((d: any) => d.tournaments)
+          .filter(Boolean) as MyTournament[];
+
+        setMyTournaments(tournaments);
+        setUpcomingTournaments(tournaments.filter(t => t.status === 'upcoming'));
+        setActiveTournaments(tournaments.filter(t => t.status === 'active'));
+        setCompletedTournaments(tournaments.filter(t => ['completed', 'expired'].includes(t.status)));
       }
     } catch (error: any) {
       toast({
