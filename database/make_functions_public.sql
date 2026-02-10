@@ -19,31 +19,67 @@ CREATE OR REPLACE FUNCTION create_normal_tournament(
   p_max_participants INTEGER DEFAULT 32,
   p_tournament_type TEXT DEFAULT 'single_elimination'
 )
-RETURNS JSON LANGUAGE plpgsql SECURITY DEFINER AS $$
+RETURNS JSON LANGUAGE plpgsql SECURITY DEFINER AS $
 DECLARE
   v_user_id UUID;
   v_user_balance DECIMAL;
   v_tournament_id UUID;
   v_total_rounds INTEGER;
 BEGIN
+  -- Get current user
   SELECT auth.uid() INTO v_user_id;
-  SELECT duelcoins_balance INTO v_user_balance FROM profiles WHERE user_id = v_user_id;
   
-  IF v_user_balance < p_prize_pool THEN
+  IF v_user_id IS NULL THEN
     RETURN json_build_object(
       'success', FALSE,
-      'message', 'Saldo insuficiente. Voce precisa de ' || p_prize_pool || ' DuelCoins.'
+      'message', 'Usuario nao esta autenticado. Faca login novamente.'
     );
   END IF;
   
-  UPDATE profiles SET duelcoins_balance = duelcoins_balance - p_prize_pool 
+  -- Get user balance - handle NULL properly
+  SELECT COALESCE(duelcoins_balance, 0) INTO v_user_balance 
+  FROM profiles 
   WHERE user_id = v_user_id;
   
-  INSERT INTO duelcoins_transactions (sender_id, amount, transaction_type, description)
-  VALUES (v_user_id, p_prize_pool, 'tournament_prize', 'Pagamento antecipado de premio - Torneio Normal: ' || p_name);
+  -- Check if profile was found
+  IF v_user_balance IS NULL THEN
+    RETURN json_build_object(
+      'success', FALSE,
+      'message', 'Perfil nao encontrado.'
+    );
+  END IF;
   
-  v_total_rounds := CEIL(LOG(2, p_max_participants::FLOAT))::INTEGER;
+  -- Only check balance if prize_pool > 0
+  IF p_prize_pool > 0 AND v_user_balance < p_prize_pool THEN
+    RETURN json_build_object(
+      'success', FALSE,
+      'message', 'Saldo insuficiente. Voce tem ' || v_user_balance || ' DuelCoins, mas precisa de ' || p_prize_pool || ' DuelCoins.'
+    );
+  END IF;
   
+  -- Deduct prize pool from balance (only if > 0)
+  IF p_prize_pool > 0 THEN
+    UPDATE profiles SET duelcoins_balance = duelcoins_balance - p_prize_pool 
+    WHERE user_id = v_user_id;
+    
+    INSERT INTO duelcoins_transactions (sender_id, amount, transaction_type, description)
+    VALUES (v_user_id, p_prize_pool, 'tournament_prize', 'Pagamento antecipado de premio - Torneio Normal: ' || p_name);
+  END IF;
+  
+  -- Calculate rounds based on tournament type
+  IF p_tournament_type = 'swiss' THEN
+    v_total_rounds := CASE 
+      WHEN p_max_participants >= 65 THEN 7
+      WHEN p_max_participants >= 33 THEN 6
+      WHEN p_max_participants >= 17 THEN 5
+      WHEN p_max_participants >= 9 THEN 4
+      ELSE 3
+    END;
+  ELSE
+    v_total_rounds := CEIL(LOG(2, p_max_participants::FLOAT))::INTEGER;
+  END IF;
+  
+  -- Insert tournament
   INSERT INTO tournaments (
     name, description, start_date, end_date, max_participants,
     prize_pool, entry_fee, created_by, status, is_weekly,
@@ -63,7 +99,7 @@ BEGIN
 EXCEPTION WHEN OTHERS THEN
   RETURN json_build_object('success', FALSE, 'message', SQLERRM);
 END;
-$$;
+$;
 
 GRANT EXECUTE ON FUNCTION create_normal_tournament(TEXT, TEXT, TIMESTAMPTZ, TIMESTAMPTZ, DECIMAL, DECIMAL, INTEGER, TEXT) TO authenticated, anon;
 
