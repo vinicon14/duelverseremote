@@ -21,6 +21,7 @@ const TournamentDetail = () => {
   const [matches, setMatches] = useState<any[]>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [isGeneratingBracket, setIsGeneratingBracket] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -133,6 +134,19 @@ const TournamentDetail = () => {
       return;
     }
 
+    // Check if bracket already exists
+    if (matches.length > 0) {
+      toast({
+        title: "Chaveamento já existe",
+        description: "O torneio já foi iniciado anteriormente.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (isGeneratingBracket) return;
+    setIsGeneratingBracket(true);
+
     try {
       // Generate bracket
       await generateBracket();
@@ -159,6 +173,8 @@ const TournamentDetail = () => {
         description: error.message,
         variant: "destructive",
       });
+    } finally {
+      setIsGeneratingBracket(false);
     }
   };
 
@@ -422,9 +438,9 @@ const TournamentDetail = () => {
                   <Button
                     onClick={startTournament}
                     className="w-full btn-mystic text-white"
-                    disabled={participants.length < tournament.min_participants}
+                    disabled={participants.length < tournament.min_participants || isGeneratingBracket}
                   >
-                    Iniciar Torneio
+                    {isGeneratingBracket ? 'Iniciando...' : 'Iniciar Torneio'}
                   </Button>
                 )}
                 
