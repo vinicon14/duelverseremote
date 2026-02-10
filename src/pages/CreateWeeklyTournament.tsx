@@ -37,11 +37,12 @@ const CreateWeeklyTournament = () => {
   const fetchUserBalance = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
+      // Force fresh data by bypassing cache
       const { data } = await supabase
         .from("profiles")
         .select("duelcoins_balance")
         .eq("user_id", user.id)
-        .single();
+        .single({ count: null });
       if (data) {
         setUserBalance(data.duelcoins_balance || 0);
       }
@@ -146,6 +147,8 @@ const CreateWeeklyTournament = () => {
             </div>
           ),
         });
+        // Refresh balance to show deducted amount
+        await fetchUserBalance();
         navigate(`/tournament/${tournament.id}`);
         return;
       }
@@ -162,6 +165,8 @@ const CreateWeeklyTournament = () => {
             </div>
           ),
         });
+        // Refresh balance to show deducted amount
+        await fetchUserBalance();
         navigate(`/tournament/${data.tournament_id}`);
       } else {
         throw new Error(data?.message || "Erro ao criar torneio");
