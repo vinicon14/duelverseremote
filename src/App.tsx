@@ -1,6 +1,7 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ConditionalMonetagLoader } from "@/components/ConditionalMonetagLoader";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -33,6 +34,10 @@ import News from "./pages/News";
 import NotFound from "./pages/NotFound";
 import InstallApp from "./pages/InstallApp";
 import DeckBuilder from "./pages/DeckBuilder";
+import CreateWeeklyTournament from "./pages/CreateWeeklyTournament";
+import WeeklyTournaments from "./pages/WeeklyTournaments";
+import MyTournaments from "./pages/MyTournaments";
+import TournamentManager from "./pages/TournamentManager";
 
 const queryClient = new QueryClient();
 
@@ -63,6 +68,10 @@ const RouterContent = () => {
       <Route path="/video/:id" element={<VideoShare />} />
       <Route path="/install" element={<InstallApp />} />
       <Route path="/deck-builder" element={<DeckBuilder />} />
+      <Route path="/weekly-tournaments" element={<WeeklyTournaments />} />
+      <Route path="/create-weekly-tournament" element={<CreateWeeklyTournament />} />
+      <Route path="/my-tournaments" element={<MyTournaments />} />
+      <Route path="/tournament-manager" element={<TournamentManager />} />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
     </Routes>
@@ -101,6 +110,7 @@ const AppContent = () => {
 
   return (
     <BrowserRouter>
+      <ConditionalMonetagLoader />
       <DuelInviteNotification currentUserId={user?.id} />
       <NotificationPrompt />
       <RouterContent />

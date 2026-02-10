@@ -2,24 +2,17 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Navbar } from "@/components/Navbar";
+import { ProNavbar } from "@/components/ProNavbar";
 import { TournamentCard } from "@/components/TournamentCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Trophy, Plus, Crown, Users, Settings } from "lucide-react";
+import { Trophy, Plus, Crown } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useAccountType } from "@/hooks/useAccountType";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { useBanCheck } from "@/hooks/useBanCheck";
+import { TournamentNotifications } from "@/components/tournament/TournamentNotifications";
 
-const Tournaments = () => {
-  useBanCheck(); // Proteger contra usuários banidos
+const ProTournaments = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isAdmin } = useAdmin();
@@ -73,104 +66,47 @@ const Tournaments = () => {
     }
   };
 
-  const joinTournament = async (tournamentId: string) => {
-    if (!currentUser) return;
-
-    try {
-      setLoading(true);
-      
-      const { data, error } = await supabase.functions.invoke('charge-tournament-entry-fee', {
-        body: { tournament_id: tournamentId },
-      });
-
-      if (error || !data?.success) {
-        throw new Error(data?.message || error?.message || 'Erro ao se inscrever');
-      }
-
-      toast({
-        title: "Inscrição realizada!",
-        description: data.message,
-      });
-
-      await fetchTournaments();
-    } catch (error: any) {
-      toast({
-        title: "Erro ao se inscrever",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const upcomingTournaments = tournaments.filter(t => t.status === 'upcoming');
   const activeTournaments = tournaments.filter(t => t.status === 'active');
   const completedTournaments = tournaments.filter(t => t.status === 'completed');
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar />
+      <ProNavbar />
       
       <main className="container mx-auto px-4 pt-20 sm:pt-24 pb-12">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
-          <div>
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gradient-mystic mb-2">
-              Torneios
-            </h1>
-            <p className="text-sm sm:text-base text-muted-foreground">
-              Participe de torneios e ganhe recompensas
-            </p>
+        {/* PRO Header */}
+        <div className="mb-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Crown className="w-8 h-8 text-yellow-500" />
+            <div>
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gradient-pro bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600">
+                Torneios PRO
+              </h1>
+              <p className="text-sm sm:text-base text-muted-foreground">
+                Participe de torneios e ganhe recompensas
+              </p>
+            </div>
           </div>
-
-          {canCreateTournament ? (
-            <div className="flex gap-2 w-full sm:w-auto">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-yellow-500 font-medium">Zero Anúncios</span>
+              <Crown className="w-5 h-5 text-yellow-500" />
+            </div>
+            {canCreateTournament && (
               <Button
-                variant="outline"
-                className="flex-1 sm:flex-none"
-                onClick={() => navigate("/tournament-manager")}
-              >
-                <Settings className="mr-2 h-4 w-4" />
-                <span className="hidden sm:inline">Gerenciador</span>
-              </Button>
-              <Button
-                className="btn-mystic text-white flex-1 sm:flex-none"
-                onClick={() => navigate("/create-tournament")}
+                className="btn-mystic text-white"
+                onClick={() => navigate("/pro/create-tournament")}
               >
                 <Plus className="mr-2 h-4 w-4" />
-                <span className="hidden sm:inline">Criar Torneio</span>
-                <span className="sm:hidden">Criar</span>
+                Criar Torneio
               </Button>
-            </div>
-          ) : (
-            <div className="flex gap-2 w-full sm:w-auto">
-              <Button
-                variant="outline"
-                className="flex-1 sm:flex-none"
-                onClick={() => navigate("/my-tournaments")}
-              >
-                <Users className="mr-2 h-4 w-4" />
-                <span className="hidden sm:inline">Meus Torneios</span>
-              </Button>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className="flex-1 sm:flex-none">
-                      <Button disabled className="opacity-50 w-full">
-                        <Crown className="mr-2 h-4 w-4" />
-                        <span className="hidden sm:inline">Criar (PRO)</span>
-                        <span className="sm:hidden">PRO</span>
-                      </Button>
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Apenas usuários PRO ou Admin podem criar torneios</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-          )}
+            )}
+          </div>
         </div>
+
+        {/* Tournament Notifications for Pending Matches */}
+        <TournamentNotifications userId={currentUser?.id} />
 
         <Tabs defaultValue="upcoming" className="space-y-4 sm:space-y-6">
           <TabsList className="w-full sm:w-auto grid grid-cols-3 sm:inline-flex">
@@ -208,7 +144,9 @@ const Tournaments = () => {
                   <TournamentCard
                     key={tournament.id}
                     tournament={tournament}
-                    onJoin={joinTournament}
+                    onJoin={async (id) => {
+                      // Handle join for PRO users
+                    }}
                   />
                 ))}
               </div>
@@ -256,4 +194,4 @@ const Tournaments = () => {
   );
 };
 
-export default Tournaments;
+export default ProTournaments;

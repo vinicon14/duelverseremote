@@ -1160,13 +1160,16 @@ export type Database = {
           entry_fee?: number
           entry_type?: string | null
           id?: string
+          is_weekly?: boolean
           max_participants?: number
           min_participants?: number | null
           name?: string
+          prize_paid?: boolean
           prize_pool?: number
           rules?: string | null
           start_date?: string
           status?: string
+          total_collected?: number
           total_prize?: number
           total_rounds?: number | null
           tournament_type?: string | null
@@ -1347,6 +1350,39 @@ export type Database = {
       transfer_duelcoins: {
         Args: { p_amount: number; p_receiver_id: string }
         Returns: Json
+      }
+      create_weekly_tournament: {
+        Args: {
+          p_name: string
+          p_description: string
+          p_prize_pool: number
+          p_entry_fee: number
+          p_max_participants?: number
+        }
+        Returns: Json
+      }
+      join_weekly_tournament: {
+        Args: { p_tournament_id: string }
+        Returns: Json
+      }
+      distribute_weekly_tournament_prize: {
+        Args: {
+          p_tournament_id: string
+          p_winner_id: string
+        }
+        Returns: Json
+      }
+      process_expired_weekly_tournaments: {
+        Args: never
+        Returns: Json
+      }
+      get_weekly_tournaments: {
+        Args: never
+        Returns: Json
+      }
+      is_user_joined_in_tournament: {
+        Args: { p_tournament_id: string }
+        Returns: boolean
       }
     }
     Enums: {

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/Navbar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { Trophy, Users, Calendar, Coins, ArrowLeft } from "lucide-react";
+import { Trophy, Users, Calendar, Coins, ArrowLeft, Swords } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { TournamentWinnerSelector } from "@/components/TournamentWinnerSelector";
@@ -216,6 +216,79 @@ const TournamentDetail = () => {
     }
   };
 
+  const challengeOpponent = async (opponentId: string) => {
+    if (!currentUser || !id) return;
+
+    try {
+      // Check if user already in active duel
+      const { data: existingDuels } = await supabase
+        .from('live_duels')
+        .select('id, status')
+        .or(`creator_id.eq.${currentUser.id},opponent_id.eq.${currentUser.id}`)
+        .in('status', ['waiting', 'in_progress']);
+
+      if (existingDuels && existingDuels.length > 0) {
+        toast({
+          title: "Você já está em um duelo",
+          description: "Termine ou saia do duelo atual antes de desafiar.",
+          variant: "destructive",
+        });
+        navigate(`/duel/${existingDuels[0].id}`);
+        return;
+      }
+
+      // Check if opponent is available
+      const { data: opponentDuels } = await supabase
+        .from('live_duels')
+        .select('id, status')
+        .or(`creator_id.eq.${opponentId},opponent_id.eq.${opponentId}`)
+        .in('status', ['waiting', 'in_progress']);
+
+      if (opponentDuels && opponentDuels.length > 0) {
+        toast({
+          title: "Oponente ocupado",
+          description: "Seu adversário já está em outro duelo.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Create duel
+      const { data: duelData, error: duelError } = await supabase
+        .from('live_duels')
+        .insert({
+          creator_id: currentUser.id,
+          status: 'waiting',
+          is_ranked: false,
+        })
+        .select()
+        .single();
+
+      if (duelError) throw duelError;
+
+      // Create invite
+      await supabase.from('duel_invites').insert({
+        sender_id: currentUser.id,
+        receiver_id: opponentId,
+        duel_id: duelData.id,
+        status: 'pending',
+      });
+
+      toast({
+        title: "Desafio enviado!",
+        description: "Convite enviado para seu adversário.",
+      });
+
+      navigate(`/duel/${duelData.id}`);
+    } catch (error: any) {
+      toast({
+        title: "Erro ao criar desafio",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -406,6 +479,32 @@ const TournamentDetail = () => {
                                     {match.status === 'in_progress' && 'Em Andamento'}
                                     {match.status === 'completed' && 'Concluído'}
                                   </Badge>
+                                  {tournament.status === 'active' && match.status === 'pending' && (
+                                    <>
+                                      {/* Botão de desafio para player1 */}
+                                      {match.player1_id === currentUser?.id && match.player2_id && (
+                                        <Button
+                                          size="sm"
+                                          onClick={() => challengeOpponent(match.player2_id)}
+                                          className="btn-mystic text-white"
+                                        >
+                                          <Swords className="w-3 h-3 mr-1" />
+                                          Desafiar
+                                        </Button>
+                                      )}
+                                      {/* Botão de desafio para player2 */}
+                                      {match.player2_id === currentUser?.id && match.player1_id && (
+                                        <Button
+                                          size="sm"
+                                          onClick={() => challengeOpponent(match.player1_id)}
+                                          className="btn-mystic text-white"
+                                        >
+                                          <Swords className="w-3 h-3 mr-1" />
+                                          Desafiar
+                                        </Button>
+                                      )}
+                                    </>
+                                  )}
                                   {tournament.status === 'active' &&
                                     tournament.created_by === currentUser?.id &&
                                     match.status === 'pending' &&
