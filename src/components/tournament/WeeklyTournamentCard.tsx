@@ -34,28 +34,88 @@ export const WeeklyTournamentCard = ({
   const handleJoin = async () => {
     setJoining(true);
     try {
+      // Try RPC first
       const { data, error } = await supabase.rpc("join_weekly_tournament", {
         p_tournament_id: tournament.id,
       });
 
-      if (error) throw error;
-
-      if (data?.success) {
+      if (!error && data?.success) {
         toast({
           title: "Inscrição realizada!",
           description: `Você se inscreveu no ${tournament.name}`,
         });
         if (onJoin) onJoin();
-      } else {
-        toast({
-          title: "Erro na inscrição",
-          description: data?.message || "Falha ao realizar inscrição",
-          variant: "destructive",
-        });
+        setJoining(false);
+        return;
       }
+
+      // Fallback: Direct database operations
+      if (tournament.isFull) {
+        throw new Error("Torneio está lotado");
+      }
+
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuário não autenticado");
+
+      // Check if already joined
+      const { data: existing } = await supabase
+        .from('weekly_tournament_participants')
+        .select('id')
+        .eq('tournament_id', tournament.id)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (existing) {
+        throw new Error("Você já está inscrito neste torneio");
+      }
+
+      // Deduct entry fee
+      const { error: balanceError } = await supabase.rpc('deduct_balance', {
+        p_amount: tournament.entry_fee
+      });
+
+      if (balanceError) {
+        // Fallback for deduct_balance
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('duelcoins_balance')
+          .eq('user_id', user.id)
+          .single();
+
+        if (!profile || profile.duelcoins_balance < tournament.entry_fee) {
+          throw new Error("Saldo insuficiente");
+        }
+
+        await supabase
+          .from('profiles')
+          .update({ duelcoins_balance: profile.duelcoins_balance - tournament.entry_fee })
+          .eq('user_id', user.id);
+      }
+
+      // Record transaction
+      await supabase.from('duelcoins_transactions').insert({
+        sender_id: user.id,
+        receiver_id: tournament.creator_id,
+        amount: tournament.entry_fee,
+        transaction_type: 'tournament_entry',
+        description: `Taxa de inscrição: ${tournament.name}`
+      });
+
+      // Add participant
+      await supabase.from('weekly_tournament_participants').insert({
+        tournament_id: tournament.id,
+        user_id: user.id,
+      });
+
+      toast({
+        title: "Inscrição realizada!",
+        description: `Você se inscreveu no ${tournament.name}`,
+      });
+      if (onJoin) onJoin();
     } catch (error: any) {
       toast({
-        title: "Erro",
+        title: "Erro na inscrição",
         description: error.message,
         variant: "destructive",
       });

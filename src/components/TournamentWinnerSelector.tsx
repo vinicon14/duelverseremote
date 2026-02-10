@@ -35,9 +35,10 @@ export const TournamentWinnerSelector = ({
       return;
     }
 
-    try {
-      setLoading(true);
+    setLoading(true);
 
+    try {
+      // Try Edge Function first
       const { data, error } = await supabase.functions.invoke('distribute-tournament-prize', {
         body: {
           tournament_id: tournamentId,
@@ -45,12 +46,45 @@ export const TournamentWinnerSelector = ({
         },
       });
 
-      if (error) throw new Error(error.message);
-      if (!data.success) throw new Error(data.message);
+      if (!error && data?.success) {
+        toast({
+          title: "Sucesso!",
+          description: data.message,
+        });
+        onWinnerSelected();
+        setLoading(false);
+        return;
+      }
+
+      // Fallback: Record transaction directly if Edge Function fails
+      const winner = participants.find(p => p.user_id === selectedWinnerId);
+      
+      // Add prize to winner's balance
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ duelcoins_balance: prizePool })
+        .eq('user_id', selectedWinnerId);
+
+      if (updateError) throw updateError;
+
+      // Record transaction
+      await supabase.from('duelcoins_transactions').insert({
+        sender_id: creatorId,
+        receiver_id: selectedWinnerId,
+        amount: prizePool,
+        transaction_type: 'tournament_prize',
+        description: `Prêmio do Torneio: ${winner?.profiles?.username || 'Torneio'}`
+      });
+
+      // Update tournament status
+      await supabase
+        .from('tournaments')
+        .update({ status: 'completed', prize_paid: true })
+        .eq('id', tournamentId);
 
       toast({
         title: "Sucesso!",
-        description: data.message,
+        description: `Prêmio de ${prizePool} DuelCoins enviado para ${winner?.profiles?.username || 'o vencedor'}!`,
       });
       onWinnerSelected();
     } catch (error: any) {

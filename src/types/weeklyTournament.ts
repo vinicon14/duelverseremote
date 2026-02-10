@@ -1,14 +1,20 @@
-import { Database } from "@/integrations/supabase/types";
-
-export type WeeklyTournament = Database["public"]["Tables"]["tournaments"]["Row"] & {
-  is_weekly: true;
+export interface WeeklyTournamentWithCount {
+  id: string;
+  name: string;
+  description: string | null;
+  prize_pool: number;
+  entry_fee: number;
+  max_participants: number;
+  start_date: string;
+  end_date: string;
+  status: string;
+  creator_id: string;
+  created_at: string;
+  participant_count: number;
   total_collected: number;
   prize_paid: boolean;
-  participant_count?: number;
-};
-
-export interface WeeklyTournamentWithCount extends WeeklyTournament {
-  participant_count: number;
+  is_weekly?: boolean;
+  isFull?: boolean;
 }
 
 export interface CreateWeeklyTournamentInput {
