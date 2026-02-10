@@ -236,14 +236,16 @@ export const AdminDuelCoins = () => {
   };
 
   const getTransactionBadge = (type: string) => {
-    const badges = {
+    const badges: Record<string, React.ReactNode> = {
       'transfer': <Badge variant="outline">Transferência</Badge>,
       'admin_add': <Badge className="bg-green-500">Admin +</Badge>,
       'admin_remove': <Badge className="bg-red-500">Admin -</Badge>,
       'tournament_entry': <Badge variant="secondary">Torneio</Badge>,
-      'tournament_prize': <Badge className="bg-yellow-500">Prêmio</Badge>
+      'tournament_prize': <Badge className="bg-yellow-500">Prêmio</Badge>,
+      'tournament_win': <Badge className="bg-yellow-500">Vitória</Badge>,
+      'tournament_refund': <Badge variant="outline">Reembolso</Badge>,
     };
-    return badges[type as keyof typeof badges] || <Badge>{type}</Badge>;
+    return badges[type] || <Badge variant="outline">{type}</Badge>;
   };
 
   return (
