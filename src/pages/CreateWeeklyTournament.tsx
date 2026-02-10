@@ -42,7 +42,7 @@ const CreateWeeklyTournament = () => {
         .from("profiles")
         .select("duelcoins_balance")
         .eq("user_id", user.id)
-        .single({ count: null });
+        .single();
       if (data) {
         setUserBalance(data.duelcoins_balance || 0);
       }
@@ -76,6 +76,7 @@ const CreateWeeklyTournament = () => {
 
     try {
       // Try RPC first (works after cache is updated)
+      console.log('Criando torneio com prêmio:', prizePool, 'DC');
       const { data, error } = await supabase.rpc("create_weekly_tournament", {
         p_name: name,
         p_description: description,
@@ -84,7 +85,10 @@ const CreateWeeklyTournament = () => {
         p_max_participants: 32,
       });
 
+      console.log('RPC response:', { data, error });
+
       if (error) {
+        console.log('RPC error, using fallback...');
         // If RPC fails due to schema cache, try direct insert with balance deduction
         
         // Check balance first
@@ -94,7 +98,9 @@ const CreateWeeklyTournament = () => {
           .eq('user_id', user.id)
           .single();
         
-        if (profileError || (profile.duelcoins_balance || 0) < prizePool) {
+        console.log('Profile balance:', profile?.duelcoins_balance);
+        
+        if (profileError || (profile?.duelcoins_balance || 0) < prizePool) {
           throw new Error('Saldo insuficiente para criar este torneio');
         }
         
@@ -104,6 +110,7 @@ const CreateWeeklyTournament = () => {
           .update({ duelcoins_balance: profile.duelcoins_balance - prizePool })
           .eq('user_id', user.id);
         
+        console.log('Balance update result:', { updateError });
         if (updateError) throw updateError;
         
         // Record transaction
@@ -134,6 +141,7 @@ const CreateWeeklyTournament = () => {
           .select()
           .single();
 
+        console.log('Tournament created:', { tournament, insertError });
         if (insertError) throw insertError;
 
         toast({
@@ -154,6 +162,7 @@ const CreateWeeklyTournament = () => {
       }
 
       if (data?.success) {
+        console.log('RPC success, tournament_id:', data.tournament_id);
         toast({
           title: "Torneio Semanal criado com sucesso!",
           description: (
@@ -169,6 +178,7 @@ const CreateWeeklyTournament = () => {
         await fetchUserBalance();
         navigate(`/tournament/${data.tournament_id}`);
       } else {
+        console.log('RPC returned success=false:', data);
         throw new Error(data?.message || "Erro ao criar torneio");
       }
     } catch (error: any) {
