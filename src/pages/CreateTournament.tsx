@@ -51,7 +51,7 @@ const CreateTournament = () => {
 
     try {
       // Use RPC function to handle prize pool deduction atomically
-      const { data, error } = await supabase.rpc("create_normal_tournament", {
+      const { data, error } = await (supabase as any).rpc("create_normal_tournament", {
         p_name: name,
         p_description: description,
         p_start_date: startDate,

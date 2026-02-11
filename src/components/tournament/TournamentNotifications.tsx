@@ -22,10 +22,7 @@ interface PendingMatch {
   opponent_id: string;
   opponent_username: string;
   round: number;
-  match_deadline: string;
-  duel_room_id: string | null;
-  player1_reported: boolean;
-  player2_reported: boolean;
+  match_deadline: string | null;
 }
 
 export const TournamentNotifications = ({ userId }: TournamentNotificationsProps) => {
@@ -66,18 +63,15 @@ export const TournamentNotifications = ({ userId }: TournamentNotificationsProps
 
     try {
       // Get user's pending matches in active tournaments
-      const { data: matches, error } = await supabase
+      const { data: matches, error } = await (supabase as any)
         .from('tournament_matches')
         .select(`
           id,
           tournament_id,
           round,
           match_deadline,
-          duel_room_id,
           player1_id,
           player2_id,
-          player1_reported,
-          player2_reported,
           tournaments!inner(
             name,
             status,
@@ -109,8 +103,8 @@ export const TournamentNotifications = ({ userId }: TournamentNotificationsProps
             ...match,
             opponent_id: opponentId,
             opponent_username: opponentUsername,
-            tournament_name: match.tournaments.name,
-          };
+            tournament_name: (match as any).tournaments?.name || 'Torneio',
+          } as PendingMatch;
         })
       );
 
@@ -180,8 +174,7 @@ export const TournamentNotifications = ({ userId }: TournamentNotificationsProps
 
         {pendingMatches.map((match) => {
           const timeRemaining = getTimeRemaining(match.match_deadline);
-          const isPlayer1 = match.player1_id === userId;
-          const hasReported = isPlayer1 ? match.player1_reported : match.player2_reported;
+          const hasReported = false; // Will be implemented with reports system
 
           return (
             <Card key={match.id} className={`card-mystic ${timeRemaining.urgent ? 'border-red-500/50' : ''}`}>
@@ -235,8 +228,7 @@ export const TournamentNotifications = ({ userId }: TournamentNotificationsProps
                   </Button>
                   <Button
                     className="flex-1 btn-mystic text-white"
-                    onClick={() => handleEnterRoom(match.duel_room_id, match.id)}
-                    disabled={!match.duel_room_id}
+                    onClick={() => navigate(`/tournaments/${match.tournament_id}`)}
                   >
                     Entrar na Sala
                   </Button>

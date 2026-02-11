@@ -49,7 +49,7 @@ export const CreatorTournamentDashboard = ({
   const fetchMatchesWithReports = async () => {
     try {
       // Fetch matches
-      const { data: matchesData, error: matchesError } = await supabase
+      const { data: matchesData, error: matchesError } = await (supabase as any)
         .from('tournament_matches')
         .select(`
           id, round, player1_id, player2_id, status, match_deadline,
@@ -66,7 +66,7 @@ export const CreatorTournamentDashboard = ({
       let reportsByMatch: Record<string, any[]> = {};
 
       if (matchIds.length > 0) {
-        const { data: reportsData } = await supabase
+        const { data: reportsData } = await (supabase as any)
           .from('tournament_match_reports')
           .select(`
             match_id, reporter_id, reported_result, is_creator, created_at
@@ -156,7 +156,7 @@ export const CreatorTournamentDashboard = ({
   const handleSetWinner = async (matchId: string, winnerId: string) => {
     try {
       // Call Supabase function to set winner
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .rpc('set_match_winner', {
           p_match_id: matchId,
           p_winner_id: winnerId

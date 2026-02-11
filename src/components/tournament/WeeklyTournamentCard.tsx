@@ -35,7 +35,7 @@ export const WeeklyTournamentCard = ({
     setJoining(true);
     try {
       // Try RPC first
-      const { data, error } = await supabase.rpc("join_weekly_tournament", {
+      const { data, error } = await (supabase as any).rpc("join_weekly_tournament", {
         p_tournament_id: tournament.id,
       });
 
@@ -59,8 +59,8 @@ export const WeeklyTournamentCard = ({
       if (!user) throw new Error("Usuário não autenticado");
 
       // Check if already joined
-      const { data: existing } = await supabase
-        .from('weekly_tournament_participants')
+      const { data: existing } = await (supabase as any)
+        .from('tournament_participants')
         .select('id')
         .eq('tournament_id', tournament.id)
         .eq('user_id', user.id)
@@ -70,40 +70,32 @@ export const WeeklyTournamentCard = ({
         throw new Error("Você já está inscrito neste torneio");
       }
 
-      // Deduct entry fee
-      const { error: balanceError } = await supabase.rpc('deduct_balance', {
-        p_amount: tournament.entry_fee
-      });
+      // Deduct entry fee directly
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('duelcoins_balance')
+        .eq('user_id', user.id)
+        .single();
 
-      if (balanceError) {
-        // Fallback for deduct_balance
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('duelcoins_balance')
-          .eq('user_id', user.id)
-          .single();
-
-        if (!profile || profile.duelcoins_balance < tournament.entry_fee) {
-          throw new Error("Saldo insuficiente");
-        }
-
-        await supabase
-          .from('profiles')
-          .update({ duelcoins_balance: profile.duelcoins_balance - tournament.entry_fee })
-          .eq('user_id', user.id);
+      if (!profile || profile.duelcoins_balance < tournament.entry_fee) {
+        throw new Error("Saldo insuficiente");
       }
 
+      await supabase
+        .from('profiles')
+        .update({ duelcoins_balance: profile.duelcoins_balance - tournament.entry_fee })
+        .eq('user_id', user.id);
+
       // Record transaction
-      await supabase.from('duelcoins_transactions').insert({
+      await (supabase as any).from('duelcoins_transactions').insert({
         sender_id: user.id,
-        receiver_id: tournament.creator_id,
         amount: tournament.entry_fee,
         transaction_type: 'tournament_entry',
         description: `Taxa de inscrição: ${tournament.name}`
       });
 
       // Add participant
-      await supabase.from('weekly_tournament_participants').insert({
+      await supabase.from('tournament_participants').insert({
         tournament_id: tournament.id,
         user_id: user.id,
       });

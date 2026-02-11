@@ -57,7 +57,7 @@ export const TournamentMatchReportModal = ({
       if (!match) throw new Error("Partida não encontrada");
 
       // Submit report (using insert since table might not exist yet)
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('tournament_match_reports')
         .insert({
           match_id: matchId,
