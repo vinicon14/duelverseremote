@@ -209,8 +209,8 @@ export const Navbar = () => {
               <Menu className="h-6 w-6" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="right" className="w-64 overflow-y-auto">
-            <div className="flex flex-col space-y-4 mt-8">
+          <SheetContent side="right" className="w-64 h-screen overflow-y-auto">
+            <div className="flex flex-col space-y-4 pt-8 h-full">
               <NavLinks />
               {user ? (
                 <>
