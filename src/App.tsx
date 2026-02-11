@@ -11,7 +11,6 @@ import { DuelInviteNotification } from "@/components/DuelInviteNotification";
 import { NotificationPrompt } from "@/components/NotificationPrompt";
 import { useRealtimeNotifications } from "@/hooks/useRealtimeNotifications";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
-import { useDuelInviteNotifications } from "@/hooks/useDuelInviteNotifications";
 import Home from "./pages/Home";
 import Landing from "./pages/Landing";
 import Admin from "./pages/Admin";
@@ -85,10 +84,7 @@ const AppContent = () => {
 
   // Enable realtime notifications
   useRealtimeNotifications(user?.id);
-
-  // Enable duel invite notifications with buttons
-  useDuelInviteNotifications(user?.id);
-
+  
   // Enable online status tracking
   useOnlineStatus();
 
