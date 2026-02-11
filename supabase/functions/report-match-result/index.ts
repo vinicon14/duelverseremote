@@ -54,7 +54,7 @@ serve(async (req) => {
 
     const { data: match, error: matchError } = await supabase
       .from('tournament_matches')
-      .select('*, tournaments!inner(created_by, status, current_round, total_rounds)')
+      .select('*, tournament:tournaments!inner(id, created_by, status, current_round, total_rounds, prize_pool, name)')
       .eq('id', match_id)
       .single();
 
@@ -65,7 +65,7 @@ serve(async (req) => {
       });
     }
 
-    if (match.tournaments.created_by !== user.id) {
+    if (match.tournament.created_by !== user.id) {
       return new Response(JSON.stringify({ success: false, error: 'Apenas o criador do torneio pode reportar resultados' }), {
         status: 403,
         headers: { ...corsHeaders, ...securityHeaders, 'Content-Type': 'application/json' },
@@ -124,7 +124,7 @@ serve(async (req) => {
 
     const allCompleted = roundMatches?.every(m => m.status === 'completed');
 
-    if (allCompleted && roundMatches && match.round < match.tournaments.total_rounds) {
+    if (allCompleted && roundMatches && match.round < match.tournament.total_rounds) {
       const winners = roundMatches.map(m => m.winner_id).filter(Boolean);
       const nextRoundMatches = [];
 
@@ -151,14 +151,57 @@ serve(async (req) => {
 
       await supabase.from('tournament_matches').insert(nextRoundMatches);
       await supabase.from('tournaments').update({ current_round: match.round + 1 }).eq('id', match.tournament_id);
-    } else if (allCompleted && match.round === match.tournaments.total_rounds) {
-      await supabase.from('tournaments').update({ status: 'completed' }).eq('id', match.tournament_id);
+    } else if (allCompleted && match.round === match.tournament.total_rounds) {
+      // Final da última rodada - distribuir prêmio automaticamente
+      const finalWinnerId = winner_id;
+      
+      if (match.tournament.prize_pool > 0) {
+        // Buscar perfil do vencedor
+        const { data: winnerProfile } = await supabase
+          .from('profiles')
+          .select('duelcoins_balance, username')
+          .eq('user_id', finalWinnerId)
+          .single();
+
+        if (winnerProfile) {
+          // Transferir prêmio para o vencedor
+          await supabase
+            .from('profiles')
+            .update({ duelcoins_balance: winnerProfile.duelcoins_balance + match.tournament.prize_pool })
+            .eq('user_id', finalWinnerId);
+
+          // Registrar transação no histórico
+          await supabase
+            .from('duelcoins_transactions')
+            .insert({
+              sender_id: null,
+              receiver_id: finalWinnerId,
+              amount: match.tournament.prize_pool,
+              transaction_type: 'tournament_prize',
+              tournament_id: match.tournament_id,
+              description: `Prêmio do torneio: ${match.tournament.name}`
+            });
+        }
+      }
+
+      // Atualizar status do vencedor
+      await supabase
+        .from('tournament_participants')
+        .update({ status: 'winner' })
+        .eq('tournament_id', match.tournament_id)
+        .eq('user_id', finalWinnerId);
+
+      // Marcar torneio como completado
+      await supabase
+        .from('tournaments')
+        .update({ status: 'completed', end_date: new Date().toISOString() })
+        .eq('id', match.tournament_id);
     }
 
     return new Response(JSON.stringify({ 
       success: true, 
       message: 'Resultado reportado com sucesso!',
-      next_round_generated: allCompleted && match.round < match.tournaments.total_rounds
+      next_round_generated: allCompleted && match.round < match.tournament.total_rounds
     }), {
       status: 200,
       headers: { ...corsHeaders, ...securityHeaders, 'Content-Type': 'application/json' },
