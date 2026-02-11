@@ -22,6 +22,7 @@ const TournamentDetail = () => {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isGeneratingBracket, setIsGeneratingBracket] = useState(false);
+  const [isCompletingTournament, setIsCompletingTournament] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -305,6 +306,54 @@ const TournamentDetail = () => {
     }
   };
 
+  // Função para finalizar torneio manualmente (fallback)
+  const completeTournamentManually = async () => {
+    if (!id || !currentUser) return;
+    
+    // Verificar se é o criador
+    if (tournament?.created_by !== currentUser.id) {
+      toast({
+        title: "Acesso negado",
+        description: "Apenas o criador pode finalizar o torneio",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsCompletingTournament(true);
+    try {
+      // Chamar a função RPC para finalizar
+      const { data, error } = await supabase
+        .rpc('check_and_complete_tournament', {
+          p_tournament_id: id
+        });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        toast({
+          title: "Torneio finalizado!",
+          description: data.message,
+        });
+        await fetchTournamentData();
+      } else {
+        toast({
+          title: "Não foi possível finalizar",
+          description: data?.message || "Verifique se todas as partidas foram completadas",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Erro ao finalizar",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsCompletingTournament(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -444,15 +493,30 @@ const TournamentDetail = () => {
                 )}
                 
                 {tournament.status === 'active' && tournament.created_by === currentUser?.id && (
-                  <TournamentWinnerSelector
-                    tournamentId={id!}
-                    participants={participants}
-                    prizePool={tournament.prize_pool}
-                    creatorId={tournament.created_by}
-                    onWinnerSelected={() => {
-                      fetchTournamentData();
-                    }}
-                  />
+                  <>
+                    <TournamentWinnerSelector
+                      tournamentId={id!}
+                      participants={participants}
+                      prizePool={tournament.prize_pool}
+                      creatorId={tournament.created_by}
+                      onWinnerSelected={() => {
+                        fetchTournamentData();
+                      }}
+                    />
+                    <div className="mt-4 pt-4 border-t border-border">
+                      <p className="text-xs text-muted-foreground mb-2">
+                        Se o prêmio não foi distribuído automaticamente:
+                      </p>
+                      <Button
+                        onClick={completeTournamentManually}
+                        variant="outline"
+                        className="w-full"
+                        disabled={isCompletingTournament}
+                      >
+                        {isCompletingTournament ? 'Finalizando...' : 'Finalizar e Pagar Prêmio Manualmente'}
+                      </Button>
+                    </div>
+                  </>
                 )}
               </CardContent>
             </Card>
