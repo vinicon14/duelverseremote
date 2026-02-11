@@ -87,49 +87,28 @@ serve(async (req) => {
       );
     }
 
-    // Transferir prize pool para o vencedor
-    if (tournament.prize_pool > 0) {
-      const { data: winnerProfile } = await supabaseClient
-        .from('profiles')
-        .select('duelcoins_balance, username')
-        .eq('user_id', winner_id)
-        .single();
+    // Usar a função RPC para finalizar e pagar o vencedor
+    const { data: result, error: finalizeError } = await supabaseClient
+      .rpc('finalize_tournament_and_pay_winner', {
+        p_tournament_id: tournament_id,
+        p_winner_id: winner_id
+      });
 
-      if (!winnerProfile) {
-        return new Response(
-          JSON.stringify({ success: false, message: 'Perfil do vencedor não encontrado' }),
-          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      // Adicionar prêmio ao vencedor
-      await supabaseClient
-        .from('profiles')
-        .update({ 
-          duelcoins_balance: winnerProfile.duelcoins_balance + tournament.prize_pool 
-        })
-        .eq('user_id', winner_id);
-
-      // Registrar transação
-      await supabaseClient
-        .from('duelcoins_transactions')
-        .insert({
-          sender_id: null,
-          receiver_id: winner_id,
-          amount: tournament.prize_pool,
-          transaction_type: 'tournament_prize',
-          description: `Prêmio do torneio: ${tournament.name}`
-        });
+    if (finalizeError) {
+      console.error('Error finalizing tournament:', finalizeError);
+      return new Response(
+        JSON.stringify({ success: false, message: 'Erro ao finalizar torneio: ' + finalizeError.message }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    // Atualizar status do torneio
-    await supabaseClient
-      .from('tournaments')
-      .update({ 
-        status: 'completed',
-        end_date: new Date().toISOString()
-      })
-      .eq('id', tournament_id);
+    // Verificar resultado da função RPC
+    if (result && !result.success) {
+      return new Response(
+        JSON.stringify({ success: false, message: result.message }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     return new Response(
       JSON.stringify({
