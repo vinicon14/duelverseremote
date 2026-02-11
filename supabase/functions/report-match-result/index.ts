@@ -122,32 +122,15 @@ serve(async (req) => {
     }
 
     // Check if all matches in current round are completed
-    console.log(`Checking round completion. Match round: ${match.round}, Tournament total_rounds: ${match.tournament.total_rounds}`);
-    console.log(`Tournament ID: ${match.tournament_id}, Current round from match: ${match.round}`);
-    
-    const { data: roundMatches, error: roundError } = await supabase
+    const { data: roundMatches } = await supabase
       .from('tournament_matches')
-      .select('id, status, winner_id, round')
+      .select('id, status, winner_id')
       .eq('tournament_id', match.tournament_id)
       .eq('round', match.round);
 
-    if (roundError) {
-      console.error('Error fetching round matches:', roundError);
-    }
-
-    console.log(`Found ${roundMatches?.length || 0} matches in current round`);
-    console.log('Round matches:', JSON.stringify(roundMatches));
-
     const allCompleted = roundMatches?.every(m => m.status === 'completed');
-    console.log(`All matches completed: ${allCompleted}`);
 
-    // Converte para número para garantir comparação correta
-    const currentRound = Number(match.round);
-    const totalRounds = Number(match.tournament.total_rounds);
-    
-    console.log(`Comparing rounds: current=${currentRound}, total=${totalRounds}, isFinal=${currentRound === totalRounds}`);
-
-    if (allCompleted && roundMatches && currentRound < totalRounds) {
+    if (allCompleted && roundMatches && match.round < match.tournament.total_rounds) {
       // Generate next round matches
       const winners = roundMatches.map(m => m.winner_id).filter(Boolean);
       const nextRoundMatches = [];
@@ -181,19 +164,96 @@ serve(async (req) => {
         .from('tournaments')
         .update({ current_round: match.round + 1 })
         .eq('id', match.tournament_id);
-    } else if (allCompleted && currentRound === totalRounds) {
-      console.log('FINAL ROUND DETECTED! Processing prize distribution...');
+    } else if (allCompleted && match.round === match.tournament.total_rounds) {
+      // Final da última rodada - distribuir prêmio automaticamente
+      console.log(`Tournament ${match.tournament_id} final match completed. Winner: ${winner_id}`);
+      const finalWinnerId = winner_id;
       
-      // Usar a função RPC para finalizar o torneio e pagar o prêmio
-      const { data: result, error: finalizeError } = await supabase
-        .rpc('check_and_complete_tournament', {
-          p_tournament_id: match.tournament_id
-        });
+      // Calcular o prêmio baseado nas taxas de entrada pagas
+      const { data: entryFees } = await supabase
+        .from('duelcoins_transactions')
+        .select('amount')
+        .eq('tournament_id', match.tournament_id)
+        .eq('transaction_type', 'tournament_entry');
       
-      if (finalizeError) {
-        console.error('Error calling check_and_complete_tournament:', finalizeError);
+      const totalPrize = entryFees?.reduce((sum, tx) => sum + (tx.amount || 0), 0) || 0;
+      console.log(`Total prize calculated: ${totalPrize} DuelCoins`);
+      
+      // Se não houver taxas de entrada, usar o prize_pool do torneio
+      const prizeAmount = totalPrize > 0 ? totalPrize : match.tournament.prize_pool;
+      
+      if (prizeAmount > 0) {
+        console.log(`Distributing prize of ${prizeAmount} to winner ${finalWinnerId}`);
+        
+        // Buscar perfil do vencedor
+        const { data: winnerProfile, error: winnerError } = await supabase
+          .from('profiles')
+          .select('duelcoins_balance, username')
+          .eq('user_id', finalWinnerId)
+          .single();
+
+        if (winnerError) {
+          console.error('Error fetching winner profile:', winnerError);
+        } else if (winnerProfile) {
+          console.log(`Winner profile found. Current balance: ${winnerProfile.duelcoins_balance}`);
+          
+          // Transferir prêmio para o vencedor
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({ duelcoins_balance: winnerProfile.duelcoins_balance + prizeAmount })
+            .eq('user_id', finalWinnerId);
+
+          if (updateError) {
+            console.error('Error updating winner balance:', updateError);
+          } else {
+            console.log(`Winner balance updated to ${winnerProfile.duelcoins_balance + prizeAmount}`);
+          }
+
+          // Registrar transação no histórico
+          const { error: txError } = await supabase
+            .from('duelcoins_transactions')
+            .insert({
+              sender_id: null,
+              receiver_id: finalWinnerId,
+              amount: prizeAmount,
+              transaction_type: 'tournament_prize',
+              tournament_id: match.tournament_id,
+              description: `Prêmio do torneio: ${match.tournament.name}`
+            });
+            
+          if (txError) {
+            console.error('Error recording transaction:', txError);
+          } else {
+            console.log('Prize transaction recorded successfully');
+          }
+        } else {
+          console.error('Winner profile not found');
+        }
       } else {
-        console.log('Tournament finalization result:', JSON.stringify(result));
+        console.log('No prize to distribute (prize_amount = 0)');
+      }
+
+      // Atualizar status do vencedor
+      const { error: winnerStatusError } = await supabase
+        .from('tournament_participants')
+        .update({ status: 'winner' })
+        .eq('tournament_id', match.tournament_id)
+        .eq('user_id', finalWinnerId);
+        
+      if (winnerStatusError) {
+        console.error('Error updating winner status:', winnerStatusError);
+      }
+
+      // Marcar torneio como completado
+      const { error: tournamentError } = await supabase
+        .from('tournaments')
+        .update({ status: 'completed', end_date: new Date().toISOString() })
+        .eq('id', match.tournament_id);
+        
+      if (tournamentError) {
+        console.error('Error completing tournament:', tournamentError);
+      } else {
+        console.log('Tournament marked as completed');
       }
     }
 
