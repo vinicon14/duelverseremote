@@ -63,34 +63,61 @@ const TournamentManager = () => {
       const { data, error } = await (supabase as any)
         .rpc('get_my_created_tournaments');
 
-      if (!error && data) {
-        setTournaments(data as unknown as ManagedTournament[]);
-        setLoading(false);
-        return;
+      if (error) {
+        console.warn('RPC error:', error);
+        throw error;
       }
 
+      // Handle null or array response
+      let tournamentsData: ManagedTournament[] = [];
+      if (data) {
+        if (Array.isArray(data)) {
+          tournamentsData = data as ManagedTournament[];
+        } else if (typeof data === 'object' && data !== null) {
+          // If it's an object (JSON response), convert to array
+          tournamentsData = Object.values(data) as ManagedTournament[];
+        }
+      }
+      
+      setTournaments(tournamentsData);
+      setLoading(false);
+      return;
+
+    } catch (rpcError: any) {
+      console.warn('RPC failed, using fallback:', rpcError);
+      
       // Fallback: direct query if RPC fails
-      const { data: directData, error: directError } = await supabase
-        .from('tournaments')
-        .select('*')
-        .eq('created_by', userId)
-        .order('created_at', { ascending: false });
+      try {
+        const { data: directData, error: directError } = await supabase
+          .from('tournaments')
+          .select(`
+            *,
+            tournament_participants(count)
+          `)
+          .eq('created_by', userId)
+          .order('created_at', { ascending: false });
 
-      if (directError) throw directError;
+        if (directError) throw directError;
 
-      if (directData) {
-        const tournamentsData = directData.map(t => ({
-          ...t,
-          participant_count: 0,
-        })) as unknown as ManagedTournament[];
-        setTournaments(tournamentsData);
+        if (directData) {
+          const tournamentsData = directData.map(t => ({
+            ...t,
+            participant_count: t.tournament_participants?.[0]?.count || 0,
+            total_collected: 0,
+            prize_paid: false,
+          })) as unknown as ManagedTournament[];
+          setTournaments(tournamentsData);
+        } else {
+          setTournaments([]);
+        }
+      } catch (fallbackError: any) {
+        toast({
+          title: "Erro ao carregar torneios",
+          description: fallbackError.message,
+          variant: "destructive",
+        });
+        setTournaments([]);
       }
-    } catch (error: any) {
-      toast({
-        title: "Erro ao carregar torneios",
-        description: error.message,
-        variant: "destructive",
-      });
     } finally {
       setLoading(false);
     }
@@ -102,17 +129,60 @@ const TournamentManager = () => {
       const { data, error } = await (supabase as any)
         .rpc('get_tournament_participants', { p_tournament_id: tournamentId });
 
-      if (error) throw error;
-
-      if (data) {
-        setParticipants(data as unknown as Participant[]);
+      if (error) {
+        console.warn('RPC error fetching participants:', error);
+        throw error;
       }
-    } catch (error: any) {
-      toast({
-        title: "Erro ao carregar participantes",
-        description: error.message,
-        variant: "destructive",
-      });
+
+      // Handle null or array response
+      let participantsData: Participant[] = [];
+      if (data) {
+        if (Array.isArray(data)) {
+          participantsData = data as Participant[];
+        } else if (typeof data === 'object' && data !== null) {
+          participantsData = Object.values(data) as Participant[];
+        }
+      }
+      
+      setParticipants(participantsData);
+
+    } catch (rpcError: any) {
+      console.warn('RPC failed, using fallback for participants:', rpcError);
+      
+      // Fallback: direct query
+      try {
+        const { data: directData, error: directError } = await supabase
+          .from('tournament_participants')
+          .select(`
+            user_id,
+            registered_at,
+            status,
+            profiles(user_id, username, avatar_url, is_online)
+          `)
+          .eq('tournament_id', tournamentId);
+
+        if (directError) throw directError;
+
+        if (directData) {
+          const participantsData = directData.map((p: any) => ({
+            user_id: p.user_id,
+            username: p.profiles?.username || 'Usuário',
+            avatar_url: p.profiles?.avatar_url || '',
+            is_online: p.profiles?.is_online || false,
+            joined_at: p.registered_at,
+          })) as Participant[];
+          setParticipants(participantsData);
+        } else {
+          setParticipants([]);
+        }
+      } catch (fallbackError: any) {
+        toast({
+          title: "Erro ao carregar participantes",
+          description: fallbackError.message,
+          variant: "destructive",
+        });
+        setParticipants([]);
+      }
     } finally {
       setLoadingParticipants(false);
     }
