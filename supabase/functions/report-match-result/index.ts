@@ -122,32 +122,15 @@ serve(async (req) => {
     }
 
     // Check if all matches in current round are completed
-    console.log(`Checking round completion. Match round: ${match.round}, Tournament total_rounds: ${match.tournament.total_rounds}`);
-    console.log(`Tournament ID: ${match.tournament_id}, Current round from match: ${match.round}`);
-    
-    const { data: roundMatches, error: roundError } = await supabase
+    const { data: roundMatches } = await supabase
       .from('tournament_matches')
-      .select('id, status, winner_id, round')
+      .select('id, status, winner_id')
       .eq('tournament_id', match.tournament_id)
       .eq('round', match.round);
 
-    if (roundError) {
-      console.error('Error fetching round matches:', roundError);
-    }
-
-    console.log(`Found ${roundMatches?.length || 0} matches in current round`);
-    console.log('Round matches:', JSON.stringify(roundMatches));
-
     const allCompleted = roundMatches?.every(m => m.status === 'completed');
-    console.log(`All matches completed: ${allCompleted}`);
 
-    // Converte para número para garantir comparação correta
-    const currentRound = Number(match.round);
-    const totalRounds = Number(match.tournament.total_rounds);
-    
-    console.log(`Comparing rounds: current=${currentRound}, total=${totalRounds}, isFinal=${currentRound === totalRounds}`);
-
-    if (allCompleted && roundMatches && currentRound < totalRounds) {
+    if (allCompleted && roundMatches && match.round < match.tournament.total_rounds) {
       // Generate next round matches
       const winners = roundMatches.map(m => m.winner_id).filter(Boolean);
       const nextRoundMatches = [];
