@@ -59,10 +59,19 @@ export const TournamentWinnerSelector = ({
       // Fallback: Record transaction directly if Edge Function fails
       const winner = participants.find(p => p.user_id === selectedWinnerId);
       
+      // Get current balance and add prize
+      const { data: currentProfile } = await supabase
+        .from('profiles')
+        .select('duelcoins_balance')
+        .eq('user_id', selectedWinnerId)
+        .single();
+      
+      const newBalance = (currentProfile?.duelcoins_balance || 0) + prizePool;
+      
       // Add prize to winner's balance
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({ duelcoins_balance: prizePool })
+        .update({ duelcoins_balance: newBalance })
         .eq('user_id', selectedWinnerId);
 
       if (updateError) throw updateError;
