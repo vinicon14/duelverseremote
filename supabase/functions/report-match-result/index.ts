@@ -182,19 +182,12 @@ serve(async (req) => {
         .update({ current_round: match.round + 1 })
         .eq('id', match.tournament_id);
     } else if (allCompleted && currentRound === totalRounds) {
-      console.log('FINAL ROUND DETECTED! Processing prize distribution...');
+      console.log('FINAL ROUND DETECTED! All matches completed. Tournament ready for prize distribution.');
       
-      // Usar a função RPC para finalizar o torneio e pagar o prêmio
-      const { data: result, error: finalizeError } = await supabase
-        .rpc('check_and_complete_tournament', {
-          p_tournament_id: match.tournament_id
-        });
-      
-      if (finalizeError) {
-        console.error('Error calling check_and_complete_tournament:', finalizeError);
-      } else {
-        console.log('Tournament finalization result:', JSON.stringify(result));
-      }
+      // NÃO finalizar o torneio automaticamente aqui
+      // O torneio só deve ser finalizado através da distribuição do prêmio
+      // Registrar que a rodada final foi completada para referência
+      console.log(`Tournament ${match.tournament_id} is ready for finalization. Use distribute-tournament-prize to complete.`);
     }
 
     return new Response(JSON.stringify({ 

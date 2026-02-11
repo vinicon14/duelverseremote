@@ -56,35 +56,29 @@ export const TournamentWinnerSelector = ({
         return;
       }
 
-      // Fallback: Record transaction directly if Edge Function fails
-      const winner = participants.find(p => p.user_id === selectedWinnerId);
+      // Fallback: Use RPC function to finalize and pay winner
+      console.log('Edge Function failed, using RPC fallback:', error);
       
-      // Add prize to winner's balance
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ duelcoins_balance: prizePool })
-        .eq('user_id', selectedWinnerId);
+      const { data: rpcResult, error: rpcError } = await supabase
+        .rpc('finalize_tournament_and_pay_winner', {
+          p_tournament_id: tournamentId,
+          p_winner_id: selectedWinnerId
+        });
 
-      if (updateError) throw updateError;
+      if (rpcError) {
+        console.error('RPC fallback error:', rpcError);
+        throw new Error(rpcError.message);
+      }
 
-      // Record transaction
-      await supabase.from('duelcoins_transactions').insert({
-        sender_id: creatorId,
-        receiver_id: selectedWinnerId,
-        amount: prizePool,
-        transaction_type: 'tournament_prize',
-        description: `Prêmio do Torneio: ${winner?.profiles?.username || 'Torneio'}`
-      });
+      if (rpcResult && !rpcResult.success) {
+        throw new Error(rpcResult.message);
+      }
 
-      // Update tournament status
-      await supabase
-        .from('tournaments')
-        .update({ status: 'completed', prize_paid: true })
-        .eq('id', tournamentId);
+      const winner = participants.find(p => p.user_id === selectedWinnerId);
 
       toast({
         title: "Sucesso!",
-        description: `Prêmio de ${prizePool} DuelCoins enviado para ${winner?.profiles?.username || 'o vencedor'}!`,
+        description: rpcResult?.message || `Prêmio distribuído para ${winner?.profiles?.username || 'o vencedor'}!`,
       });
       onWinnerSelected();
     } catch (error: any) {
