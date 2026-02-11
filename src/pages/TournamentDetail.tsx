@@ -394,9 +394,8 @@ const TournamentDetail = () => {
                         // Verificar se o usuário é o criador do torneio
                         if (tournament.created_by === currentUser?.id) {
                           toast({
-                            title: "Não permitido",
-                            description: "Você não pode se inscrever no seu próprio torneio",
-                            variant: "destructive",
+                            title: "Informação",
+                            description: "Você é o criador deste torneio e não pode se inscrever como participante",
                           });
                           return;
                         }

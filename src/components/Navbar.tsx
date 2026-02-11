@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Swords, Trophy, User, LogOut, Menu, Users, Zap, Shield, Store, Newspaper, Coins, Scale, Video, Layers } from "lucide-react";
+import { Swords, Trophy, User, LogOut, Menu, Users, Zap, Shield, Store, Newspaper, Coins, Scale, Video, Layers, BarChart3 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/hooks/useAdmin";
@@ -96,7 +96,7 @@ export const Navbar = () => {
       </Link>
       <Link to="/ranking">
         <Button variant="ghost" className="text-foreground hover:text-primary">
-          <Trophy className="mr-2 h-4 w-4" />
+          <BarChart3 className="mr-2 h-4 w-4" />
           Ranking
         </Button>
       </Link>
@@ -209,7 +209,7 @@ export const Navbar = () => {
               <Menu className="h-6 w-6" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="right" className="w-64">
+          <SheetContent side="right" className="w-64 overflow-y-auto">
             <div className="flex flex-col space-y-4 mt-8">
               <NavLinks />
               {user ? (
