@@ -43,8 +43,8 @@ const Auth = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/duels`,
-        },
+          redirectTo: `${window.location.origin}/duels`
+        }
       });
 
       if (error) throw error;
@@ -53,7 +53,7 @@ const Auth = () => {
       toast({
         title: "Erro no login",
         description: error.message,
-        variant: "destructive",
+        variant: "destructive"
       });
       setLoading(false);
     }
@@ -72,7 +72,7 @@ const Auth = () => {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
-        password,
+        password
       });
 
       console.log("📝 Resposta do login:", { data, error });
@@ -87,11 +87,11 @@ const Auth = () => {
       // Verificar se o usuário está banido
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('is_banned')
-          .eq('user_id', session.user.id)
-          .maybeSingle();
+        const { data: profile, error: profileError } = await supabase.
+        from('profiles').
+        select('is_banned').
+        eq('user_id', session.user.id).
+        maybeSingle();
 
         if (profileError) {
           console.error("Error checking ban status:", profileError);
@@ -103,22 +103,22 @@ const Auth = () => {
           toast({
             title: "❌ Conta suspensa",
             description: "Sua conta foi suspensa. Entre em contato com o suporte para mais informações.",
-            variant: "destructive",
+            variant: "destructive"
           });
           setLoading(false);
           return;
         }
 
         // Update online status apenas se não estiver banido
-        await supabase
-          .from('profiles')
-          .update({ is_online: true, last_seen: new Date().toISOString() })
-          .eq('user_id', session.user.id);
+        await supabase.
+        from('profiles').
+        update({ is_online: true, last_seen: new Date().toISOString() }).
+        eq('user_id', session.user.id);
       }
 
       toast({
         title: "Login realizado!",
-        description: "Bem-vindo de volta, duelista!",
+        description: "Bem-vindo de volta, duelista!"
       });
 
       navigate('/duels');
@@ -126,7 +126,7 @@ const Auth = () => {
       toast({
         title: "Erro ao fazer login",
         description: error.message,
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setLoading(false);
@@ -147,7 +147,7 @@ const Auth = () => {
       toast({
         title: "Erro no cadastro",
         description: "O nickname deve ter no mínimo 3 caracteres.",
-        variant: "destructive",
+        variant: "destructive"
       });
       setLoading(false);
       return;
@@ -157,7 +157,7 @@ const Auth = () => {
       toast({
         title: "Erro no cadastro",
         description: "As senhas não coincidem.",
-        variant: "destructive",
+        variant: "destructive"
       });
       setLoading(false);
       return;
@@ -167,7 +167,7 @@ const Auth = () => {
       toast({
         title: "Erro no cadastro",
         description: "A senha deve ter no mínimo 6 caracteres.",
-        variant: "destructive",
+        variant: "destructive"
       });
       setLoading(false);
       return;
@@ -175,17 +175,17 @@ const Auth = () => {
 
     try {
       // Verificar se o username já existe
-      const { data: existingUser } = await supabase
-        .from('profiles')
-        .select('username')
-        .eq('username', username.trim())
-        .maybeSingle();
+      const { data: existingUser } = await supabase.
+      from('profiles').
+      select('username').
+      eq('username', username.trim()).
+      maybeSingle();
 
       if (existingUser) {
         toast({
           title: "Erro no cadastro",
           description: "Este nickname já está em uso. Escolha outro.",
-          variant: "destructive",
+          variant: "destructive"
         });
         setLoading(false);
         return;
@@ -197,36 +197,36 @@ const Auth = () => {
         options: {
           emailRedirectTo: `${window.location.origin}/duels`,
           data: {
-            username: username.trim(),
-          },
-        },
+            username: username.trim()
+          }
+        }
       });
 
       if (error) throw error;
 
       toast({
         title: "Cadastro realizado!",
-        description: "Bem-vindo ao Duelverse! Você já pode fazer login.",
+        description: "Bem-vindo ao Duelverse! Você já pode fazer login."
       });
 
       // Após o cadastro bem-sucedido, fazer login automaticamente
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
-        password,
+        password
       });
 
       if (signInError) throw signInError;
 
       navigate('/duels');
     } catch (error: any) {
-      const errorMessage = error.message?.toLowerCase().includes('email not confirmed') 
-        ? "Confirme seu email para continuar" 
-        : error.message;
-      
+      const errorMessage = error.message?.toLowerCase().includes('email not confirmed') ?
+      "Confirme seu email para continuar" :
+      error.message;
+
       toast({
         title: "Erro ao criar conta",
         description: errorMessage,
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setLoading(false);
@@ -247,8 +247,8 @@ const Auth = () => {
           <CardTitle className="text-3xl font-bold text-gradient-mystic">
             DUELVERSE
           </CardTitle>
-          <CardDescription className="text-muted-foreground">
-            Entre no mundo dos duelos místicos
+          <CardDescription className="text-muted-foreground">Entre no mundo dos duelos TCG
+
           </CardDescription>
         </CardHeader>
 
@@ -269,8 +269,8 @@ const Auth = () => {
                     type="email"
                     placeholder="seu@email.com"
                     required
-                    className="bg-background/50"
-                  />
+                    className="bg-background/50" />
+
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signin-password">Senha</Label>
@@ -280,14 +280,14 @@ const Auth = () => {
                     type="password"
                     placeholder="••••••••"
                     required
-                    className="bg-background/50"
-                  />
+                    className="bg-background/50" />
+
                 </div>
                 <Button
                   type="submit"
                   className="w-full btn-mystic text-white"
-                  disabled={loading}
-                >
+                  disabled={loading}>
+
                   {loading ? "Entrando..." : "Entrar"}
                 </Button>
               </form>
@@ -308,25 +308,25 @@ const Auth = () => {
                 variant="outline"
                 className="w-full"
                 onClick={handleGoogleSignIn}
-                disabled={loading}
-              >
+                disabled={loading}>
+
                 <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                   <path
                     fill="currentColor"
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                  />
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+
                   <path
                     fill="currentColor"
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  />
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+
                   <path
                     fill="currentColor"
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                  />
+                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+
                   <path
                     fill="currentColor"
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                  />
+                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+
                 </svg>
                 Google
               </Button>
@@ -344,8 +344,8 @@ const Auth = () => {
                     required
                     minLength={3}
                     maxLength={20}
-                    className="bg-background/50"
-                  />
+                    className="bg-background/50" />
+
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-email">Email</Label>
@@ -355,8 +355,8 @@ const Auth = () => {
                     type="email"
                     placeholder="seu@email.com"
                     required
-                    className="bg-background/50"
-                  />
+                    className="bg-background/50" />
+
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-password">Senha</Label>
@@ -367,8 +367,8 @@ const Auth = () => {
                     placeholder="••••••••"
                     required
                     minLength={6}
-                    className="bg-background/50"
-                  />
+                    className="bg-background/50" />
+
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-confirm-password">Confirmar Senha</Label>
@@ -379,14 +379,14 @@ const Auth = () => {
                     placeholder="••••••••"
                     required
                     minLength={6}
-                    className="bg-background/50"
-                  />
+                    className="bg-background/50" />
+
                 </div>
                 <Button
                   type="submit"
                   className="w-full btn-mystic text-white"
-                  disabled={loading}
-                >
+                  disabled={loading}>
+
                   {loading ? "Cadastrando..." : "Criar Conta"}
                 </Button>
               </form>
@@ -394,8 +394,8 @@ const Auth = () => {
           </Tabs>
         </CardContent>
       </Card>
-    </div>
-  );
+    </div>);
+
 };
 
 export default Auth;
