@@ -60,7 +60,7 @@ const TournamentManager = () => {
     setLoading(true);
     try {
       // Try RPC first (works after cache is updated)
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .rpc('get_my_created_tournaments');
 
       if (!error && data) {
@@ -99,7 +99,7 @@ const TournamentManager = () => {
   const fetchParticipants = async (tournamentId: string) => {
     setLoadingParticipants(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .rpc('get_tournament_participants', { p_tournament_id: tournamentId });
 
       if (error) throw error;

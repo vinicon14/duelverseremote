@@ -81,7 +81,7 @@ const CreateWeeklyTournament = () => {
       // Force fresh authentication data
       await supabase.auth.getSession();
       
-      const { data, error } = await supabase.rpc("create_weekly_tournament", {
+      const { data, error } = await (supabase as any).rpc("create_weekly_tournament", {
         p_name: name,
         p_description: description,
         p_prize_pool: prizePool,

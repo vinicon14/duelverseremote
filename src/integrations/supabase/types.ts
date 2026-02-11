@@ -991,10 +991,43 @@ export type Database = {
         }
         Relationships: []
       }
+      tournament_match_reports: {
+        Row: {
+          created_at: string
+          id: string
+          match_id: string
+          reporter_id: string
+          result: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          match_id: string
+          reporter_id: string
+          result: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          match_id?: string
+          reporter_id?: string
+          result?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournament_match_reports_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "tournament_matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tournament_matches: {
         Row: {
           created_at: string | null
           id: string
+          match_deadline: string | null
           player1_id: string | null
           player2_id: string | null
           round: number
@@ -1006,6 +1039,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           id?: string
+          match_deadline?: string | null
           player1_id?: string | null
           player2_id?: string | null
           round: number
@@ -1017,6 +1051,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           id?: string
+          match_deadline?: string | null
           player1_id?: string | null
           player2_id?: string | null
           round?: number
@@ -1121,13 +1156,16 @@ export type Database = {
           entry_fee: number
           entry_type: string | null
           id: string
+          is_weekly: boolean | null
           max_participants: number
           min_participants: number | null
           name: string
+          prize_paid: boolean | null
           prize_pool: number
           rules: string | null
           start_date: string
           status: string
+          total_collected: number | null
           total_prize: number
           total_rounds: number | null
           tournament_type: string | null
@@ -1142,13 +1180,16 @@ export type Database = {
           entry_fee?: number
           entry_type?: string | null
           id?: string
+          is_weekly?: boolean | null
           max_participants: number
           min_participants?: number | null
           name: string
+          prize_paid?: boolean | null
           prize_pool?: number
           rules?: string | null
           start_date: string
           status?: string
+          total_collected?: number | null
           total_prize?: number
           total_rounds?: number | null
           tournament_type?: string | null
@@ -1163,13 +1204,16 @@ export type Database = {
           entry_fee?: number
           entry_type?: string | null
           id?: string
+          is_weekly?: boolean | null
           max_participants?: number
           min_participants?: number | null
           name?: string
+          prize_paid?: boolean | null
           prize_pool?: number
           rules?: string | null
           start_date?: string
           status?: string
+          total_collected?: number | null
           total_prize?: number
           total_rounds?: number | null
           tournament_type?: string | null
@@ -1275,6 +1319,19 @@ export type Database = {
           deleted_emails: string[]
         }[]
       }
+      create_normal_tournament: {
+        Args: {
+          p_description: string
+          p_end_date: string
+          p_entry_fee: number
+          p_max_participants: number
+          p_name: string
+          p_prize_pool: number
+          p_start_date: string
+          p_tournament_type?: string
+        }
+        Returns: Json
+      }
       create_notification: {
         Args: {
           p_data?: Json
@@ -1284,6 +1341,16 @@ export type Database = {
           p_user_id: string
         }
         Returns: string
+      }
+      create_weekly_tournament: {
+        Args: {
+          p_description: string
+          p_entry_fee: number
+          p_max_participants?: number
+          p_name: string
+          p_prize_pool: number
+        }
+        Returns: Json
       }
       get_leaderboard: {
         Args: { limit_count?: number }
@@ -1307,6 +1374,7 @@ export type Database = {
           wins: number
         }[]
       }
+      get_weekly_tournaments: { Args: never; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1318,6 +1386,10 @@ export type Database = {
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_direct_video_access: { Args: never; Returns: boolean }
       is_judge: { Args: { _user_id: string }; Returns: boolean }
+      join_weekly_tournament: {
+        Args: { p_tournament_id: string }
+        Returns: Json
+      }
       matchmake: {
         Args: { p_match_type: string; p_user_id: string }
         Returns: {
@@ -1345,6 +1417,10 @@ export type Database = {
           user_id: string
           username: string
         }[]
+      }
+      set_match_winner: {
+        Args: { p_match_id: string; p_winner_id: string }
+        Returns: Json
       }
       sync_storage_recordings: { Args: never; Returns: undefined }
       transfer_duelcoins: {

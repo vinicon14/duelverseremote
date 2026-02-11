@@ -56,7 +56,7 @@ const MyTournaments = () => {
     setLoading(true);
     try {
       // Try RPC first (works after cache is updated)
-      const { data, error } = await supabase.rpc('get_my_tournaments');
+      const { data, error } = await (supabase as any).rpc('get_my_tournaments');
 
       if (!error && data) {
         const tournaments = data as unknown as MyTournament[];
@@ -108,7 +108,7 @@ const MyTournaments = () => {
 
     for (const tournamentId of tournamentIds) {
       try {
-        const { data, error } = await supabase
+        const { data, error } = await (supabase as any)
           .rpc('get_tournament_opponents', { p_tournament_id: tournamentId });
 
         if (!error && data) {
