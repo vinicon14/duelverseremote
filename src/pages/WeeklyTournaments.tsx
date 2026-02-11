@@ -6,7 +6,6 @@ import { WeeklyTournamentCard } from "@/components/tournament/WeeklyTournamentCa
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Trophy, Plus, Loader2, RefreshCw, Crown, Lock } from "lucide-react";
-import { Database } from "@/integrations/supabase/types";
 import { useAccountType } from "@/hooks/useAccountType";
 
 type WeeklyTournament = {
