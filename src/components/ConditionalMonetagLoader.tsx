@@ -129,4 +129,6 @@ const applyPopupBlocking = () => {
     
     return window._originalOpen?.apply(window, args);
   };
+
+  return null;
 };

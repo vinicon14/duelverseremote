@@ -40,6 +40,7 @@ import WeeklyTournaments from "./pages/WeeklyTournaments";
 import MyTournaments from "./pages/MyTournaments";
 import TournamentManager from "./pages/TournamentManager";
 import TransferHistory from "./pages/TransferHistory";
+import { DuelInvitePage } from "./pages/DuelInvitePage";
 
 const queryClient = new QueryClient();
 
@@ -75,6 +76,7 @@ const RouterContent = () => {
       <Route path="/my-tournaments" element={<MyTournaments />} />
       <Route path="/tournament-manager" element={<TournamentManager />} />
       <Route path="/transfer-history" element={<TransferHistory />} />
+      <Route path="/invite/:inviteId" element={<DuelInvitePage />} />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
     </Routes>
