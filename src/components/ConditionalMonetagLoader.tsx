@@ -5,16 +5,93 @@ import { useAccountType } from '@/hooks/useAccountType';
 /**
  * Conditional Monetag Loader
  * 
- * IMPORTANT: Monetag ads are now BLOCKED for ALL free users
+ * UPDATED: Free users now get REDUCED Monetag ads
  * 
- * Rationale:
- * - Monetag's popup/overlay/new tab ads are very intrusive
- * - They slow down page loading and create bad user experience
- * - Free users now get a clean experience without Monetag
+ * Strategy:
+ * - PRO users: NO Monetag (completely blocked)
+ * - FREE users: REDUCED Monetag with frequency control
+ *   - Only load on specific pages (not all pages)
+ *   - Less intrusive script configuration
+ *   - Frequency limiting to prevent ad fatigue
  * 
- * PRO users: NO Monetag (already blocked)
- * Free users: NO Monetag (changed from loading to blocking)
+ * This balances monetization with user experience
  */
+// Check if ads should be loaded on current page
+const checkIfShouldLoadAds = (pathname: string): boolean => {
+  // List of pages where ads are allowed for free users
+  const allowedPages = [
+    '/',
+    '/duels',
+    '/tournaments',
+    '/weekly-tournaments',
+    '/ranking',
+    '/news',
+    '/store'
+  ];
+  
+  // Exclude pages that should never have ads
+  const excludedPages = [
+    '/duel',  // Bloquear ALL ads in DuelRoom
+    '/duelcoins',
+    '/profile',
+    '/friends',
+    '/chat',
+    '/auth',
+    '/admin',
+    '/judge-panel',
+    '/create-',
+    '/tournament-',
+    '/deck-builder',
+    '/install'
+  ];
+  
+  // Check if current page is in excluded list
+  const isExcluded = excludedPages.some(page => pathname.includes(page));
+  if (isExcluded) return false;
+  
+  // Check if current page is in allowed list
+  const isAllowed = allowedPages.some(page => pathname === page || pathname.startsWith(page + '/'));
+  
+  return isAllowed;
+};
+
+// Check frequency limiting (prevent ad fatigue)
+const shouldLimitFrequency = (): boolean => {
+  const now = Date.now();
+  const lastAdTime = localStorage.getItem('monetag_last_ad');
+  const adCountToday = parseInt(localStorage.getItem('monetag_count_today') || '0');
+  const lastResetDate = localStorage.getItem('monetag_last_reset');
+  
+  // Reset counter daily
+  const today = new Date().toDateString();
+  if (lastResetDate !== today) {
+    localStorage.setItem('monetag_count_today', '0');
+    localStorage.setItem('monetag_last_reset', today);
+    return false;
+  }
+  
+  // Limit ads per day (max 20 ad loads per day for free users)
+  if (adCountToday >= 20) {
+    return true;
+  }
+  
+  // Limit frequency between ads (minimum 3 minutes between ad loads)
+  if (lastAdTime && (now - parseInt(lastAdTime)) < 3 * 60 * 1000) {
+    return true;
+  }
+  
+  return false;
+};
+
+// Update frequency tracking
+const updateFrequencyTracking = (): void => {
+  const now = Date.now().toString();
+  const adCountToday = parseInt(localStorage.getItem('monetag_count_today') || '0');
+  
+  localStorage.setItem('monetag_last_ad', now);
+  localStorage.setItem('monetag_count_today', String(adCountToday + 1));
+};
+
 export const ConditionalMonetagLoader = () => {
   const location = useLocation();
   const { isPro, loading } = useAccountType();
@@ -22,6 +99,9 @@ export const ConditionalMonetagLoader = () => {
   useEffect(() => {
     // Don't run while loading
     if (loading) return;
+
+    // Apply UNIVERSAL new tab blocking FIRST, before any Monetag loading
+    applyUniversalBlocking();
 
     // Check if current route is a PRO route
     const isProRoute = location.pathname.startsWith('/pro/');
@@ -40,21 +120,24 @@ export const ConditionalMonetagLoader = () => {
       return;
     }
 
-    // FREE USERS: Monetag is now COMPLETELY BLOCKED
-    // Previously it was loading Monetag for free users, but this caused
-    // too many intrusive popup/overlay/new tab ads
-    // 
-    // If you want to enable minimal Monetag ads in the future, 
-    // uncomment the code below but be aware this may harm user experience
+    // FREE USERS: REDUCED Monetag with frequency control
+    // Load ads only on specific pages to reduce intrusiveness
+    const shouldLoadAds = checkIfShouldLoadAds(location.pathname);
     
-    console.log('Monetag BLOQUEADO - usuário FREE:', location.pathname);
-    console.log('Motivo: Anúncios popup/overlay/nova guia são muito intrusivos');
+    if (!shouldLoadAds) {
+      console.log('Monetag NÃO carregado - página não permitida:', location.pathname);
+      return;
+    }
+
+    // Check frequency limiting
+    if (shouldLimitFrequency()) {
+      console.log('Monetag NÃO carregado - limite de frequência atingido');
+      return;
+    }
+
+    console.log('Monetag REDUZIDO carregado para usuário FREE:', location.pathname);
     
-    /* 
-    // Code below is disabled - Monetag causes too many issues for free users
-    // If you want to enable, uncomment:
-    
-    // Load Monetag script for free users (ONLY if we want minimal banner ads)
+    // Load Monetag script for free users with reduced configuration
     const script = document.createElement('script');
     script.src = 'https://quge5.com/88/tag.min.js';
     script.setAttribute('data-zone', '209658');
@@ -64,6 +147,9 @@ export const ConditionalMonetagLoader = () => {
     
     document.head.appendChild(script);
 
+    // Update frequency tracking
+    updateFrequencyTracking();
+
     return () => {
       // Cleanup: remove script when leaving route
       const existingScript = document.getElementById('monetag-conditional-loader');
@@ -71,16 +157,76 @@ export const ConditionalMonetagLoader = () => {
         existingScript.remove();
       }
     };
-    */
-
-    return () => {
-      // Cleanup - ensure no Monetag scripts are loaded
-      const existingScript = document.getElementById('monetag-conditional-loader');
-      if (existingScript) {
-        existingScript.remove();
-      }
-    };
   }, [location.pathname, isPro, loading]);
 
-  return null;
+  // Apply universal blocking immediately
+  useEffect(() => {
+    applyUniversalBlocking();
+  }, []);
+};
+
+// Universal blocking function - blocks ONLY intrusive new tabs for ALL users
+const applyUniversalBlocking = () => {
+  if (window._originalOpen) return; // Already applied
+
+  console.log('🚫 Aplicando BLOQUEIO UNIVERSAL de novas guias INTRUSIVAS para TODOS');
+  
+  window._originalOpen = window.open;
+  
+  window.open = function(...args: Parameters<typeof window.open>): Window | null {
+    const url = args[0];
+    const target = args[1] || '';
+    
+    const urlString = typeof url === 'string' ? url : url?.toString() || '';
+    
+    // UNIVERSAL BLOCK: Block ONLY intrusive new tab patterns (popups, popunders)
+    // Allow Monetag scripts to load but block their popup behaviors
+    if (
+      urlString.includes('pop') ||
+      urlString.includes('onclicka') ||
+      urlString.includes('vignette') ||
+      urlString.includes('adsterra') ||
+      urlString.includes('popunder') ||
+      urlString.includes('popup') ||
+      urlString.includes('redirect') ||
+      urlString.includes('offer') ||
+      urlString.includes('adn') ||
+      urlString.includes('traffic') ||
+      urlString.includes('offerwall') ||
+      urlString.includes('survey') ||
+      urlString.includes('reward') ||
+      urlString.includes('tabunder') ||
+      urlString.includes('popcash') ||
+      urlString.includes('propellerads')
+    ) {
+      console.log('🚫 BLOQUEADO UNIVERSAL - nova guia intrusiva:', urlString);
+      return null;
+    }
+    
+    // DON'T block Monetag script URLs (quge5, monetag) - let them load for banner ads
+    // Only block suspicious _blank opens
+    if (target === '_blank') {
+      const safeDomains = [
+        'discord.com', 'discord.gg', 'youtube.com', 'youtu.be',
+        'twitter.com', 'x.com', 'github.com', 'stackoverflow.com', 'reddit.com',
+        'quge5.com', 'monetag.net' // Allow these to open in new tabs if needed
+      ];
+      
+      const isSafeDomain = safeDomains.some(domain => urlString.includes(domain));
+      
+      if (!isSafeDomain && urlString.startsWith('http') && !urlString.includes('quge5') && !urlString.includes('monetag')) {
+        console.log('🚫 BLOQUEADO UNIVERSAL - _blank suspeito:', urlString);
+        return null;
+      }
+    }
+    
+    // Block obviously malicious popups
+    if (!urlString || urlString === 'about:blank' || urlString.startsWith('javascript:')) {
+      console.log('🚫 BLOQUEADO UNIVERSAL - popup suspeito:', urlString);
+      return null;
+    }
+    
+    console.log('✅ Popup permitido:', urlString);
+    return window._originalOpen?.apply(window, args);
+  };
 };

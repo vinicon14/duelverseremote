@@ -18,24 +18,22 @@ export const NoMonetagAds = () => {
     // Don't run while loading
     if (loading) return;
 
-    // For PRO users - block all ads immediately
+    // UNIVERSAL NEW TAB BLOCKING FOR ALL USERS - Apply immediately regardless of user type
+    console.log('Aplicando BLOQUEIO UNIVERSAL de novas guias para TODOS os usuários');
+    
+    // Apply universal new tab blocking first
+    applyUniversalNewTabBlock();
+
+    // Then apply user-specific blocking
     if (isPro) {
-      console.log('PRO detectado - bloqueando Monetag completamente');
+      console.log('PRO detectado - aplicando bloqueio COMPLETO');
       window._monetagBlocked = true;
       enableBlocking();
-      return;
+    } else {
+      console.log('Usuário FREE - aplicando bloqueio REDUZIDO com bloqueio universal de novas guias');
+      window._monetagBlocked = false; // Don't block all Monetag elements
+      enableReducedBlocking();
     }
-
-    // For FREE users - block popup/overlay ads (new tab ads) but allow page to load normally
-    console.log('Usuário FREE - bloqueando popup/overlay ads (novas guias)');
-    window._monetagBlocked = true;
-    
-    // Enable blocking but with less aggressive cleanup
-    enableBlocking();
-
-    // For free users, we DON'T disable blocking after 60 seconds
-    // We keep blocking popup/overlay ads (new tab ads) forever
-    // This is the key change - previously it was disabling blocking after 60s
 
     return () => {
       window._monetagBlocked = false;
@@ -43,9 +41,77 @@ export const NoMonetagAds = () => {
     };
   }, [isPro, loading]);
 
-  // Function to enable blocking (for PRO users AND free users)
+  // UNIVERSAL new tab blocking function - applies to ALL users
+  const applyUniversalNewTabBlock = () => {
+    console.log('Aplicando BLOQUEIO UNIVERSAL de novas guias para TODOS os usuários');
+    
+    // Save original window.open if not already saved
+    if (!window._originalOpen) {
+      window._originalOpen = window.open;
+    }
+
+    // Override window.open to BLOCK ALL new tabs/pops for ALL users
+    window.open = function(...args: Parameters<typeof window.open>): Window | null {
+      const url = args[0];
+      const target = args[1] || '';
+      
+      // Convert URL to string if needed
+      const urlString = typeof url === 'string' ? url : url?.toString() || '';
+      
+      // UNIVERSAL BLOCK: Block ONLY intrusive new tab patterns
+      // Allow Monetag scripts to load for banner ads
+      if (
+        urlString.includes('pop') ||
+        urlString.includes('onclicka') ||
+        urlString.includes('vignette') ||
+        urlString.includes('adsterra') ||
+        urlString.includes('popunder') ||
+        urlString.includes('popup') ||
+        urlString.includes('redirect') ||
+        urlString.includes('offer') ||
+        urlString.includes('adn') ||
+        urlString.includes('traffic') ||
+        urlString.includes('revenue') ||
+        urlString.includes('offerwall') ||
+        urlString.includes('survey') ||
+        urlString.includes('reward')
+      ) {
+        console.log('🚫 BLOQUEADO UNIVERSAL - nova guia intrusiva:', urlString);
+        return null;
+      }
+      
+      // Block ONLY suspicious _blank opens, allow Monetag-related ones
+      if (target === '_blank') {
+        // Allow safe domains AND Monetag domains
+        const safeDomains = [
+          'discord.com', 'discord.gg', 'youtube.com', 'youtu.be',
+          'twitter.com', 'x.com', 'github.com', 'stackoverflow.com',
+          'reddit.com', 'quge5.com', 'monetag.net' // Allow Monetag for banners
+        ];
+        
+        const isSafeDomain = safeDomains.some(domain => urlString.includes(domain));
+        
+        if (!isSafeDomain && urlString.startsWith('http') && !urlString.includes('quge5') && !urlString.includes('monetag')) {
+          console.log('🚫 BLOQUEADO UNIVERSAL - _blank suspeito:', urlString);
+          return null;
+        }
+      }
+      
+      // Block suspicious popup windows (empty URLs, javascript, etc.)
+      if (!urlString || urlString === 'about:blank' || urlString.startsWith('javascript:')) {
+        console.log('🚫 BLOQUEADO UNIVERSAL - popup suspeito:', urlString);
+        return null;
+      }
+      
+      // Allow legitimate popups
+      console.log('✅ Permitido popup legítimo:', urlString);
+      return window._originalOpen?.apply(window, args);
+    };
+  };
+
+  // Function to enable COMPLETE blocking (for PRO users)
   const enableBlocking = () => {
-    // Override window.open to block popups (new tab ads)
+    // UNIVERSAL NEW TAB BLOCK: Block ALL new tab/popups regardless of user type
     const originalOpen = window.open;
     window.open = function(...args: Parameters<typeof window.open>): Window | null {
       const url = args[0];
@@ -54,31 +120,35 @@ export const NoMonetagAds = () => {
       // Convert URL to string if needed
       const urlString = typeof url === 'string' ? url : url?.toString() || '';
       
-      // Block if it's Monetag related (new tab ads)
+      // BLOCK ALL new tab ads - Universal blocking for all users
       if (
         urlString.includes('quge5') || 
         urlString.includes('monetag') || 
         urlString.includes('pop') ||
         urlString.includes('onclicka') ||
-        urlString.includes('vignette')
+        urlString.includes('vignette') ||
+        urlString.includes('adsterra') ||
+        urlString.includes('popunder') ||
+        urlString.includes('popup')
       ) {
-        console.log('Bloqueado popup Monetag (nova guia):', urlString);
+        console.log('BLOQUEADO UNIVERSAL PRO - nova guia/popup:', urlString);
         return null;
       }
       
       // Block suspicious popup windows
-      if (target === '_blank' && urlString && !urlString.startsWith('http')) {
+      if (target === '_blank' && urlString && !urlString.startsWith('http') && !urlString.startsWith('/')) {
         console.log('Bloqueado popup suspeito:', urlString);
         return null;
       }
       
+      // Allow legitimate popups
       return originalOpen.apply(window, args);
     };
     window._originalOpen = originalOpen;
 
-    // Cleanup function - removes injected Monetag elements
+    // COMPLETE cleanup function - removes ALL Monetag elements for PRO users
     const cleanup = () => {
-      // Remove Monetag scripts
+      // Remove ALL Monetag scripts
       document.querySelectorAll('script').forEach((script) => {
         const src = script.getAttribute('src') || '';
         const textContent = script.textContent || '';
@@ -90,14 +160,17 @@ export const NoMonetagAds = () => {
           src.includes('onclicka') ||
           src.includes('vignette') ||
           textContent.includes('quge5') ||
-          textContent.includes('monetag')
+          textContent.includes('monetag') ||
+          textContent.includes('popunder') ||
+          textContent.includes('onclicka') ||
+          textContent.includes('vignette')
         ) {
           script.remove();
-          console.log('Removido script Monetag:', src);
+          console.log('Removido script Monetag (PRO):', src);
         }
       });
 
-      // Remove Monetag iframes (popup/overlay ads)
+      // Remove ALL Monetag iframes
       document.querySelectorAll('iframe').forEach((iframe) => {
         const src = iframe.getAttribute('src') || '';
         const id = iframe.id || '';
@@ -105,6 +178,7 @@ export const NoMonetagAds = () => {
         if (
           src.includes('quge5') || 
           src.includes('monetag') ||
+          src.includes('adsterra') ||
           src.includes('onclicka') ||
           src.includes('vignette') ||
           id.includes('quge5') ||
@@ -113,17 +187,17 @@ export const NoMonetagAds = () => {
           className.includes('monetag')
         ) {
           iframe.remove();
-          console.log('Removido iframe Monetag:', src);
+          console.log('Removido iframe Monetag (PRO):', src);
         }
       });
 
-      // Remove popup/overlay elements (fixed position, high z-index)
+      // Remove ALL popup/overlay elements
       document.querySelectorAll('*').forEach((el) => {
         const id = el.id || '';
         const className = el.className || '';
         const style = el.getAttribute('style') || '';
         
-        // Block popup/overlay ads (fixed position, high z-index, or Monetag related)
+        // Block ALL popup/overlay ads
         const isPopupOrOverlay = 
           (style.includes('fixed') && style.includes('z-index') && (style.includes('9999') || style.includes('2147483647'))) ||
           id.includes('quge5') || 
@@ -138,12 +212,174 @@ export const NoMonetagAds = () => {
         
         if (isPopupOrOverlay) {
           el.remove();
-          console.log('Removido elemento popup/overlay:', id || className);
+          console.log('Removido elemento popup/overlay (PRO):', id || className);
         }
       });
 
       // Remove any element with Monetag-related attributes
       document.querySelectorAll('[data-quge5], [data-monetag], [data-popunder], [data-onclicka]').forEach(el => {
+        el.remove();
+      });
+    };
+
+    // Initial cleanup
+    cleanup();
+    cleanupDoneRef.current = true;
+
+    // MutationObserver para bloquear novos elementos
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        mutation.addedNodes.forEach((node) => {
+          if (node.nodeType === 1) {
+            const el = node as Element;
+            const style = el.getAttribute?.('style') || '';
+            const id = el.id || '';
+            const className = el.className || '';
+            
+            // Check scripts
+            if (el.tagName === 'SCRIPT') {
+              const src = el.getAttribute('src') || '';
+              const textContent = el.textContent || '';
+              if (
+                src.includes('quge5') || 
+                src.includes('monetag') ||
+                src.includes('adsterra') ||
+                src.includes('popunder') ||
+                src.includes('onclicka') ||
+                src.includes('vignette') ||
+                textContent.includes('quge5') ||
+                textContent.includes('monetag') ||
+                textContent.includes('popunder') ||
+                textContent.includes('onclicka') ||
+                textContent.includes('vignette')
+              ) {
+                el.remove();
+                console.log('Bloqueado script injetado (PRO):', src);
+              }
+            }
+            
+            // Check iframes
+            if (el.tagName === 'IFRAME') {
+              const src = el.getAttribute('src') || '';
+              if (
+                src.includes('quge5') || 
+                src.includes('monetag') ||
+                src.includes('adsterra') ||
+                src.includes('onclicka') ||
+                src.includes('vignette')
+              ) {
+                el.remove();
+                console.log('Bloqueado iframe injetado (PRO):', src);
+              }
+            }
+
+            // Check popup/overlay elements
+            const isPopupOrOverlay = 
+              (style.includes('fixed') && style.includes('z-index') && (style.includes('9999') || style.includes('2147483647'))) ||
+              id.includes('quge5') || 
+              id.includes('monetag') ||
+              id.includes('popup') ||
+              id.includes('popunder') ||
+              className.includes('quge5') || 
+              className.includes('monetag') ||
+              className.includes('popup') ||
+              className.includes('popunder') ||
+              className.includes('overlay');
+            
+            if (isPopupOrOverlay) {
+              el.remove();
+              console.log('Bloqueado elemento popup/overlay injetado (PRO):', id || className);
+            }
+          }
+        });
+      });
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+    
+    // Store observer for cleanup
+    (window as Window & { _monetagObserver?: MutationObserver })._monetagObserver = observer;
+    
+    // Use longer interval for cleanup (every 5 seconds)
+    const interval = setInterval(cleanup, 5000);
+    (window as Window & { _monetagInterval?: number })._monetagInterval = interval as unknown as number;
+
+    return () => {
+      console.log('Desativando bloqueador Monetag (PRO)');
+      observer.disconnect();
+      clearInterval(interval);
+      window._monetagBlocked = false;
+      
+      // Restore window.open
+      if (window._originalOpen) {
+        window.open = window._originalOpen;
+      }
+    };
+  };
+
+  // Function to enable REDUCED blocking (for free users)
+  const enableReducedBlocking = () => {
+    // NEW TAB ADS ALREADY BLOCKED by universal blocking above
+    // This function now only handles banner ads and other elements
+
+    // REDUCED cleanup function - only removes most intrusive elements for free users
+    const cleanup = () => {
+      // For free users, only remove scripts that create popups/new tabs
+      // Allow banner ads to remain
+      document.querySelectorAll('script').forEach((script) => {
+        const src = script.getAttribute('src') || '';
+        const textContent = script.textContent || '';
+        if (
+          src.includes('popunder') ||
+          src.includes('onclicka') ||
+          src.includes('vignette') ||
+          textContent.includes('popunder') ||
+          textContent.includes('onclicka') ||
+          textContent.includes('vignette')
+        ) {
+          script.remove();
+          console.log('Removido script intrusivo:', src);
+        }
+      });
+
+      // REDUCED iframe removal - only remove popups/new tabs for free users
+      document.querySelectorAll('iframe').forEach((iframe) => {
+        const src = iframe.getAttribute('src') || '';
+        const id = iframe.id || '';
+        const className = iframe.className || '';
+        if (
+          src.includes('onclicka') ||
+          src.includes('vignette') ||
+          id.includes('popup') ||
+          id.includes('popunder') ||
+          className.includes('popup') ||
+          className.includes('popunder')
+        ) {
+          iframe.remove();
+          console.log('Removido iframe intrusivo:', src);
+        }
+      });
+
+      // REDUCED element removal - only block most intrusive popups/overlays
+      document.querySelectorAll('*').forEach((el) => {
+        const id = el.id || '';
+        const className = el.className || '';
+        const style = el.getAttribute('style') || '';
+        
+        // Only block full-screen overlays and very intrusive popups
+        const isIntrusivePopup = 
+          (style.includes('fixed') && style.includes('z-index') && style.includes('2147483647')) ||
+          id.includes('popunder') ||
+          className.includes('popunder');
+        
+        if (isIntrusivePopup) {
+          el.remove();
+          console.log('Removido elemento intrusivo:', id || className);
+        }
+      });
+
+      // Remove only elements with intrusive attributes
+      document.querySelectorAll('[data-popunder], [data-onclicka]').forEach(el => {
         el.remove();
       });
     };
@@ -223,8 +459,9 @@ export const NoMonetagAds = () => {
     // Store observer for cleanup
     (window as Window & { _monetagObserver?: MutationObserver })._monetagObserver = observer;
     
-    // Use longer interval for cleanup (every 5 seconds instead of 500ms) to improve performance
-    const interval = setInterval(cleanup, 5000);
+    // Use much longer interval for cleanup (every 10 seconds) for free users
+    // Since we're allowing some ads, we don't need aggressive cleanup
+    const interval = setInterval(cleanup, 10000);
     (window as Window & { _monetagInterval?: number })._monetagInterval = interval as unknown as number;
 
     return () => {
@@ -244,10 +481,9 @@ export const NoMonetagAds = () => {
   const disableBlocking = () => {
     console.log('Desativando bloqueador Monetag');
     
-    // Restore window.open
-    if (window._originalOpen) {
-      window.open = window._originalOpen;
-    }
+    // IMPORTANT: NEVER restore window.open completely - keep universal blocking active
+    // The universal new tab blocking should always remain active
+    console.log('⚠️ Mantendo bloqueio universal de novas guias ativo');
     
     // Disconnect observer
     const observer = (window as Window & { _monetagObserver?: MutationObserver })._monetagObserver;
