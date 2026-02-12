@@ -70,35 +70,13 @@ export const WeeklyTournamentCard = ({
         throw new Error("Você já está inscrito neste torneio");
       }
 
-      // Deduct entry fee directly
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('duelcoins_balance')
-        .eq('user_id', user.id)
-        .single();
-
-      if (!profile || profile.duelcoins_balance < tournament.entry_fee) {
-        throw new Error("Saldo insuficiente");
-      }
-
-      await supabase
-        .from('profiles')
-        .update({ duelcoins_balance: profile.duelcoins_balance - tournament.entry_fee })
-        .eq('user_id', user.id);
-
-      // Record transaction
-      await (supabase as any).from('duelcoins_transactions').insert({
-        sender_id: user.id,
-        amount: tournament.entry_fee,
-        transaction_type: 'tournament_entry',
-        description: `Taxa de inscrição: ${tournament.name}`
+      // Use edge function to handle entry fee + registration atomically
+      const { data: result, error: fnError } = await supabase.functions.invoke('charge-tournament-entry-fee', {
+        body: { tournament_id: tournament.id }
       });
 
-      // Add participant
-      await supabase.from('tournament_participants').insert({
-        tournament_id: tournament.id,
-        user_id: user.id,
-      });
+      if (fnError) throw new Error(fnError.message || 'Erro ao processar inscrição');
+      if (result && !result.success) throw new Error(result.message || 'Erro ao processar inscrição');
 
       toast({
         title: "Inscrição realizada!",
