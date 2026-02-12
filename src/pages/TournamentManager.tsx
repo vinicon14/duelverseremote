@@ -193,7 +193,26 @@ const TournamentManager = () => {
     fetchParticipants(tournament.id);
   };
 
-  const handleMessageParticipant = (participantId: string) => {
+  const handleMessageParticipant = async (participantId: string) => {
+    if (!userId) return;
+    
+    // Check if already friends
+    const { data: existingFriendship } = await supabase
+      .from('friend_requests')
+      .select('id')
+      .eq('status', 'accepted')
+      .or(`and(sender_id.eq.${userId},receiver_id.eq.${participantId}),and(sender_id.eq.${participantId},receiver_id.eq.${userId})`)
+      .maybeSingle();
+    
+    if (!existingFriendship) {
+      // Auto-create accepted friendship so creator can chat directly
+      await supabase.from('friend_requests').insert({
+        sender_id: userId,
+        receiver_id: participantId,
+        status: 'accepted',
+      });
+    }
+    
     navigate(`/chat/${participantId}`);
   };
 

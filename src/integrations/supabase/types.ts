@@ -1363,6 +1363,52 @@ export type Database = {
           wins: number
         }[]
       }
+      get_my_created_tournaments: {
+        Args: never
+        Returns: {
+          created_at: string
+          id: string
+          is_weekly: boolean
+          name: string
+          participant_count: number
+          prize_paid: boolean
+          prize_pool: number
+          status: string
+          total_collected: number
+        }[]
+      }
+      get_my_tournaments: {
+        Args: never
+        Returns: {
+          created_at: string
+          created_by: string
+          current_round: number
+          id: string
+          is_weekly: boolean
+          name: string
+          status: string
+        }[]
+      }
+      get_tournament_opponents: {
+        Args: { p_tournament_id: string }
+        Returns: {
+          match_id: string
+          opponent_id: string
+          opponent_username: string
+          round: number
+          status: string
+        }[]
+      }
+      get_tournament_participants: {
+        Args: { p_tournament_id: string }
+        Returns: {
+          avatar_url: string
+          is_online: boolean
+          joined_at: string
+          user_id: string
+          username: string
+        }[]
+      }
       get_user_profile: {
         Args: { p_user_id: string }
         Returns: {
