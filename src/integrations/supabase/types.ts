@@ -139,6 +139,7 @@ export type Database = {
           id: string
           receiver_id: string | null
           sender_id: string | null
+          tournament_id: string | null
           transaction_type: string
         }
         Insert: {
@@ -148,6 +149,7 @@ export type Database = {
           id?: string
           receiver_id?: string | null
           sender_id?: string | null
+          tournament_id?: string | null
           transaction_type: string
         }
         Update: {
@@ -157,9 +159,18 @@ export type Database = {
           id?: string
           receiver_id?: string | null
           sender_id?: string | null
+          tournament_id?: string | null
           transaction_type?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "duelcoins_transactions_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       friend_requests: {
         Row: {
@@ -1361,6 +1372,52 @@ export type Database = {
           user_id: string
           username: string
           wins: number
+        }[]
+      }
+      get_my_created_tournaments: {
+        Args: never
+        Returns: {
+          created_at: string
+          id: string
+          is_weekly: boolean
+          name: string
+          participant_count: number
+          prize_paid: boolean
+          prize_pool: number
+          status: string
+          total_collected: number
+        }[]
+      }
+      get_my_tournaments: {
+        Args: never
+        Returns: {
+          created_at: string
+          created_by: string
+          current_round: number
+          id: string
+          is_weekly: boolean
+          name: string
+          status: string
+        }[]
+      }
+      get_tournament_opponents: {
+        Args: { p_tournament_id: string }
+        Returns: {
+          match_id: string
+          opponent_id: string
+          opponent_username: string
+          round: number
+          status: string
+        }[]
+      }
+      get_tournament_participants: {
+        Args: { p_tournament_id: string }
+        Returns: {
+          avatar_url: string
+          is_online: boolean
+          joined_at: string
+          user_id: string
+          username: string
         }[]
       }
       get_user_profile: {
