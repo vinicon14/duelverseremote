@@ -1,31 +1,23 @@
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Eye, EyeOff } from "lucide-react";
 
 interface HideElementsButtonProps {
-  onToggle: (hidden: boolean) => void;
+  onToggle: () => void;
+  isHidden: boolean;
 }
 
-export const HideElementsButton = ({ onToggle }: HideElementsButtonProps) => {
-  const [hidden, setHidden] = useState(false);
-
-  const toggle = () => {
-    const newState = !hidden;
-    setHidden(newState);
-    onToggle(newState);
-  };
-
+export const HideElementsButton = ({ onToggle, isHidden }: HideElementsButtonProps) => {
   return (
     <Button
       type="button"
-      onClick={toggle}
+      onClick={onToggle}
       variant="outline"
       size="sm"
       className="bg-card/95 backdrop-blur-sm recording-safe-hide-button"
       data-recording-safe="true"
-      title={hidden ? "Mostrar controles" : "Ocultar controles"}
+      title={isHidden ? "Mostrar controles" : "Ocultar controles"}
     >
-      {hidden ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+      {isHidden ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
     </Button>
   );
 };

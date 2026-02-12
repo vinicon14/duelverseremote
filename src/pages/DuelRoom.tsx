@@ -874,7 +874,7 @@ const DuelRoom = () => {
               {/* O botão de Ocultar e Gravar ficam sempre visíveis para participantes */}
               {isParticipant && !isJudge && (
                 <>
-                  <HideElementsButton onToggle={setHideControls} />
+                  <HideElementsButton onToggle={() => setHideControls(!hideControls)} isHidden={hideControls} />
                   <RecordMatchButton duelId={id!} />
                 </>
               )}
