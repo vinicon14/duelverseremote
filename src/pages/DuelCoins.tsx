@@ -39,11 +39,23 @@ export default function DuelCoins() {
 
   const fetchTransactions = async (userId: string) => {
     try {
-      // Tentar usar a função RPC primeiro (mais confiável)
+      console.log('[DuelCoins] Buscando transações para usuário:', userId);
+      
+      // Tentar usar a função RPC primeiro (mais confiável - bypass RLS)
       const { data: rpcData, error: rpcError } = await supabase
-        .rpc('get_user_transactions', { p_limit: 50 });
+        .rpc('get_user_transactions', { 
+          p_limit: 100,  // Aumentado para 100
+          p_offset: 0 
+        });
 
-      if (!rpcError && rpcData) {
+      if (rpcError) {
+        console.error('[DuelCoins] Erro na RPC:', rpcError);
+        throw rpcError;
+      }
+
+      if (rpcData && rpcData.length > 0) {
+        console.log(`[DuelCoins] ${rpcData.length} transações encontradas via RPC`);
+        
         // Formatar dados da RPC
         const formattedTransactions = rpcData.map((tx: any) => ({
           ...tx,
@@ -54,51 +66,19 @@ export default function DuelCoins() {
         return;
       }
 
-      console.warn('RPC failed, using fallback query:', rpcError);
-
-      // Fallback: query direta (menos confiável devido a RLS)
-      const { data, error } = await supabase
-        .from('duelcoins_transactions')
-        .select('*')
-        .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
-        .order('created_at', { ascending: false })
-        .limit(50);
-
-      if (error) throw error;
-
-      // Buscar usernames separadamente
-      const transactionsWithUsers = await Promise.all(
-        (data || []).map(async (transaction) => {
-          let senderUsername = 'Sistema';
-          let receiverUsername = 'Sistema';
-
-          if (transaction.sender_id) {
-            const { data: senderData } = await supabase
-              .from('profiles')
-              .select('username')
-              .eq('user_id', transaction.sender_id)
-              .maybeSingle();
-            if (senderData) senderUsername = senderData.username;
-          }
-
-          if (transaction.receiver_id) {
-            const { data: receiverData } = await supabase
-              .from('profiles')
-              .select('username')
-              .eq('user_id', transaction.receiver_id)
-              .maybeSingle();
-            if (receiverData) receiverUsername = receiverData.username;
-          }
-
-          return {
-            ...transaction,
-            sender: { username: senderUsername },
-            receiver: { username: receiverUsername }
-          };
-        })
-      );
-
-      setTransactions(transactionsWithUsers);
+      console.warn('[DuelCoins] Nenhuma transação encontrada via RPC');
+      setTransactions([]);
+      
+    } catch (error: any) {
+      console.error('[DuelCoins] Erro ao buscar transações:', error);
+      toast({
+        title: "Erro ao carregar histórico",
+        description: error.message || "Tente novamente mais tarde",
+        variant: "destructive"
+      });
+      setTransactions([]);
+    }
+  };
     } catch (error: any) {
       console.error('Error fetching transactions:', error);
       toast({
