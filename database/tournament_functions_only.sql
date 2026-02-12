@@ -133,7 +133,70 @@ BEGIN
 EXCEPTION WHEN OTHERS THEN
   RETURN json_build_object('success', FALSE, 'message', SQLERRM);
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ============================================
+-- FUNÇÃO: remove_tournament_participant (Creator only)
+-- ============================================
+CREATE OR REPLACE FUNCTION remove_tournament_participant(
+  p_tournament_id UUID,
+  p_participant_id UUID
+)
+RETURNS JSON AS $
+DECLARE
+  v_tournament RECORD;
+  v_entry_fee DECIMAL;
+  v_creator_id UUID;
+BEGIN
+  -- Get current user (creator)
+  SELECT auth.uid() INTO v_creator_id;
+  
+  -- Get tournament info
+  SELECT * INTO v_tournament FROM tournaments WHERE id = p_tournament_id;
+  
+  -- Validate tournament exists
+  IF v_tournament.id IS NULL THEN
+    RETURN json_build_object('success', FALSE, 'message', 'Torneio não encontrado');
+  END IF;
+  
+  -- Validate user is creator
+  IF v_tournament.created_by != v_creator_id THEN
+    RETURN json_build_object('success', FALSE, 'message', 'Apenas o criador pode remover participantes');
+  END IF;
+  
+  -- Validate tournament is still upcoming
+  IF v_tournament.status != 'upcoming' THEN
+    RETURN json_build_object('success', FALSE, 'message', 'Não é possível remover participantes após o início do torneio');
+  END IF;
+  
+  -- Get entry fee
+  v_entry_fee := v_tournament.entry_fee;
+  
+  -- Remove participant
+  DELETE FROM tournament_participants 
+  WHERE tournament_id = p_tournament_id AND user_id = p_participant_id;
+  
+  -- Refund entry fee to participant
+  IF v_entry_fee > 0 THEN
+    UPDATE profiles SET duelcoins_balance = duelcoins_balance + v_entry_fee 
+    WHERE user_id = p_participant_id;
+    
+    UPDATE profiles SET duelcoins_balance = duelcoins_balance - v_entry_fee 
+    WHERE user_id = v_creator_id;
+    
+    UPDATE tournaments SET total_collected = total_collected - v_entry_fee
+    WHERE id = p_tournament_id;
+    
+    INSERT INTO duelcoins_transactions (receiver_id, sender_id, amount, transaction_type, description)
+    VALUES (p_participant_id, v_creator_id, v_entry_fee, 'tournament_refund', 
+            'Reembolso de inscrição removido pelo criador - Torneio: ' || v_tournament.name);
+  END IF;
+  
+  RETURN json_build_object('success', TRUE, 'message', 'Participante removido com sucesso!');
+EXCEPTION WHEN OTHERS THEN
+  RETURN json_build_object('success', FALSE, 'message', SQLERRM);
+END;
+$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ============================================
 -- 5. FUNÇÃO: distribute_normal_tournament_prize
