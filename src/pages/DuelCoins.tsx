@@ -166,6 +166,27 @@ export default function DuelCoins() {
 
   const isReceived = (tx: any) => tx.receiver_id === currentUserId;
 
+  const getTransactionOrigin = (tx: any) => {
+    const type = tx.transaction_type;
+    if (type === 'tournament_entry' || type === 'tournament_prize' || type === 'tournament_win') {
+      return 'Torneios';
+    }
+    if (type === 'admin_add' || type === 'admin_remove' || type === 'system' || type === 'daily_reward' || type === 'purchase' || type === 'redeem') {
+      return 'Sistema';
+    }
+    if (type === 'transfer') {
+      const received = tx.receiver_id === currentUserId;
+      return received 
+        ? (tx.sender?.username || 'Sistema')
+        : (tx.receiver?.username || 'Sistema');
+    }
+    // Fallback
+    const received = tx.receiver_id === currentUserId;
+    return received 
+      ? (tx.sender?.username || 'Sistema')
+      : (tx.receiver?.username || 'Sistema');
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -279,10 +300,7 @@ export default function DuelCoins() {
                               )}
                             </TableCell>
                             <TableCell>
-                              {received 
-                                ? tx.sender?.username || 'Sistema'
-                                : tx.receiver?.username || 'Sistema'
-                              }
+                              {getTransactionOrigin(tx)}
                             </TableCell>
                             <TableCell className="text-right font-bold">
                               <span className={received ? "text-green-500" : "text-muted-foreground"}>
