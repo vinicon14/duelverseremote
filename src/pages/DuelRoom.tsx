@@ -37,7 +37,7 @@ const DuelRoom = () => {
   const lastPauseTime = useRef<number>(0);
   
   const isJudge = searchParams.get('role') === 'judge';
-  const [hideControls, setHideControls] = useState(false);
+  const [hideControls, setHideControls] = useState(true);
   
   // Deck viewer state
   const [showDeckViewer, setShowDeckViewer] = useState(false);
