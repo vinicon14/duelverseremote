@@ -39,6 +39,24 @@ export default function DuelCoins() {
 
   const fetchTransactions = async (userId: string) => {
     try {
+      // Tentar usar a função RPC primeiro (mais confiável)
+      const { data: rpcData, error: rpcError } = await supabase
+        .rpc('get_user_transactions', { p_limit: 50 });
+
+      if (!rpcError && rpcData) {
+        // Formatar dados da RPC
+        const formattedTransactions = rpcData.map((tx: any) => ({
+          ...tx,
+          sender: { username: tx.sender_username || 'Sistema' },
+          receiver: { username: tx.receiver_username || 'Sistema' }
+        }));
+        setTransactions(formattedTransactions);
+        return;
+      }
+
+      console.warn('RPC failed, using fallback query:', rpcError);
+
+      // Fallback: query direta (menos confiável devido a RLS)
       const { data, error } = await supabase
         .from('duelcoins_transactions')
         .select('*')
@@ -81,10 +99,11 @@ export default function DuelCoins() {
       );
 
       setTransactions(transactionsWithUsers);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching transactions:', error);
       toast({
         title: "Erro ao carregar histórico",
+        description: error.message || "Tente novamente mais tarde",
         variant: "destructive"
       });
     }
