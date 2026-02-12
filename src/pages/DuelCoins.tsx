@@ -79,15 +79,6 @@ export default function DuelCoins() {
       setTransactions([]);
     }
   };
-    } catch (error: any) {
-      console.error('Error fetching transactions:', error);
-      toast({
-        title: "Erro ao carregar histórico",
-        description: error.message || "Tente novamente mais tarde",
-        variant: "destructive"
-      });
-    }
-  };
 
   const transferDuelCoins = async () => {
     if (!receiverUsername.trim()) {
