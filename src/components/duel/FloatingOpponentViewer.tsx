@@ -142,11 +142,17 @@ export const FloatingOpponentViewer = ({
   if (isMinimized) {
     return (
       <button
+        ref={elementRef}
         onClick={() => setIsMinimized(false)}
-        className="fixed z-40 w-10 h-10 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-lg flex items-center justify-center hover:bg-muted/50 transition-colors"
+        className={cn(
+          "fixed z-40 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-lg flex items-center gap-2 px-3 py-2 hover:bg-muted/50 transition-colors",
+          isDragging && "cursor-grabbing"
+        )}
         style={{ left: position.x, top: position.y }}
+        {...dragHandlers}
       >
         <Eye className="h-5 w-5 text-primary" />
+        <span className="text-sm font-medium whitespace-nowrap">Ver deck do oponente</span>
       </button>
     );
   }
