@@ -2,6 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ConditionalMonetagLoader } from "@/components/ConditionalMonetagLoader";
+import { UniversalNewTabBlocker } from "@/components/UniversalNewTabBlocker";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -38,6 +39,7 @@ import CreateWeeklyTournament from "./pages/CreateWeeklyTournament";
 import WeeklyTournaments from "./pages/WeeklyTournaments";
 import MyTournaments from "./pages/MyTournaments";
 import TournamentManager from "./pages/TournamentManager";
+import TransferHistory from "./pages/TransferHistory";
 
 const queryClient = new QueryClient();
 
@@ -72,6 +74,7 @@ const RouterContent = () => {
       <Route path="/create-weekly-tournament" element={<CreateWeeklyTournament />} />
       <Route path="/my-tournaments" element={<MyTournaments />} />
       <Route path="/tournament-manager" element={<TournamentManager />} />
+      <Route path="/transfer-history" element={<TransferHistory />} />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
     </Routes>
@@ -110,6 +113,7 @@ const AppContent = () => {
 
   return (
     <BrowserRouter>
+      <UniversalNewTabBlocker />
       <ConditionalMonetagLoader />
       <DuelInviteNotification currentUserId={user?.id} />
       <NotificationPrompt />
