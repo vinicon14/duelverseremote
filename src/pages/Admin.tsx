@@ -11,8 +11,8 @@ import { AdminSettings } from "@/components/admin/AdminSettings";
 import { AdminDuels } from "@/components/admin/AdminDuels";
 import { AdminDuelCoins } from "@/components/admin/AdminDuelCoins";
 import { AdminJudges } from "@/components/admin/AdminJudges";
-import { ShopManager } from "@/components/admin/ShopManager";
-import { ShopTransactions } from "@/components/admin/ShopTransactions";
+import ShopManager from "@/components/admin/ShopManager";
+import ShopTransactions from "@/components/admin/ShopTransactions";
 import { Shield, Loader2, ShoppingCart, Package } from "lucide-react";
 
 export default function Admin() {

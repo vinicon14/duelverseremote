@@ -48,6 +48,10 @@ interface CashoutConfig {
   processing_days: number;
 }
 
+interface SystemSettings {
+  store_url: string;
+}
+
 export default function Store() {
   useBanCheck();
   const navigate = useNavigate();
@@ -55,23 +59,22 @@ export default function Store() {
   
   const [products, setProducts] = useState<Product[]>([]);
   const [duelcoinsBalance, setDuelcoinsBalance] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [showCheckout, setShowCheckout] = useState(false);
-  const [showCashout, setShowCashout] = useState(false);
-  const [cashoutAmount, setCashoutAmount] = useState("");
   const [cashoutConfig, setCashoutConfig] = useState<CashoutConfig>({
     min_amount: 100,
     max_amount: 10000,
     fee_percentage: 10,
-    processing_days: 2
+    processing_days: 7
   });
-  const [copiedCode, setCopiedCode] = useState<string | null);
+  const [systemSettings, setSystemSettings] = useState<SystemSettings>({
+    store_url: ''
+  });
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
   useEffect(() => {
     fetchProducts();
+    fetchDuelcoinsBalance();
     fetchCashoutConfig();
-    fetchUserBalance();
+    fetchSystemSettings();
   }, []);
 
   const fetchProducts = async () => {
@@ -82,30 +85,41 @@ export default function Store() {
         .select('*')
         .eq('is_active', true)
         .order('created_at', { ascending: false });
-      
-      if (error) {
-        console.error('Error fetching products:', error);
-        throw error;
-      }
+
+      if (error) throw error;
       setProducts(data || []);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching products:', error);
-      
-      if (error.code === 'PGRST116') {
-        toast({
-          title: "Tabela não encontrada",
-          description: "Execute os arquivos SQL da pasta database para instalar as tabelas da loja.",
-          variant: "destructive"
-        });
-      } else {
-        toast({
-          title: "Erro ao carregar produtos",
-          description: error.message || "Ocorreu um erro ao carregar os produtos.",
-          variant: "destructive"
-        });
-      }
+      toast({
+        title: "Erro ao carregar produtos",
+        description: "Não foi possível carregar os produtos da loja.",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchSystemSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('system_settings')
+        .select('key, value')
+        .in('key', ['store_url']);
+
+      if (error) throw error;
+      
+      if (data) {
+        const storeUrl = data.find(s => s.key === 'store_url');
+        if (storeUrl) {
+          setSystemSettings(prev => ({
+            ...prev,
+            store_url: storeUrl.value || ''
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching system settings:', error);
     }
   };
 
@@ -323,8 +337,22 @@ export default function Store() {
               Produtos exclusivos e DuelCoins para potencializar sua experiência
             </p>
             
+            {/* External Store Link */}
+            {systemSettings.store_url && (
+              <div className="mt-4">
+                <Button
+                  onClick={() => window.open(systemSettings.store_url, '_blank')}
+                  className="btn-mystic"
+                  size="lg"
+                >
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  Acessar Loja Externa
+                </Button>
+              </div>
+            )}
+            
             {/* Balance Display */}
-            <div className="inline-flex items-center gap-2 bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-2">
+            <div className="inline-flex items-center gap-2 bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-2 mt-4">
               <Coins className="w-5 h-5 text-yellow-600" />
               <span className="font-bold text-yellow-800">
                 Seu saldo: {duelcoinsBalance} DuelCoins
