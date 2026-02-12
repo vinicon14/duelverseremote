@@ -123,7 +123,7 @@ export const ProNavbar = () => {
           DuelCoins
         </Button>
       </Link>
-      <Link to="/pro/store">
+      <Link to="/store">
         <Button variant="ghost" className="text-foreground hover:text-primary">
           <Store className="mr-2 h-4 w-4" />
           Loja

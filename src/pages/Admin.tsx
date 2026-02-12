@@ -11,7 +11,9 @@ import { AdminSettings } from "@/components/admin/AdminSettings";
 import { AdminDuels } from "@/components/admin/AdminDuels";
 import { AdminDuelCoins } from "@/components/admin/AdminDuelCoins";
 import { AdminJudges } from "@/components/admin/AdminJudges";
-import { Shield, Loader2 } from "lucide-react";
+import { ShopManager } from "@/components/admin/ShopManager";
+import { ShopTransactions } from "@/components/admin/ShopTransactions";
+import { Shield, Loader2, ShoppingCart, Package } from "lucide-react";
 
 export default function Admin() {
   const { isAdmin, loading } = useAdmin();
@@ -51,14 +53,15 @@ export default function Admin() {
         </div>
 
         <Tabs defaultValue="news" className="w-full">
-          <TabsList className="grid w-full grid-cols-8">
+          <TabsList className="grid w-full grid-cols-10">
             <TabsTrigger value="news">Notícias</TabsTrigger>
             <TabsTrigger value="ads">Anúncios</TabsTrigger>
             <TabsTrigger value="users">Usuários</TabsTrigger>
             <TabsTrigger value="duels">Salas</TabsTrigger>
             <TabsTrigger value="tournaments">Torneios</TabsTrigger>
             <TabsTrigger value="duelcoins">DuelCoins</TabsTrigger>
-            <TabsTrigger value="judges">Juízes</TabsTrigger>
+            <TabsTrigger value="shop">Loja</TabsTrigger>
+            <TabsTrigger value="shop-transactions">Vendas</TabsTrigger>
             <TabsTrigger value="settings">Configurações</TabsTrigger>
           </TabsList>
           
@@ -88,6 +91,14 @@ export default function Admin() {
           
           <TabsContent value="judges" className="mt-6">
             <AdminJudges />
+          </TabsContent>
+          
+          <TabsContent value="shop" className="mt-6">
+            <ShopManager />
+          </TabsContent>
+          
+          <TabsContent value="shop-transactions" className="mt-6">
+            <ShopTransactions />
           </TabsContent>
           
           <TabsContent value="settings" className="mt-6">
