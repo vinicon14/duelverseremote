@@ -139,6 +139,7 @@ export type Database = {
           id: string
           receiver_id: string | null
           sender_id: string | null
+          tournament_id: string | null
           transaction_type: string
         }
         Insert: {
@@ -148,6 +149,7 @@ export type Database = {
           id?: string
           receiver_id?: string | null
           sender_id?: string | null
+          tournament_id?: string | null
           transaction_type: string
         }
         Update: {
@@ -157,9 +159,18 @@ export type Database = {
           id?: string
           receiver_id?: string | null
           sender_id?: string | null
+          tournament_id?: string | null
           transaction_type?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "duelcoins_transactions_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       friend_requests: {
         Row: {

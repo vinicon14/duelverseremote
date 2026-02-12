@@ -109,6 +109,7 @@ serve(async (req) => {
           receiver_id: null,
           amount: tournament.entry_fee,
           transaction_type: 'tournament_entry',
+          tournament_id: tournament_id,
           description: `Inscrição no torneio: ${tournament.name}`
         });
     }
