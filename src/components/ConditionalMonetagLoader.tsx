@@ -103,55 +103,13 @@ export const ConditionalMonetagLoader = () => {
     // Apply UNIVERSAL new tab blocking FIRST, before any Monetag loading
     applyUniversalBlocking();
 
-    // Check if current route is a PRO route
-    const isProRoute = location.pathname.startsWith('/pro/');
-    const isAuthRoute = location.pathname === '/auth';
-    const isLandingRoute = location.pathname === '/landing';
-
-    // Don't load Monetag on PRO routes, auth page, or landing
-    if (isProRoute || isAuthRoute || isLandingRoute) {
-      console.log('Monetag BLOQUEADO - rota PRO/auth/landing:', location.pathname);
-      return;
-    }
-
-    // Don't load if user is PRO (in case they somehow access non-PRO route)
-    if (isPro) {
-      console.log('Monetag BLOQUEADO - usuário PRO');
-      return;
-    }
-
-    // FREE USERS: REDUCED Monetag with frequency control
-    // Load ads only on specific pages to reduce intrusiveness
-    const shouldLoadAds = checkIfShouldLoadAds(location.pathname);
-    
-    if (!shouldLoadAds) {
-      console.log('Monetag NÃO carregado - página não permitida:', location.pathname);
-      return;
-    }
-
-    // Check frequency limiting
-    if (shouldLimitFrequency()) {
-      console.log('Monetag NÃO carregado - limite de frequência atingido');
-      return;
-    }
-
-    console.log('Monetag REDUZIDO carregado para usuário FREE:', location.pathname);
-    
-    // Load Monetag script for free users with reduced configuration
-    const script = document.createElement('script');
-    script.src = 'https://quge5.com/88/tag.min.js';
-    script.setAttribute('data-zone', '209658');
-    script.setAttribute('async', 'true');
-    script.setAttribute('data-cfasync', 'false');
-    script.id = 'monetag-conditional-loader';
-    
-    document.head.appendChild(script);
-
-    // Update frequency tracking
-    updateFrequencyTracking();
+    // MONETAG COMPLETELY DISABLED - No ads will be loaded
+    // This prevents any popup/new tab ads from appearing
+    console.log('Monetag COMPLETAMENTE DESATIVADO - nenhum anúncio será carregado');
+    console.log('Todos os anúncios que abrem novas guias estão bloqueados');
 
     return () => {
-      // Cleanup: remove script when leaving route
+      // Cleanup any existing script
       const existingScript = document.getElementById('monetag-conditional-loader');
       if (existingScript) {
         existingScript.remove();
