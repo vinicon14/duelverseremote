@@ -34,7 +34,7 @@ export const FloatingCalculator = ({
     };
   });
   const [isDragging, setIsDragging] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(true);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const calculatorRef = useRef<HTMLDivElement>(null);
 

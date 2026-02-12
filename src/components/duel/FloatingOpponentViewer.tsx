@@ -79,7 +79,7 @@ export const FloatingOpponentViewer = ({
 }: FloatingOpponentViewerProps) => {
   const [opponentState, setOpponentState] = useState<OpponentState | null>(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(true);
   const [isVisible, setIsVisible] = useState(true);
   const [selectedCard, setSelectedCard] = useState<OpponentCard | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -141,11 +141,11 @@ export const FloatingOpponentViewer = ({
 
   if (isMinimized) {
     return (
-      <button
+      <div
         ref={elementRef}
-        onClick={() => setIsMinimized(false)}
+        onClick={() => !isDragging && setIsMinimized(false)}
         className={cn(
-          "fixed z-40 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-lg flex items-center gap-2 px-3 py-2 hover:bg-muted/50 transition-colors",
+          "fixed z-40 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-lg flex items-center gap-2 px-3 py-2 hover:bg-muted/50 transition-colors cursor-pointer",
           isDragging && "cursor-grabbing"
         )}
         style={{ left: position.x, top: position.y }}
@@ -153,7 +153,7 @@ export const FloatingOpponentViewer = ({
       >
         <Eye className="h-5 w-5 text-primary" />
         <span className="text-sm font-medium whitespace-nowrap">Ver deck do oponente</span>
-      </button>
+      </div>
     );
   }
 
