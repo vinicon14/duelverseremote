@@ -184,8 +184,8 @@ export const GlobalChat = () => {
         </CardTitle>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col gap-3 min-h-0">
-        <ScrollArea className="flex-1 pr-4" ref={scrollRef}>
-          <div className="space-y-3">
+        <ScrollArea className="flex-1 pr-4 min-h-0" ref={scrollRef}>
+          <div className="space-y-3 overflow-hidden">
             {messages.map((msg) => (
               <div
                 key={msg.id}
@@ -199,7 +199,7 @@ export const GlobalChat = () => {
                   </div>
                 </div>
                 <div
-                  className={`flex flex-col gap-1 max-w-[70%] ${
+                  className={`flex flex-col gap-1 max-w-[85%] ${
                     msg.user_id === currentUser?.id ? 'items-end' : 'items-start'
                   }`}
                 >
@@ -213,7 +213,7 @@ export const GlobalChat = () => {
                         : 'bg-muted'
                     }`}
                   >
-                    <p className="text-sm break-words">{msg.message}</p>
+                    <p className="text-sm break-words whitespace-pre-wrap overflow-wrap-anywhere" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{msg.message}</p>
                   </div>
                   <span className="text-xs text-muted-foreground">
                     {new Date(msg.created_at).toLocaleTimeString('pt-BR', {
