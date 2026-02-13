@@ -164,7 +164,7 @@ serve(async (req) => {
         .from('tournaments')
         .update({ current_round: match.round + 1 })
         .eq('id', match.tournament_id);
-    } else if (allCompleted && currentRound === totalRounds) {
+    } else if (allCompleted && match.round >= match.tournament.total_rounds) {
       console.log('FINAL ROUND DETECTED! All matches completed. Tournament ready for prize distribution.');
       
       // NÃO finalizar o torneio automaticamente aqui

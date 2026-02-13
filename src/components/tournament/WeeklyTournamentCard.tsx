@@ -67,7 +67,12 @@ export const WeeklyTournamentCard = ({
         .maybeSingle();
 
       if (existing) {
-        throw new Error("Você já está inscrito neste torneio");
+        toast({
+          title: "⚠️ Inscrição duplicada",
+          description: "Você não pode se inscrever duas vezes no mesmo torneio.",
+        });
+        setJoining(false);
+        return;
       }
 
       // Use edge function to handle entry fee + registration atomically
