@@ -84,21 +84,6 @@ serve(async (req) => {
       );
     }
 
-    // Check if already registered BEFORE charging
-    const { data: existingParticipant } = await supabaseClient
-      .from('tournament_participants')
-      .select('id')
-      .eq('tournament_id', tournament_id)
-      .eq('user_id', user.id)
-      .maybeSingle();
-
-    if (existingParticipant) {
-      return new Response(
-        JSON.stringify({ success: false, message: 'Você não pode se inscrever duas vezes no mesmo torneio' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     if (tournament.entry_fee > 0 && profile.duelcoins_balance < tournament.entry_fee) {
       return new Response(
         JSON.stringify({ success: false, message: `Saldo insuficiente. Você precisa de ${tournament.entry_fee} DuelCoins` }),

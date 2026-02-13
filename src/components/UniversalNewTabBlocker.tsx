@@ -98,12 +98,7 @@ export const UniversalNewTabBlocker = () => {
         if (link && link.target === '_blank') {
           const href = link.href;
           
-          const blockedLinkPatterns = [
-            'pop', 'onclicka', 'vignette', 'adsterra',
-            'popunder', 'popup', 'redirect', 'offer',
-            'tabunder', 'popcash', 'propellerads'
-          ];
-          const isBlocked = blockedLinkPatterns.some(pattern => 
+          const isBlocked = blockedPatterns.some(pattern => 
             href.toLowerCase().includes(pattern.toLowerCase())
           );
           
