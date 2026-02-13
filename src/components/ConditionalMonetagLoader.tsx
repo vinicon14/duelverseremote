@@ -13,7 +13,7 @@ import { useAccountType } from '@/hooks/useAccountType';
  * 
  * This allows monetization while preventing intrusive ads
  */
-export const ConditionalMonetagLoader = () => {
+export const ConditionalMonetagLoader = (): JSX.Element | null => {
   const location = useLocation();
   const { isPro, loading } = useAccountType();
 
@@ -76,6 +76,8 @@ export const ConditionalMonetagLoader = () => {
   useEffect(() => {
     applyPopupBlocking();
   }, []);
+
+  return null;
 };
 
 // Blocking function - blocks popunder and popup/click ads but allows notification
