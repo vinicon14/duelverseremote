@@ -49,6 +49,17 @@ export const WeeklyTournamentCard = ({
         return;
       }
 
+      // Check if RPC returned a duplicate error
+      const rpcMessage = data?.message || error?.message || '';
+      if (rpcMessage.toLowerCase().includes('já') || rpcMessage.toLowerCase().includes('already') || rpcMessage.toLowerCase().includes('inscrito') || rpcMessage.toLowerCase().includes('duplicate')) {
+        toast({
+          title: "⚠️ Inscrição duplicada",
+          description: "Você não pode se inscrever duas vezes no mesmo torneio.",
+        });
+        setJoining(false);
+        return;
+      }
+
       // Fallback: Direct database operations
       if (tournament.isFull) {
         throw new Error("Torneio está lotado");
