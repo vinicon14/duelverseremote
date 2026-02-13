@@ -183,13 +183,13 @@ export const GlobalChat = () => {
           Chat Global
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 flex flex-col gap-3 min-h-0">
-        <ScrollArea className="flex-1 pr-4 min-h-0" ref={scrollRef}>
-          <div className="space-y-3 overflow-hidden">
+      <CardContent className="flex-1 flex flex-col gap-3 min-h-0 overflow-hidden">
+        <ScrollArea className="flex-1 pr-2 sm:pr-4 min-h-0" ref={scrollRef}>
+          <div className="space-y-3 min-w-0">
             {messages.map((msg) => (
               <div
                 key={msg.id}
-                className={`flex gap-2 ${
+                className={`flex gap-2 min-w-0 ${
                   msg.user_id === currentUser?.id ? 'flex-row-reverse' : 'flex-row'
                 }`}
               >
@@ -199,21 +199,21 @@ export const GlobalChat = () => {
                   </div>
                 </div>
                 <div
-                  className={`flex flex-col gap-1 max-w-[85%] ${
+                  className={`flex flex-col gap-1 min-w-0 max-w-[calc(100%-48px)] ${
                     msg.user_id === currentUser?.id ? 'items-end' : 'items-start'
                   }`}
                 >
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-xs text-muted-foreground truncate max-w-full">
                     {msg.username}
                   </span>
                   <div
-                    className={`px-3 py-2 rounded-lg ${
+                    className={`px-3 py-2 rounded-lg max-w-full ${
                       msg.user_id === currentUser?.id
                         ? 'bg-primary text-primary-foreground'
                         : 'bg-muted'
                     }`}
                   >
-                    <p className="text-sm break-words whitespace-pre-wrap overflow-wrap-anywhere" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{msg.message}</p>
+                    <p className="text-sm break-words whitespace-pre-wrap" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{msg.message}</p>
                   </div>
                   <span className="text-xs text-muted-foreground">
                     {new Date(msg.created_at).toLocaleTimeString('pt-BR', {
