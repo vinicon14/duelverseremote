@@ -13,7 +13,9 @@ import {
   ArrowDown,
   Shuffle,
   Eye,
-  Trash2
+  Trash2,
+  Zap,
+  Link2
 } from 'lucide-react';
 import { FieldZoneType, GameCard } from './DuelFieldBoard';
 
@@ -134,6 +136,30 @@ export const ZoneViewerModal = ({
                     <span className="text-[8px] text-white text-center line-clamp-2">{card.name}</span>
                     
                     <div className="flex gap-1 flex-wrap justify-center">
+                      {onInvokeToField && (
+                        <Button
+                          variant="default"
+                          size="icon"
+                          className="h-5 w-5 bg-green-600 hover:bg-green-700"
+                          onClick={(e) => { e.stopPropagation(); onInvokeToField(card, idx); }}
+                          title="Invocar ao Campo"
+                        >
+                          <Zap className="h-3 w-3" />
+                        </Button>
+                      )}
+                      
+                      {hasXYZMonster && onAttachAsMaterial && (
+                        <Button
+                          variant="default"
+                          size="icon"
+                          className="h-5 w-5 bg-blue-600 hover:bg-blue-700"
+                          onClick={(e) => { e.stopPropagation(); onAttachAsMaterial(card, idx); }}
+                          title="Anexar como Material"
+                        >
+                          <Link2 className="h-3 w-3" />
+                        </Button>
+                      )}
+                      
                       {zone !== 'graveyard' && onSendToGY && (
                         <Button
                           variant="secondary"
@@ -179,6 +205,18 @@ export const ZoneViewerModal = ({
                           title="Anexar como Material"
                         >
                           <Layers className="h-3 w-3" />
+                        </Button>
+                      )}
+                      
+                      {zone !== 'banished' && onSendToBanished && (
+                        <Button
+                          variant="secondary"
+                          size="icon"
+                          className="h-5 w-5"
+                          onClick={(e) => { e.stopPropagation(); onSendToBanished(card, idx); }}
+                          title="Banir"
+                        >
+                          <Ban className="h-3 w-3" />
                         </Button>
                       )}
                       
