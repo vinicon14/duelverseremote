@@ -267,7 +267,7 @@ export const MultiDeviceVideoCall = ({
 
         await callObject.join({
           url: roomUrl,
-          userName: `${username} (${userId.slice(0, 6)})`,
+          userName: username,
         });
 
       } catch (err: any) {
