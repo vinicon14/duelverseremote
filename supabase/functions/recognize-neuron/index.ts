@@ -98,23 +98,22 @@ serve(async (req) => {
     if (cardNames.length === 0) {
       console.log("No JSON found, using AI to parse HTML");
       
-      const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-      if (!LOVABLE_API_KEY) {
-        throw new Error("LOVABLE_API_KEY is not configured");
+      const GOOGLE_API_KEY = Deno.env.get("GOOGLE_API_KEY");
+      if (!GOOGLE_API_KEY) {
+        throw new Error("GOOGLE_API_KEY is not configured");
       }
 
-      const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GOOGLE_API_KEY}`, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
-          messages: [
+          contents: [
             {
-              role: "system",
-              content: `You are the world's leading expert on Yu-Gi-Oh! Trading Card Game with complete knowledge of ALL 12,000+ cards ever printed.
+              parts: [
+                {
+                  text: `You are the world's leading expert on Yu-Gi-Oh! Trading Card Game with complete knowledge of ALL 12,000+ cards ever printed.
 
 YOUR MISSION: Extract ALL Yu-Gi-Oh! card names from this Neuron deck list HTML.
 
@@ -133,22 +132,17 @@ OUTPUT: Return ONLY a JSON array of official English card names.
 Example: ["Dark Magician", "Blue-Eyes White Dragon", "Polymerization", "Mirror Force"]
 
 If absolutely no cards are identifiable, return: []`
-            },
-            {
-              role: "user",
-              content: [
-                {
-                  type: "text",
-                  text: "Extract ALL Yu-Gi-Oh! card names from this Neuron deck list. Return a JSON array of official English card names."
                 },
                 {
-                  type: "text",
-                  text: html.substring(0, 15000) // Send first 15000 chars to avoid token limits
+                  text: html.substring(0, 15000)
                 }
               ]
             }
           ],
-          max_tokens: 2000,
+          generationConfig: {
+            temperature: 0.1,
+            maxOutputTokens: 2000,
+          }
         }),
       });
 
@@ -159,7 +153,7 @@ If absolutely no cards are identifiable, return: []`
       }
 
       const aiData = await aiResponse.json();
-      const content = aiData.choices?.[0]?.message?.content || "[]";
+      const content = aiData.candidates?.[0]?.content?.parts?.[0]?.text || "[]";
       
       // Parse the JSON array from the response
       try {
