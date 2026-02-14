@@ -59,6 +59,7 @@ export const MultiDeviceVideoCall = ({
   const [error, setError] = useState<string | null>(null);
 
   const [participants, setParticipants] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const enumerateDevices = useCallback(async () => {
     try {
@@ -216,15 +217,23 @@ export const MultiDeviceVideoCall = ({
   }, [enumerateDevices]);
 
   useEffect(() => {
-    if (!roomUrl || !containerRef.current) return;
-    
+    if (!roomUrl) return;
+
     const initCall = async () => {
       try {
         setError(null);
         
         if (callRef.current) {
-          await callRef.current.leave();
+          try {
+            await callRef.current.leave();
+          } catch (e) {}
           callRef.current.destroy();
+          callRef.current = null;
+        }
+
+        if (!containerRef.current) {
+          console.error('Container ref is null');
+          return;
         }
 
         const callObject = DailyIframe.createFrame(containerRef.current, {
@@ -242,15 +251,18 @@ export const MultiDeviceVideoCall = ({
 
         callObject.on('joined-meeting', () => {
           setIsJoined(true);
+          setIsLoading(false);
         });
 
         callObject.on('left-meeting', () => {
           setIsJoined(false);
+          setIsLoading(false);
         });
 
         callObject.on('error', (evt) => {
           console.error('Daily.co error:', evt);
           setError(evt.errorMsg || 'Erro na chamada');
+          setIsLoading(false);
         });
 
         await callObject.join({
@@ -261,14 +273,17 @@ export const MultiDeviceVideoCall = ({
       } catch (err: any) {
         console.error('Error joining call:', err);
         setError(err.message || 'Erro ao entrar na chamada');
+        setIsLoading(false);
       }
     };
 
-    initCall();
+    setIsLoading(true);
+    const timer = setTimeout(initCall, 100);
 
     return () => {
+      clearTimeout(timer);
       if (callRef.current) {
-        callRef.current.leave();
+        callRef.current.leave().catch(() => {});
         callRef.current.destroy();
         callRef.current = null;
       }
@@ -277,7 +292,7 @@ export const MultiDeviceVideoCall = ({
 
   return (
     <div className={cn("relative h-full w-full bg-black rounded-lg overflow-hidden", className)}>
-      {!isJoined && !error && (
+      {(isLoading || (!isJoined && !error)) && (
         <div className="absolute inset-0 flex items-center justify-center bg-black z-10">
           <div className="text-center space-y-4">
             <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
@@ -290,7 +305,7 @@ export const MultiDeviceVideoCall = ({
         <div className="absolute inset-0 flex items-center justify-center bg-black z-10">
           <div className="text-center space-y-4 p-4">
             <p className="text-red-400">{error}</p>
-            <Button onClick={joinCall} variant="outline">
+            <Button onClick={() => window.location.reload()} variant="outline">
               Tentar novamente
             </Button>
           </div>
