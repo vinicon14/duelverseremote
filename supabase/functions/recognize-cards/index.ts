@@ -20,27 +20,33 @@ serve(async (req) => {
       );
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+    const GOOGLE_API_KEY = Deno.env.get("GOOGLE_API_KEY");
+    if (!GOOGLE_API_KEY) {
+      throw new Error("GOOGLE_API_KEY is not configured");
     }
 
     // Use Gemini Pro with vision capabilities to recognize Yu-Gi-Oh! cards
     console.log("Starting card recognition...");
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GOOGLE_API_KEY}`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
+        contents: [
           {
-            role: "system",
-            content: `You are the world's leading expert on Yu-Gi-Oh! Trading Card Game with complete knowledge of ALL 12,000+ cards ever printed including OCG, TCG, anime-only, and promotional cards.
+            parts: [
+              {
+                text: `You are the world's leading expert on Yu-Gi-Oh! Trading Card Game with complete knowledge of ALL 12,000+ cards ever printed including OCG, TCG, anime-only, and promotional cards.
 
 YOUR MISSION: Identify EVERY SINGLE Yu-Gi-Oh! card visible in this image. Do not miss any card.
+
+IMPORTANT - This is likely a NERON APP screenshot:
+- Neuron shows deck lists in a specific format
+- Look for card names in list format, usually on the left side
+- Card quantities may appear on the right (x1, x2, x3, etc.)
+- Main deck cards at top, Extra deck below, Side deck at bottom
+- Even small text or icons you can identify count as cards
 
 IDENTIFICATION TECHNIQUES:
 1. ARTWORK ANALYSIS: Study each card's unique artwork, monsters, spell/trap imagery
@@ -71,47 +77,31 @@ OUTPUT: Return ONLY a JSON array of official English card names.
 Example: ["Dark Magician", "Blue-Eyes White Dragon", "Polymerization", "Mirror Force"]
 
 If absolutely no cards are identifiable, return: []`
-          },
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: "Examine this image very carefully. Identify ALL Yu-Gi-Oh! cards you can see. Look at the entire image including edges, background, and partially visible cards. For each card, provide its official English name. Return your answer as a JSON array."
               },
               {
-                type: "image_url",
-                image_url: {
-                  url: imageBase64.startsWith('data:') ? imageBase64 : `data:image/jpeg;base64,${imageBase64}`
+                inlineData: {
+                  mimeType: imageBase64.startsWith('data:') ? imageBase64.split(';')[0].split(':')[1] : 'image/jpeg',
+                  data: imageBase64.startsWith('data:') ? imageBase64.split(',')[1] : imageBase64
                 }
               }
             ]
           }
         ],
-        max_tokens: 2000,
+        generationConfig: {
+          temperature: 0.1,
+          maxOutputTokens: 2000,
+        }
       }),
     });
 
     if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Rate limit exceeded. Please try again later." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Payment required. Please add credits to your workspace." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
       const errorText = await response.text();
       console.error("AI gateway error:", response.status, errorText);
       throw new Error("Failed to analyze image");
     }
 
     const data = await response.json();
-    const content = data.choices?.[0]?.message?.content || "[]";
+    const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "[]";
     
     // Parse the JSON array from the response
     let cardNames: string[] = [];

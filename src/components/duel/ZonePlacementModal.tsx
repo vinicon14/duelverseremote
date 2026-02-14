@@ -36,8 +36,11 @@ const isMonsterCard = (type: string): boolean => {
   return type.toLowerCase().includes('monster');
 };
 
-const isFieldSpell = (type: string, race?: string): boolean => {
-  return type === 'Spell Card' && race === 'Field';
+const isFieldSpell = (card: GameCard): boolean => {
+  const type = card.type?.toLowerCase() || '';
+  const name = card.name?.toLowerCase() || '';
+  // Check if card is a Field Spell - check type, race, and name for "field"
+  return type.includes('field') || name.includes('field') || card.race?.toLowerCase() === 'field';
 };
 
 export const ZonePlacementModal = ({
@@ -52,7 +55,7 @@ export const ZonePlacementModal = ({
   const isMonster = isMonsterCard(card.type);
   const isSpell = isSpellCard(card.type);
   const isTrap = isTrapCard(card.type);
-  const isField = isFieldSpell(card.type, card.race);
+  const isField = isFieldSpell(card);
   const isExtraDeck = isExtraDeckCardType(card.type);
   const isLinkMonster = card.type.includes('Link');
 

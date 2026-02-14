@@ -5,11 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/Navbar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { Trophy, Swords, Star, Calendar, Video, Eye, Play } from "lucide-react";
+import { Trophy, Swords, Star, Calendar, Video, Eye, Play, Coins, ArrowUpRight, ArrowDownLeft, History } from "lucide-react";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { BrowserNotificationTest } from "@/components/BrowserNotificationTest";
 import { ChangePasswordForm } from "@/components/ChangePasswordForm";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -33,6 +35,7 @@ const Profile = () => {
   const [stats, setStats] = useState<any>(null);
   const [recentMatches, setRecentMatches] = useState<any[]>([]);
   const [recordings, setRecordings] = useState<Recording[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isOwnProfile, setIsOwnProfile] = useState(true);
@@ -62,6 +65,11 @@ const Profile = () => {
     await fetchStats(targetUserId);
     await fetchRecentMatches(targetUserId);
     await fetchRecordings(targetUserId);
+    
+    // Só busca transações se for o próprio perfil do usuário logado
+    if (targetUserId === session.user.id) {
+      await fetchTransactions(targetUserId);
+    }
   };
 
   const fetchProfile = async (userId: string) => {
@@ -161,6 +169,61 @@ const Profile = () => {
     }
   };
 
+  const fetchTransactions = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('duelcoins_transactions')
+        .select('*')
+        .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+
+      // Buscar usernames separadamente
+      const transactionsWithUsers = await Promise.all(
+        (data || []).map(async (transaction) => {
+          let senderUsername = 'Sistema';
+          let receiverUsername = 'Sistema';
+
+          if (transaction.sender_id) {
+            const { data: senderData } = await supabase
+              .from('profiles')
+              .select('username')
+              .eq('user_id', transaction.sender_id)
+              .maybeSingle();
+            if (senderData) senderUsername = senderData.username;
+          }
+
+          if (transaction.receiver_id) {
+            const { data: receiverData } = await supabase
+              .from('profiles')
+              .select('username')
+              .eq('user_id', transaction.receiver_id)
+              .maybeSingle();
+            if (receiverData) receiverUsername = receiverData.username;
+          }
+
+          return {
+            ...transaction,
+            sender: { username: senderUsername },
+            receiver: { username: receiverUsername }
+          };
+        })
+      );
+
+      setTransactions(transactionsWithUsers);
+    } catch (error: any) {
+      console.error('Erro ao carregar transações:', error);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleString('pt-BR');
+  };
+
+  const isReceived = (tx: any) => tx.receiver_id === currentUser?.id;
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -243,7 +306,7 @@ const Profile = () => {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className={`grid w-full ${isOwnProfile ? 'grid-cols-3' : 'grid-cols-2'}`}>
             <TabsTrigger value="stats" className="gap-2">
               <Trophy className="h-4 w-4" />
               Estatísticas
@@ -252,6 +315,12 @@ const Profile = () => {
               <Video className="h-4 w-4" />
               Galeria
             </TabsTrigger>
+            {isOwnProfile && (
+              <TabsTrigger value="transactions" className="gap-2">
+                <History className="h-4 w-4" />
+                Transações
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="stats" className="space-y-6">
@@ -409,6 +478,76 @@ const Profile = () => {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {isOwnProfile && (
+            <TabsContent value="transactions">
+              <Card className="card-mystic">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <History className="w-5 h-5 text-primary" />
+                    <span className="text-gradient-mystic">Histórico de Transações</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {transactions.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">
+                      Nenhuma transação encontrada
+                    </p>
+                  ) : (
+                    <div className="rounded-md border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Data</TableHead>
+                            <TableHead>Tipo</TableHead>
+                            <TableHead>Usuário</TableHead>
+                            <TableHead className="text-right">Valor</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {transactions.map((tx) => {
+                            const received = isReceived(tx);
+                            return (
+                              <TableRow key={tx.id}>
+                                <TableCell className="text-xs">
+                                  {formatDate(tx.created_at)}
+                                </TableCell>
+                                <TableCell>
+                                  {received ? (
+                                    <Badge className="bg-green-500">
+                                      <ArrowDownLeft className="w-3 h-3 mr-1" />
+                                      Recebido
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="outline">
+                                      <ArrowUpRight className="w-3 h-3 mr-1" />
+                                      Enviado
+                                    </Badge>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {received
+                                    ? tx.sender?.username || 'Sistema'
+                                    : tx.receiver?.username || 'Sistema'
+                                  }
+                                </TableCell>
+                                <TableCell className="text-right font-bold">
+                                  <span className={received ? "text-green-500" : "text-muted-foreground"}>
+                                    {received ? '+' : '-'}{tx.amount}
+                                  </span>
+                                  <Coins className="w-3 h-3 inline ml-1 text-yellow-500" />
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
         </Tabs>
       </main>
     </div>
