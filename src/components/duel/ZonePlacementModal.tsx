@@ -39,7 +39,6 @@ const isMonsterCard = (type: string): boolean => {
 const isFieldSpell = (card: GameCard): boolean => {
   const type = card.type?.toLowerCase() || '';
   const name = card.name?.toLowerCase() || '';
-  // Check if card is a Field Spell - check type, race, and name for "field"
   return type.includes('field') || name.includes('field') || card.race?.toLowerCase() === 'field';
 };
 
