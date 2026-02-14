@@ -328,10 +328,7 @@ const DuelRoom = () => {
               .from('live_duels')
               .update({
                 opponent_id: userId,
-                opponent_connected: true,
-                status: 'in_progress',
-                empty_since: null,
-                last_activity_at: new Date().toISOString()
+                status: 'in_progress'
               })
               .eq('id', id)
               .is('opponent_id', null);
@@ -650,15 +647,13 @@ const DuelRoom = () => {
           description: "Você saiu e a sala foi removida",
         });
       } 
-      // Se for o oponente, remover ele da sala e marcar desconexão
+      // Se for o oponente, remover ele da sala
       else if (isOpponent) {
         await supabase
           .from('live_duels')
           .update({ 
             opponent_id: null,
-            opponent_connected: false,
-            status: 'waiting',
-            empty_since: new Date().toISOString()
+            status: 'waiting'
           })
           .eq('id', id);
         

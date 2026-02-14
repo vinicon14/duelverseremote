@@ -140,10 +140,6 @@ const Duels = () => {
           status: 'waiting',
           is_ranked: isRanked,
           duration_minutes: durationMinutes,
-          creator_connected: true,
-          opponent_connected: false,
-          empty_since: new Date().toISOString(),
-          last_activity_at: new Date().toISOString(),
         })
         .select()
         .single();
