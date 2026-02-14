@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useBanCheck } from "@/hooks/useBanCheck";
 import { AdPopup } from "@/components/AdPopup";
 import { GlobalChat } from "@/components/GlobalChat";
+import { cleanupAllEmptyDuels } from "@/hooks/useDuelPresence";
 
 const Duels = () => {
   useBanCheck(); // Proteger contra usuários banidos
@@ -33,10 +34,7 @@ const Duels = () => {
     // Limpar salas vazias ao carregar a página
     const cleanupEmptyRooms = async () => {
       try {
-        const { error } = await supabase.rpc('cleanup_empty_duels');
-        if (error) {
-          console.error('Erro ao limpar salas vazias:', error);
-        }
+        await cleanupAllEmptyDuels();
       } catch (error) {
         console.error('Erro ao executar limpeza:', error);
       }
@@ -142,6 +140,10 @@ const Duels = () => {
           status: 'waiting',
           is_ranked: isRanked,
           duration_minutes: durationMinutes,
+          creator_connected: true,
+          opponent_connected: false,
+          empty_since: new Date().toISOString(),
+          last_activity_at: new Date().toISOString(),
         })
         .select()
         .single();
