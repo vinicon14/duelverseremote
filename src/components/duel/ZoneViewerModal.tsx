@@ -13,7 +13,9 @@ import {
   ArrowDown,
   Shuffle,
   Eye,
-  Trash2
+  Trash2,
+  Zap,
+  Link2
 } from 'lucide-react';
 import { FieldZoneType, GameCard } from './DuelFieldBoard';
 
@@ -25,11 +27,15 @@ interface ZoneViewerModalProps {
   onCardClick: (card: GameCard, index: number) => void;
   onAddToHand?: (card: GameCard, index: number) => void;
   onSendToGY?: (card: GameCard, index: number) => void;
+  onSendToBanished?: (card: GameCard, index: number) => void;
   onReturnToTop?: (card: GameCard, index: number) => void;
   onReturnToBottom?: (card: GameCard, index: number) => void;
   onShuffleIn?: (card: GameCard, index: number) => void;
   onShuffle?: () => void;
   onDraw?: () => void;
+  onInvokeToField?: (card: GameCard, index: number) => void;
+  hasXYZMonster?: boolean;
+  onAttachAsMaterial?: (card: GameCard, index: number) => void;
   isDeck?: boolean;
 }
 
@@ -60,11 +66,15 @@ export const ZoneViewerModal = ({
   onCardClick,
   onAddToHand,
   onSendToGY,
+  onSendToBanished,
   onReturnToTop,
   onReturnToBottom,
   onShuffleIn,
   onShuffle,
   onDraw,
+  onInvokeToField,
+  hasXYZMonster,
+  onAttachAsMaterial,
   isDeck = false,
 }: ZoneViewerModalProps) => {
   if (!zone) return null;
@@ -126,6 +136,30 @@ export const ZoneViewerModal = ({
                     <span className="text-[8px] text-white text-center line-clamp-2">{card.name}</span>
                     
                     <div className="flex gap-1 flex-wrap justify-center">
+                      {onInvokeToField && (
+                        <Button
+                          variant="default"
+                          size="icon"
+                          className="h-5 w-5 bg-green-600 hover:bg-green-700"
+                          onClick={(e) => { e.stopPropagation(); onInvokeToField(card, idx); }}
+                          title="Invocar ao Campo"
+                        >
+                          <Zap className="h-3 w-3" />
+                        </Button>
+                      )}
+                      
+                      {hasXYZMonster && onAttachAsMaterial && (
+                        <Button
+                          variant="default"
+                          size="icon"
+                          className="h-5 w-5 bg-blue-600 hover:bg-blue-700"
+                          onClick={(e) => { e.stopPropagation(); onAttachAsMaterial(card, idx); }}
+                          title="Anexar como Material"
+                        >
+                          <Link2 className="h-3 w-3" />
+                        </Button>
+                      )}
+                      
                       {zone !== 'graveyard' && onSendToGY && (
                         <Button
                           variant="secondary"
@@ -135,6 +169,18 @@ export const ZoneViewerModal = ({
                           title="Enviar ao Cemitério"
                         >
                           <Flame className="h-3 w-3" />
+                        </Button>
+                      )}
+                      
+                      {zone !== 'banished' && onSendToBanished && (
+                        <Button
+                          variant="secondary"
+                          size="icon"
+                          className="h-5 w-5"
+                          onClick={(e) => { e.stopPropagation(); onSendToBanished(card, idx); }}
+                          title="Banir"
+                        >
+                          <Ban className="h-3 w-3" />
                         </Button>
                       )}
                       

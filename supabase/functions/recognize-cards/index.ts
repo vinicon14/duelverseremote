@@ -42,6 +42,13 @@ serve(async (req) => {
 
 YOUR MISSION: Identify EVERY SINGLE Yu-Gi-Oh! card visible in this image. Do not miss any card.
 
+IMPORTANT - This is likely a NERON APP screenshot:
+- Neuron shows deck lists in a specific format
+- Look for card names in list format, usually on the left side
+- Card quantities may appear on the right (x1, x2, x3, etc.)
+- Main deck cards at top, Extra deck below, Side deck at bottom
+- Even small text or icons you can identify count as cards
+
 IDENTIFICATION TECHNIQUES:
 1. ARTWORK ANALYSIS: Study each card's unique artwork, monsters, spell/trap imagery
 2. CARD FRAME: Identify card type by frame color:
