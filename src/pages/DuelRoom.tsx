@@ -13,6 +13,7 @@ import { useBanCheck } from "@/hooks/useBanCheck";
 import { DuelDeckViewer } from "@/components/duel/DuelDeckViewer";
 import { FloatingOpponentViewer } from "@/components/duel/FloatingOpponentViewer";
 import { useDuelDeck } from "@/hooks/useDuelDeck";
+import { useDuelPresence, useDuelCleanup } from "@/hooks/useDuelPresence";
 
 const DuelRoom = () => {
   useBanCheck(); // Proteger contra usuários banidos
@@ -257,16 +258,17 @@ const DuelRoom = () => {
         });
       }
 
-      // Finalizar automaticamente quando chegar a 0:00
+      // Tempo chegou a zero - apenas mostrar aviso, NÃO finalizar automaticamente
       if (remaining === 0) {
-        if (timerInterval.current) {
-          clearInterval(timerInterval.current);
+        if (!showTimeWarning) {
+          setShowTimeWarning(true);
+          toast({
+            title: "⏱️ Tempo de partida esgotado",
+            description: "O tempo acabou! A partida continua até ser finalizada manualmente.",
+            duration: 5000,
+          });
         }
-        toast({
-          title: "⏱️ Tempo de partida esgotado",
-          description: `O tempo de ${durationMinutes} minutos acabou. A sala permanece aberta até que ambos saiam.`,
-        });
-        // Não fecha automaticamente - apenas quando não houver players por 3 min
+        // Não finaliza automaticamente - apenas quando clicar no botão Finalizar
       }
     }, 1000);
   };
@@ -434,21 +436,19 @@ const DuelRoom = () => {
         const durationMins = data.duration_minutes || 50;
         const maxDurationSeconds = durationMins * 60;
         
-        // Verificar se já passou o tempo
-        if (elapsed >= maxDurationSeconds) {
-          await endDuel();
-        } else {
-          // Validar remaining_seconds do banco - não pode exceder a duração máxima
-          let remainingSecs = data.remaining_seconds !== null ? data.remaining_seconds : Math.max(0, maxDurationSeconds - elapsed);
-          
-          // Proteger contra valores corrompidos
-          if (remainingSecs > maxDurationSeconds || remainingSecs < 0) {
-            console.warn('⚠️ Valor corrompido no banco. Recalculando...', { remainingSecs, maxDurationSeconds });
-            remainingSecs = Math.max(0, maxDurationSeconds - elapsed);
-          }
-          
-          startCallTimer(startedAt, durationMins, remainingSecs);
+        // Verificar se já passou o tempo - apenas iniciar timer, NÃO finalizar
+        // A partida só termina quando os jogadores clicarem em "Finalizar"
+        
+        // Validar remaining_seconds do banco - não pode exceder a duração máxima
+        let remainingSecs = data.remaining_seconds !== null ? data.remaining_seconds : Math.max(0, maxDurationSeconds - elapsed);
+        
+        // Proteger contra valores corrompidos
+        if (remainingSecs > maxDurationSeconds || remainingSecs < 0) {
+          console.warn('⚠️ Valor corrompido no banco. Recalculando...', { remainingSecs, maxDurationSeconds });
+          remainingSecs = Math.max(0, maxDurationSeconds - elapsed);
         }
+        
+        startCallTimer(startedAt, durationMins, remainingSecs);
       }
     } catch (error: any) {
       console.error('[DuelRoom] Erro em fetchDuel:', error);
@@ -798,6 +798,12 @@ const DuelRoom = () => {
   
   // Determinar o player atual de forma clara
   const currentUserPlayer: 'player1' | 'player2' | null = isPlayer1 ? 'player1' : (isPlayer2 ? 'player2' : null);
+
+  // Hook para gerenciar presença e detecção de desconexão
+  useDuelPresence(id, currentUser?.id, isParticipant);
+  
+  // Hook para limpeza automática de salas vazias
+  useDuelCleanup(id);
 
   return (
     <div className="min-h-screen bg-background">
