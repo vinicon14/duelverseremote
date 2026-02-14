@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { PhoneOff, Loader2, Scale, Layers } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
+import { DuelChat } from "@/components/DuelChat";
 import { FloatingCalculator } from "@/components/FloatingCalculator";
 import { RecordMatchButton } from "@/components/RecordMatchButton";
 import { HideElementsButton } from "@/components/HideElementsButton";
@@ -1007,6 +1008,10 @@ const DuelRoom = () => {
         />
       )}
 
+      {/* Chat Component */}
+      {!hideControls && currentUser && (
+        <DuelChat duelId={id!} currentUserId={currentUser.id} />
+      )}
     </div>
   );
 };

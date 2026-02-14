@@ -9,7 +9,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { Camera, Upload, Loader2, X, Plus, Wand2, Link as LinkIcon } from 'lucide-react';
+import { Camera, Upload, Loader2, X, Plus, Wand2 } from 'lucide-react';
 import { YugiohCard } from '@/hooks/useYugiohCards';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -29,7 +29,6 @@ export const CardRecognitionModal = ({
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [recognizedCards, setRecognizedCards] = useState<YugiohCard[]>([]);
   const [selectedCards, setSelectedCards] = useState<Set<number>>(new Set());
-  const [neuronLink, setNeuronLink] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
@@ -79,47 +78,6 @@ export const CardRecognitionModal = ({
     } catch (error: any) {
       console.error('Error analyzing image:', error);
       toast.error('Erro ao analisar a imagem');
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
-
-  const handleNeuronLink = async () => {
-    if (!neuronLink.trim()) {
-      toast.error('Cole um link do Neuron');
-      return;
-    }
-
-    setIsAnalyzing(true);
-    setRecognizedCards([]);
-    setSelectedCards(new Set());
-
-    try {
-      const { data, error } = await supabase.functions.invoke('recognize-neuron', {
-        body: { neuronLink: neuronLink.trim() },
-      });
-
-      if (error) {
-        if (error.message?.includes('429')) {
-          toast.error('Limite de requisições atingido. Tente novamente em alguns segundos.');
-        } else if (error.message?.includes('402')) {
-          toast.error('Créditos insuficientes. Adicione créditos à sua conta.');
-        } else {
-          throw error;
-        }
-        return;
-      }
-
-      if (data.cards && data.cards.length > 0) {
-        setRecognizedCards(data.cards);
-        setSelectedCards(new Set(data.cards.map((c: YugiohCard) => c.id)));
-        toast.success(`${data.cards.length} carta(s) reconhecida(s) do Neuron!`);
-      } else {
-        toast.info('Nenhuma carta foi reconhecida. Verifique o link.');
-      }
-    } catch (error: any) {
-      console.error('Error fetching Neuron deck:', error);
-      toast.error('Erro ao buscar deck do Neuron');
     } finally {
       setIsAnalyzing(false);
     }
