@@ -212,15 +212,68 @@ export const MultiDeviceVideoCall = ({
   }, []);
 
   useEffect(() => {
-    joinCall();
+    enumerateDevices();
+  }, [enumerateDevices]);
+
+  useEffect(() => {
+    if (!roomUrl || !containerRef.current) return;
+    
+    const initCall = async () => {
+      try {
+        setError(null);
+        
+        if (callRef.current) {
+          await callRef.current.leave();
+          callRef.current.destroy();
+        }
+
+        const callObject = DailyIframe.createFrame(containerRef.current, {
+          iframeStyle: {
+            width: '100%',
+            height: '100%',
+            border: 'none',
+            borderRadius: '8px',
+          },
+          showLeaveButton: false,
+          showFullscreenButton: true,
+        });
+
+        callRef.current = callObject;
+
+        callObject.on('joined-meeting', () => {
+          setIsJoined(true);
+        });
+
+        callObject.on('left-meeting', () => {
+          setIsJoined(false);
+        });
+
+        callObject.on('error', (evt) => {
+          console.error('Daily.co error:', evt);
+          setError(evt.errorMsg || 'Erro na chamada');
+        });
+
+        await callObject.join({
+          url: roomUrl,
+          userName: `${username} (${userId.slice(0, 6)})`,
+        });
+
+      } catch (err: any) {
+        console.error('Error joining call:', err);
+        setError(err.message || 'Erro ao entrar na chamada');
+      }
+    };
+
+    initCall();
 
     return () => {
       if (callRef.current) {
         callRef.current.leave();
         callRef.current.destroy();
+        callRef.current = null;
       }
     };
-  }, []);
+  }, [roomUrl]);
 
   return (
     <div className={cn("relative h-full w-full bg-black rounded-lg overflow-hidden", className)}>
