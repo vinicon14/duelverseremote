@@ -184,7 +184,7 @@ export const ZoneViewerModal = ({
                         </Button>
                       )}
 
-                      {onInvokeToField && (zone === 'deck' || zone === 'graveyard' || zone === 'banished') && (
+                      {onInvokeToField && (zone === 'deck' || zone === 'extraDeck' || zone === 'graveyard' || zone === 'banished') && (
                         <Button
                           variant="default"
                           size="icon"
@@ -196,7 +196,7 @@ export const ZoneViewerModal = ({
                         </Button>
                       )}
 
-                      {hasXYZMonster && onAttachAsMaterial && (zone === 'hand' || zone === 'graveyard' || zone === 'banished') && (
+                      {hasXYZMonster && onAttachAsMaterial && (zone === 'hand' || zone === 'deck' || zone === 'extraDeck' || zone === 'graveyard' || zone === 'banished') && (
                         <Button
                           variant="default"
                           size="icon"
