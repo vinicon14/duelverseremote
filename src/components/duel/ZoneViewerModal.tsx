@@ -25,11 +25,15 @@ interface ZoneViewerModalProps {
   onCardClick: (card: GameCard, index: number) => void;
   onAddToHand?: (card: GameCard, index: number) => void;
   onSendToGY?: (card: GameCard, index: number) => void;
+  onSendToBanished?: (card: GameCard, index: number) => void;
   onReturnToTop?: (card: GameCard, index: number) => void;
   onReturnToBottom?: (card: GameCard, index: number) => void;
   onShuffleIn?: (card: GameCard, index: number) => void;
   onShuffle?: () => void;
   onDraw?: () => void;
+  onInvokeToField?: (card: GameCard, index: number) => void;
+  hasXYZMonster?: boolean;
+  onAttachAsMaterial?: (card: GameCard, index: number) => void;
   isDeck?: boolean;
 }
 
@@ -60,11 +64,15 @@ export const ZoneViewerModal = ({
   onCardClick,
   onAddToHand,
   onSendToGY,
+  onSendToBanished,
   onReturnToTop,
   onReturnToBottom,
   onShuffleIn,
   onShuffle,
   onDraw,
+  onInvokeToField,
+  hasXYZMonster,
+  onAttachAsMaterial,
   isDeck = false,
 }: ZoneViewerModalProps) => {
   if (!zone) return null;
@@ -135,6 +143,42 @@ export const ZoneViewerModal = ({
                           title="Enviar ao Cemitério"
                         >
                           <Flame className="h-3 w-3" />
+                        </Button>
+                      )}
+
+                      {zone !== 'banished' && onSendToBanished && (
+                        <Button
+                          variant="secondary"
+                          size="icon"
+                          className="h-5 w-5"
+                          onClick={(e) => { e.stopPropagation(); onSendToBanished(card, idx); }}
+                          title="Banir"
+                        >
+                          <Ban className="h-3 w-3" />
+                        </Button>
+                      )}
+
+                      {onInvokeToField && (zone === 'deck' || zone === 'graveyard' || zone === 'banished') && (
+                        <Button
+                          variant="default"
+                          size="icon"
+                          className="h-5 w-5"
+                          onClick={(e) => { e.stopPropagation(); onInvokeToField(card, idx); }}
+                          title="Invocar ao Campo"
+                        >
+                          <Sparkles className="h-3 w-3" />
+                        </Button>
+                      )}
+
+                      {hasXYZMonster && onAttachAsMaterial && (zone === 'hand' || zone === 'graveyard' || zone === 'banished') && (
+                        <Button
+                          variant="default"
+                          size="icon"
+                          className="h-5 w-5"
+                          onClick={(e) => { e.stopPropagation(); onAttachAsMaterial(card, idx); }}
+                          title="Anexar como Material"
+                        >
+                          <Layers className="h-3 w-3" />
                         </Button>
                       )}
                       

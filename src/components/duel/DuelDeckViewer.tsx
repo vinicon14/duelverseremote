@@ -19,7 +19,9 @@ import {
   Search,
   GripVertical,
   Move,
-  ArrowLeftRight
+  ArrowLeftRight,
+  Zap,
+  Ban
 } from 'lucide-react';
 import { DeckCard } from '@/components/deckbuilder/DeckPanel';
 import { cn } from '@/lib/utils';
@@ -45,6 +47,88 @@ interface DuelDeckViewerProps {
 }
 
 const EXTRA_DECK_TYPES = ['Fusion', 'Synchro', 'XYZ', 'Link'];
+
+const MONSTER_ZONES: FieldZoneType[] = ['monster1', 'monster2', 'monster3', 'monster4', 'monster5'];
+const EXTRA_MONSTER_ZONES: FieldZoneType[] = ['extraMonster1', 'extraMonster2'];
+const SPELL_TRAP_ZONES: FieldZoneType[] = ['spell1', 'spell2', 'spell3', 'spell4', 'spell5'];
+
+type CardSourceZone = 'hand' | 'deck' | 'extraDeck' | 'graveyard' | 'banished';
+
+const isSpellCard = (type: string): boolean => {
+  return type.toLowerCase().includes('spell') && !type.toLowerCase().includes('trap');
+};
+
+const isTrapCard = (type: string): boolean => {
+  return type.toLowerCase().includes('trap');
+};
+
+const isSpellOrTrap = (type: string): boolean => {
+  return isSpellCard(type) || isTrapCard(type);
+};
+
+const isMonsterCard = (type: string): boolean => {
+  if (isSpellCard(type) || isTrapCard(type)) return false;
+  return type.toLowerCase().includes('monster');
+};
+
+const isTokenCard = (card: GameCard): boolean => {
+  return card.name.toLowerCase().includes('token') || 
+         card.type.toLowerCase().includes('token');
+};
+
+interface PriorityZoneResult {
+  zone: FieldZoneType | null;
+  faceDown: boolean;
+}
+
+const isFieldSpell = (card: GameCard): boolean => {
+  const type = card.type?.toLowerCase() || '';
+  const name = card.name?.toLowerCase() || '';
+  const race = card.race?.toLowerCase() || '';
+  return type.includes('field') || name.includes('field') || race === 'field';
+};
+
+const findPriorityZone = (
+  card: GameCard,
+  sourceZone: CardSourceZone,
+  occupiedZones: FieldZoneType[]
+): PriorityZoneResult => {
+  const isMonster = isMonsterCard(card.type);
+  const isSpellOrTrapCard = isSpellOrTrap(card.type);
+  const isExtraDeck = isExtraDeckCardType(card.type);
+  const isToken = isTokenCard(card);
+  const isField = isFieldSpell(card);
+
+  const isZoneOccupied = (zone: FieldZoneType) => occupiedZones.includes(zone);
+
+  if (isField) {
+    if (!isZoneOccupied('fieldSpell')) {
+      return { zone: 'fieldSpell', faceDown: false };
+    }
+  } else if (isMonster || isToken) {
+    let priorityZones: FieldZoneType[];
+    
+    if (isExtraDeck && !isToken) {
+      priorityZones = ['extraMonster1', 'monster1', 'monster2', 'monster3', 'monster4', 'monster5'];
+    } else {
+      priorityZones = MONSTER_ZONES;
+    }
+
+    for (const zone of priorityZones) {
+      if (!isZoneOccupied(zone)) {
+        return { zone, faceDown: false };
+      }
+    }
+  } else if (isSpellOrTrapCard) {
+    for (const zone of SPELL_TRAP_ZONES) {
+      if (!isZoneOccupied(zone)) {
+        return { zone, faceDown: true };
+      }
+    }
+  }
+
+  return { zone: null, faceDown: false };
+};
 
 const isExtraDeckCardType = (type: string): boolean => {
   return EXTRA_DECK_TYPES.some((t) => type.includes(t));
@@ -111,7 +195,7 @@ export const DuelDeckViewer = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
-  const [attachMode, setAttachMode] = useState<{ targetZone: FieldZoneType } | null>(null);
+  const [attachMode, setAttachMode] = useState<{ targetZone: FieldZoneType; cardToAttach: GameCard } | null>(null);
   const [showSideSwap, setShowSideSwap] = useState(false);
 
   // Draggable functionality
@@ -361,6 +445,14 @@ export const DuelDeckViewer = ({
     return zones.filter(zone => fieldState[zone] !== null);
   }, [fieldState]);
 
+  const hasXYZOnField = useCallback((): boolean => {
+    const monsterZones: FieldZoneType[] = ['monster1', 'monster2', 'monster3', 'monster4', 'monster5', 'extraMonster1', 'extraMonster2'];
+    return monsterZones.some(zone => {
+      const card = fieldState[zone];
+      return card && !Array.isArray(card) && card.type && card.type.includes('XYZ');
+    });
+  }, [fieldState]);
+
   const handlePlaceCard = useCallback((zone: FieldZoneType, faceDown: boolean, position: 'attack' | 'defense') => {
     const card = placementModal.card;
     if (!card) return;
@@ -398,38 +490,40 @@ export const DuelDeckViewer = ({
 
   const handleCardOnFieldClick = useCallback((card: GameCard, zone: FieldZoneType) => {
     if (attachMode) {
-      // Attach card as material
+      const cardToAttach = attachMode.cardToAttach;
+      const targetCard = fieldState[zone as keyof FieldState];
+      
+      // Check if target is an XYZ monster
+      const isTargetXYZ = targetCard && !Array.isArray(targetCard) && targetCard.type && targetCard.type.includes('XYZ');
+      
+      if (!isTargetXYZ) {
+        // Cancel attach mode if not XYZ
+        setAttachMode(null);
+        setCardActionsModal({ open: true, card, zone });
+        return;
+      }
+      
       setFieldState(prev => {
-        const targetCard = prev[attachMode.targetZone as keyof FieldState];
-        if (!targetCard || Array.isArray(targetCard)) return prev;
+        const currentTarget = prev[zone as keyof FieldState];
+        if (!currentTarget || Array.isArray(currentTarget)) return prev;
 
-        // Add as material
+        // Add the card as material
         const updatedTarget: GameCard = {
-          ...(targetCard as GameCard),
-          attachedCards: [...((targetCard as GameCard).attachedCards || []), card]
+          ...(currentTarget as GameCard),
+          attachedCards: [...((currentTarget as GameCard).attachedCards || []), cardToAttach]
         };
-        
-        // Type-safe update for single card zones
-        const singleCardZones = ['monster1', 'monster2', 'monster3', 'monster4', 'monster5',
-          'spell1', 'spell2', 'spell3', 'spell4', 'spell5',
-          'extraMonster1', 'extraMonster2', 'fieldSpell'] as const;
-        
-        if (singleCardZones.includes(attachMode.targetZone as any) && singleCardZones.includes(zone as any)) {
-          const updates: Partial<FieldState> = {
-            [attachMode.targetZone]: updatedTarget,
-            [zone]: null,
-          };
-          return { ...prev, ...updates } as FieldState;
-        }
-        
-        return prev;
+
+        return {
+          ...prev,
+          [zone]: updatedTarget,
+        } as FieldState;
       });
       setAttachMode(null);
       return;
     }
     
     setCardActionsModal({ open: true, card, zone });
-  }, [attachMode]);
+  }, [attachMode, fieldState]);
 
   const handleCardDrop = useCallback((zone: FieldZoneType, card: GameCard & { sourceZone?: FieldZoneType }) => {
     // Handle dropped card from drag and drop
@@ -750,12 +844,27 @@ export const DuelDeckViewer = ({
         case 'toGY':
           newState.graveyard = zone === 'graveyard' ? sourceArray : [...prev.graveyard, card];
           break;
+        case 'toBanished':
+          newState.banished = zone === 'banished' ? sourceArray : [...prev.banished, card];
+          break;
         case 'toTop':
           newState.deck = [card, ...currentDeck];
           break;
         case 'toBottom':
           newState.deck = [...currentDeck, card];
           break;
+        case 'toField': {
+          const occupiedZones = ['monster1', 'monster2', 'monster3', 'monster4', 'monster5', 'spell1', 'spell2', 'spell3', 'spell4', 'spell5', 'extraMonster1', 'extraMonster2', 'fieldSpell'].filter(z => prev[z as keyof FieldState] !== null);
+          const result = findPriorityZone(card, zone as CardSourceZone, occupiedZones as FieldZoneType[]);
+          if (result.zone) {
+            (newState as any)[result.zone] = { 
+              ...card, 
+              isFaceDown: result.faceDown, 
+              position: result.faceDown ? 'attack' : 'attack' 
+            };
+          }
+          break;
+        }
       }
 
       return newState;
@@ -848,9 +957,9 @@ export const DuelDeckViewer = ({
 
             {/* Attach mode banner */}
             {attachMode && (
-              <div className="bg-yellow-500/20 border-b border-yellow-500 p-2 flex items-center justify-between flex-shrink-0">
-                <span className="text-xs text-yellow-600">
-                  Selecione uma carta no campo para anexar como material
+              <div className="bg-blue-500/20 border-b border-blue-500 p-2 flex items-center justify-between flex-shrink-0">
+                <span className="text-xs text-blue-600">
+                  Anexar "{attachMode.cardToAttach?.name}" como material - clique em um monstro XYZ
                 </span>
                 <Button 
                   variant="ghost" 
@@ -1070,10 +1179,17 @@ export const DuelDeckViewer = ({
         onCardClick={(card, idx) => handleZoneViewerAction('toHand', card, idx)}
         onAddToHand={(card, idx) => handleZoneViewerAction('toHand', card, idx)}
         onSendToGY={(card, idx) => handleZoneViewerAction('toGY', card, idx)}
+        onSendToBanished={(card, idx) => handleZoneViewerAction('toBanished', card, idx)}
         onReturnToTop={viewerModal.zone === 'deck' ? (card, idx) => handleZoneViewerAction('toTop', card, idx) : undefined}
         onReturnToBottom={viewerModal.zone === 'deck' ? (card, idx) => handleZoneViewerAction('toBottom', card, idx) : undefined}
         onShuffle={viewerModal.zone === 'deck' ? shuffleDeck : undefined}
         onDraw={viewerModal.zone === 'deck' ? drawCard : undefined}
+        onInvokeToField={(card, idx) => handleZoneViewerAction('toField', card, idx)}
+        hasXYZMonster={hasXYZOnField()}
+        onAttachAsMaterial={(card, idx) => {
+          setAttachMode({ targetZone: 'monster1' as FieldZoneType, cardToAttach: card });
+          setViewerModal({ open: false, zone: null });
+        }}
         isDeck={viewerModal.zone === 'deck'}
       />
 
@@ -1094,8 +1210,8 @@ export const DuelDeckViewer = ({
         onShuffleIntoDeck={() => handleFieldCardAction('shuffleIntoDeck')}
         onReturnToExtraDeck={() => handleFieldCardAction('toExtraDeck')}
         onAttachMaterial={() => {
-          if (cardActionsModal.zone) {
-            setAttachMode({ targetZone: cardActionsModal.zone });
+          if (cardActionsModal.zone && cardActionsModal.card) {
+            setAttachMode({ targetZone: cardActionsModal.zone, cardToAttach: cardActionsModal.card });
             setCardActionsModal({ open: false, card: null, zone: null });
           }
         }}
