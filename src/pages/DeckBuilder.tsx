@@ -24,6 +24,10 @@ const isExtraDeckCard = (card: YugiohCard): boolean => {
   return EXTRA_DECK_TYPES.some((type) => card.type.includes(type));
 };
 
+const isTokenCard = (card: YugiohCard): boolean => {
+  return card.type.includes('Token') || card.name.toLowerCase().includes('token') || card.name.toLowerCase().includes('ficha');
+};
+
 const DeckBuilder = () => {
   const [language, setLanguage] = useState<Language>('pt');
   const [mainDeck, setMainDeck] = useState<DeckCard[]>([]);
@@ -487,7 +491,8 @@ const DeckBuilder = () => {
     : false;
 
   const canAddToTokens = selectedCard
-    ? getTotalCount(tokensDeck) < 5 &&
+    ? isTokenCard(selectedCard) &&
+      getTotalCount(tokensDeck) < 5 &&
       (getTotalCount(extraDeck) + getTotalCount(tokensDeck)) < 20
     : false;
 

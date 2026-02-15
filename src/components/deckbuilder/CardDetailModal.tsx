@@ -190,16 +190,17 @@ export const CardDetailModal = ({
                   <Plus className="h-3 w-3" />
                   {t.addToSide}
                 </Button>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => onAddToDeck(card, 'tokens')}
-                  disabled={!canAddToTokens}
-                  className="gap-1"
-                >
-                  <Sparkles className="h-3 w-3" />
-                  {t.addToTokens}
-                </Button>
+                {canAddToTokens && (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => onAddToDeck(card, 'tokens')}
+                    className="gap-1"
+                  >
+                    <Sparkles className="h-3 w-3" />
+                    {t.addToTokens}
+                  </Button>
+                )}
               </div>
             </div>
           </div>
