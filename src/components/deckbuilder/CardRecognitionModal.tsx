@@ -61,10 +61,16 @@ export const CardRecognitionModal = ({
     return EXTRA_DECK_TYPES.some((type) => card.type.includes(type));
   };
 
-  const parseCardLine = (line: string): { name: string; deckType: 'main' | 'extra' | 'side' | 'auto'; quantity: number } => {
-    const lowerLine = line.toLowerCase();
+  const parseCardLine = (line: string): { name: string; deckType: 'main' | 'extra' | 'side' | 'auto'; quantity: number } | null => {
+    const trimmedLine = line.trim();
+    
+    if (!trimmedLine || trimmedLine.startsWith('#') || trimmedLine.startsWith('//') || trimmedLine.startsWith('!')) {
+      return null;
+    }
+    
+    const lowerLine = trimmedLine.toLowerCase();
     let deckType: 'main' | 'extra' | 'side' | 'auto' = 'auto';
-    let name = line;
+    let name = trimmedLine;
     
     if (lowerLine.startsWith('side:') || lowerLine.startsWith('sd:')) {
       deckType = 'side';
@@ -102,7 +108,16 @@ export const CardRecognitionModal = ({
       const parsedCards: { name: string; deckType: 'main' | 'extra' | 'side' | 'auto'; quantity: number }[] = [];
       
       for (const line of lines) {
-        parsedCards.push(parseCardLine(line));
+        const parsed = parseCardLine(line);
+        if (parsed) {
+          parsedCards.push(parsed);
+        }
+      }
+
+      if (parsedCards.length === 0) {
+        toast.error('Nenhuma carta encontrada no texto');
+        setIsAnalyzing(false);
+        return;
       }
 
       const foundCards: { card: YugiohCard; deckType: 'main' | 'extra' | 'side'; quantity: number }[] = [];
@@ -406,10 +421,13 @@ export const CardRecognitionModal = ({
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <h4 className="font-medium text-sm">Cartas Reconhecidas</h4>
-                <Badge variant="secondary">{selectedCards.size} selecionadas</Badge>
+                <div className="flex gap-2">
+                  <Badge variant="secondary">{selectedCards.size} selecionadas</Badge>
+                  <Badge variant="outline">{recognizedCards.reduce((acc, c) => acc + (cardQuantities.get(c.id) || 1), 0)} cartas</Badge>
+                </div>
               </div>
-              <ScrollArea className="h-48">
-                <div className="grid grid-cols-4 gap-2 pr-4">
+              <ScrollArea className="h-64">
+                <div className="grid grid-cols-4 gap-2 pr-4 pb-2">
                   {recognizedCards.map((card) => (
                     <div
                       key={card.id}
@@ -428,6 +446,11 @@ export const CardRecognitionModal = ({
                       {selectedCards.has(card.id) && (
                         <div className="absolute top-1 right-1 bg-primary rounded-full p-0.5">
                           <Plus className="h-3 w-3 text-primary-foreground" />
+                        </div>
+                      )}
+                      {cardQuantities.get(card.id) && cardQuantities.get(card.id)! > 1 && (
+                        <div className="absolute bottom-1 right-1 bg-black/70 text-white text-xs font-bold px-1.5 py-0.5 rounded">
+                          x{cardQuantities.get(card.id)}
                         </div>
                       )}
                     </div>
