@@ -24,6 +24,8 @@ import {
   PopoverTrigger 
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
+import { useMultiDeviceSync } from '@/hooks/useMultiDeviceSync';
+import { DeviceSyncPanel } from './DeviceSyncPanel';
 
 interface Device {
   deviceId: string;
@@ -59,9 +61,43 @@ export const MultiDeviceVideoCall = ({
   const [showSettings, setShowSettings] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [useFallback, setUseFallback] = useState(false);
-
   const [participants, setParticipants] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Multi-device sync
+  const {
+    deviceType,
+    connectedDevices,
+    isMultiDevice,
+    preferences,
+    isAudioActive,
+    isVideoActive,
+    setAudioDevice,
+    setVideoDevice,
+  } = useMultiDeviceSync(roomUrl, userId);
+
+  // Auto-mute/unmute based on multi-device preferences
+  useEffect(() => {
+    if (!callRef.current || !isJoined || !isMultiDevice) return;
+
+    try {
+      callRef.current.setLocalAudio(isAudioActive);
+      setIsAudioEnabled(isAudioActive);
+    } catch (err) {
+      console.error('Error syncing audio state:', err);
+    }
+  }, [isAudioActive, isJoined, isMultiDevice]);
+
+  useEffect(() => {
+    if (!callRef.current || !isJoined || !isMultiDevice) return;
+
+    try {
+      callRef.current.setLocalVideo(isVideoActive);
+      setIsVideoEnabled(isVideoActive);
+    } catch (err) {
+      console.error('Error syncing video state:', err);
+    }
+  }, [isVideoActive, isJoined, isMultiDevice]);
 
   const enumerateDevices = useCallback(async () => {
     try {
@@ -93,19 +129,19 @@ export const MultiDeviceVideoCall = ({
       setIsLoading(true);
 
       if (callRef.current) {
-        try {
-          await callRef.current.leave();
-        } catch (e) {}
+        try { await callRef.current.leave(); } catch (e) {}
         callRef.current.destroy();
         callRef.current = null;
       }
 
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      if (!containerRef.current) {
-        console.log('Container not ready');
-        return;
-      }
+      if (!containerRef.current) return;
+
+      // Join with device-type suffix so both devices appear but are recognized as same user
+      const displayName = isMultiDevice
+        ? `${username} (${deviceType === 'mobile' ? '📱' : '💻'})`
+        : username;
 
       const callObject = DailyIframe.createFrame(containerRef.current, {
         iframeStyle: {
@@ -124,13 +160,21 @@ export const MultiDeviceVideoCall = ({
       callObject.on('joined-meeting', () => {
         setIsJoined(true);
         setIsLoading(false);
-        console.log('Joined meeting as:', username);
+
+        // If multi-device, immediately apply preferences
+        if (isMultiDevice) {
+          try {
+            callObject.setLocalAudio(isAudioActive);
+            callObject.setLocalVideo(isVideoActive);
+            setIsAudioEnabled(isAudioActive);
+            setIsVideoEnabled(isVideoActive);
+          } catch (e) {}
+        }
       });
 
       callObject.on('left-meeting', () => {
         setIsJoined(false);
         setIsLoading(false);
-        console.log('Left meeting');
       });
 
       callObject.on('error', (evt: any) => {
@@ -139,10 +183,8 @@ export const MultiDeviceVideoCall = ({
         setIsLoading(false);
       });
 
-      // Timeout de 15 segundos para evitar loop infinito
       const timeoutId = setTimeout(() => {
         if (!isJoined) {
-          console.warn('Timeout ao entrar na sala, usando fallback iframe');
           setUseFallback(true);
           setIsLoading(false);
         }
@@ -150,11 +192,10 @@ export const MultiDeviceVideoCall = ({
 
       await callObject.join({
         url: roomUrl,
-        userName: username,
+        userName: displayName,
       });
 
       clearTimeout(timeoutId);
-
     } catch (err: any) {
       console.error('Error joining call:', err);
       setError(err.message || 'Erro ao entrar na chamada');
@@ -162,13 +203,11 @@ export const MultiDeviceVideoCall = ({
       isInitialized.current = false;
       setUseFallback(true);
     }
-  }, [roomUrl, username, isJoined]);
+  }, [roomUrl, username, isJoined, deviceType, isMultiDevice, isAudioActive, isVideoActive]);
 
   const leaveCall = useCallback(async () => {
     if (callRef.current) {
-      try {
-        await callRef.current.leave();
-      } catch (e) {}
+      try { await callRef.current.leave(); } catch (e) {}
       callRef.current.destroy();
       callRef.current = null;
       isInitialized.current = false;
@@ -179,37 +218,38 @@ export const MultiDeviceVideoCall = ({
 
   const toggleAudio = useCallback(async () => {
     if (!callRef.current) return;
-    
     try {
-      if (isAudioEnabled) {
-        await callRef.current.setLocalAudio(false);
-      } else {
-        await callRef.current.setLocalAudio(true);
+      const newState = !isAudioEnabled;
+      await callRef.current.setLocalAudio(newState);
+      setIsAudioEnabled(newState);
+
+      // If multi-device and enabling audio, set this device as audio source
+      if (isMultiDevice && newState) {
+        setAudioDevice(deviceType);
       }
-      setIsAudioEnabled(!isAudioEnabled);
     } catch (err) {
       console.error('Error toggling audio:', err);
     }
-  }, [isAudioEnabled]);
+  }, [isAudioEnabled, isMultiDevice, deviceType, setAudioDevice]);
 
   const toggleVideo = useCallback(async () => {
     if (!callRef.current) return;
-    
     try {
-      if (isVideoEnabled) {
-        await callRef.current.setLocalVideo(false);
-      } else {
-        await callRef.current.setLocalVideo(true);
+      const newState = !isVideoEnabled;
+      await callRef.current.setLocalVideo(newState);
+      setIsVideoEnabled(newState);
+
+      // If multi-device and enabling video, set this device as video source
+      if (isMultiDevice && newState) {
+        setVideoDevice(deviceType);
       }
-      setIsVideoEnabled(!isVideoEnabled);
     } catch (err) {
       console.error('Error toggling video:', err);
     }
-  }, [isVideoEnabled]);
+  }, [isVideoEnabled, isMultiDevice, deviceType, setVideoDevice]);
 
   const toggleScreenShare = useCallback(async () => {
     if (!callRef.current) return;
-
     try {
       if (isScreenSharing) {
         await callRef.current.stopScreenShare();
@@ -225,12 +265,10 @@ export const MultiDeviceVideoCall = ({
 
   const changeAudioDevice = useCallback(async (deviceId: string) => {
     setSelectedAudioDevice(deviceId);
-    console.log('Audio device selected:', deviceId);
   }, []);
 
   const changeVideoDevice = useCallback(async (deviceId: string) => {
     setSelectedVideoDevice(deviceId);
-    console.log('Video device selected:', deviceId);
   }, []);
 
   useEffect(() => {
@@ -239,11 +277,7 @@ export const MultiDeviceVideoCall = ({
 
   useEffect(() => {
     if (!roomUrl) return;
-
-    const timer = setTimeout(() => {
-      joinCall();
-    }, 500);
-
+    const timer = setTimeout(() => { joinCall(); }, 500);
     return () => {
       clearTimeout(timer);
       if (callRef.current) {
@@ -262,6 +296,11 @@ export const MultiDeviceVideoCall = ({
           <div className="text-center space-y-4">
             <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
             <p className="text-white">Entrando na sala...</p>
+            {isMultiDevice && (
+              <p className="text-white/60 text-xs">
+                Multi-dispositivo: {deviceType === 'mobile' ? '📱 Celular' : '💻 Computador'}
+              </p>
+            )}
           </div>
         </div>
       )}
@@ -277,7 +316,6 @@ export const MultiDeviceVideoCall = ({
         </div>
       )}
 
-      {/* Fallback para iframe quando SDK falha */}
       {useFallback && (
         <iframe
           src={roomUrl}
@@ -288,6 +326,17 @@ export const MultiDeviceVideoCall = ({
       )}
 
       {!useFallback && <div ref={containerRef} className="w-full h-full" />}
+
+      {/* Multi-device sync panel */}
+      {isJoined && (
+        <DeviceSyncPanel
+          connectedDevices={connectedDevices}
+          preferences={preferences}
+          currentDevice={deviceType}
+          onSetAudioDevice={setAudioDevice}
+          onSetVideoDevice={setVideoDevice}
+        />
+      )}
 
       {isJoined && (
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-black/80 backdrop-blur-sm p-2 rounded-full">
@@ -323,48 +372,30 @@ export const MultiDeviceVideoCall = ({
 
           <Popover open={showSettings} onOpenChange={setShowSettings}>
             <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon"
-                className="rounded-full w-10 h-10"
-                title="Configurações"
-              >
+              <Button variant="outline" size="icon" className="rounded-full w-10 h-10" title="Configurações">
                 <Settings className="h-4 w-4" />
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-64" side="top">
               <div className="space-y-4">
                 <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">
-                    Microfone
-                  </label>
+                  <label className="text-xs text-muted-foreground mb-1 block">Microfone</label>
                   <Select value={selectedAudioDevice} onValueChange={changeAudioDevice}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecionar microfone" />
-                    </SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Selecionar microfone" /></SelectTrigger>
                     <SelectContent>
                       {audioDevices.map(device => (
-                        <SelectItem key={device.deviceId} value={device.deviceId}>
-                          {device.label}
-                        </SelectItem>
+                        <SelectItem key={device.deviceId} value={device.deviceId}>{device.label}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-
                 <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">
-                    Câmera
-                  </label>
+                  <label className="text-xs text-muted-foreground mb-1 block">Câmera</label>
                   <Select value={selectedVideoDevice} onValueChange={changeVideoDevice}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecionar câmera" />
-                    </SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Selecionar câmera" /></SelectTrigger>
                     <SelectContent>
                       {videoDevices.map(device => (
-                        <SelectItem key={device.deviceId} value={device.deviceId}>
-                          {device.label}
-                        </SelectItem>
+                        <SelectItem key={device.deviceId} value={device.deviceId}>{device.label}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -389,6 +420,11 @@ export const MultiDeviceVideoCall = ({
         <div className="bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs text-white flex items-center gap-2">
           <User className="w-3 h-3" />
           {username}
+          {isMultiDevice && (
+            <span className="text-white/60">
+              {deviceType === 'mobile' ? '📱' : '💻'}
+            </span>
+          )}
         </div>
         
         {participants.length > 0 && (
