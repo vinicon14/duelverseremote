@@ -169,7 +169,20 @@ export default function Matchmaking() {
     if (!currentUserId.current || isRedirecting.current) return;
 
     try {
-      // Verificar tabela de redirects
+      // Verificar na fila se foi matched - verificar primeiro sem filtro de status para pegarp duel_id
+      const { data: queueEntry } = await supabase
+        .from('matchmaking_queue')
+        .select('duel_id, status')
+        .eq('user_id', currentUserId.current)
+        .maybeSingle();
+
+      if (queueEntry?.status === 'matched' && queueEntry?.duel_id) {
+        console.log('🎮 Found match in queue:', queueEntry.duel_id);
+        await handleMatchFound(queueEntry.duel_id);
+        return true;
+      }
+
+      // Verificar tabela de redirects como fallback
       const { data: redirect } = await supabase
         .from('redirects')
         .select('duel_id')
@@ -180,19 +193,6 @@ export default function Matchmaking() {
       if (redirect?.duel_id) {
         console.log('🎮 Found redirect to duel:', redirect.duel_id);
         await handleMatchFound(redirect.duel_id);
-        return true;
-      }
-
-      // Verificar na fila se foi matched
-      const { data: queueEntry } = await supabase
-        .from('matchmaking_queue')
-        .select('duel_id, status')
-        .eq('user_id', currentUserId.current)
-        .maybeSingle();
-
-      if (queueEntry?.status === 'matched' && queueEntry?.duel_id) {
-        console.log('🎮 Found match in queue:', queueEntry.duel_id);
-        await handleMatchFound(queueEntry.duel_id);
         return true;
       }
 
@@ -302,6 +302,35 @@ export default function Matchmaking() {
       setSearching(false);
     }
   };
+
+  // Realtime subscription para detectar match
+  useEffect(() => {
+    if (!searching || !currentUserId.current || matchFound) return;
+
+    const channel = supabase
+      .channel('matchmaking-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'matchmaking_queue',
+          filter: `user_id=eq.${currentUserId.current}`
+        },
+        (payload) => {
+          console.log('📡 Queue update received:', payload);
+          if (payload.new && (payload.new as any).status === 'matched' && (payload.new as any).duel_id) {
+            console.log('🎮 Match found via realtime!', (payload.new as any).duel_id);
+            handleMatchFound((payload.new as any).duel_id);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [searching, matchFound, handleMatchFound]);
 
   const cancelSearch = async () => {
     console.log('❌ Canceling search...');
