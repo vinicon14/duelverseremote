@@ -197,56 +197,18 @@ export const useYugiohCards = () => {
       
       return card || null;
     } catch {
-      return null;
-    }
-  }, []);
-
-  // Buscar carta por nome (para imports de texto como Neuron)
-  const getCardByName = useCallback(async (cardName: string, language: Language = 'pt'): Promise<YugiohCard | null> => {
-    if (!cardName.trim()) return null;
-    
-    try {
-      // Primeiro tenta em português
-      const langParam = language === 'pt' ? '&language=pt' : '';
-      const response = await fetch(
-        `https://db.ygoprodeck.com/api/v7/cardinfo.php?fname=${encodeURIComponent(cardName)}${langParam}`
-      );
-      
-      if (response.ok) {
-        const data = await response.json();
-        const cards = data.data || [];
-        
-        // Tentar encontrar correspondência exata primeiro
-        let card = cards.find((c: YugiohCard) => 
-          c.name.toLowerCase() === cardName.toLowerCase()
-        );
-        
-        // Se não achou, pega o primeiro
-        if (!card && cards.length > 0) {
-          card = cards[0];
-        }
-        
-        if (card) return card;
-      }
-      
-      // Se português falhou ou não achou, tenta em inglês
+      // Try English as fallback on error
       if (language === 'pt') {
-        const englishResponse = await fetch(
-          `https://db.ygoprodeck.com/api/v7/cardinfo.php?fname=${encodeURIComponent(cardName)}`
-        );
-        
-        if (englishResponse.ok) {
-          const englishData = await englishResponse.json();
-          const cards = englishData.data || [];
-          
-          if (cards.length > 0) {
-            return cards[0];
+        try {
+          const englishResponse = await fetch(
+            `https://db.ygoprodeck.com/api/v7/cardinfo.php?id=${id}`
+          );
+          if (englishResponse.ok) {
+            const englishData = await englishResponse.json();
+            return englishData.data?.[0] || null;
           }
-        }
+        } catch {}
       }
-      
-      return null;
-    } catch {
       return null;
     }
   }, []);
@@ -269,7 +231,6 @@ export const useYugiohCards = () => {
     error,
     searchCards,
     getCardById,
-    getCardByName,
     fetchArchetypes,
     CARD_TYPES,
     ATTRIBUTES,
