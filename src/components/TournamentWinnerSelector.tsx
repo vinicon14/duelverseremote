@@ -38,28 +38,55 @@ export const TournamentWinnerSelector = ({
     setLoading(true);
 
     try {
-      // Use RPC directly instead of Edge Function
-      const { data: rpcResult, error: rpcError } = await supabase
-        .rpc('finalize_tournament_and_pay_winner', {
-          p_tournament_id: tournamentId,
-          p_winner_id: selectedWinnerId
+      // Buscar perfil do vencedor
+      const { data: winnerProfile } = await supabase
+        .from('profiles')
+        .select('username, duelcoins_balance')
+        .eq('user_id', selectedWinnerId)
+        .single();
+
+      // Atualizar saldo do vencedor
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ duelcoins_balance: (winnerProfile?.duelcoins_balance || 0) + prizePool })
+        .eq('user_id', selectedWinnerId);
+
+      if (updateError) throw updateError;
+
+      // Registrar transação
+      const { error: transactionError } = await supabase
+        .from('duelcoins_transactions')
+        .insert({
+          sender_id: null,
+          receiver_id: selectedWinnerId,
+          amount: prizePool,
+          transaction_type: 'tournament_prize',
+          tournament_id: tournamentId,
+          description: `Prêmio do torneo`
         });
 
-      if (rpcError) {
-        console.error('RPC error:', rpcError);
-        throw new Error(rpcError.message);
-      }
+      if (transactionError) console.log('Transaction error (pode já existir):', transactionError);
 
-      const result = rpcResult as any;
-      if (result && !result.success) {
-        throw new Error(result.message);
-      }
+      // Marcar participante como vencedor
+      await supabase
+        .from('tournament_participants')
+        .update({ status: 'winner' })
+        .eq('tournament_id', tournamentId)
+        .eq('user_id', selectedWinnerId);
+
+      // Finalizar torneo
+      const { error: tournamentError } = await supabase
+        .from('tournaments')
+        .update({ status: 'completed', end_date: new Date().toISOString() })
+        .eq('id', tournamentId);
+
+      if (tournamentError) throw tournamentError;
 
       const winner = participants.find(p => p.user_id === selectedWinnerId);
 
       toast({
         title: "Sucesso!",
-        description: result?.message || `Prêmio distribuído para ${winner?.username || 'o vencedor'}!`,
+        description: `Prêmio de ${prizePool} DuelCoins distribuído para ${winnerProfile?.username || 'o vencedor'}!`,
       });
       onWinnerSelected();
     } catch (error: any) {
