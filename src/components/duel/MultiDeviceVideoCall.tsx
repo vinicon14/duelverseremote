@@ -63,6 +63,7 @@ export const MultiDeviceVideoCall = ({
   const [useFallback, setUseFallback] = useState(false);
   const [participants, setParticipants] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const joinedRef = useRef(false);
 
   // Multi-device sync
   const {
@@ -158,6 +159,7 @@ export const MultiDeviceVideoCall = ({
       isInitialized.current = true;
 
       callObject.on('joined-meeting', () => {
+        joinedRef.current = true;
         setIsJoined(true);
         setIsLoading(false);
 
@@ -184,11 +186,16 @@ export const MultiDeviceVideoCall = ({
       });
 
       const timeoutId = setTimeout(() => {
-        if (!isJoined) {
+        if (!joinedRef.current) {
+          console.warn('Timeout ao entrar na sala, usando fallback iframe');
+          if (callRef.current) {
+            try { callRef.current.destroy(); } catch (e) {}
+            callRef.current = null;
+          }
           setUseFallback(true);
           setIsLoading(false);
         }
-      }, 15000);
+      }, 10000);
 
       await callObject.join({
         url: roomUrl,
@@ -203,7 +210,7 @@ export const MultiDeviceVideoCall = ({
       isInitialized.current = false;
       setUseFallback(true);
     }
-  }, [roomUrl, username, isJoined, deviceType, isMultiDevice, isAudioActive, isVideoActive]);
+  }, [roomUrl, username, deviceType, isMultiDevice, isAudioActive, isVideoActive]);
 
   const leaveCall = useCallback(async () => {
     if (callRef.current) {
@@ -291,7 +298,7 @@ export const MultiDeviceVideoCall = ({
 
   return (
     <div className={cn("relative h-full w-full bg-black rounded-lg overflow-hidden", className)}>
-      {(isLoading || (!isJoined && !error)) && (
+      {isLoading && !useFallback && (
         <div className="absolute inset-0 flex items-center justify-center bg-black z-10">
           <div className="text-center space-y-4">
             <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
