@@ -9,7 +9,7 @@ export const useDuelDeck = () => {
   const [tokensDeck, setTokensDeck] = useState<DeckCard[]>([]);
   const [sideDeck, setSideDeck] = useState<DeckCard[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const { getCardById } = useYugiohCards();
+  const { getCardById, getCardByName } = useYugiohCards();
   const { toast } = useToast();
 
   const isExtraDeckCard = (type: string): boolean => {
@@ -101,16 +101,113 @@ export const useDuelDeck = () => {
     return { main: mainCards, extra: extraCards, side: sideCards };
   }, [getCardById]);
 
+  // Parse deck de texto (formato Neuron)
+  const parseTextDeck = useCallback(async (content: string): Promise<{
+    main: DeckCard[];
+    extra: DeckCard[];
+    side: DeckCard[];
+  }> => {
+    const lines = content.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    
+    const mainCards: DeckCard[] = [];
+    const extraCards: DeckCard[] = [];
+    const sideCards: DeckCard[] = [];
+    
+    let currentSection = 'main';
+    const cardQuantities = new Map<string, number>();
+    
+    for (const line of lines) {
+      // Detectar seção
+      const lowerLine = line.toLowerCase();
+      if (lowerLine.includes('main deck') || lowerLine === '#main') {
+        currentSection = 'main';
+        continue;
+      }
+      if (lowerLine.includes('extra deck') || lowerLine === '#extra') {
+        currentSection = 'extra';
+        continue;
+      }
+      if (lowerLine.includes('side deck') || lowerLine === '!side' || lowerLine === '#side') {
+        currentSection = 'side';
+        continue;
+      }
+      
+      // Skip headers like "Main Deck", "Extra Deck", etc.
+      if (/^(main|extra|side)\s*deck$/i.test(line)) continue;
+      
+      // Parse quantidade e nome da carta
+      // Formatos: "3 Dark Magician" ou "Dark Magician" (sem número = 1)
+      const match = line.match(/^(\d+)?\s*(.+)$/);
+      if (!match) continue;
+      
+      const quantity = match[1] ? parseInt(match[1]) : 1;
+      const cardName = match[2].trim();
+      
+      if (!cardName) continue;
+      
+      // Agrupar por nome
+      const key = cardName.toLowerCase();
+      cardQuantities.set(key, (cardQuantities.get(key) || 0) + quantity);
+    }
+    
+    // Buscar cartas pelo nome
+    for (const [cardName, quantity] of cardQuantities) {
+      const card = await getCardByName(cardName, 'pt');
+      
+      if (card) {
+        const deckCard: DeckCard = {
+          id: card.id,
+          name: card.name,
+          type: card.type,
+          desc: card.desc,
+          atk: card.atk,
+          def: card.def,
+          level: card.level,
+          race: card.race,
+          attribute: card.attribute,
+          archetype: card.archetype,
+          scale: card.scale,
+          linkval: card.linkval,
+          linkmarkers: card.linkmarkers,
+          card_images: card.card_images,
+          quantity,
+        };
+        
+        // Determinar seção baseada no tipo da carta
+        const isExtra = isExtraDeckCard(card.type);
+        
+        if (currentSection === 'main' && !isExtra) {
+          mainCards.push(deckCard);
+        } else if (currentSection === 'extra' || isExtra) {
+          extraCards.push(deckCard);
+        } else {
+          mainCards.push(deckCard);
+        }
+      } else {
+        console.warn('Carta não encontrada:', cardName);
+      }
+    }
+    
+    return { main: mainCards, extra: extraCards, side: sideCards };
+  }, [getCardByName, isExtraDeckCard]);
+
   const importDeckFromYDK = useCallback(async (file: File) => {
     setIsLoading(true);
     try {
       const content = await file.text();
-      const result = await parseYDKContent(content);
+      const isYDK = content.includes('#main') || content.includes('#extra') || content.includes('!side');
+      
+      let result;
+      if (isYDK) {
+        // Formato YDK padrão (com IDs)
+        result = await parseYDKContent(content);
+      } else {
+        // Formato texto (Neuron)
+        result = await parseTextDeck(content);
+      }
       
       setMainDeck(result.main);
-      // Fichas começam vazias em YDK (YDK não suporta fichas)
       setTokensDeck([]);
-      // No duel, fichas e extra deck são mesclados
       setExtraDeck(result.extra);
       setSideDeck(result.side);
 
@@ -127,7 +224,7 @@ export const useDuelDeck = () => {
     } catch (error) {
       toast({
         title: "Erro ao importar",
-        description: "Não foi possível importar o arquivo .ydk",
+        description: "Não foi possível importar o arquivo",
         variant: "destructive",
       });
       return false;
