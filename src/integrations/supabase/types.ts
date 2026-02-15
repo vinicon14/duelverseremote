@@ -1459,6 +1459,10 @@ export type Database = {
         Args: { p_tournament_id: string }
         Returns: Json
       }
+      finalize_tournament_and_pay_winner: {
+        Args: { p_tournament_id: string; p_winner_id: string }
+        Returns: Json
+      }
       matchmake: {
         Args: { p_match_type: string; p_user_id: string }
         Returns: {

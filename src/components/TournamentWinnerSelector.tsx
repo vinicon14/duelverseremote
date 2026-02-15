@@ -38,35 +38,15 @@ export const TournamentWinnerSelector = ({
     setLoading(true);
 
     try {
-      // Try Edge Function first
-      const { data, error } = await supabase.functions.invoke('distribute-tournament-prize', {
-        body: {
-          tournament_id: tournamentId,
-          winner_id: selectedWinnerId,
-        },
-      });
-
-      if (!error && data?.success) {
-        toast({
-          title: "Sucesso!",
-          description: data.message,
-        });
-        onWinnerSelected();
-        setLoading(false);
-        return;
-      }
-
-      // Fallback: Use RPC function to finalize and pay winner
-      console.log('Edge Function failed, using RPC fallback:', error);
-      
-      const { data: rpcResult, error: rpcError } = await (supabase as any)
+      // Use RPC directly instead of Edge Function
+      const { data: rpcResult, error: rpcError } = await supabase
         .rpc('finalize_tournament_and_pay_winner', {
           p_tournament_id: tournamentId,
           p_winner_id: selectedWinnerId
         });
 
       if (rpcError) {
-        console.error('RPC fallback error:', rpcError);
+        console.error('RPC error:', rpcError);
         throw new Error(rpcError.message);
       }
 
@@ -79,7 +59,7 @@ export const TournamentWinnerSelector = ({
 
       toast({
         title: "Sucesso!",
-        description: result?.message || `Prêmio distribuído para ${winner?.profiles?.username || 'o vencedor'}!`,
+        description: result?.message || `Prêmio distribuído para ${winner?.username || 'o vencedor'}!`,
       });
       onWinnerSelected();
     } catch (error: any) {
