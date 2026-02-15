@@ -58,6 +58,7 @@ export const MultiDeviceVideoCall = ({
   const [selectedVideoDevice, setSelectedVideoDevice] = useState<string>('default');
   const [showSettings, setShowSettings] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [useFallback, setUseFallback] = useState(false);
 
   const [participants, setParticipants] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -138,18 +139,30 @@ export const MultiDeviceVideoCall = ({
         setIsLoading(false);
       });
 
+      // Timeout de 15 segundos para evitar loop infinito
+      const timeoutId = setTimeout(() => {
+        if (!isJoined) {
+          console.warn('Timeout ao entrar na sala, usando fallback iframe');
+          setUseFallback(true);
+          setIsLoading(false);
+        }
+      }, 15000);
+
       await callObject.join({
         url: roomUrl,
         userName: username,
       });
+
+      clearTimeout(timeoutId);
 
     } catch (err: any) {
       console.error('Error joining call:', err);
       setError(err.message || 'Erro ao entrar na chamada');
       setIsLoading(false);
       isInitialized.current = false;
+      setUseFallback(true);
     }
-  }, [roomUrl, username]);
+  }, [roomUrl, username, isJoined]);
 
   const leaveCall = useCallback(async () => {
     if (callRef.current) {
@@ -253,7 +266,7 @@ export const MultiDeviceVideoCall = ({
         </div>
       )}
 
-      {error && (
+      {error && !useFallback && (
         <div className="absolute inset-0 flex items-center justify-center bg-black z-10">
           <div className="text-center space-y-4 p-4">
             <p className="text-red-400">{error}</p>
@@ -264,7 +277,17 @@ export const MultiDeviceVideoCall = ({
         </div>
       )}
 
-      <div ref={containerRef} className="w-full h-full" />
+      {/* Fallback para iframe quando SDK falha */}
+      {useFallback && (
+        <iframe
+          src={roomUrl}
+          allow="camera; microphone; fullscreen; speaker; display-capture; autoplay"
+          className="w-full h-full"
+          title="Daily.co Video Call"
+        />
+      )}
+
+      {!useFallback && <div ref={containerRef} className="w-full h-full" />}
 
       {isJoined && (
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-black/80 backdrop-blur-sm p-2 rounded-full">
