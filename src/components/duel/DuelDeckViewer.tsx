@@ -85,6 +85,7 @@ const isFieldSpell = (card: GameCard): boolean => {
   const type = card.type?.toLowerCase() || '';
   const name = card.name?.toLowerCase() || '';
   const race = card.race?.toLowerCase() || '';
+  // Check if card is a Field Spell - check type, name, and race for "field"
   return type.includes('field') || name.includes('field') || race === 'field';
 };
 
@@ -101,6 +102,7 @@ const findPriorityZone = (
 
   const isZoneOccupied = (zone: FieldZoneType) => occupiedZones.includes(zone);
 
+  // Field Spells go to the Field Spell zone, face-up
   if (isField) {
     if (!isZoneOccupied('fieldSpell')) {
       return { zone: 'fieldSpell', faceDown: false };
@@ -109,8 +111,11 @@ const findPriorityZone = (
     let priorityZones: FieldZoneType[];
     
     if (isExtraDeck && !isToken) {
+      // Extra Deck monsters: Extra Monster Zone 1 first, then Main Zones 1-5
+      // Extra Monster Zone 2 is NOT used for auto-summon
       priorityZones = ['extraMonster1', 'monster1', 'monster2', 'monster3', 'monster4', 'monster5'];
     } else {
+      // Normal monsters and tokens: Main Zones 1-5
       priorityZones = MONSTER_ZONES;
     }
 
@@ -523,7 +528,7 @@ export const DuelDeckViewer = ({
     }
     
     setCardActionsModal({ open: true, card, zone });
-  }, [attachMode, fieldState]);
+  }, [attachMode]);
 
   const handleCardDrop = useCallback((zone: FieldZoneType, card: GameCard & { sourceZone?: FieldZoneType }) => {
     // Handle dropped card from drag and drop
@@ -643,7 +648,7 @@ export const DuelDeckViewer = ({
   }, []);
 
   const handleHandCardClick = useCallback((card: GameCard) => {
-    // Open effect modal for hand cards (click shows effect)
+    // Click always shows the effect modal
     setSelectedEffectCard(card);
     setEffectModalOpen(true);
   }, []);
@@ -854,8 +859,7 @@ export const DuelDeckViewer = ({
           newState.deck = [...currentDeck, card];
           break;
         case 'toField': {
-          const occupiedZones = ['monster1', 'monster2', 'monster3', 'monster4', 'monster5', 'spell1', 'spell2', 'spell3', 'spell4', 'spell5', 'extraMonster1', 'extraMonster2', 'fieldSpell'].filter(z => prev[z as keyof FieldState] !== null);
-          const result = findPriorityZone(card, zone as CardSourceZone, occupiedZones as FieldZoneType[]);
+          const result = findPriorityZone(card, zone as CardSourceZone, getOccupiedZones());
           if (result.zone) {
             (newState as any)[result.zone] = { 
               ...card, 
@@ -869,7 +873,7 @@ export const DuelDeckViewer = ({
 
       return newState;
     });
-  }, [viewerModal.zone]);
+  }, [viewerModal.zone, getOccupiedZones]);
 
   // Calculate total cards
   const totalMainDeck = deck.reduce((acc, c) => acc + c.quantity, 0);
@@ -1187,6 +1191,7 @@ export const DuelDeckViewer = ({
         onInvokeToField={(card, idx) => handleZoneViewerAction('toField', card, idx)}
         hasXYZMonster={hasXYZOnField()}
         onAttachAsMaterial={(card, idx) => {
+          // Store the card to attach and close modal - user will click on XYZ to attach
           setAttachMode({ targetZone: 'monster1' as FieldZoneType, cardToAttach: card });
           setViewerModal({ open: false, zone: null });
         }}
