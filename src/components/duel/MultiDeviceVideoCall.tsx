@@ -9,9 +9,7 @@ import {
   PhoneOff, 
   Settings,
   Monitor,
-  User,
-  Smartphone,
-  Radio
+  User
 } from 'lucide-react';
 import { 
   Select, 
@@ -39,13 +37,6 @@ interface MultiDeviceVideoCallProps {
   className?: string;
 }
 
-interface ParticipantInfo {
-  session_id: string;
-  user_name: string;
-  audio: boolean;
-  video: boolean;
-}
-
 export const MultiDeviceVideoCall = ({ 
   roomUrl, 
   username, 
@@ -55,7 +46,6 @@ export const MultiDeviceVideoCall = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const callRef = useRef<any>(null);
   const isInitialized = useRef(false);
-  const localDeviceType = useRef<'primary' | 'secondary'>('primary');
   
   const [isJoined, setIsJoined] = useState(false);
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
@@ -68,9 +58,8 @@ export const MultiDeviceVideoCall = ({
   const [selectedVideoDevice, setSelectedVideoDevice] = useState<string>('default');
   const [showSettings, setShowSettings] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [deviceMode, setDeviceMode] = useState<'primary' | 'secondary'>('primary');
 
-  const [participants, setParticipants] = useState<ParticipantInfo[]>([]);
+  const [participants, setParticipants] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const enumerateDevices = useCallback(async () => {
@@ -95,38 +84,6 @@ export const MultiDeviceVideoCall = ({
     }
   }, []);
 
-  const getExistingParticipants = useCallback(async () => {
-    if (!callRef.current) return [];
-    
-    try {
-      const participants = callRef.current.participants();
-      const participantList: ParticipantInfo[] = [];
-      
-      Object.entries(participants).forEach(([sessionId, participant]: [string, any]) => {
-        if (sessionId !== 'local') {
-          participantList.push({
-            session_id: sessionId,
-            user_name: participant?.user_name || '',
-            audio: participant?.audio || false,
-            video: participant?.video || false,
-          });
-        }
-      });
-      
-      return participantList;
-    } catch (err) {
-      console.error('Error getting participants:', err);
-      return [];
-    }
-  }, []);
-
-  const hasOtherDeviceWithMedia = useCallback((participantList: ParticipantInfo[]): boolean => {
-    const otherParticipant = participantList.find(
-      p => p.user_name === username && (p.audio || p.video)
-    );
-    return !!otherParticipant;
-  }, [username]);
-
   const joinCall = useCallback(async () => {
     if (!roomUrl || isInitialized.current) return;
 
@@ -144,7 +101,10 @@ export const MultiDeviceVideoCall = ({
 
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      if (!containerRef.current) return;
+      if (!containerRef.current) {
+        console.log('Container not ready');
+        return;
+      }
 
       const callObject = DailyIframe.createFrame(containerRef.current, {
         iframeStyle: {
@@ -158,66 +118,18 @@ export const MultiDeviceVideoCall = ({
       });
 
       callRef.current = callObject;
+      isInitialized.current = true;
 
-      callObject.on('joined-meeting', async () => {
+      callObject.on('joined-meeting', () => {
         setIsJoined(true);
         setIsLoading(false);
-        
-        const participantList = await getExistingParticipants();
-        const hasMedia = hasOtherDeviceWithMedia(participantList);
-        
-        if (hasMedia) {
-          localDeviceType.current = 'secondary';
-          setDeviceMode('secondary');
-          await callObject.setLocalAudio(false);
-          await callObject.setLocalVideo(false);
-          setIsAudioEnabled(false);
-          setIsVideoEnabled(false);
-        } else {
-          localDeviceType.current = 'primary';
-          setDeviceMode('primary');
-        }
-        
-        console.log('Joined as:', localDeviceType.current);
-      });
-
-      callObject.on('participant-joined', async (evt: any) => {
-        console.log('Participant joined:', evt.participant);
-        
-        if (evt.participant?.user_name === username && localDeviceType.current === 'primary') {
-          const participantList = await getExistingParticipants();
-          const otherParticipant = participantList.find(
-            p => p.user_name === username && p.session_id !== 'local'
-          );
-          
-          if (otherParticipant) {
-            localDeviceType.current = 'secondary';
-            setDeviceMode('secondary');
-            await callObject.setLocalAudio(false);
-            await callObject.setLocalVideo(false);
-            setIsAudioEnabled(false);
-            setIsVideoEnabled(false);
-          }
-        }
-        
-        setParticipants(await getExistingParticipants());
-      });
-
-      callObject.on('participant-left', async (evt: any) => {
-        console.log('Participant left:', evt.participant);
-        
-        if (evt.participant?.user_name === username && localDeviceType.current === 'secondary') {
-          localDeviceType.current = 'primary';
-          setDeviceMode('primary');
-        }
-        
-        setParticipants(await getExistingParticipants());
+        console.log('Joined meeting as:', username);
       });
 
       callObject.on('left-meeting', () => {
         setIsJoined(false);
         setIsLoading(false);
-        isInitialized.current = false;
+        console.log('Left meeting');
       });
 
       callObject.on('error', (evt: any) => {
@@ -231,15 +143,13 @@ export const MultiDeviceVideoCall = ({
         userName: username,
       });
 
-      isInitialized.current = true;
-
     } catch (err: any) {
       console.error('Error joining call:', err);
       setError(err.message || 'Erro ao entrar na chamada');
       setIsLoading(false);
       isInitialized.current = false;
     }
-  }, [roomUrl, username, getExistingParticipants, hasOtherDeviceWithMedia]);
+  }, [roomUrl, username]);
 
   const leaveCall = useCallback(async () => {
     if (callRef.current) {
@@ -256,47 +166,33 @@ export const MultiDeviceVideoCall = ({
 
   const toggleAudio = useCallback(async () => {
     if (!callRef.current) return;
-
-    const participantList = await getExistingParticipants();
-    const otherHasAudio = participantList.some(
-      p => p.user_name === username && p.audio
-    );
-
-    if (localDeviceType.current === 'secondary' && otherHasAudio) {
-      console.log('Cannot enable audio - primary device is using it');
-      return;
-    }
     
     try {
-      const newState = !isAudioEnabled;
-      await callRef.current.setLocalAudio(newState);
-      setIsAudioEnabled(newState);
+      if (isAudioEnabled) {
+        await callRef.current.setLocalAudio(false);
+      } else {
+        await callRef.current.setLocalAudio(true);
+      }
+      setIsAudioEnabled(!isAudioEnabled);
     } catch (err) {
       console.error('Error toggling audio:', err);
     }
-  }, [isAudioEnabled, username, getExistingParticipants]);
+  }, [isAudioEnabled]);
 
   const toggleVideo = useCallback(async () => {
     if (!callRef.current) return;
-
-    const participantList = await getExistingParticipants();
-    const otherHasVideo = participantList.some(
-      p => p.user_name === username && p.video
-    );
-
-    if (localDeviceType.current === 'secondary' && otherHasVideo) {
-      console.log('Cannot enable video - primary device is using it');
-      return;
-    }
     
     try {
-      const newState = !isVideoEnabled;
-      await callRef.current.setLocalVideo(newState);
-      setIsVideoEnabled(newState);
+      if (isVideoEnabled) {
+        await callRef.current.setLocalVideo(false);
+      } else {
+        await callRef.current.setLocalVideo(true);
+      }
+      setIsVideoEnabled(!isVideoEnabled);
     } catch (err) {
       console.error('Error toggling video:', err);
     }
-  }, [isVideoEnabled, username, getExistingParticipants]);
+  }, [isVideoEnabled]);
 
   const toggleScreenShare = useCallback(async () => {
     if (!callRef.current) return;
@@ -316,10 +212,12 @@ export const MultiDeviceVideoCall = ({
 
   const changeAudioDevice = useCallback(async (deviceId: string) => {
     setSelectedAudioDevice(deviceId);
+    console.log('Audio device selected:', deviceId);
   }, []);
 
   const changeVideoDevice = useCallback(async (deviceId: string) => {
     setSelectedVideoDevice(deviceId);
+    console.log('Video device selected:', deviceId);
   }, []);
 
   useEffect(() => {
@@ -351,7 +249,6 @@ export const MultiDeviceVideoCall = ({
           <div className="text-center space-y-4">
             <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
             <p className="text-white">Entrando na sala...</p>
-            <p className="text-xs text-gray-400">{deviceMode === 'primary' ? 'Dispositivo principal' : 'Dispositivo secundário'}</p>
           </div>
         </div>
       )}
@@ -370,23 +267,13 @@ export const MultiDeviceVideoCall = ({
       <div ref={containerRef} className="w-full h-full" />
 
       {isJoined && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-black/80 backdrop-blur-sm p-2 rounded-full flex-wrap justify-center max-w-[95%]">
-          <div className="flex items-center gap-1 px-2 bg-black/40 rounded-full">
-            {deviceMode === 'primary' ? (
-              <Smartphone className="w-4 h-4 text-green-400" />
-            ) : (
-              <Radio className="w-4 h-4 text-yellow-400" />
-            )}
-            <span className="text-xs text-white">{deviceMode === 'primary' ? 'Principal' : 'Backup'}</span>
-          </div>
-
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-black/80 backdrop-blur-sm p-2 rounded-full">
           <Button
             variant={isAudioEnabled ? "default" : "destructive"}
             size="icon"
             className="rounded-full w-10 h-10"
             onClick={toggleAudio}
-            disabled={deviceMode === 'secondary'}
-            title={deviceMode === 'secondary' ? "Dispositivo principal está usando" : (isAudioEnabled ? "Desativar microfone" : "Ativar microfone")}
+            title={isAudioEnabled ? "Desativar microfone" : "Ativar microfone"}
           >
             {isAudioEnabled ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
           </Button>
@@ -396,8 +283,7 @@ export const MultiDeviceVideoCall = ({
             size="icon"
             className="rounded-full w-10 h-10"
             onClick={toggleVideo}
-            disabled={deviceMode === 'secondary'}
-            title={deviceMode === 'secondary' ? "Dispositivo principal está usando" : (isVideoEnabled ? "Desativar câmera" : "Ativar câmera")}
+            title={isVideoEnabled ? "Desativar câmera" : "Ativar câmera"}
           >
             {isVideoEnabled ? <Video className="h-4 w-4" /> : <VideoOff className="h-4 w-4" />}
           </Button>
@@ -480,8 +366,13 @@ export const MultiDeviceVideoCall = ({
         <div className="bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs text-white flex items-center gap-2">
           <User className="w-3 h-3" />
           {username}
-          {deviceMode === 'secondary' && <span className="text-yellow-400">(backup)</span>}
         </div>
+        
+        {participants.length > 0 && (
+          <div className="bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs text-white">
+            {participants.length + 1} participantes
+          </div>
+        )}
       </div>
     </div>
   );
