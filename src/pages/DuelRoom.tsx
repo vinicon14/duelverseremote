@@ -155,14 +155,14 @@ const DuelRoom = () => {
               }
             }
             
-            // SEMPRE atualizar countdown quando remaining_seconds mudar (para sincronizar todos os players)
-            // Mas apenas se não estivermos em pause (para não sobrescrever o tempo local durante pausa)
-            if (payload.new.remaining_seconds !== undefined && !isTimerPausedRef.current) {
+            // Sincronizar countdown quando remaining_seconds mudar
+            // Isso mantém todos os participantes alinhados
+            if (payload.new.remaining_seconds !== undefined) {
               const durationMins = payload.new.duration_minutes || 50;
               const maxSeconds = durationMins * 60;
               // Validar valor recebido
               const validRemaining = Math.min(Math.max(0, payload.new.remaining_seconds), maxSeconds);
-              console.log('🔴 [REALTIME] Atualizando countdown para:', validRemaining);
+              console.log('🔴 [REALTIME] Sincronizando countdown para:', validRemaining);
               setCallDuration(validRemaining);
             }
             
@@ -199,7 +199,7 @@ const DuelRoom = () => {
     };
   }, [id, currentUser]);
 
-  const startCallTimer = (startedAt: string, durationMinutes: number = 50, remainingSecs?: number) => {
+  const startCallTimer = (startedAt: string, durationMinutes: number = 50) => {
     // Evitar iniciar timer múltiplas vezes
     if (timerInitialized.current) {
       console.log('⚠️ Timer já inicializado, ignorando...');
@@ -215,10 +215,6 @@ const DuelRoom = () => {
     pausedTime.current = 0;
     lastPauseTime.current = 0;
     
-    // Usar apenas o tempo local calculado
-    const initialRemaining = Math.max(0, MAX_DURATION - Math.floor((Date.now() - startTime) / 1000));
-    setCallDuration(initialRemaining);
-    
     // Limpar intervalo anterior se existir
     if (timerInterval.current) {
       clearInterval(timerInterval.current);
@@ -227,7 +223,7 @@ const DuelRoom = () => {
     const isCreator = currentUser?.id === duel?.creator_id;
     let lastDbUpdate = 0;
     
-    // Todos os participantes rodam o timer localmente para evitar travamentos
+    // Timer simples baseado no started_at - mesmo para todos os participantes
     timerInterval.current = setInterval(() => {
       if (isTimerPausedRef.current) return;
 
@@ -243,8 +239,8 @@ const DuelRoom = () => {
       // Atualizar UI local
       setCallDuration(remaining);
       
-      // Apenas o criador atualiza o banco a cada 3 segundos (reduz carga)
-      if (isCreator && now - lastDbUpdate > 3000) {
+      // Apenas o criador atualiza o banco a cada 1 segundo (para manter sincronizado)
+      if (isCreator && now - lastDbUpdate > 1000) {
         lastDbUpdate = now;
         supabase
           .from('live_duels')
@@ -273,7 +269,6 @@ const DuelRoom = () => {
             duration: 5000,
           });
         }
-        // Não finaliza automaticamente - apenas quando clicar no botão Finalizar
       }
     }, 1000);
   };
@@ -437,23 +432,9 @@ const DuelRoom = () => {
 
       // Iniciar timer SEMPRE que houver started_at
       if (startedAt) {
-        const elapsed = Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000);
         const durationMins = data.duration_minutes || 50;
-        const maxDurationSeconds = durationMins * 60;
-        
-        // Verificar se já passou o tempo - apenas iniciar timer, NÃO finalizar
-        // A partida só termina quando os jogadores clicarem em "Finalizar"
-        
-        // Validar remaining_seconds do banco - não pode exceder a duração máxima
-        let remainingSecs = data.remaining_seconds !== null ? data.remaining_seconds : Math.max(0, maxDurationSeconds - elapsed);
-        
-        // Proteger contra valores corrompidos
-        if (remainingSecs > maxDurationSeconds || remainingSecs < 0) {
-          console.warn('⚠️ Valor corrompido no banco. Recalculando...', { remainingSecs, maxDurationSeconds });
-          remainingSecs = Math.max(0, maxDurationSeconds - elapsed);
-        }
-        
-        startCallTimer(startedAt, durationMins, remainingSecs);
+        // O timer começa quando a sala abre (started_at) - mesmo para todos
+        startCallTimer(startedAt, durationMins);
       }
     } catch (error: any) {
       console.error('[DuelRoom] Erro em fetchDuel:', error);
