@@ -202,24 +202,29 @@ const DuelRoom = () => {
     };
   }, [id, currentUser]);
 
-  const startCallTimer = (durationMinutes: number = 50) => {
+  const startCallTimer = (initialRemaining: number, durationMinutes: number = 50) => {
     // Não reiniciar se já estiver rodando
     if (timerInterval.current) {
       return;
     }
     
+    // Resetar aviso de tempo
+    setShowTimeWarning(false);
+    
     const MAX_DURATION = durationMinutes * 60;
     
-    // Iniciar do tempo máximo
-    setCallDuration(MAX_DURATION);
+    // Usar o tempo restante inicial passado como parâmetro
+    const startTime = Math.max(0, Math.min(initialRemaining, MAX_DURATION));
+    setCallDuration(startTime);
     
     // Timer simples local - cada usuário tem seu próprio timer
     timerInterval.current = setInterval(() => {
       setCallDuration((prev: number) => {
         const newTime = prev - 1;
         
-        // Aviso quando restar 5 minutos
-        if (newTime === 300) {
+        // Aviso quando restar 5 minutos (apenas uma vez)
+        if (newTime === 300 && !showTimeWarning) {
+          setShowTimeWarning(true);
           toast({
             title: "⏰ Atenção: Tempo de chamada",
             description: "Restam apenas 5 minutos.",
@@ -227,8 +232,9 @@ const DuelRoom = () => {
           });
         }
         
-        // Tempo chegou a zero
-        if (newTime <= 0) {
+        // Tempo chegou a zero (apenas uma vez)
+        if (newTime <= 0 && !showTimeWarning) {
+          setShowTimeWarning(true);
           toast({
             title: "⏱️ Tempo de partida esgotado",
             description: "O tempo acabou! A partida continua até ser finalizada manualmente.",
@@ -399,9 +405,10 @@ const DuelRoom = () => {
         }
       }
 
-      // Iniciar timer quando a sala é criada
+      // Iniciar timer quando a sala é criada - usar remaining_seconds do banco
       const durationMins = data.duration_minutes || 50;
-      startCallTimer(durationMins);
+      const initialRemaining = data.remaining_seconds || (durationMins * 60);
+      startCallTimer(initialRemaining, durationMins);
     } catch (error: any) {
       console.error('[DuelRoom] Erro em fetchDuel:', error);
       toast({
@@ -648,9 +655,9 @@ const DuelRoom = () => {
         description: "O tempo foi pausado",
       });
     } else {
-      // Retomar - reiniciar o intervalo
+      // Retomar - reiniciar o intervalo com o tempo atual
       const durationMinutes = duel?.duration_minutes || 50;
-      startCallTimer(durationMinutes);
+      startCallTimer(callDuration, durationMinutes);
       toast({
         title: "▶️ Timer retomado",
         description: "O tempo foi retomado",
