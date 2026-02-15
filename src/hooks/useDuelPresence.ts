@@ -15,7 +15,7 @@ export const useDuelPresence = (duelId: string | undefined, userId: string | und
       const { error } = await supabase
         .from('live_duels')
         .update({
-          started_at: new Date().toISOString(),
+          last_activity_at: new Date().toISOString(),
         })
         .eq('id', duelId);
 

@@ -374,12 +374,16 @@ export type Database = {
         Row: {
           bet_amount: number
           created_at: string
+          creator_connected: boolean | null
           creator_id: string
           duration_minutes: number
+          empty_since: string | null
           finished_at: string | null
           id: string
           is_ranked: boolean
           is_timer_paused: boolean
+          last_activity_at: string | null
+          opponent_connected: boolean | null
           opponent_id: string | null
           player1_lp: number
           player2_lp: number
@@ -392,12 +396,16 @@ export type Database = {
         Insert: {
           bet_amount?: number
           created_at?: string
+          creator_connected?: boolean | null
           creator_id: string
           duration_minutes?: number
+          empty_since?: string | null
           finished_at?: string | null
           id?: string
           is_ranked?: boolean
           is_timer_paused?: boolean
+          last_activity_at?: string | null
+          opponent_connected?: boolean | null
           opponent_id?: string | null
           player1_lp?: number
           player2_lp?: number
@@ -410,12 +418,16 @@ export type Database = {
         Update: {
           bet_amount?: number
           created_at?: string
+          creator_connected?: boolean | null
           creator_id?: string
           duration_minutes?: number
+          empty_since?: string | null
           finished_at?: string | null
           id?: string
           is_ranked?: boolean
           is_timer_paused?: boolean
+          last_activity_at?: string | null
+          opponent_connected?: boolean | null
           opponent_id?: string | null
           player1_lp?: number
           player2_lp?: number
