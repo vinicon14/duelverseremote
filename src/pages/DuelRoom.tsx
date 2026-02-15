@@ -815,7 +815,7 @@ const DuelRoom = () => {
           <div className="h-full w-full rounded-lg overflow-hidden bg-card shadow-2xl border border-primary/20">
             {roomUrl ? (
               <iframe
-                src={roomUrl + '?t=' + Date.now()}
+                src={roomUrl}
                 allow="camera; microphone; fullscreen; speaker; display-capture; autoplay"
                 className="w-full h-full"
                 title="Daily.co Video Call"
