@@ -166,9 +166,14 @@ export default function Matchmaking() {
   }, []);
 
   const checkForRedirect = useCallback(async () => {
-    if (!currentUserId.current || isRedirecting.current) return false;
+    if (!currentUserId.current) return false;
+    if (isRedirecting.current) {
+      console.log('⚠️ Already redirecting, skipping check');
+      return false;
+    }
 
     try {
+      console.log('🔍 Checking for redirect for user:', currentUserId.current);
       // Verificar na fila se foi matched
       const { data: queueEntry, error: queueError } = await supabase
         .from('matchmaking_queue')
@@ -296,8 +301,9 @@ export default function Matchmaking() {
       console.log('⏳ Waiting in queue, starting polling...');
       fetchQueueStats();
 
-      // Polling a cada 2 segundos para verificar se foi matched
+      // Polling a cada 1 segundo para verificar se foi matched
       pollingInterval.current = setInterval(async () => {
+        console.log('🔄 Polling for match...');
         const found = await checkForRedirect();
         if (found) {
           if (pollingInterval.current) {
@@ -305,7 +311,7 @@ export default function Matchmaking() {
             pollingInterval.current = null;
           }
         }
-      }, 2000);
+      }, 1000);
 
       // Timeout de 120 segundos (2 minutos)
       setTimeout(async () => {
@@ -327,6 +333,8 @@ export default function Matchmaking() {
   useEffect(() => {
     if (!searching || !currentUserId.current || matchFound) return;
 
+    console.log('📡 Setting up realtime subscription for user:', currentUserId.current);
+
     const channel = supabase
       .channel('matchmaking-updates')
       .on(
@@ -345,7 +353,9 @@ export default function Matchmaking() {
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('📡 Subscription status:', status);
+      });
 
     return () => {
       supabase.removeChannel(channel);
