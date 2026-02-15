@@ -209,25 +209,32 @@ export const Navbar = () => {
               <Menu className="h-6 w-6" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="right" className="w-72 h-screen overflow-y-auto">
-            <div className="flex flex-col space-y-4 pt-8 h-full">
-              {/* Mobile User Section */}
-              <div className="flex items-center gap-3 px-2 pb-4 border-b">
+          <SheetContent side="right" className="w-72 h-[100dvh] p-0">
+            <div className="flex flex-col h-full">
+              {/* Logo and User Section */}
+              <div className="p-4 border-b shrink-0">
+                <Link to="/" className="flex items-center space-x-2 mb-4">
+                  <div className="text-xl font-bold text-gradient-mystic">
+                    DUELVERSE
+                  </div>
+                </Link>
                 {user && (
-                  <>
+                  <div className="flex items-center gap-3">
                     <NotificationBell userId={user.id} />
                     <OnlineUsersCounter />
-                  </>
+                  </div>
                 )}
               </div>
               
-              <div className="flex-1 overflow-y-auto">
+              {/* Nav Links with Scroll */}
+              <div className="flex-1 overflow-y-auto p-2">
                 <NavLinks />
               </div>
               
-              <div className="border-t pt-4 space-y-2">
+              {/* Bottom Actions */}
+              <div className="p-2 border-t shrink-0">
                 {user ? (
-                  <>
+                  <div className="space-y-2">
                     <Button variant="ghost" onClick={() => navigate('/profile')} className="justify-start w-full">
                       <User className="mr-2 h-4 w-4" />
                       Perfil
@@ -236,7 +243,7 @@ export const Navbar = () => {
                       <LogOut className="mr-2 h-4 w-4" />
                       Sair
                     </Button>
-                  </>
+                  </div>
                 ) : (
                   <Button className="btn-mystic text-white w-full" onClick={() => navigate('/auth')}>
                     Entrar

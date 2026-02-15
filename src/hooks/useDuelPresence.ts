@@ -31,18 +31,25 @@ export const useDuelPresence = (duelId: string | undefined, userId: string | und
     if (!duelId || !userId || !isParticipant) return;
 
     try {
-      // Check current duel state
       const { data: duel } = await supabase
         .from('live_duels')
-        .select('creator_id, opponent_id')
+        .select('creator_id, opponent_id, status')
         .eq('id', duelId)
         .single();
 
       if (!duel) return;
 
+      if (duel.status === 'finished') return;
+
       if (duel.creator_id === userId) {
-        // Creator disconnected - delete the room
-        await supabase.from('live_duels').delete().eq('id', duelId);
+        // Creator disconnected - just mark as inactive, don't delete
+        await supabase
+          .from('live_duels')
+          .update({
+            opponent_id: null,
+            status: 'waiting',
+          })
+          .eq('id', duelId);
       } else if (duel.opponent_id === userId) {
         // Opponent disconnected - remove from room
         await supabase
