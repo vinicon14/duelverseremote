@@ -39,6 +39,7 @@ export const MultiDeviceVideoCall = ({
   // Estado para multi-device
   const [hasOtherDevice, setHasOtherDevice] = useState(false);
   const otherDeviceRef = useRef<DeviceSession | null>(null);
+  const isInitialized = useRef(false);
 
   // Gerar ID único para esta sessão
   const sessionId = useRef(`session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
@@ -182,6 +183,10 @@ export const MultiDeviceVideoCall = ({
   }, [isVideoOff, broadcastDeviceState]);
 
   useEffect(() => {
+    // Evitar múltiplas inicializações
+    if (isInitialized.current) return;
+    isInitialized.current = true;
+    
     joinCall();
 
     return () => {
@@ -189,6 +194,7 @@ export const MultiDeviceVideoCall = ({
         callObjectRef.current.leave();
         callObjectRef.current.destroy();
       }
+      isInitialized.current = false;
     };
   }, [joinCall]);
 
