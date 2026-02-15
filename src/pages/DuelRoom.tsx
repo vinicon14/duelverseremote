@@ -183,11 +183,7 @@ const DuelRoom = () => {
                 console.log('🔴 [REALTIME] Duel atualizado com opponent:', updatedDuel);
                 setDuel(updatedDuel);
                 
-                // Reiniciar timer com remaining_seconds do banco
-                if (updatedDuel.started_at && updatedDuel.remaining_seconds !== null) {
-                  timerInitialized.current = false;
-                  startCallTimer(updatedDuel.started_at, updatedDuel.duration_minutes || 50, updatedDuel.remaining_seconds);
-                }
+                // Timer já inicia automaticamente quando a sala é criada
               }
             }
             
@@ -205,84 +201,43 @@ const DuelRoom = () => {
     };
   }, [id, currentUser]);
 
-  const startCallTimer = (startedAt: string, durationMinutes: number = 50, initialRemaining?: number) => {
-    // Evitar iniciar timer múltiplas vezes
-    if (timerInitialized.current) {
-      console.log('⚠️ Timer já inicializado, ignorando...');
+  const startCallTimer = (durationMinutes: number = 50) => {
+    // Não reiniciar se já estiver rodando
+    if (timerInterval.current) {
       return;
     }
-    timerInitialized.current = true;
     
-    const startTime = new Date(startedAt).getTime();
-    callStartTime.current = startTime;
     const MAX_DURATION = durationMinutes * 60;
     
-    // Usar o tempo restante inicial passado como parâmetro, ou calcular baseado no started_at
-    const initialCallDuration = initialRemaining !== undefined 
-      ? Math.min(initialRemaining, MAX_DURATION)
-      : Math.max(0, MAX_DURATION - Math.floor((Date.now() - startTime) / 1000));
+    // Iniciar do tempo máximo
+    setCallDuration(MAX_DURATION);
     
-    setCallDuration(initialCallDuration);
-    
-    // Resetar contadores de pausa
-    pausedTime.current = 0;
-    lastPauseTime.current = 0;
-    
-    // Limpar intervalo anterior se existir
-    if (timerInterval.current) {
-      clearInterval(timerInterval.current);
-    }
-    
-    const isCreator = currentUser?.id === duel?.creator_id;
-    let lastDbUpdate = 0;
-    
-    // Timer simples baseado no started_at - mesmo para todos os participantes
+    // Timer simples local - cada usuário tem seu próprio timer
     timerInterval.current = setInterval(() => {
-      if (isTimerPausedRef.current) return;
-
-      const now = Date.now();
-      const elapsedRaw = Math.floor((now - startTime - pausedTime.current) / 1000);
-      let remaining = Math.max(0, MAX_DURATION - elapsedRaw);
-      
-      // Proteger contra valores inválidos
-      if (remaining > MAX_DURATION || remaining < 0) {
-        remaining = 0;
-      }
-      
-      // Atualizar UI local
-      setCallDuration(remaining);
-      
-      // Apenas o criador atualiza o banco a cada 1 segundo (para manter sincronizado)
-      if (isCreator && now - lastDbUpdate > 1000) {
-        lastDbUpdate = now;
-        supabase
-          .from('live_duels')
-          .update({ remaining_seconds: remaining })
-          .eq('id', id)
-          .then(() => {});
-      }
-
-      // Aviso quando restar 5 minutos (300 segundos)
-      if (remaining === 300 && !showTimeWarning) {
-        setShowTimeWarning(true);
-        toast({
-          title: "⏰ Atenção: Tempo de chamada",
-          description: "Restam apenas 5 minutos. A chamada será encerrada automaticamente em 0:00.",
-          duration: 10000,
-        });
-      }
-
-      // Tempo chegou a zero - apenas mostrar aviso, NÃO finalizar automaticamente
-      if (remaining === 0) {
-        if (!showTimeWarning) {
-          setShowTimeWarning(true);
+      setCallDuration((prev: number) => {
+        const newTime = prev - 1;
+        
+        // Aviso quando restar 5 minutos
+        if (newTime === 300) {
+          toast({
+            title: "⏰ Atenção: Tempo de chamada",
+            description: "Restam apenas 5 minutos.",
+            duration: 10000,
+          });
+        }
+        
+        // Tempo chegou a zero
+        if (newTime <= 0) {
           toast({
             title: "⏱️ Tempo de partida esgotado",
             description: "O tempo acabou! A partida continua até ser finalizada manualmente.",
             duration: 5000,
           });
+          return 0;
         }
-      }
+        
+        return newTime;
+      });
     }, 1000);
   };
 
@@ -443,16 +398,9 @@ const DuelRoom = () => {
         }
       }
 
-      // Iniciar timer SEMPRE que houver started_at
-      if (startedAt) {
-        const durationMins = data.duration_minutes || 50;
-        const maxSeconds = durationMins * 60;
-        // Usar remaining_seconds do banco se existir, para manter continuidade após pausa
-        const initialRemaining = data.remaining_seconds !== null 
-          ? Math.min(Math.max(0, data.remaining_seconds), maxSeconds)
-          : undefined;
-        startCallTimer(startedAt, durationMins, initialRemaining);
-      }
+      // Iniciar timer quando a sala é criada
+      const durationMins = data.duration_minutes || 50;
+      startCallTimer(durationMins);
     } catch (error: any) {
       console.error('[DuelRoom] Erro em fetchDuel:', error);
       toast({
@@ -678,45 +626,33 @@ const DuelRoom = () => {
     }
   };
 
-  const toggleTimerPause = async () => {
-    if (!id || !duel) return;
-    
+  const toggleTimerPause = () => {
     // Apenas participantes podem pausar/despausar
-    const isParticipant = currentUser?.id === duel.creator_id || currentUser?.id === duel.opponent_id;
+    const isParticipant = currentUser?.id === duel?.creator_id || currentUser?.id === duel?.opponent_id;
     if (!isParticipant) return;
 
     const newPauseState = !isTimerPaused;
+    setIsTimerPaused(newPauseState);
+    isTimerPausedRef.current = newPauseState;
     
-    try {
-      const { error } = await supabase
-        .from('live_duels')
-        .update({ 
-          is_timer_paused: newPauseState,
-          remaining_seconds: callDuration 
-        })
-        .eq('id', id);
-
-      if (error) throw error;
-
-      setIsTimerPaused(newPauseState);
-      isTimerPausedRef.current = newPauseState;
-      
-      // Registrar tempo de pausa/despausa
-      if (newPauseState) {
-        lastPauseTime.current = Date.now();
-      } else {
-        pausedTime.current += Date.now() - lastPauseTime.current;
+    // Pausar ou retomar o timer local
+    if (newPauseState) {
+      // Pausar - parar o intervalo
+      if (timerInterval.current) {
+        clearInterval(timerInterval.current);
+        timerInterval.current = null;
       }
-      
       toast({
-        title: newPauseState ? "⏸️ Timer pausado" : "▶️ Timer retomado",
-        description: newPauseState ? "O tempo foi pausado para ambos os jogadores" : "O tempo foi retomado",
+        title: "⏸️ Timer pausado",
+        description: "O tempo foi pausado",
       });
-    } catch (error: any) {
+    } else {
+      // Retomar - reiniciar o intervalo
+      const durationMinutes = duel?.duration_minutes || 50;
+      startCallTimer(durationMinutes);
       toast({
-        title: "Erro ao pausar/despausar",
-        description: error.message,
-        variant: "destructive",
+        title: "▶️ Timer retomado",
+        description: "O tempo foi retomado",
       });
     }
   };
