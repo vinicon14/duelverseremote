@@ -115,7 +115,7 @@ export const ZoneViewerModal = ({
               <p className="text-sm">Nenhuma carta nesta zona</p>
             </div>
           ) : (
-            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+            <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
               {cards.map((card, idx) => (
                 <div
                   key={card.instanceId}
@@ -138,11 +138,11 @@ export const ZoneViewerModal = ({
                         <Button
                           variant="secondary"
                           size="icon"
-                          className="h-8 w-8 md:h-5 md:w-5"
+                          className="h-5 w-5"
                           onClick={(e) => { e.stopPropagation(); onSendToGY(card, idx); }}
                           title="Enviar ao Cemitério"
                         >
-                          <Flame className="h-4 w-4 md:h-3 md:w-3" />
+                          <Flame className="h-3 w-3" />
                         </Button>
                       )}
 
@@ -150,11 +150,11 @@ export const ZoneViewerModal = ({
                         <Button
                           variant="secondary"
                           size="icon"
-                          className="h-8 w-8 md:h-5 md:w-5"
+                          className="h-5 w-5"
                           onClick={(e) => { e.stopPropagation(); onSendToBanished(card, idx); }}
                           title="Banir"
                         >
-                          <Ban className="h-4 w-4 md:h-3 md:w-3" />
+                          <Ban className="h-3 w-3" />
                         </Button>
                       )}
 
@@ -162,11 +162,11 @@ export const ZoneViewerModal = ({
                         <Button
                           variant="default"
                           size="icon"
-                          className="h-8 w-8 md:h-5 md:w-5"
+                          className="h-5 w-5"
                           onClick={(e) => { e.stopPropagation(); onInvokeToField(card, idx); }}
                           title="Invocar ao Campo"
                         >
-                          <Sparkles className="h-4 w-4 md:h-3 md:w-3" />
+                          <Sparkles className="h-3 w-3" />
                         </Button>
                       )}
 
@@ -174,11 +174,11 @@ export const ZoneViewerModal = ({
                         <Button
                           variant="default"
                           size="icon"
-                          className="h-8 w-8 md:h-5 md:w-5"
+                          className="h-5 w-5"
                           onClick={(e) => { e.stopPropagation(); onAttachAsMaterial(card, idx); }}
                           title="Anexar como Material"
                         >
-                          <Layers className="h-4 w-4 md:h-3 md:w-3" />
+                          <Layers className="h-3 w-3" />
                         </Button>
                       )}
                       

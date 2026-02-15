@@ -68,85 +68,85 @@ export const Navbar = () => {
     navigate('/auth');
   };
 
-  const NavLinks = ({ horizontal = false }: { horizontal?: boolean }) => (
-    <div className={horizontal ? "flex flex-wrap gap-1 justify-start" : "flex flex-col"}>
+  const NavLinks = () => (
+    <>
       <Link to="/duels">
-        <Button variant="ghost" size={horizontal ? "sm" : "default"} className="text-foreground hover:text-primary">
-          <Swords className="h-4 w-4" />
-          {horizontal ? "" : <span className="ml-2">Duelos</span>}
+        <Button variant="ghost" className="text-foreground hover:text-primary">
+          <Swords className="mr-2 h-4 w-4" />
+          Duelos
         </Button>
       </Link>
       <Link to="/matchmaking">
-        <Button variant="ghost" size={horizontal ? "sm" : "default"} className="text-foreground hover:text-primary">
-          <Zap className="h-4 w-4" />
-          {horizontal ? "" : <span className="ml-2">Fila Rápida</span>}
+        <Button variant="ghost" className="text-foreground hover:text-primary">
+          <Zap className="mr-2 h-4 w-4" />
+          Fila Rápida
         </Button>
       </Link>
       <Link to="/tournaments">
-        <Button variant="ghost" size={horizontal ? "sm" : "default"} className="text-foreground hover:text-primary">
-          <Trophy className="h-4 w-4" />
-          {horizontal ? "" : <span className="ml-2">Torneios</span>}
+        <Button variant="ghost" className="text-foreground hover:text-primary">
+          <Trophy className="mr-2 h-4 w-4" />
+          Torneios
         </Button>
       </Link>
       <Link to="/friends">
-        <Button variant="ghost" size={horizontal ? "sm" : "default"} className="text-foreground hover:text-primary">
-          <Users className="h-4 w-4" />
-          {horizontal ? "" : <span className="ml-2">Amigos</span>}
+        <Button variant="ghost" className="text-foreground hover:text-primary">
+          <Users className="mr-2 h-4 w-4" />
+          Amigos
         </Button>
       </Link>
       <Link to="/ranking">
-        <Button variant="ghost" size={horizontal ? "sm" : "default"} className="text-foreground hover:text-primary">
-          <BarChart3 className="h-4 w-4" />
-          {horizontal ? "" : <span className="ml-2">Ranking</span>}
+        <Button variant="ghost" className="text-foreground hover:text-primary">
+          <BarChart3 className="mr-2 h-4 w-4" />
+          Ranking
         </Button>
       </Link>
       <Link to="/news">
-        <Button variant="ghost" size={horizontal ? "sm" : "default"} className="text-foreground hover:text-primary">
-          <Newspaper className="h-4 w-4" />
-          {horizontal ? "" : <span className="ml-2">Notícias</span>}
+        <Button variant="ghost" className="text-foreground hover:text-primary">
+          <Newspaper className="mr-2 h-4 w-4" />
+          Notícias
         </Button>
       </Link>
       <Link to="/gallery">
-        <Button variant="ghost" size={horizontal ? "sm" : "default"} className="text-foreground hover:text-primary">
-          <Video className="h-4 w-4" />
-          {horizontal ? "" : <span className="ml-2">Galeria</span>}
+        <Button variant="ghost" className="text-foreground hover:text-primary">
+          <Video className="mr-2 h-4 w-4" />
+          Galeria
         </Button>
       </Link>
       <Link to="/deck-builder">
-        <Button variant="ghost" size={horizontal ? "sm" : "default"} className="text-foreground hover:text-primary">
-          <Layers className="h-4 w-4" />
-          {horizontal ? "" : <span className="ml-2">Deck Build</span>}
+        <Button variant="ghost" className="text-foreground hover:text-primary">
+          <Layers className="mr-2 h-4 w-4" />
+          Deck Build
         </Button>
       </Link>
       <Link to="/duelcoins">
-        <Button variant="ghost" size={horizontal ? "sm" : "default"} className="text-foreground hover:text-primary">
-          <Coins className="h-4 w-4" />
-          {horizontal ? "" : <span className="ml-2">DuelCoins</span>}
+        <Button variant="ghost" className="text-foreground hover:text-primary">
+          <Coins className="mr-2 h-4 w-4" />
+          DuelCoins
         </Button>
       </Link>
       <Link to="/store">
-        <Button variant="ghost" size={horizontal ? "sm" : "default"} className="text-foreground hover:text-primary">
-          <Store className="h-4 w-4" />
-          {horizontal ? "" : <span className="ml-2">Loja</span>}
+        <Button variant="ghost" className="text-foreground hover:text-primary">
+          <Store className="mr-2 h-4 w-4" />
+          Loja
         </Button>
       </Link>
       {isAdmin && (
         <Link to="/admin">
-          <Button variant="ghost" size={horizontal ? "sm" : "default"} className="text-foreground hover:text-primary">
-            <Shield className="h-4 w-4" />
-            {horizontal ? "" : <span className="ml-2">Admin</span>}
+          <Button variant="ghost" className="text-foreground hover:text-primary">
+            <Shield className="mr-2 h-4 w-4" />
+            Admin
           </Button>
         </Link>
       )}
       {isJudge && (
         <Link to="/judge-panel">
-          <Button variant="ghost" size={horizontal ? "sm" : "default"} className="text-foreground hover:text-primary">
-            <Scale className="h-4 w-4" />
-            {horizontal ? "" : <span className="ml-2">Juiz</span>}
+          <Button variant="ghost" className="text-foreground hover:text-primary">
+            <Scale className="mr-2 h-4 w-4" />
+            Juiz
           </Button>
         </Link>
       )}
-    </div>
+    </>
   );
 
   return (
@@ -161,7 +161,7 @@ export const Navbar = () => {
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center space-x-2 overflow-x-auto flex-1 mx-4">
           <div className="flex items-center space-x-2 min-w-max">
-            <NavLinks horizontal />
+            <NavLinks />
           </div>
         </div>
         
@@ -209,42 +209,22 @@ export const Navbar = () => {
               <Menu className="h-6 w-6" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="right" className="w-64 h-[100dvh] p-0 flex flex-col">
-            {/* Logo and User Section */}
-            <div className="p-3 border-b shrink-0">
-              <Link to="/" className="flex items-center space-x-2 mb-3">
-                <div className="text-lg font-bold text-gradient-mystic">
-                  DUELVERSE
-                </div>
-              </Link>
-              {user && (
-                <div className="flex items-center gap-3">
-                  <NotificationBell userId={user.id} />
-                  <OnlineUsersCounter />
-                </div>
-              )}
-            </div>
-            
-            {/* Nav Links with Scroll - Horizontal layout */}
-            <div className="flex-1 overflow-y-auto p-2">
-              <NavLinks horizontal />
-            </div>
-            
-            {/* Bottom Actions */}
-            <div className="p-2 border-t shrink-0">
+          <SheetContent side="right" className="w-64 h-screen overflow-y-auto">
+            <div className="flex flex-col space-y-4 pt-8 h-full">
+              <NavLinks />
               {user ? (
-                <div className="space-y-2">
-                  <Button variant="ghost" onClick={() => navigate('/profile')} className="justify-start w-full">
+                <>
+                  <Button variant="ghost" onClick={() => navigate('/profile')} className="justify-start">
                     <User className="mr-2 h-4 w-4" />
                     Perfil
                   </Button>
-                  <Button variant="ghost" onClick={handleLogout} className="justify-start w-full">
+                  <Button variant="ghost" onClick={handleLogout} className="justify-start">
                     <LogOut className="mr-2 h-4 w-4" />
                     Sair
                   </Button>
-                </div>
+                </>
               ) : (
-                <Button className="btn-mystic text-white w-full" onClick={() => navigate('/auth')}>
+                <Button className="btn-mystic text-white" onClick={() => navigate('/auth')}>
                   Entrar
                 </Button>
               )}
