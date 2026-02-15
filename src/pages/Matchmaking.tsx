@@ -166,19 +166,39 @@ export default function Matchmaking() {
   }, []);
 
   const checkForRedirect = useCallback(async () => {
-    if (!currentUserId.current || isRedirecting.current) return;
+    if (!currentUserId.current || isRedirecting.current) return false;
 
     try {
-      // Verificar na fila se foi matched - verificar primeiro sem filtro de status para pegarp duel_id
-      const { data: queueEntry } = await supabase
+      // Verificar na fila se foi matched
+      const { data: queueEntry, error: queueError } = await supabase
         .from('matchmaking_queue')
         .select('duel_id, status')
         .eq('user_id', currentUserId.current)
         .maybeSingle();
 
+      if (queueError) {
+        console.error('Queue query error:', queueError);
+      }
+
       if (queueEntry?.status === 'matched' && queueEntry?.duel_id) {
         console.log('🎮 Found match in queue:', queueEntry.duel_id);
         await handleMatchFound(queueEntry.duel_id);
+        return true;
+      }
+
+      // Fallback: verificar se há um duelo recente que o usuário participa
+      const { data: recentDuel } = await supabase
+        .from('live_duels')
+        .select('id')
+        .or(`creator_id.eq.${currentUserId.current},opponent_id.eq.${currentUserId.current}`)
+        .eq('status', 'in_progress')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (recentDuel?.id) {
+        console.log('🎮 Found recent duel:', recentDuel.id);
+        await handleMatchFound(recentDuel.id);
         return true;
       }
 
