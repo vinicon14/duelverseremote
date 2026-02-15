@@ -68,12 +68,30 @@ export default function Matchmaking() {
   }, [cleanup, navigate]);
 
   useEffect(() => {
+    // Limpar timer quando componente desmonta
+    return () => {
+      if (timerInterval.current) {
+        clearInterval(timerInterval.current);
+        timerInterval.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    // Controlar timer baseado em searching
     if (searching && !matchFound) {
       timerInterval.current = setInterval(() => {
         setElapsedTime(prev => prev + 1);
       }, 1000);
-    } else if (!searching) {
-      setElapsedTime(0);
+    } else {
+      // Parar e resetar timer
+      if (timerInterval.current) {
+        clearInterval(timerInterval.current);
+        timerInterval.current = null;
+      }
+      if (!searching) {
+        setElapsedTime(0);
+      }
     }
     
     return () => {
@@ -159,6 +177,13 @@ export default function Matchmaking() {
     
     // Buscar informações do oponente
     const opponentName = await getOpponentInfo(duelId);
+    
+    // Resetar timer
+    if (timerInterval.current) {
+      clearInterval(timerInterval.current);
+      timerInterval.current = null;
+    }
+    setElapsedTime(0);
     
     setSearching(false);
     setMatchFound({ duelId, opponentName });
