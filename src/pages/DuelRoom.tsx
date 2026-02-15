@@ -12,6 +12,7 @@ import { HideElementsButton } from "@/components/HideElementsButton";
 import { useBanCheck } from "@/hooks/useBanCheck";
 import { DuelDeckViewer } from "@/components/duel/DuelDeckViewer";
 import { FloatingOpponentViewer } from "@/components/duel/FloatingOpponentViewer";
+import { MultiDeviceVideoCall } from "@/components/duel/MultiDeviceVideoCall";
 import { useDuelDeck } from "@/hooks/useDuelDeck";
 import { useDuelPresence, useDuelCleanup } from "@/hooks/useDuelPresence";
 
@@ -811,14 +812,13 @@ const DuelRoom = () => {
          
       <main className="px-2 sm:px-4 pt-16 sm:pt-20 pb-2 sm:pb-4">
         <div className="h-[calc(100vh-80px)] sm:h-[calc(100vh-100px)] relative">
-          {/* Video Call - Daily.co */}
+          {/* Video Call - Daily.co with Multi-Device Support */}
           <div className="h-full w-full rounded-lg overflow-hidden bg-card shadow-2xl border border-primary/20">
             {roomUrl ? (
-              <iframe
-                src={roomUrl}
-                allow="camera; microphone; fullscreen; speaker; display-capture; autoplay"
-                className="w-full h-full"
-                title="Daily.co Video Call"
+              <MultiDeviceVideoCall
+                roomUrl={roomUrl}
+                username={currentUser?.username || 'Player'}
+                userId={currentUser?.id || ''}
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
