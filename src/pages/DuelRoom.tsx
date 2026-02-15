@@ -182,6 +182,12 @@ const DuelRoom = () => {
               if (!error && updatedDuel) {
                 console.log('🔴 [REALTIME] Duel atualizado com opponent:', updatedDuel);
                 setDuel(updatedDuel);
+                
+                // Reiniciar timer com remaining_seconds do banco
+                if (updatedDuel.started_at && updatedDuel.remaining_seconds !== null) {
+                  timerInitialized.current = false;
+                  startCallTimer(updatedDuel.started_at, updatedDuel.duration_minutes || 50, updatedDuel.remaining_seconds);
+                }
               }
             }
             
