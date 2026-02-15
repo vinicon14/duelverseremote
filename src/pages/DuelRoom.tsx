@@ -12,7 +12,6 @@ import { HideElementsButton } from "@/components/HideElementsButton";
 import { useBanCheck } from "@/hooks/useBanCheck";
 import { DuelDeckViewer } from "@/components/duel/DuelDeckViewer";
 import { FloatingOpponentViewer } from "@/components/duel/FloatingOpponentViewer";
-import { MultiDeviceVideoCall } from "@/components/duel/MultiDeviceVideoCall";
 import { useDuelDeck } from "@/hooks/useDuelDeck";
 import { useDuelPresence, useDuelCleanup } from "@/hooks/useDuelPresence";
 
@@ -183,8 +182,6 @@ const DuelRoom = () => {
               if (!error && updatedDuel) {
                 console.log('🔴 [REALTIME] Duel atualizado com opponent:', updatedDuel);
                 setDuel(updatedDuel);
-                
-                // Timer já inicia automaticamente quando a sala é criada
               }
             }
             
@@ -202,49 +199,84 @@ const DuelRoom = () => {
     };
   }, [id, currentUser]);
 
-  const startCallTimer = (initialRemaining: number, durationMinutes: number = 50) => {
-    // Não reiniciar se já estiver rodando
-    if (timerInterval.current) {
+  const startCallTimer = (startedAt: string, durationMinutes: number = 50, initialRemaining?: number) => {
+    // Evitar iniciar timer múltiplas vezes
+    if (timerInitialized.current) {
+      console.log('⚠️ Timer já inicializado, ignorando...');
       return;
     }
+    timerInitialized.current = true;
     
-    // Resetar aviso de tempo
-    setShowTimeWarning(false);
-    
+    const startTime = new Date(startedAt).getTime();
+    callStartTime.current = startTime;
     const MAX_DURATION = durationMinutes * 60;
     
-    // Usar o tempo restante inicial passado como parâmetro
-    const startTime = Math.max(0, Math.min(initialRemaining, MAX_DURATION));
-    setCallDuration(startTime);
+    // Usar o tempo restante inicial passado como parâmetro, ou calcular baseado no started_at
+    const initialCallDuration = initialRemaining !== undefined 
+      ? Math.min(initialRemaining, MAX_DURATION)
+      : Math.max(0, MAX_DURATION - Math.floor((Date.now() - startTime) / 1000));
     
-    // Timer simples local - cada usuário tem seu próprio timer
+    setCallDuration(initialCallDuration);
+    
+    // Resetar contadores de pausa
+    pausedTime.current = 0;
+    lastPauseTime.current = 0;
+    
+    // Limpar intervalo anterior se existir
+    if (timerInterval.current) {
+      clearInterval(timerInterval.current);
+    }
+    
+    const isCreator = currentUser?.id === duel?.creator_id;
+    let lastDbUpdate = 0;
+    
+    // Timer simples baseado no started_at - mesmo para todos os participantes
     timerInterval.current = setInterval(() => {
-      setCallDuration((prev: number) => {
-        const newTime = prev - 1;
-        
-        // Aviso quando restar 5 minutos (apenas uma vez)
-        if (newTime === 300 && !showTimeWarning) {
-          setShowTimeWarning(true);
-          toast({
-            title: "⏰ Atenção: Tempo de chamada",
-            description: "Restam apenas 5 minutos.",
-            duration: 10000,
-          });
-        }
-        
-        // Tempo chegou a zero (apenas uma vez)
-        if (newTime <= 0 && !showTimeWarning) {
+      if (isTimerPausedRef.current) return;
+
+      const now = Date.now();
+      const elapsedRaw = Math.floor((now - startTime - pausedTime.current) / 1000);
+      let remaining = Math.max(0, MAX_DURATION - elapsedRaw);
+      
+      // Proteger contra valores inválidos
+      if (remaining > MAX_DURATION || remaining < 0) {
+        remaining = 0;
+      }
+      
+      // Atualizar UI local
+      setCallDuration(remaining);
+      
+      // Apenas o criador atualiza o banco a cada 1 segundo (para manter sincronizado)
+      if (isCreator && now - lastDbUpdate > 1000) {
+        lastDbUpdate = now;
+        supabase
+          .from('live_duels')
+          .update({ remaining_seconds: remaining })
+          .eq('id', id)
+          .then(() => {});
+      }
+
+      // Aviso quando restar 5 minutos (300 segundos)
+      if (remaining === 300 && !showTimeWarning) {
+        setShowTimeWarning(true);
+        toast({
+          title: "⏰ Atenção: Tempo de chamada",
+          description: "Restam apenas 5 minutos. A chamada será encerrada automaticamente em 0:00.",
+          duration: 10000,
+        });
+      }
+
+      // Tempo chegou a zero - apenas mostrar aviso, NÃO finalizar automaticamente
+      if (remaining === 0) {
+        if (!showTimeWarning) {
           setShowTimeWarning(true);
           toast({
             title: "⏱️ Tempo de partida esgotado",
             description: "O tempo acabou! A partida continua até ser finalizada manualmente.",
             duration: 5000,
           });
-          return 0;
         }
-        
-        return newTime;
-      });
+      }
     }, 1000);
   };
 
@@ -405,10 +437,16 @@ const DuelRoom = () => {
         }
       }
 
-      // Iniciar timer quando a sala é criada - usar remaining_seconds do banco
-      const durationMins = data.duration_minutes || 50;
-      const initialRemaining = data.remaining_seconds || (durationMins * 60);
-      startCallTimer(initialRemaining, durationMins);
+      // Iniciar timer SEMPRE que houver started_at
+      if (startedAt) {
+        const durationMins = data.duration_minutes || 50;
+        const maxSeconds = durationMins * 60;
+        // Usar remaining_seconds do banco se existir, para manter continuidade após pausa
+        const initialRemaining = data.remaining_seconds !== null 
+          ? Math.min(Math.max(0, data.remaining_seconds), maxSeconds)
+          : undefined;
+        startCallTimer(startedAt, durationMins, initialRemaining);
+      }
     } catch (error: any) {
       console.error('[DuelRoom] Erro em fetchDuel:', error);
       toast({
@@ -634,33 +672,45 @@ const DuelRoom = () => {
     }
   };
 
-  const toggleTimerPause = () => {
+  const toggleTimerPause = async () => {
+    if (!id || !duel) return;
+    
     // Apenas participantes podem pausar/despausar
-    const isParticipant = currentUser?.id === duel?.creator_id || currentUser?.id === duel?.opponent_id;
+    const isParticipant = currentUser?.id === duel.creator_id || currentUser?.id === duel.opponent_id;
     if (!isParticipant) return;
 
     const newPauseState = !isTimerPaused;
-    setIsTimerPaused(newPauseState);
-    isTimerPausedRef.current = newPauseState;
     
-    // Pausar ou retomar o timer local
-    if (newPauseState) {
-      // Pausar - parar o intervalo
-      if (timerInterval.current) {
-        clearInterval(timerInterval.current);
-        timerInterval.current = null;
+    try {
+      const { error } = await supabase
+        .from('live_duels')
+        .update({ 
+          is_timer_paused: newPauseState,
+          remaining_seconds: callDuration 
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setIsTimerPaused(newPauseState);
+      isTimerPausedRef.current = newPauseState;
+      
+      // Registrar tempo de pausa/despausa
+      if (newPauseState) {
+        lastPauseTime.current = Date.now();
+      } else {
+        pausedTime.current += Date.now() - lastPauseTime.current;
       }
+      
       toast({
-        title: "⏸️ Timer pausado",
-        description: "O tempo foi pausado",
+        title: newPauseState ? "⏸️ Timer pausado" : "▶️ Timer retomado",
+        description: newPauseState ? "O tempo foi pausado para ambos os jogadores" : "O tempo foi retomado",
       });
-    } else {
-      // Retomar - reiniciar o intervalo com o tempo atual
-      const durationMinutes = duel?.duration_minutes || 50;
-      startCallTimer(callDuration, durationMinutes);
+    } catch (error: any) {
       toast({
-        title: "▶️ Timer retomado",
-        description: "O tempo foi retomado",
+        title: "Erro ao pausar/despausar",
+        description: error.message,
+        variant: "destructive",
       });
     }
   };
@@ -758,13 +808,16 @@ const DuelRoom = () => {
       
       <main className="px-2 sm:px-4 pt-16 sm:pt-20 pb-2 sm:pb-4">
         <div className="h-[calc(100vh-80px)] sm:h-[calc(100vh-100px)] relative">
-          {/* Video Call - Daily.co with multi-device support */}
+          {/* Video Call - Daily.co - SEMPRE VISÍVEL */}
           <div className="h-full w-full rounded-lg overflow-hidden bg-card shadow-2xl border border-primary/20">
             {roomUrl ? (
-              <MultiDeviceVideoCall
-                roomUrl={roomUrl}
-                username={currentUser?.username || 'Player'}
-                userId={currentUser?.id || ''}
+              <iframe
+                src={roomUrl}
+                allow="camera; microphone; fullscreen; speaker; display-capture; autoplay"
+                className="w-full h-full"
+                title="Daily.co Video Call"
+                onLoad={() => console.log('Iframe loaded')}
+                onError={(e) => console.error('Iframe error:', e)}
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center">

@@ -22,6 +22,13 @@ interface DeviceSession {
   hasMedia: boolean;
 }
 
+interface Participant {
+  session_id: string;
+  user_name: string;
+  audio: boolean;
+  video: boolean;
+}
+
 export const MultiDeviceVideoCall = ({ 
   roomUrl, 
   username, 
@@ -34,6 +41,9 @@ export const MultiDeviceVideoCall = ({
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [mySessionId, setMySessionId] = useState<string | null>(null);
+  const [participants, setParticipants] = useState<Participant[]>([]);
+  const [showParticipants, setShowParticipants] = useState(true);
+  const [hiddenParticipants, setHiddenParticipants] = useState<Set<string>>(new Set());
   
   const [hasOtherDevice, setHasOtherDevice] = useState(false);
   const otherDeviceRef = useRef<DeviceSession | null>(null);
@@ -102,6 +112,22 @@ export const MultiDeviceVideoCall = ({
     broadcastDeviceState({ hasMedia: !newVideoOff });
   }, [isVideoOff, broadcastDeviceState]);
 
+  const toggleParticipantVideo = useCallback((sessionId: string) => {
+    if (!callObject.current) return;
+    
+    setHiddenParticipants((prev) => {
+      const next = new Set(prev);
+      if (next.has(sessionId)) {
+        next.delete(sessionId);
+      } else {
+        next.add(sessionId);
+      }
+      return next;
+    });
+  }, []);
+
+  const visibleParticipants = participants.filter(p => !hiddenParticipants.has(p.session_id));
+
   const joinCall = useCallback(async () => {
     if (hasJoinedRef.current || !roomUrl || !containerRef.current) return;
     hasJoinedRef.current = true;
@@ -129,11 +155,33 @@ export const MultiDeviceVideoCall = ({
         setIsLoading(false);
         setMySessionId(sessionId.current);
         broadcastDeviceState({ hasMedia: true });
+        
+        // Get initial participants
+        const parts = callObject.current?.participants();
+        if (parts) {
+          setParticipants(Object.values(parts));
+        }
       });
 
       callObject.current.on('left-meeting', () => {
         console.log('👋 Left meeting');
         hasJoinedRef.current = false;
+        setParticipants([]);
+      });
+
+      callObject.current.on('participant-joined', (evt: any) => {
+        console.log('👤 Participant joined:', evt.participant);
+        setParticipants((prev) => [...prev, evt.participant]);
+      });
+
+      callObject.current.on('participant-left', (evt: any) => {
+        console.log('👤 Participant left:', evt.participant);
+        setParticipants((prev) => prev.filter(p => p.session_id !== evt.participant.session_id));
+        setHiddenParticipants((prev) => {
+          const next = new Set(prev);
+          next.delete(evt.participant.session_id);
+          return next;
+        });
       });
 
       callObject.current.on('error', (evt: any) => {
@@ -224,6 +272,36 @@ export const MultiDeviceVideoCall = ({
               <span>Sincronizado</span>
             </div>
           )}
+
+          {/* Botão para mostrar/ocultar participantes */}
+          <button
+            onClick={() => setShowParticipants(!showParticipants)}
+            className={`p-3 rounded-full ${!showParticipants ? 'bg-blue-500' : 'bg-gray-700'} text-white`}
+            title={showParticipants ? "Ocultar participantes" : "Mostrar participantes"}
+          >
+            {showParticipants ? "👥" : "👤"}
+          </button>
+        </div>
+      )}
+
+      {/* Lista de participantes para ocultar */}
+      {mySessionId && participants.length > 0 && showParticipants && (
+        <div className="absolute top-4 right-4 bg-black/80 rounded-lg p-2 z-20 max-h-48 overflow-y-auto">
+          <div className="text-white text-xs mb-2 font-bold">Participantes:</div>
+          {participants.map((p) => (
+            <div key={p.session_id} className="flex items-center gap-2 text-white text-sm mb-1">
+              <button
+                onClick={() => toggleParticipantVideo(p.session_id)}
+                className={`px-2 py-1 rounded ${hiddenParticipants.has(p.session_id) ? 'bg-red-500' : 'bg-green-500'}`}
+                title={hiddenParticipants.has(p.session_id) ? "Mostrar" : "Ocultar"}
+              >
+                {hiddenParticipants.has(p.session_id) ? "👁️" : "👁️‍🗨️"}
+              </button>
+              <span className="truncate max-w-[120px]">{p.user_name}</span>
+              {!p.audio && <span>🔇</span>}
+              {!p.video && <span>📵</span>}
+            </div>
+          ))}
         </div>
       )}
     </div>
