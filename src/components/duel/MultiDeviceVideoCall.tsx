@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import DailyIframe, { DailyCall } from '@daily-co/daily-js';
+import DailyIframe from '@daily-co/daily-js';
 import { Button } from '@/components/ui/button';
 import { 
   Mic, 
@@ -44,7 +44,8 @@ export const MultiDeviceVideoCall = ({
   className 
 }: MultiDeviceVideoCallProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const callRef = useRef<DailyCall | null>(null);
+  const callRef = useRef<any>(null);
+  const isInitialized = useRef(false);
   
   const [isJoined, setIsJoined] = useState(false);
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
@@ -63,7 +64,8 @@ export const MultiDeviceVideoCall = ({
 
   const enumerateDevices = useCallback(async () => {
     try {
-      await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+      stream.getTracks().forEach(track => track.stop());
       
       const devices = await navigator.mediaDevices.enumerateDevices();
       
@@ -73,7 +75,7 @@ export const MultiDeviceVideoCall = ({
       
       const video = devices
         .filter(d => d.kind === 'videoinput')
-        .map(d => ({ deviceId: d.deviceId, label: d.label || `Camera ${d.deviceId.slice(0, 4)}` }));
+        .map(d => ({ deviceId: d.deviceId, label: d.label || `Câmera ${d.deviceId.slice(0, 4)}` }));
       
       setAudioDevices(audio);
       setVideoDevices(video);
@@ -83,16 +85,25 @@ export const MultiDeviceVideoCall = ({
   }, []);
 
   const joinCall = useCallback(async () => {
-    if (!roomUrl || !containerRef.current) return;
+    if (!roomUrl || isInitialized.current) return;
 
     try {
       setError(null);
-      
-      await enumerateDevices();
+      setIsLoading(true);
 
       if (callRef.current) {
-        callRef.current.leave();
+        try {
+          await callRef.current.leave();
+        } catch (e) {}
         callRef.current.destroy();
+        callRef.current = null;
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      if (!containerRef.current) {
+        console.log('Container not ready');
+        return;
       }
 
       const callObject = DailyIframe.createFrame(containerRef.current, {
@@ -107,50 +118,47 @@ export const MultiDeviceVideoCall = ({
       });
 
       callRef.current = callObject;
+      isInitialized.current = true;
 
       callObject.on('joined-meeting', () => {
         setIsJoined(true);
-        console.log('Joined meeting');
+        setIsLoading(false);
+        console.log('Joined meeting as:', username);
       });
 
       callObject.on('left-meeting', () => {
         setIsJoined(false);
+        setIsLoading(false);
         console.log('Left meeting');
       });
 
-      callObject.on('participant-joined', (evt) => {
-        console.log('Participant joined:', evt.participant);
-        setParticipants(prev => [...prev, evt.participant]);
-      });
-
-      callObject.on('participant-left', (evt) => {
-        console.log('Participant left:', evt.participant);
-        setParticipants(prev => prev.filter(p => p.session_id !== evt.participant.session_id));
-      });
-
-      callObject.on('error', (evt) => {
+      callObject.on('error', (evt: any) => {
         console.error('Daily.co error:', evt);
-        setError(evt.errorMsg || 'Erro na chamada');
+        setError(evt?.errorMsg || 'Erro na chamada');
+        setIsLoading(false);
       });
-
-      const userName = `${username} (${userId.slice(0, 6)})`;
 
       await callObject.join({
         url: roomUrl,
-        userName: userName,
+        userName: username,
       });
 
     } catch (err: any) {
       console.error('Error joining call:', err);
       setError(err.message || 'Erro ao entrar na chamada');
+      setIsLoading(false);
+      isInitialized.current = false;
     }
-  }, [roomUrl, username, userId, selectedAudioDevice, selectedVideoDevice, enumerateDevices]);
+  }, [roomUrl, username]);
 
   const leaveCall = useCallback(async () => {
     if (callRef.current) {
-      await callRef.current.leave();
+      try {
+        await callRef.current.leave();
+      } catch (e) {}
       callRef.current.destroy();
       callRef.current = null;
+      isInitialized.current = false;
     }
     setIsJoined(false);
     setParticipants([]);
@@ -204,12 +212,12 @@ export const MultiDeviceVideoCall = ({
 
   const changeAudioDevice = useCallback(async (deviceId: string) => {
     setSelectedAudioDevice(deviceId);
-    console.log('Audio device changed to:', deviceId);
+    console.log('Audio device selected:', deviceId);
   }, []);
 
   const changeVideoDevice = useCallback(async (deviceId: string) => {
     setSelectedVideoDevice(deviceId);
-    console.log('Video device changed to:', deviceId);
+    console.log('Video device selected:', deviceId);
   }, []);
 
   useEffect(() => {
@@ -219,66 +227,9 @@ export const MultiDeviceVideoCall = ({
   useEffect(() => {
     if (!roomUrl) return;
 
-    const initCall = async () => {
-      try {
-        setError(null);
-        
-        if (callRef.current) {
-          try {
-            await callRef.current.leave();
-          } catch (e) {}
-          callRef.current.destroy();
-          callRef.current = null;
-        }
-
-        if (!containerRef.current) {
-          console.error('Container ref is null');
-          return;
-        }
-
-        const callObject = DailyIframe.createFrame(containerRef.current, {
-          iframeStyle: {
-            width: '100%',
-            height: '100%',
-            border: 'none',
-            borderRadius: '8px',
-          },
-          showLeaveButton: false,
-          showFullscreenButton: true,
-        });
-
-        callRef.current = callObject;
-
-        callObject.on('joined-meeting', () => {
-          setIsJoined(true);
-          setIsLoading(false);
-        });
-
-        callObject.on('left-meeting', () => {
-          setIsJoined(false);
-          setIsLoading(false);
-        });
-
-        callObject.on('error', (evt) => {
-          console.error('Daily.co error:', evt);
-          setError(evt.errorMsg || 'Erro na chamada');
-          setIsLoading(false);
-        });
-
-        await callObject.join({
-          url: roomUrl,
-          userName: username,
-        });
-
-      } catch (err: any) {
-        console.error('Error joining call:', err);
-        setError(err.message || 'Erro ao entrar na chamada');
-        setIsLoading(false);
-      }
-    };
-
-    setIsLoading(true);
-    const timer = setTimeout(initCall, 100);
+    const timer = setTimeout(() => {
+      joinCall();
+    }, 500);
 
     return () => {
       clearTimeout(timer);
@@ -286,6 +237,7 @@ export const MultiDeviceVideoCall = ({
         callRef.current.leave().catch(() => {});
         callRef.current.destroy();
         callRef.current = null;
+        isInitialized.current = false;
       }
     };
   }, [roomUrl]);
@@ -296,7 +248,7 @@ export const MultiDeviceVideoCall = ({
         <div className="absolute inset-0 flex items-center justify-center bg-black z-10">
           <div className="text-center space-y-4">
             <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
-            <p className="text-white">Entrando na sala de vídeo...</p>
+            <p className="text-white">Entrando na sala...</p>
           </div>
         </div>
       )}
@@ -305,7 +257,7 @@ export const MultiDeviceVideoCall = ({
         <div className="absolute inset-0 flex items-center justify-center bg-black z-10">
           <div className="text-center space-y-4 p-4">
             <p className="text-red-400">{error}</p>
-            <Button onClick={() => window.location.reload()} variant="outline">
+            <Button onClick={() => { isInitialized.current = false; joinCall(); }} variant="outline">
               Tentar novamente
             </Button>
           </div>
