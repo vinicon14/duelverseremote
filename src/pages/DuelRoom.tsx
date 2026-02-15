@@ -808,17 +808,19 @@ const DuelRoom = () => {
   return (
     <div className="min-h-screen bg-background">
       {!hideControls && <Navbar />}
-         
+      
       <main className="px-2 sm:px-4 pt-16 sm:pt-20 pb-2 sm:pb-4">
         <div className="h-[calc(100vh-80px)] sm:h-[calc(100vh-100px)] relative">
-          {/* Video Call - Daily.co */}
+          {/* Video Call - Daily.co - SEMPRE VISÍVEL */}
           <div className="h-full w-full rounded-lg overflow-hidden bg-card shadow-2xl border border-primary/20">
             {roomUrl ? (
               <iframe
-                src={roomUrl + '?t=' + Date.now()}
+                src={roomUrl}
                 allow="camera; microphone; fullscreen; speaker; display-capture; autoplay"
                 className="w-full h-full"
                 title="Daily.co Video Call"
+                onLoad={() => console.log('Iframe loaded')}
+                onError={(e) => console.error('Iframe error:', e)}
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
