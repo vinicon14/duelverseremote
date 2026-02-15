@@ -150,6 +150,10 @@ export const MultiDeviceVideoCall = ({
 
       callObject.current = window.__dailyCallObject;
 
+      callObject.current.on('joining-meeting', () => {
+        console.log('🔄 Joining meeting...');
+      });
+
       callObject.current.on('joined-meeting', () => {
         console.log('✅ Joined meeting');
         setIsLoading(false);
@@ -159,6 +163,7 @@ export const MultiDeviceVideoCall = ({
         // Get initial participants
         const parts = callObject.current?.participants();
         if (parts) {
+          console.log('📋 Participants:', Object.values(parts));
           setParticipants(Object.values(parts));
         }
       });
