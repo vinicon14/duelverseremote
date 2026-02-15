@@ -460,18 +460,20 @@ export const CardRecognitionModal = ({
             </div>
           )}
 
-          {/* Action buttons */}
+          {/* Action buttons - always visible when cards are recognized */}
           {recognizedCards.length > 0 && (
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={handleReset}>
+            <div className="flex gap-2 justify-between items-center pt-2 border-t">
+              <Button variant="outline" onClick={handleReset} size="sm">
                 Nova Análise
               </Button>
               <Button
                 onClick={handleAddSelected}
                 disabled={selectedCards.size === 0}
+                className="bg-green-600 hover:bg-green-700"
+                size="sm"
               >
-                <Plus className="h-4 w-4 mr-2" />
-                Adicionar {selectedCards.size} Carta(s)
+                <Plus className="h-4 w-4 mr-1" />
+                Adicionar ao Deck
               </Button>
             </div>
           )}
