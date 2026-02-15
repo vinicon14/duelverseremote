@@ -329,6 +329,29 @@ export default function Matchmaking() {
     }
   };
 
+  // Canal de realtime para broadcast de match
+  useEffect(() => {
+    if (!searching || matchFound) return;
+
+    console.log('📡 Setting up broadcast channel');
+
+    const broadcastChannel = supabase
+      .channel('match-broadcast')
+      .on('broadcast', { event: 'match-found' }, ({ payload }) => {
+        console.log('📡 Broadcast received:', payload);
+        if (payload.duel_id) {
+          handleMatchFound(payload.duel_id);
+        }
+      })
+      .subscribe((status) => {
+        console.log('📡 Broadcast channel status:', status);
+      });
+
+    return () => {
+      supabase.removeChannel(broadcastChannel);
+    };
+  }, [searching, matchFound, handleMatchFound]);
+
   // Realtime subscription para detectar match
   useEffect(() => {
     if (!searching || !currentUserId.current || matchFound) return;
