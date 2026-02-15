@@ -25,7 +25,9 @@ const isExtraDeckCard = (card: YugiohCard): boolean => {
 };
 
 const isTokenCard = (card: YugiohCard): boolean => {
-  return card.type.includes('Token') || card.name.toLowerCase().includes('token') || card.name.toLowerCase().includes('ficha');
+  const name = card.name.toLowerCase();
+  const type = card.type.toLowerCase();
+  return type.includes('token') || name.includes('token') || name.includes('ficha') || name.includes('gelatina') || type.includes('skill');
 };
 
 const DeckBuilder = () => {
