@@ -412,12 +412,14 @@ export const CardRecognitionModal = ({
           {isAnalyzing && (
             <div className="flex flex-col items-center justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
-              <p className="text-sm text-muted-foreground">Analisando imagem com IA...</p>
+              <p className="text-sm text-muted-foreground">
+                {inputMode === 'text' ? 'Processando cartas...' : 'Analisando imagem com IA...'}
+              </p>
             </div>
           )}
 
           {/* Recognized cards */}
-          {recognizedCards.length > 0 && (
+          {recognizedCards.length > 0 && !isAnalyzing && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <h4 className="font-medium text-sm">Cartas Reconhecidas</h4>
@@ -461,7 +463,7 @@ export const CardRecognitionModal = ({
           )}
 
           {/* Action buttons - always visible when cards are recognized */}
-          {recognizedCards.length > 0 && (
+          {recognizedCards.length > 0 && !isAnalyzing && (
             <div className="flex gap-2 justify-between items-center pt-2 border-t">
               <Button variant="outline" onClick={handleReset} size="sm">
                 Nova Análise
