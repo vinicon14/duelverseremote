@@ -156,7 +156,8 @@ const DuelRoom = () => {
             }
             
             // SEMPRE atualizar countdown quando remaining_seconds mudar (para sincronizar todos os players)
-            if (payload.new.remaining_seconds !== undefined) {
+            // Mas apenas se não estivermos em pause (para não sobrescrever o tempo local durante pausa)
+            if (payload.new.remaining_seconds !== undefined && !isTimerPausedRef.current) {
               const durationMins = payload.new.duration_minutes || 50;
               const maxSeconds = durationMins * 60;
               // Validar valor recebido
@@ -210,7 +211,11 @@ const DuelRoom = () => {
     callStartTime.current = startTime;
     const MAX_DURATION = durationMinutes * 60;
     
-    // Usar apenas o tempo local calculado, ignorar remainingSecs do banco para evitar conflitos
+    // Resetar contadores de pausa
+    pausedTime.current = 0;
+    lastPauseTime.current = 0;
+    
+    // Usar apenas o tempo local calculado
     const initialRemaining = Math.max(0, MAX_DURATION - Math.floor((Date.now() - startTime) / 1000));
     setCallDuration(initialRemaining);
     
