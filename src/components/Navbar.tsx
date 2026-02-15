@@ -209,25 +209,40 @@ export const Navbar = () => {
               <Menu className="h-6 w-6" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="right" className="w-64 h-screen overflow-y-auto">
+          <SheetContent side="right" className="w-72 h-screen overflow-y-auto">
             <div className="flex flex-col space-y-4 pt-8 h-full">
-              <NavLinks />
-              {user ? (
-                <>
-                  <Button variant="ghost" onClick={() => navigate('/profile')} className="justify-start">
-                    <User className="mr-2 h-4 w-4" />
-                    Perfil
+              {/* Mobile User Section */}
+              <div className="flex items-center gap-3 px-2 pb-4 border-b">
+                {user && (
+                  <>
+                    <NotificationBell userId={user.id} />
+                    <OnlineUsersCounter />
+                  </>
+                )}
+              </div>
+              
+              <div className="flex-1 overflow-y-auto">
+                <NavLinks />
+              </div>
+              
+              <div className="border-t pt-4 space-y-2">
+                {user ? (
+                  <>
+                    <Button variant="ghost" onClick={() => navigate('/profile')} className="justify-start w-full">
+                      <User className="mr-2 h-4 w-4" />
+                      Perfil
+                    </Button>
+                    <Button variant="ghost" onClick={handleLogout} className="justify-start w-full">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Sair
+                    </Button>
+                  </>
+                ) : (
+                  <Button className="btn-mystic text-white w-full" onClick={() => navigate('/auth')}>
+                    Entrar
                   </Button>
-                  <Button variant="ghost" onClick={handleLogout} className="justify-start">
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Sair
-                  </Button>
-                </>
-              ) : (
-                <Button className="btn-mystic text-white" onClick={() => navigate('/auth')}>
-                  Entrar
-                </Button>
-              )}
+                )}
+              </div>
             </div>
           </SheetContent>
         </Sheet>
