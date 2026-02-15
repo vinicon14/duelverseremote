@@ -34,6 +34,7 @@ const DuelRoom = () => {
   const isTimerPausedRef = useRef(false);
   const callStartTime = useRef<number | null>(null);
   const timerInterval = useRef<NodeJS.Timeout | null>(null);
+  const timerInitialized = useRef(false);
   const pausedTime = useRef<number>(0);
   const lastPauseTime = useRef<number>(0);
   
@@ -198,26 +199,20 @@ const DuelRoom = () => {
   }, [id, currentUser]);
 
   const startCallTimer = (startedAt: string, durationMinutes: number = 50, remainingSecs?: number) => {
+    // Evitar iniciar timer múltiplas vezes
+    if (timerInitialized.current) {
+      console.log('⚠️ Timer já inicializado, ignorando...');
+      return;
+    }
+    timerInitialized.current = true;
+    
     const startTime = new Date(startedAt).getTime();
     callStartTime.current = startTime;
     const MAX_DURATION = durationMinutes * 60;
     
-    // Validar e definir remaining_seconds inicial
-    if (remainingSecs !== undefined) {
-      // Proteger contra valores corrompidos - o tempo restante não pode ser maior que a duração máxima
-      const validRemaining = Math.min(Math.max(0, remainingSecs), MAX_DURATION);
-      setCallDuration(validRemaining);
-      
-      // Se o valor estava corrompido, resetar no banco
-      if (remainingSecs > MAX_DURATION || remainingSecs < 0) {
-        console.warn('⚠️ Timer corrompido detectado. Resetando...', { remainingSecs, MAX_DURATION });
-        supabase
-          .from('live_duels')
-          .update({ remaining_seconds: validRemaining })
-          .eq('id', id)
-          .then(() => console.log('✅ Timer resetado com sucesso'));
-      }
-    }
+    // Usar apenas o tempo local calculado, ignorar remainingSecs do banco para evitar conflitos
+    const initialRemaining = Math.max(0, MAX_DURATION - Math.floor((Date.now() - startTime) / 1000));
+    setCallDuration(initialRemaining);
     
     // Limpar intervalo anterior se existir
     if (timerInterval.current) {
@@ -233,7 +228,12 @@ const DuelRoom = () => {
 
       const now = Date.now();
       const elapsedRaw = Math.floor((now - startTime - pausedTime.current) / 1000);
-      const remaining = Math.max(0, MAX_DURATION - elapsedRaw);
+      let remaining = Math.max(0, MAX_DURATION - elapsedRaw);
+      
+      // Proteger contra valores inválidos
+      if (remaining > MAX_DURATION || remaining < 0) {
+        remaining = 0;
+      }
       
       // Atualizar UI local
       setCallDuration(remaining);
