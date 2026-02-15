@@ -19,7 +19,7 @@ import { toast } from 'sonner';
 interface CardRecognitionModalProps {
   open: boolean;
   onClose: () => void;
-  onAddCards: (cards: YugiohCard[], deckType?: 'main' | 'extra' | 'side') => void;
+  onAddCards: (cards: YugiohCard[], deckType?: 'main' | 'extra' | 'side', quantities?: number[]) => void;
 }
 
 export const CardRecognitionModal = ({
@@ -34,22 +34,25 @@ export const CardRecognitionModal = ({
   const [textInput, setTextInput] = useState('');
   const [inputMode, setInputMode] = useState<'image' | 'text'>('image');
   const [cardDeckTypes, setCardDeckTypes] = useState<Map<number, 'main' | 'extra' | 'side'>>(new Map());
+  const [cardQuantities, setCardQuantities] = useState<Map<number, number>>(new Map());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const searchCardByName = async (cardName: string): Promise<YugiohCard | null> => {
-    try {
-      const response = await fetch(
-        `https://db.ygoprodeck.com/api/v7/cardinfo.php?fname=${encodeURIComponent(cardName)}`
-      );
-      const data = await response.json();
-      if (data.data && data.data.length > 0) {
-        return data.data[0];
+    for (const lang of ['pt', 'en']) {
+      try {
+        const response = await fetch(
+          `https://db.ygoprodeck.com/api/v7/cardinfo.php?fname=${encodeURIComponent(cardName)}&language=${lang}`
+        );
+        const data = await response.json();
+        if (data.data && data.data.length > 0) {
+          return data.data[0];
+        }
+      } catch {
+        continue;
       }
-      return null;
-    } catch {
-      return null;
     }
+    return null;
   };
 
   const EXTRA_DECK_TYPES = ['Fusion', 'Synchro', 'XYZ', 'Link'];
@@ -58,20 +61,30 @@ export const CardRecognitionModal = ({
     return EXTRA_DECK_TYPES.some((type) => card.type.includes(type));
   };
 
-  const parseCardLine = (line: string): { name: string; deckType: 'main' | 'extra' | 'side' | 'auto' } => {
+  const parseCardLine = (line: string): { name: string; deckType: 'main' | 'extra' | 'side' | 'auto'; quantity: number } => {
     const lowerLine = line.toLowerCase();
+    let deckType: 'main' | 'extra' | 'side' | 'auto' = 'auto';
+    let name = line;
     
     if (lowerLine.startsWith('side:') || lowerLine.startsWith('sd:')) {
-      return { name: line.replace(/^(side:|sd:)\s*/i, '').trim(), deckType: 'side' };
-    }
-    if (lowerLine.startsWith('extra:') || lowerLine.startsWith('ed:')) {
-      return { name: line.replace(/^(extra:|ed:)\s*/i, '').trim(), deckType: 'extra' };
-    }
-    if (lowerLine.startsWith('main:') || lowerLine.startsWith('md:')) {
-      return { name: line.replace(/^(main:|md:)\s*/i, '').trim(), deckType: 'main' };
+      deckType = 'side';
+      name = line.replace(/^(side:|sd:)\s*/i, '').trim();
+    } else if (lowerLine.startsWith('extra:') || lowerLine.startsWith('ed:')) {
+      deckType = 'extra';
+      name = line.replace(/^(extra:|ed:)\s*/i, '').trim();
+    } else if (lowerLine.startsWith('main:') || lowerLine.startsWith('md:')) {
+      deckType = 'main';
+      name = line.replace(/^(main:|md:)\s*/i, '').trim();
     }
     
-    return { name: line.trim(), deckType: 'auto' };
+    const quantityMatch = name.match(/^(\d+)\s+/);
+    let quantity = 1;
+    if (quantityMatch) {
+      quantity = parseInt(quantityMatch[1], 10);
+      name = name.replace(/^\d+\s+/, '').trim();
+    }
+    
+    return { name, deckType, quantity };
   };
 
   const analyzeText = async () => {
@@ -86,14 +99,13 @@ export const CardRecognitionModal = ({
 
     try {
       const lines = textInput.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-      const parsedCards: { name: string; deckType: 'main' | 'extra' | 'side' | 'auto' }[] = [];
+      const parsedCards: { name: string; deckType: 'main' | 'extra' | 'side' | 'auto'; quantity: number }[] = [];
       
       for (const line of lines) {
         parsedCards.push(parseCardLine(line));
       }
 
-      const uniqueNames = [...new Set(parsedCards.map(p => p.name))];
-      const foundCards: { card: YugiohCard; deckType: 'main' | 'extra' | 'side' }[] = [];
+      const foundCards: { card: YugiohCard; deckType: 'main' | 'extra' | 'side'; quantity: number }[] = [];
       const notFound: string[] = [];
 
       for (const parsed of parsedCards) {
@@ -107,7 +119,7 @@ export const CardRecognitionModal = ({
             deckType = parsed.deckType;
           }
           
-          foundCards.push({ card, deckType });
+          foundCards.push({ card, deckType, quantity: Math.min(parsed.quantity, 3) });
         } else {
           notFound.push(parsed.name);
         }
@@ -124,10 +136,14 @@ export const CardRecognitionModal = ({
         setSelectedCards(new Set(foundCards.map(c => c.card.id)));
         
         const deckTypesMap = new Map<number, 'main' | 'extra' | 'side'>();
-        foundCards.forEach(({ card, deckType }) => {
+        const quantitiesMap = new Map<number, number>();
+        
+        foundCards.forEach(({ card, deckType, quantity }) => {
           deckTypesMap.set(card.id, deckType);
+          quantitiesMap.set(card.id, quantity);
         });
         setCardDeckTypes(deckTypesMap);
+        setCardQuantities(quantitiesMap);
         
         const mainCount = groupedByDeck.main.length;
         const extraCount = groupedByDeck.extra.length;
@@ -138,7 +154,8 @@ export const CardRecognitionModal = ({
         if (extraCount > 0) message += `${extraCount} extra, `;
         if (sideCount > 0) message += `${sideCount} side`;
         
-        toast.success(`${foundCards.length} carta(s) encontrada(s)! (${message.replace(/, $/, '')})`);
+        const totalCards = foundCards.reduce((acc, c) => acc + c.quantity, 0);
+        toast.success(`${totalCards} carta(s) encontrada(s)! (${message.replace(/, $/, '')})`);
         
         if (notFound.length > 0) {
           toast.info(`${notFound.length} carta(s) não encontrada(s): ${notFound.slice(0, 3).join(', ')}${notFound.length > 3 ? '...' : ''}`);
@@ -222,11 +239,20 @@ export const CardRecognitionModal = ({
       const extraCards = cardsToAdd.filter(c => cardDeckTypes.get(c.id) === 'extra' || (!cardDeckTypes.has(c.id) && isExtraDeckCard(c)));
       const sideCards = cardsToAdd.filter(c => cardDeckTypes.get(c.id) === 'side');
       
-      if (mainCards.length > 0) onAddCards(mainCards, 'main');
-      if (extraCards.length > 0) onAddCards(extraCards, 'extra');
-      if (sideCards.length > 0) onAddCards(sideCards, 'side');
+      if (mainCards.length > 0) {
+        const quantities = mainCards.map(c => cardQuantities.get(c.id) || 1);
+        onAddCards(mainCards, 'main', quantities);
+      }
+      if (extraCards.length > 0) {
+        const quantities = extraCards.map(c => cardQuantities.get(c.id) || 1);
+        onAddCards(extraCards, 'extra', quantities);
+      }
+      if (sideCards.length > 0) {
+        const quantities = sideCards.map(c => cardQuantities.get(c.id) || 1);
+        onAddCards(sideCards, 'side', quantities);
+      }
       
-      const totalAdded = mainCards.length + extraCards.length + sideCards.length;
+      const totalAdded = cardsToAdd.reduce((acc, c) => acc + (cardQuantities.get(c.id) || 1), 0);
       toast.success(`${totalAdded} carta(s) adicionada(s) ao deck!`);
     }
     handleReset();
@@ -239,6 +265,7 @@ export const CardRecognitionModal = ({
     setSelectedCards(new Set());
     setTextInput('');
     setCardDeckTypes(new Map());
+    setCardQuantities(new Map());
     if (fileInputRef.current) fileInputRef.current.value = '';
     if (cameraInputRef.current) cameraInputRef.current.value = '';
   };
@@ -335,7 +362,7 @@ export const CardRecognitionModal = ({
             <TabsContent value="text" className="mt-4">
               <div className="space-y-3">
                 <Textarea
-                  placeholder="Cole aqui a lista de cartas (uma por linha):&#10;Dark Magician&#10;Blue-Eyes White Dragon&#10;Ash Blossom & Joyous Spring&#10;Pot of Desires"
+                  placeholder="Cole aqui a lista de cartas (uma por linha):&#10;3 Dark Magician&#10;1 Blue-Eyes White Dragon&#10;side: Maxx C&#10;extra: Knightmare Unicorn"
                   value={textInput}
                   onChange={(e) => setTextInput(e.target.value)}
                   className="min-h-[150px] resize-none"
@@ -360,7 +387,7 @@ export const CardRecognitionModal = ({
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  A IA identificará automaticamente o tipo de carta e decidirá se vai para Main Deck, Extra Deck ou Side Deck.
+                  A IA identificará automaticamente o tipo de carta e decidirá se vai para Main Deck, Extra Deck ou Side Deck. Use prefixos (main:, extra:, side:) para especificar o deck e números no início para quantidade (ex: 3 Ash Blossom).
                 </p>
               </div>
             </TabsContent>
