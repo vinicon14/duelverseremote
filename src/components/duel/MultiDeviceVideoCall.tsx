@@ -4,7 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 
 declare global {
   interface Window {
-    DailyIframe: typeof DailyIframe;
+    __dailyCallObject: ReturnType<typeof DailyIframe.createCallObject> | null;
+    __dailyRoomUrl: string | null;
   }
 }
 
@@ -28,21 +29,19 @@ export const MultiDeviceVideoCall = ({
   className 
 }: MultiDeviceVideoCallProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const callObjectRef = useRef<ReturnType<typeof DailyIframe.createCallObject> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
-  const [participants, setParticipants] = useState<any[]>([]);
   const [mySessionId, setMySessionId] = useState<string | null>(null);
   
-  // Estado para multi-device
   const [hasOtherDevice, setHasOtherDevice] = useState(false);
   const otherDeviceRef = useRef<DeviceSession | null>(null);
-  const isInitialized = useRef(false);
+  const hasJoinedRef = useRef(false);
 
-  // Gerar ID único para esta sessão
   const sessionId = useRef(`session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
+
+  const callObject = useRef<ReturnType<typeof DailyIframe.createCallObject> | null>(null);
 
   // Sincronizar estado com outro dispositivo via Supabase Realtime
   useEffect(() => {
@@ -52,18 +51,16 @@ export const MultiDeviceVideoCall = ({
         console.log('📡 Device state sync:', payload);
         
         if (payload.sessionId !== sessionId.current) {
-          // Outro dispositivo
           otherDeviceRef.current = payload;
           setHasOtherDevice(true);
           
-          // Se outro dispositivo tem mídia ativa, desabilitar controls localmente
           if (payload.hasMedia && !isMuted) {
             setIsMuted(true);
-            callObjectRef.current?.setLocalAudio(false);
+            callObject.current?.setLocalAudio(false);
           }
           if (payload.hasMedia && !isVideoOff) {
             setIsVideoOff(true);
-            callObjectRef.current?.setLocalVideo(false);
+            callObject.current?.setLocalVideo(false);
           }
         }
       })
@@ -72,9 +69,8 @@ export const MultiDeviceVideoCall = ({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId]);
+  }, [userId, isMuted, isVideoOff]);
 
-  // Função para broadcast do estado atual
   const broadcastDeviceState = useCallback(async (state: Partial<DeviceSession>) => {
     const channel = supabase.channel(`device-sync-${userId}`);
     await channel.send({
@@ -88,54 +84,64 @@ export const MultiDeviceVideoCall = ({
     });
   }, [userId, hasOtherDevice]);
 
+  const toggleMute = useCallback(() => {
+    if (!callObject.current) return;
+    
+    const newMuted = !isMuted;
+    callObject.current.setLocalAudio(!newMuted);
+    setIsMuted(newMuted);
+    broadcastDeviceState({ hasMedia: !newMuted });
+  }, [isMuted, broadcastDeviceState]);
+
+  const toggleVideo = useCallback(() => {
+    if (!callObject.current) return;
+    
+    const newVideoOff = !isVideoOff;
+    callObject.current.setLocalVideo(!newVideoOff);
+    setIsVideoOff(newVideoOff);
+    broadcastDeviceState({ hasMedia: !newVideoOff });
+  }, [isVideoOff, broadcastDeviceState]);
+
   const joinCall = useCallback(async () => {
-    if (!roomUrl || !containerRef.current) return;
+    if (hasJoinedRef.current || !roomUrl || !containerRef.current) return;
+    hasJoinedRef.current = true;
 
     try {
       setIsLoading(true);
       setError(null);
 
-      // Criar call object
-      const callObject = DailyIframe.createCallObject({
-        showLeaveButton: true,
-        showFullscreenButton: true,
-      });
+      // Usar instância global ou criar nova
+      if (!window.__dailyCallObject || window.__dailyRoomUrl !== roomUrl) {
+        if (window.__dailyCallObject) {
+          window.__dailyCallObject.destroy();
+        }
+        window.__dailyCallObject = DailyIframe.createCallObject({
+          showLeaveButton: true,
+          showFullscreenButton: true,
+        });
+        window.__dailyRoomUrl = roomUrl;
+      }
 
-      callObjectRef.current = callObject;
+      callObject.current = window.__dailyCallObject;
 
-      // Eventos
-      callObject.on('joined-meeting', () => {
+      callObject.current.on('joined-meeting', () => {
         console.log('✅ Joined meeting');
         setIsLoading(false);
         setMySessionId(sessionId.current);
-        
-        // Broadcast que entrou
         broadcastDeviceState({ hasMedia: true });
       });
 
-      callObject.on('left-meeting', () => {
+      callObject.current.on('left-meeting', () => {
         console.log('👋 Left meeting');
-        callObject.destroy();
-        callObjectRef.current = null;
+        hasJoinedRef.current = false;
       });
 
-      callObject.on('participant-joined', (evt) => {
-        console.log('👤 Participant joined:', evt);
-        setParticipants((prev) => [...prev, evt.participant]);
-      });
-
-      callObject.on('participant-left', (evt) => {
-        console.log('👤 Participant left:', evt);
-        setParticipants((prev) => prev.filter(p => p.session_id !== evt.participant.session_id));
-      });
-
-      callObject.on('error', (evt) => {
+      callObject.current.on('error', (evt: any) => {
         console.error('Daily.co error:', evt);
         setError(evt?.errorMsg || 'Erro na chamada');
         setIsLoading(false);
       });
 
-      // Timeout de 15 segundos
       const timeoutId = setTimeout(() => {
         if (isLoading) {
           console.warn('Timeout joining meeting');
@@ -144,7 +150,7 @@ export const MultiDeviceVideoCall = ({
         }
       }, 15000);
 
-      await callObject.join({
+      await callObject.current.join({
         url: roomUrl,
         userName: username,
       });
@@ -155,55 +161,22 @@ export const MultiDeviceVideoCall = ({
       console.error('Error joining call:', err);
       setError(err.message || 'Erro ao entrar na chamada');
       setIsLoading(false);
+      hasJoinedRef.current = false;
     }
   }, [roomUrl, username, isLoading, broadcastDeviceState]);
 
-  // Controlar microfone
-  const toggleMute = useCallback(() => {
-    if (!callObjectRef.current) return;
-    
-    const newMuted = !isMuted;
-    callObjectRef.current.setLocalAudio(!newMuted);
-    setIsMuted(newMuted);
-    
-    // Sync com outro dispositivo
-    broadcastDeviceState({ hasMedia: !newMuted });
-  }, [isMuted, broadcastDeviceState]);
-
-  // Controlar câmera
-  const toggleVideo = useCallback(() => {
-    if (!callObjectRef.current) return;
-    
-    const newVideoOff = !isVideoOff;
-    callObjectRef.current.setLocalVideo(!newVideoOff);
-    setIsVideoOff(newVideoOff);
-    
-    // Sync com outro dispositivo
-    broadcastDeviceState({ hasMedia: !newVideoOff });
-  }, [isVideoOff, broadcastDeviceState]);
-
   useEffect(() => {
-    // Evitar múltiplas inicializações
-    if (isInitialized.current) return;
-    isInitialized.current = true;
-    
     joinCall();
 
     return () => {
-      if (callObjectRef.current) {
-        callObjectRef.current.leave();
-        callObjectRef.current.destroy();
-      }
-      isInitialized.current = false;
+      // Não destruir a instância ao desmontar - outras abas podem estar usando
     };
   }, [joinCall]);
 
   return (
     <div className={`relative w-full h-full ${className}`}>
-      {/* Video Container */}
       <div ref={containerRef} className="w-full h-full" />
 
-      {/* Loading */}
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-10">
           <div className="text-center space-y-4">
@@ -213,13 +186,12 @@ export const MultiDeviceVideoCall = ({
         </div>
       )}
 
-      {/* Error */}
       {error && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-10">
           <div className="text-center space-y-4 p-4">
             <p className="text-red-400">{error}</p>
             <button 
-              onClick={joinCall}
+              onClick={() => { hasJoinedRef.current = false; joinCall(); }}
               className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/80"
             >
               Tentar novamente
@@ -228,7 +200,6 @@ export const MultiDeviceVideoCall = ({
         </div>
       )}
 
-      {/* Controls */}
       {mySessionId && (
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-20">
           <button
