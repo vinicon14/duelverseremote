@@ -9,7 +9,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { Camera, Upload, Loader2, X, Plus, Wand2 } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
+import { Camera, Upload, Loader2, X, Plus, Wand2, FileText } from 'lucide-react';
 import { YugiohCard } from '@/hooks/useYugiohCards';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -17,7 +19,7 @@ import { toast } from 'sonner';
 interface CardRecognitionModalProps {
   open: boolean;
   onClose: () => void;
-  onAddCards: (cards: YugiohCard[]) => void;
+  onAddCards: (cards: YugiohCard[], deckType?: 'main' | 'extra' | 'side') => void;
 }
 
 export const CardRecognitionModal = ({
@@ -29,8 +31,128 @@ export const CardRecognitionModal = ({
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [recognizedCards, setRecognizedCards] = useState<YugiohCard[]>([]);
   const [selectedCards, setSelectedCards] = useState<Set<number>>(new Set());
+  const [textInput, setTextInput] = useState('');
+  const [inputMode, setInputMode] = useState<'image' | 'text'>('image');
+  const [cardDeckTypes, setCardDeckTypes] = useState<Map<number, 'main' | 'extra' | 'side'>>(new Map());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+
+  const searchCardByName = async (cardName: string): Promise<YugiohCard | null> => {
+    try {
+      const response = await fetch(
+        `https://db.ygoprodeck.com/api/v7/cardinfo.php?fname=${encodeURIComponent(cardName)}`
+      );
+      const data = await response.json();
+      if (data.data && data.data.length > 0) {
+        return data.data[0];
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  };
+
+  const EXTRA_DECK_TYPES = ['Fusion', 'Synchro', 'XYZ', 'Link'];
+
+  const isExtraDeckCard = (card: YugiohCard): boolean => {
+    return EXTRA_DECK_TYPES.some((type) => card.type.includes(type));
+  };
+
+  const parseCardLine = (line: string): { name: string; deckType: 'main' | 'extra' | 'side' | 'auto' } => {
+    const lowerLine = line.toLowerCase();
+    
+    if (lowerLine.startsWith('side:') || lowerLine.startsWith('sd:')) {
+      return { name: line.replace(/^(side:|sd:)\s*/i, '').trim(), deckType: 'side' };
+    }
+    if (lowerLine.startsWith('extra:') || lowerLine.startsWith('ed:')) {
+      return { name: line.replace(/^(extra:|ed:)\s*/i, '').trim(), deckType: 'extra' };
+    }
+    if (lowerLine.startsWith('main:') || lowerLine.startsWith('md:')) {
+      return { name: line.replace(/^(main:|md:)\s*/i, '').trim(), deckType: 'main' };
+    }
+    
+    return { name: line.trim(), deckType: 'auto' };
+  };
+
+  const analyzeText = async () => {
+    if (!textInput.trim()) {
+      toast.error('Por favor, insira os nomes das cartas');
+      return;
+    }
+
+    setIsAnalyzing(true);
+    setRecognizedCards([]);
+    setSelectedCards(new Set());
+
+    try {
+      const lines = textInput.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+      const parsedCards: { name: string; deckType: 'main' | 'extra' | 'side' | 'auto' }[] = [];
+      
+      for (const line of lines) {
+        parsedCards.push(parseCardLine(line));
+      }
+
+      const uniqueNames = [...new Set(parsedCards.map(p => p.name))];
+      const foundCards: { card: YugiohCard; deckType: 'main' | 'extra' | 'side' }[] = [];
+      const notFound: string[] = [];
+
+      for (const parsed of parsedCards) {
+        const card = await searchCardByName(parsed.name);
+        if (card) {
+          let deckType: 'main' | 'extra' | 'side';
+          
+          if (parsed.deckType === 'auto') {
+            deckType = isExtraDeckCard(card) ? 'extra' : 'main';
+          } else {
+            deckType = parsed.deckType;
+          }
+          
+          foundCards.push({ card, deckType });
+        } else {
+          notFound.push(parsed.name);
+        }
+      }
+
+      if (foundCards.length > 0) {
+        const groupedByDeck = {
+          main: foundCards.filter(c => c.deckType === 'main').map(c => c.card),
+          extra: foundCards.filter(c => c.deckType === 'extra').map(c => c.card),
+          side: foundCards.filter(c => c.deckType === 'side').map(c => c.card),
+        };
+        
+        setRecognizedCards(foundCards.map(c => c.card));
+        setSelectedCards(new Set(foundCards.map(c => c.card.id)));
+        
+        const deckTypesMap = new Map<number, 'main' | 'extra' | 'side'>();
+        foundCards.forEach(({ card, deckType }) => {
+          deckTypesMap.set(card.id, deckType);
+        });
+        setCardDeckTypes(deckTypesMap);
+        
+        const mainCount = groupedByDeck.main.length;
+        const extraCount = groupedByDeck.extra.length;
+        const sideCount = groupedByDeck.side.length;
+        
+        let message = '';
+        if (mainCount > 0) message += `${mainCount} main, `;
+        if (extraCount > 0) message += `${extraCount} extra, `;
+        if (sideCount > 0) message += `${sideCount} side`;
+        
+        toast.success(`${foundCards.length} carta(s) encontrada(s)! (${message.replace(/, $/, '')})`);
+        
+        if (notFound.length > 0) {
+          toast.info(`${notFound.length} carta(s) não encontrada(s): ${notFound.slice(0, 3).join(', ')}${notFound.length > 3 ? '...' : ''}`);
+        }
+      } else {
+        toast.error('Nenhuma carta foi encontrada. Verifique os nomes.');
+      }
+    } catch (error) {
+      console.error('Error analyzing text:', error);
+      toast.error('Erro ao processar o texto');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -96,8 +218,16 @@ export const CardRecognitionModal = ({
   const handleAddSelected = () => {
     const cardsToAdd = recognizedCards.filter(c => selectedCards.has(c.id));
     if (cardsToAdd.length > 0) {
-      onAddCards(cardsToAdd);
-      toast.success(`${cardsToAdd.length} carta(s) adicionada(s) ao deck!`);
+      const mainCards = cardsToAdd.filter(c => cardDeckTypes.get(c.id) === 'main' || (!cardDeckTypes.has(c.id) && !isExtraDeckCard(c)));
+      const extraCards = cardsToAdd.filter(c => cardDeckTypes.get(c.id) === 'extra' || (!cardDeckTypes.has(c.id) && isExtraDeckCard(c)));
+      const sideCards = cardsToAdd.filter(c => cardDeckTypes.get(c.id) === 'side');
+      
+      if (mainCards.length > 0) onAddCards(mainCards, 'main');
+      if (extraCards.length > 0) onAddCards(extraCards, 'extra');
+      if (sideCards.length > 0) onAddCards(sideCards, 'side');
+      
+      const totalAdded = mainCards.length + extraCards.length + sideCards.length;
+      toast.success(`${totalAdded} carta(s) adicionada(s) ao deck!`);
     }
     handleReset();
     onClose();
@@ -107,6 +237,8 @@ export const CardRecognitionModal = ({
     setImagePreview(null);
     setRecognizedCards([]);
     setSelectedCards(new Set());
+    setTextInput('');
+    setCardDeckTypes(new Map());
     if (fileInputRef.current) fileInputRef.current.value = '';
     if (cameraInputRef.current) cameraInputRef.current.value = '';
   };
@@ -130,61 +262,109 @@ export const CardRecognitionModal = ({
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Upload buttons */}
-          {!imagePreview && (
-            <div className="flex gap-2 justify-center">
-              <Button
-                variant="outline"
-                onClick={() => fileInputRef.current?.click()}
-                className="flex-1 gap-2"
-              >
-                <Upload className="h-4 w-4" />
-                Escolher Imagem
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => cameraInputRef.current?.click()}
-                className="flex-1 gap-2"
-              >
+          <Tabs value={inputMode} onValueChange={(v) => setInputMode(v as 'image' | 'text')} className="w-full">
+            <TabsList className="w-full grid grid-cols-2">
+              <TabsTrigger value="image" className="gap-2">
                 <Camera className="h-4 w-4" />
-                Tirar Foto
-              </Button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleFileSelect}
-                className="hidden"
-              />
-              <input
-                ref={cameraInputRef}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                onChange={handleFileSelect}
-                className="hidden"
-              />
-            </div>
-          )}
+                Imagem
+              </TabsTrigger>
+              <TabsTrigger value="text" className="gap-2">
+                <FileText className="h-4 w-4" />
+                Texto
+              </TabsTrigger>
+            </TabsList>
 
-          {/* Image preview */}
-          {imagePreview && (
-            <div className="relative">
-              <img
-                src={imagePreview}
-                alt="Preview"
-                className="w-full max-h-48 object-contain rounded-lg border"
-              />
-              <Button
-                variant="destructive"
-                size="icon"
-                className="absolute top-2 right-2 h-6 w-6"
-                onClick={handleReset}
-              >
-                <X className="h-3 w-3" />
-              </Button>
-            </div>
-          )}
+            <TabsContent value="image" className="mt-4">
+              {/* Upload buttons */}
+              {!imagePreview && (
+                <div className="flex gap-2 justify-center">
+                  <Button
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex-1 gap-2"
+                  >
+                    <Upload className="h-4 w-4" />
+                    Escolher Imagem
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => cameraInputRef.current?.click()}
+                    className="flex-1 gap-2"
+                  >
+                    <Camera className="h-4 w-4" />
+                    Tirar Foto
+                  </Button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+                  <input
+                    ref={cameraInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+                </div>
+              )}
+
+              {/* Image preview */}
+              {imagePreview && (
+                <div className="relative">
+                  <img
+                    src={imagePreview}
+                    alt="Preview"
+                    className="w-full max-h-48 object-contain rounded-lg border"
+                  />
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    className="absolute top-2 right-2 h-6 w-6"
+                    onClick={handleReset}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="text" className="mt-4">
+              <div className="space-y-3">
+                <Textarea
+                  placeholder="Cole aqui a lista de cartas (uma por linha):&#10;Dark Magician&#10;Blue-Eyes White Dragon&#10;Ash Blossom & Joyous Spring&#10;Pot of Desires"
+                  value={textInput}
+                  onChange={(e) => setTextInput(e.target.value)}
+                  className="min-h-[150px] resize-none"
+                />
+                <div className="flex gap-2">
+                  <Button
+                    onClick={analyzeText}
+                    disabled={isAnalyzing || !textInput.trim()}
+                    className="flex-1 gap-2"
+                  >
+                    {isAnalyzing ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Wand2 className="h-4 w-4" />
+                    )}
+                    Processar Texto
+                  </Button>
+                  {recognizedCards.length > 0 && (
+                    <Button variant="outline" onClick={handleReset}>
+                      Limpar
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  A IA identificará automaticamente o tipo de carta e decidirá se vai para Main Deck, Extra Deck ou Side Deck.
+                </p>
+              </div>
+            </TabsContent>
+          </Tabs>
 
           {/* Loading state */}
           {isAnalyzing && (
