@@ -53,11 +53,11 @@ export const TournamentWinnerSelector = ({
 
       if (updateError) throw updateError;
 
-      // Registrar transação
+      // Registrar transação - usar tournament como origem (não null, para lógica funcionar)
       const { error: transactionError } = await supabase
         .from('duelcoins_transactions')
         .insert({
-          sender_id: null,
+          sender_id: tournamentId, // Usar tournament como "remetente"
           receiver_id: selectedWinnerId,
           amount: prizePool,
           transaction_type: 'tournament_prize',
