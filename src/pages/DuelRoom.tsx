@@ -199,7 +199,7 @@ const DuelRoom = () => {
     };
   }, [id, currentUser]);
 
-  const startCallTimer = (startedAt: string, durationMinutes: number = 50) => {
+  const startCallTimer = (startedAt: string, durationMinutes: number = 50, initialRemaining?: number) => {
     // Evitar iniciar timer múltiplas vezes
     if (timerInitialized.current) {
       console.log('⚠️ Timer já inicializado, ignorando...');
@@ -210,6 +210,13 @@ const DuelRoom = () => {
     const startTime = new Date(startedAt).getTime();
     callStartTime.current = startTime;
     const MAX_DURATION = durationMinutes * 60;
+    
+    // Usar o tempo restante inicial passado como parâmetro, ou calcular baseado no started_at
+    const initialCallDuration = initialRemaining !== undefined 
+      ? Math.min(initialRemaining, MAX_DURATION)
+      : Math.max(0, MAX_DURATION - Math.floor((Date.now() - startTime) / 1000));
+    
+    setCallDuration(initialCallDuration);
     
     // Resetar contadores de pausa
     pausedTime.current = 0;
@@ -433,8 +440,12 @@ const DuelRoom = () => {
       // Iniciar timer SEMPRE que houver started_at
       if (startedAt) {
         const durationMins = data.duration_minutes || 50;
-        // O timer começa quando a sala abre (started_at) - mesmo para todos
-        startCallTimer(startedAt, durationMins);
+        const maxSeconds = durationMins * 60;
+        // Usar remaining_seconds do banco se existir, para manter continuidade após pausa
+        const initialRemaining = data.remaining_seconds !== null 
+          ? Math.min(Math.max(0, data.remaining_seconds), maxSeconds)
+          : undefined;
+        startCallTimer(startedAt, durationMins, initialRemaining);
       }
     } catch (error: any) {
       console.error('[DuelRoom] Erro em fetchDuel:', error);
