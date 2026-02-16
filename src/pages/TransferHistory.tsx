@@ -2,26 +2,24 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Navbar } from "@/components/Navbar";
-import { DuelCoinsBalance } from "@/components/DuelCoinsBalance";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Coins, Send, History, ArrowUpRight, ArrowDownLeft } from "lucide-react";
+import { Coins, ArrowUpRight, ArrowDownLeft, Search, RefreshCw } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useBanCheck } from "@/hooks/useBanCheck";
 
-export default function DuelCoins() {
+export default function TransferHistory() {
   useBanCheck();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [receiverUsername, setReceiverUsername] = useState("");
-  const [amount, setAmount] = useState("");
-  const [loading, setLoading] = useState(false);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string>("");
+  const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterType, setFilterType] = useState<"all" | "sent" | "received">("all");
 
   useEffect(() => {
     checkAuth();
@@ -38,13 +36,14 @@ export default function DuelCoins() {
   };
 
   const fetchTransactions = async (userId: string) => {
+    setLoading(true);
     try {
       const { data, error } = await supabase
         .from('duelcoins_transactions')
         .select('*')
         .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
         .order('created_at', { ascending: false })
-        .limit(50);
+        .limit(100);
 
       if (error) throw error;
 
@@ -87,74 +86,6 @@ export default function DuelCoins() {
         title: "Erro ao carregar histórico",
         variant: "destructive"
       });
-    }
-  };
-
-  const transferDuelCoins = async () => {
-    if (!receiverUsername.trim()) {
-      toast({
-        title: "Digite um username",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (!amount || parseInt(amount) <= 0) {
-      toast({
-        title: "Digite uma quantidade válida",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setLoading(true);
-    try {
-      // Buscar ID do destinatário
-      const { data: receiver, error: receiverError } = await supabase
-        .from('profiles')
-        .select('user_id')
-        .ilike('username', receiverUsername)
-        .single();
-
-      if (receiverError || !receiver) {
-        toast({
-          title: "Usuário não encontrado",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Fazer transferência
-      const { data, error } = await supabase.rpc('transfer_duelcoins', {
-        p_receiver_id: receiver.user_id,
-        p_amount: parseInt(amount)
-      });
-
-      if (error) throw error;
-
-      const result = data as any;
-      if (result.success) {
-        toast({
-          title: "Transferência realizada!",
-          description: result.message
-        });
-        setReceiverUsername("");
-        setAmount("");
-        fetchTransactions(currentUserId);
-      } else {
-        toast({
-          title: "Erro na transferência",
-          description: result.message,
-          variant: "destructive"
-        });
-      }
-    } catch (error: any) {
-      console.error('Error transferring DuelCoins:', error);
-      toast({
-        title: "Erro",
-        description: error.message,
-        variant: "destructive"
-      });
     } finally {
       setLoading(false);
     }
@@ -187,75 +118,114 @@ export default function DuelCoins() {
       : (tx.receiver?.username || 'Sistema');
   };
 
+  const getTransactionType = (tx: any) => {
+    const type = tx.transaction_type;
+    switch (type) {
+      case 'transfer':
+        return 'Transferência';
+      case 'tournament_entry':
+        return 'Entrada de Torneio';
+      case 'tournament_prize':
+        return 'Prêmio de Torneio';
+      case 'tournament_win':
+        return 'Vitória em Torneio';
+      case 'admin_add':
+        return 'Adição (Admin)';
+      case 'admin_remove':
+        return 'Remoção (Admin)';
+      case 'daily_reward':
+        return 'Recompensa Diária';
+      case 'purchase':
+        return 'Compra';
+      case 'redeem':
+        return 'Resgate';
+      default:
+        return type || 'Outro';
+    }
+  };
+
+  const filteredTransactions = transactions.filter(tx => {
+    const matchesSearch = searchTerm === "" || 
+      getTransactionOrigin(tx).toLowerCase().includes(searchTerm.toLowerCase()) ||
+      getTransactionType(tx).toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesFilter = filterType === "all" || 
+      (filterType === "sent" && !isReceived(tx)) ||
+      (filterType === "received" && isReceived(tx));
+    
+    return matchesSearch && matchesFilter;
+  });
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       
       <main className="container mx-auto px-4 py-8 pt-24">
-        <div className="max-w-4xl mx-auto space-y-6">
+        <div className="max-w-6xl mx-auto space-y-6">
           <div className="text-center space-y-2">
             <h1 className="text-4xl font-bold gradient-text flex items-center justify-center gap-2">
               <Coins className="w-10 h-10 text-yellow-500" />
-              DuelCoins
+              Histórico de Transferências
             </h1>
             <p className="text-muted-foreground">
-              Gerencie sua moeda virtual do DuelVerse
+              Visualize todas as suas transações de DuelCoins
             </p>
           </div>
 
-          <DuelCoinsBalance />
-
           <Card className="card-mystic">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Send className="w-5 h-5" />
-                Transferir DuelCoins
+              <CardTitle className="flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <Search className="w-5 h-5" />
+                  Filtros e Busca
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fetchTransactions(currentUserId)}
+                  disabled={loading}
+                >
+                  <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                  Atualizar
+                </Button>
               </CardTitle>
               <CardDescription>
-                Envie DuelCoins para outros jogadores
+                Filtre e busque suas transações
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="receiver">Username do destinatário</Label>
-                <Input
-                  id="receiver"
-                  placeholder="Digite o username..."
-                  value={receiverUsername}
-                  onChange={(e) => setReceiverUsername(e.target.value)}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="amount">Quantidade</Label>
-                <Input
-                  id="amount"
-                  type="number"
-                  min="1"
-                  placeholder="Ex: 100"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                />
-              </div>
-
-              <div className="flex gap-2">
-                <Button
-                  onClick={transferDuelCoins}
-                  disabled={loading}
-                  className="flex-1 btn-mystic"
-                  size="lg"
-                >
-                  <Send className="w-4 h-4 mr-2" />
-                  {loading ? "Transferindo..." : "Enviar DuelCoins"}
-                </Button>
-                <Button
-                  onClick={() => navigate("/transfer-history")}
-                  variant="outline"
-                  size="lg"
-                >
-                  <History className="w-4 h-4 mr-2" />
-                  Histórico
-                </Button>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1">
+                  <Input
+                    placeholder="Buscar por usuário ou tipo..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant={filterType === "all" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setFilterType("all")}
+                  >
+                    Todos
+                  </Button>
+                  <Button
+                    variant={filterType === "sent" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setFilterType("sent")}
+                  >
+                    Enviados
+                  </Button>
+                  <Button
+                    variant={filterType === "received" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setFilterType("received")}
+                  >
+                    Recebidos
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -263,11 +233,11 @@ export default function DuelCoins() {
           <Card className="card-mystic">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <History className="w-5 h-5" />
-                Histórico de Transações
+                <Coins className="w-5 h-5" />
+                Histórico Completo
               </CardTitle>
               <CardDescription>
-                Suas últimas 20 transações
+                {filteredTransactions.length} transações encontradas
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -277,19 +247,19 @@ export default function DuelCoins() {
                     <TableRow>
                       <TableHead>Data</TableHead>
                       <TableHead>Tipo</TableHead>
-                      <TableHead>Usuário</TableHead>
+                      <TableHead>Origem/Destino</TableHead>
                       <TableHead className="text-right">Valor</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {transactions.length === 0 ? (
+                    {filteredTransactions.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={4} className="text-center text-muted-foreground">
-                          Nenhuma transação encontrada
+                        <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                          {loading ? "Carregando..." : "Nenhuma transação encontrada"}
                         </TableCell>
                       </TableRow>
                     ) : (
-                      transactions.map((tx) => {
+                      filteredTransactions.map((tx) => {
                         const received = isReceived(tx);
                         return (
                           <TableRow key={tx.id}>
@@ -297,23 +267,24 @@ export default function DuelCoins() {
                               {formatDate(tx.created_at)}
                             </TableCell>
                             <TableCell>
-                              {received ? (
-                                <Badge className="bg-green-500">
-                                  <ArrowDownLeft className="w-3 h-3 mr-1" />
-                                  Recebido
-                                </Badge>
-                              ) : (
-                                <Badge variant="outline">
-                                  <ArrowUpRight className="w-3 h-3 mr-1" />
-                                  Enviado
-                                </Badge>
-                              )}
+                              <Badge variant={received ? "default" : "secondary"}>
+                                {getTransactionType(tx)}
+                              </Badge>
                             </TableCell>
                             <TableCell>
-                              {getTransactionOrigin(tx)}
+                              <div className="flex items-center gap-2">
+                                {received ? (
+                                  <ArrowDownLeft className="w-4 h-4 text-green-500" />
+                                ) : (
+                                  <ArrowUpRight className="w-4 h-4 text-red-500" />
+                                )}
+                                <span className="font-medium">
+                                  {getTransactionOrigin(tx)}
+                                </span>
+                              </div>
                             </TableCell>
                             <TableCell className="text-right font-bold">
-                              <span className={received ? "text-green-500" : "text-muted-foreground"}>
+                              <span className={received ? "text-green-500" : "text-red-500"}>
                                 {received ? '+' : '-'}{tx.amount}
                               </span>
                               <Coins className="w-3 h-3 inline ml-1 text-yellow-500" />
@@ -327,6 +298,16 @@ export default function DuelCoins() {
               </div>
             </CardContent>
           </Card>
+
+          <div className="text-center">
+            <Button
+              variant="outline"
+              onClick={() => navigate("/duelcoins")}
+              className="btn-mystic"
+            >
+              Voltar para DuelCoins
+            </Button>
+          </div>
         </div>
       </main>
     </div>

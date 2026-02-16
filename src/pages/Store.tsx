@@ -40,7 +40,14 @@ export default function Store() {
 
   const handleStoreAccess = () => {
     if (storeUrl) {
-      window.open(storeUrl, '_blank');
+      // Usar link anchor em vez de window.open para evitar bloqueios de popup
+      const link = document.createElement('a');
+      link.href = storeUrl;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     } else {
       toast({
         title: "Link não configurado",

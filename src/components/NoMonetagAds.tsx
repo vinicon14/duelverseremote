@@ -97,11 +97,15 @@ export const NoMonetagAds = () => {
         }
       });
 
-      // Remove Monetag iframes (popup/overlay ads)
+      // Remove Monetag iframes (popup/overlay ads) - ALLOW Daily.co
       document.querySelectorAll('iframe').forEach((iframe) => {
         const src = iframe.getAttribute('src') || '';
         const id = iframe.id || '';
         const className = iframe.className || '';
+        // Allow Daily.co iframes
+        if (src.includes('daily.co') || src.includes('duelverse')) {
+          return; // Skip removal for Daily.co
+        }
         if (
           src.includes('quge5') || 
           src.includes('monetag') ||
@@ -181,9 +185,13 @@ export const NoMonetagAds = () => {
               }
             }
             
-            // Check iframes (popup/overlay ads)
+            // Check iframes (popup/overlay ads) - ALLOW Daily.co
             if (el.tagName === 'IFRAME') {
               const src = el.getAttribute('src') || '';
+              // Allow Daily.co iframes
+              if (src.includes('daily.co') || src.includes('duelverse')) {
+                return; // Skip blocking for Daily.co
+              }
               if (
                 src.includes('quge5') || 
                 src.includes('monetag') ||

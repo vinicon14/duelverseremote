@@ -320,6 +320,67 @@ const TournamentDetail = () => {
     }
   };
 
+  const removeParticipant = async (participantId: string, participantName: string) => {
+    if (!id || !confirm(`Tem certeza que deseja remover ${participantName} do torneio?`)) return;
+
+    try {
+      // Try RPC first
+      const { data, error } = await (supabase as any).rpc("remove_tournament_participant", {
+        p_tournament_id: id,
+        p_participant_id: participantId,
+      });
+
+      // If RPC fails, use fallback
+      if (error || !data?.success) {
+        console.log("RPC failed, using fallback for remove_participant");
+        
+        // Fallback: Direct database operations
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("Usuário não autenticado");
+
+        // Get tournament info
+        const { data: tournament, error: tournamentError } = await supabase
+          .from('tournaments')
+          .select('entry_fee, created_by')
+          .eq('id', id)
+          .single();
+
+        if (tournamentError) throw new Error("Torneio não encontrado");
+        if (tournament.created_by !== user.id) throw new Error("Apenas o criador pode remover participantes");
+
+        // Remove participant
+        const { error: deleteError } = await supabase
+          .from('tournament_participants')
+          .delete()
+          .eq('tournament_id', id)
+          .eq('user_id', participantId);
+
+        if (deleteError) throw new Error("Erro ao remover participante: " + deleteError.message);
+
+        // Refund entry fee if applicable
+        if (tournament.entry_fee > 0) {
+          await supabase
+            .from('profiles')
+            .update({ duelcoins_balance: (supabase as any).raw('duelcoins_balance + ' + tournament.entry_fee) })
+            .eq('user_id', participantId);
+        }
+      }
+
+      toast({
+        title: "Participante removido!",
+        description: `${participantName} foi removido do torneio.`,
+      });
+
+      await fetchTournamentData();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao remover participante",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -601,6 +662,11 @@ const TournamentDetail = () => {
                           <Badge variant="outline">
                             {participant.placement}º
                           </Badge>
+                        )}
+                        {tournament.status === 'upcoming' && tournament.created_by === currentUser?.id && participant.user_id !== currentUser?.id && (
+                          <Button variant="destructive" size="sm" onClick={() => removeParticipant(participant.user_id, participant.profiles?.username || 'Usuário')}>
+                            ✕
+                          </Button>
                         )}
                       </div>
                     </div>

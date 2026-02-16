@@ -24,6 +24,12 @@ const isExtraDeckCard = (card: YugiohCard): boolean => {
   return EXTRA_DECK_TYPES.some((type) => card.type.includes(type));
 };
 
+const isTokenCard = (card: YugiohCard): boolean => {
+  const name = card.name.toLowerCase();
+  const type = card.type.toLowerCase();
+  return type.includes('token') || name.includes('token') || name.includes('ficha') || name.includes('gelatina') || type.includes('skill');
+};
+
 const DeckBuilder = () => {
   const [language, setLanguage] = useState<Language>('pt');
   const [mainDeck, setMainDeck] = useState<DeckCard[]>([]);
@@ -388,74 +394,85 @@ const DeckBuilder = () => {
     toast.success(`Deck "${deck.name}" carregado!`);
   };
 
-  const handleAddRecognizedCards = useCallback((cards: YugiohCard[]) => {
-    // Use batch update approach to ensure all cards are added correctly
-    const mainCardsToAdd: YugiohCard[] = [];
-    const extraCardsToAdd: YugiohCard[] = [];
-
-    // Separate cards by type
-    cards.forEach((card) => {
-      if (isExtraDeckCard(card)) {
-        extraCardsToAdd.push(card);
-      } else {
-        mainCardsToAdd.push(card);
-      }
-    });
-
-    // Add main deck cards
-    if (mainCardsToAdd.length > 0) {
+  const handleAddRecognizedCards = useCallback((cards: YugiohCard[], deckType?: 'main' | 'extra' | 'side', quantities?: number[]) => {
+    const targetDeckType = deckType || 'main';
+    const deckQuantities = quantities || cards.map(() => 1);
+    
+    if (targetDeckType === 'main') {
       setMainDeck((prevMain) => {
         let newDeck = [...prevMain];
         
-        mainCardsToAdd.forEach((card) => {
+        cards.forEach((card, index) => {
+          const quantityToAdd = Math.min(deckQuantities[index] || 1, 3);
           const totalInDeck = newDeck.reduce((acc, c) => acc + c.quantity, 0);
           if (totalInDeck >= 60) return;
           
           const totalCopies = newDeck.filter(c => c.id === card.id).reduce((acc, c) => acc + c.quantity, 0);
-          if (totalCopies >= 3) return;
+          const availableSlots = Math.min(3 - totalCopies, quantityToAdd);
+          if (availableSlots <= 0) return;
           
           const existing = newDeck.find((c) => c.id === card.id);
           if (existing) {
             newDeck = newDeck.map((c) =>
-              c.id === card.id ? { ...c, quantity: Math.min(c.quantity + 1, 3) } : c
+              c.id === card.id ? { ...c, quantity: Math.min(c.quantity + availableSlots, 3) } : c
             );
           } else {
-            newDeck = [...newDeck, { ...card, quantity: 1 }];
+            newDeck = [...newDeck, { ...card, quantity: availableSlots }];
           }
         });
         
         return newDeck;
       });
-    }
-
-    // Add extra deck cards
-    if (extraCardsToAdd.length > 0) {
+    } else if (targetDeckType === 'extra') {
       setExtraDeck((prevExtra) => {
         let newDeck = [...prevExtra];
         
-        extraCardsToAdd.forEach((card) => {
+        cards.forEach((card, index) => {
+          const quantityToAdd = Math.min(deckQuantities[index] || 1, 3);
           const totalInDeck = newDeck.reduce((acc, c) => acc + c.quantity, 0);
           if (totalInDeck >= 15) return;
           
           const totalCopies = newDeck.filter(c => c.id === card.id).reduce((acc, c) => acc + c.quantity, 0);
-          if (totalCopies >= 3) return;
+          const availableSlots = Math.min(3 - totalCopies, quantityToAdd);
+          if (availableSlots <= 0) return;
           
           const existing = newDeck.find((c) => c.id === card.id);
           if (existing) {
             newDeck = newDeck.map((c) =>
-              c.id === card.id ? { ...c, quantity: Math.min(c.quantity + 1, 3) } : c
+              c.id === card.id ? { ...c, quantity: Math.min(c.quantity + availableSlots, 3) } : c
             );
           } else {
-            newDeck = [...newDeck, { ...card, quantity: 1 }];
+            newDeck = [...newDeck, { ...card, quantity: availableSlots }];
           }
         });
         
         return newDeck;
       });
-    }
-    
-    if (cards.length > 0) {
-      toast.success(`${cards.length} carta(s) adicionada(s) ao deck!`);
+    } else if (targetDeckType === 'side') {
+      setSideDeck((prevSide) => {
+        let newDeck = [...prevSide];
+        
+        cards.forEach((card, index) => {
+          const quantityToAdd = Math.min(deckQuantities[index] || 1, 3);
+          const totalInDeck = newDeck.reduce((acc, c) => acc + c.quantity, 0);
+          if (totalInDeck >= 15) return;
+          
+          const totalCopies = newDeck.filter(c => c.id === card.id).reduce((acc, c) => acc + c.quantity, 0);
+          const availableSlots = Math.min(3 - totalCopies, quantityToAdd);
+          if (availableSlots <= 0) return;
+          
+          const existing = newDeck.find((c) => c.id === card.id);
+          if (existing) {
+            newDeck = newDeck.map((c) =>
+              c.id === card.id ? { ...c, quantity: Math.min(c.quantity + availableSlots, 3) } : c
+            );
+          } else {
+            newDeck = [...newDeck, { ...card, quantity: availableSlots }];
+          }
+        });
+        
+        return newDeck;
+      });
     }
   }, []);
 
@@ -476,7 +493,8 @@ const DeckBuilder = () => {
     : false;
 
   const canAddToTokens = selectedCard
-    ? getTotalCount(tokensDeck) < 5 &&
+    ? isTokenCard(selectedCard) &&
+      getTotalCount(tokensDeck) < 5 &&
       (getTotalCount(extraDeck) + getTotalCount(tokensDeck)) < 20
     : false;
 

@@ -136,14 +136,20 @@ const DuelRoom = () => {
               isTimerPausedRef.current = payload.new.is_timer_paused;
             }
             
-            // Sincronizar countdown quando remaining_seconds mudar
+            // Sincronizar countdown apenas se o timer não iniciou ainda ou se a diferença for grande
             if (payload.new.remaining_seconds !== undefined && payload.new.remaining_seconds !== null) {
               const durationMins = payload.new.duration_minutes || 50;
               const maxSeconds = durationMins * 60;
               const validRemaining = Math.min(Math.max(0, payload.new.remaining_seconds), maxSeconds);
-              console.log('🔴 [REALTIME] Sincronizando countdown para:', validRemaining);
-              setCallDuration(validRemaining);
-              callDurationRef.current = validRemaining;
+              
+              // Só sincronizar se o timer ainda não iniciou ou se a diferença for > 2 segundos
+              // Isso evita que o realtime sobrescreva a contagem regressiva local
+              const diff = Math.abs(validRemaining - callDurationRef.current);
+              if (!timerInitialized.current || diff > 2) {
+                console.log('🔴 [REALTIME] Sincronizando countdown para:', validRemaining);
+                setCallDuration(validRemaining);
+                callDurationRef.current = validRemaining;
+              }
             }
             
             // Se opponent_id foi atualizado, recarregar dados completos do duel
