@@ -68,12 +68,30 @@ export default function Matchmaking() {
   }, [cleanup, navigate]);
 
   useEffect(() => {
+    // Limpar timer quando componente desmonta
+    return () => {
+      if (timerInterval.current) {
+        clearInterval(timerInterval.current);
+        timerInterval.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    // Controlar timer baseado em searching
     if (searching && !matchFound) {
       timerInterval.current = setInterval(() => {
         setElapsedTime(prev => prev + 1);
       }, 1000);
-    } else if (!searching) {
-      setElapsedTime(0);
+    } else {
+      // Parar e resetar timer
+      if (timerInterval.current) {
+        clearInterval(timerInterval.current);
+        timerInterval.current = null;
+      }
+      if (!searching) {
+        setElapsedTime(0);
+      }
     }
     
     return () => {
@@ -160,15 +178,61 @@ export default function Matchmaking() {
     // Buscar informações do oponente
     const opponentName = await getOpponentInfo(duelId);
     
+    // Resetar timer
+    if (timerInterval.current) {
+      clearInterval(timerInterval.current);
+      timerInterval.current = null;
+    }
+    setElapsedTime(0);
+    
     setSearching(false);
     setMatchFound({ duelId, opponentName });
     toast.success("🎮 Match encontrado!");
   }, []);
 
   const checkForRedirect = useCallback(async () => {
-    if (!currentUserId.current || isRedirecting.current) return;
+    if (!currentUserId.current) return false;
+    if (isRedirecting.current) {
+      console.log('⚠️ Already redirecting, skipping check');
+      return false;
+    }
 
     try {
+      console.log('🔍 Checking for redirect for user:', currentUserId.current);
+      
+      // Verificar na fila se foi matched
+      const { data: queueEntry, error: queueError } = await supabase
+        .from('matchmaking_queue')
+        .select('duel_id, status')
+        .eq('user_id', currentUserId.current)
+        .maybeSingle();
+
+      if (queueError) {
+        console.error('Queue query error:', queueError);
+      }
+
+      if (queueEntry?.status === 'matched' && queueEntry?.duel_id) {
+        console.log('🎮 Found match in queue:', queueEntry.duel_id);
+        await handleMatchFound(queueEntry.duel_id);
+        return true;
+      }
+
+      // Fallback: verificar se há um duelo recente que o usuário participa
+      const { data: recentDuel } = await supabase
+        .from('live_duels')
+        .select('id')
+        .or(`creator_id.eq.${currentUserId.current},opponent_id.eq.${currentUserId.current}`)
+        .eq('status', 'in_progress')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (recentDuel?.id) {
+        console.log('🎮 Found recent duel:', recentDuel.id);
+        await handleMatchFound(recentDuel.id);
+        return true;
+      }
+
       // Verificar tabela de redirects
       const { data: redirect } = await supabase
         .from('redirects')
@@ -180,19 +244,6 @@ export default function Matchmaking() {
       if (redirect?.duel_id) {
         console.log('🎮 Found redirect to duel:', redirect.duel_id);
         await handleMatchFound(redirect.duel_id);
-        return true;
-      }
-
-      // Verificar na fila se foi matched
-      const { data: queueEntry } = await supabase
-        .from('matchmaking_queue')
-        .select('duel_id, status')
-        .eq('user_id', currentUserId.current)
-        .maybeSingle();
-
-      if (queueEntry?.status === 'matched' && queueEntry?.duel_id) {
-        console.log('🎮 Found match in queue:', queueEntry.duel_id);
-        await handleMatchFound(queueEntry.duel_id);
         return true;
       }
 
@@ -276,7 +327,7 @@ export default function Matchmaking() {
       console.log('⏳ Waiting in queue, starting polling...');
       fetchQueueStats();
 
-      // Polling a cada 2 segundos para verificar se foi matched
+      // Polling a cada 1 segundo para verificar se foi matched
       pollingInterval.current = setInterval(async () => {
         const found = await checkForRedirect();
         if (found) {
@@ -285,7 +336,7 @@ export default function Matchmaking() {
             pollingInterval.current = null;
           }
         }
-      }, 2000);
+      }, 1000);
 
       // Timeout de 120 segundos (2 minutos)
       setTimeout(async () => {
@@ -330,6 +381,62 @@ export default function Matchmaking() {
     toast.info("Busca cancelada");
     fetchQueueStats();
   };
+
+  // Canal de realtime para broadcast de match
+  useEffect(() => {
+    if (!searching || matchFound) return;
+
+    console.log('📡 Setting up broadcast channel');
+
+    const broadcastChannel = supabase
+      .channel('match-broadcast')
+      .on('broadcast', { event: 'match-found' }, ({ payload }) => {
+        console.log('📡 Broadcast received:', payload);
+        if (payload.duel_id) {
+          handleMatchFound(payload.duel_id);
+        }
+      })
+      .subscribe((status) => {
+        console.log('📡 Broadcast channel status:', status);
+      });
+
+    return () => {
+      supabase.removeChannel(broadcastChannel);
+    };
+  }, [searching, matchFound, handleMatchFound]);
+
+  // Realtime subscription para detectar match
+  useEffect(() => {
+    if (!searching || !currentUserId.current || matchFound) return;
+
+    console.log('📡 Setting up realtime subscription for user:', currentUserId.current);
+
+    const channel = supabase
+      .channel('matchmaking-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'matchmaking_queue',
+          filter: `user_id=eq.${currentUserId.current}`
+        },
+        (payload) => {
+          console.log('📡 Queue update received:', payload);
+          if (payload.new && (payload.new as any).status === 'matched' && (payload.new as any).duel_id) {
+            console.log('🎮 Match found via realtime!', (payload.new as any).duel_id);
+            handleMatchFound((payload.new as any).duel_id);
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 Subscription status:', status);
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [searching, matchFound, handleMatchFound]);
 
   const joinDuel = () => {
     if (matchFound?.duelId) {
