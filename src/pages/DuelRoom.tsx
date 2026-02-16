@@ -26,19 +26,16 @@ const DuelRoom = () => {
   const [player1LP, setPlayer1LP] = useState(8000);
   const [player2LP, setPlayer2LP] = useState(8000);
   const [callDuration, setCallDuration] = useState(0);
-  const [showTimeWarning, setShowTimeWarning] = useState(false);
-  const [showTimeEnded, setShowTimeEnded] = useState(false);
   const [roomUrl, setRoomUrl] = useState<string>('');
   const [isTimerPaused, setIsTimerPaused] = useState(false);
   const [judgeCalled, setJudgeCalled] = useState(false);
   const [elementsHidden, setElementsHidden] = useState(false);
   const isTimerPausedRef = useRef(false);
-  const callStartTime = useRef<number | null>(null);
   const timerInterval = useRef<NodeJS.Timeout | null>(null);
   const timerInitialized = useRef(false);
-  const pausedTime = useRef<number>(0);
-  const lastPauseTime = useRef<number>(0);
-  const lastSyncedRemaining = useRef<number>(0);
+  const timeEndedShownRef = useRef(false);
+  const timeWarningShownRef = useRef(false);
+  const callDurationRef = useRef<number>(0);
   
   const isJudge = searchParams.get('role') === 'judge';
   const [hideControls, setHideControls] = useState(true);
@@ -125,48 +122,34 @@ const DuelRoom = () => {
         async (payload) => {
           console.log('🔴 [REALTIME] ===== UPDATE RECEBIDO =====');
           console.log('🔴 [REALTIME] NEW:', payload.new);
-          console.log('🔴 [REALTIME] OLD:', payload.old);
           
           if (payload.new) {
             const newP1LP = payload.new.player1_lp ?? 8000;
             const newP2LP = payload.new.player2_lp ?? 8000;
-            
-            console.log('🔴 [REALTIME] Atualizando para:', { 
-              player1_lp: newP1LP, 
-              player2_lp: newP2LP 
-            });
             
             setPlayer1LP(newP1LP);
             setPlayer2LP(newP2LP);
             
             // Atualizar estado de pausa do timer
             if (payload.new.is_timer_paused !== undefined) {
-              const wasPaused = isTimerPausedRef.current;
-              const nowPaused = payload.new.is_timer_paused;
-              
-              setIsTimerPaused(nowPaused);
-              isTimerPausedRef.current = nowPaused;
-              
-              // Se acabou de pausar, registrar o momento
-              if (!wasPaused && nowPaused) {
-                lastPauseTime.current = Date.now();
-              }
-              // Se acabou de despausar, acumular tempo pausado
-              else if (wasPaused && !nowPaused) {
-                pausedTime.current += Date.now() - lastPauseTime.current;
-              }
+              setIsTimerPaused(payload.new.is_timer_paused);
+              isTimerPausedRef.current = payload.new.is_timer_paused;
             }
             
-            // Sincronizar countdown quando remaining_seconds mudar
-            // Isso mantém todos os participantes alinhados
-            if (payload.new.remaining_seconds !== undefined) {
+            // Sincronizar countdown apenas se o timer não iniciou ainda ou se a diferença for grande
+            if (payload.new.remaining_seconds !== undefined && payload.new.remaining_seconds !== null) {
               const durationMins = payload.new.duration_minutes || 50;
               const maxSeconds = durationMins * 60;
-              // Validar valor recebido
               const validRemaining = Math.min(Math.max(0, payload.new.remaining_seconds), maxSeconds);
-              console.log('🔴 [REALTIME] Sincronizando countdown para:', validRemaining);
-              setCallDuration(validRemaining);
-              lastSyncedRemaining.current = validRemaining;
+              
+              // Só sincronizar se o timer ainda não iniciou ou se a diferença for > 2 segundos
+              // Isso evita que o realtime sobrescreva a contagem regressiva local
+              const diff = Math.abs(validRemaining - callDurationRef.current);
+              if (!timerInitialized.current || diff > 2) {
+                console.log('🔴 [REALTIME] Sincronizando countdown para:', validRemaining);
+                setCallDuration(validRemaining);
+                callDurationRef.current = validRemaining;
+              }
             }
             
             // Se opponent_id foi atualizado, recarregar dados completos do duel
@@ -202,7 +185,7 @@ const DuelRoom = () => {
     };
   }, [id, currentUser]);
 
-  const startCallTimer = (startedAt: string, durationMinutes: number = 50, initialRemaining?: number, isPaused: boolean = false) => {
+  const startCallTimer = (durationMinutes: number = 50, initialRemaining: number, isPaused: boolean = false, isCreatorUser: boolean = false) => {
     // Evitar iniciar timer múltiplas vezes
     if (timerInitialized.current) {
       console.log('⚠️ Timer já inicializado, ignorando...');
@@ -210,88 +193,67 @@ const DuelRoom = () => {
     }
     timerInitialized.current = true;
     
-    const startTime = new Date(startedAt).getTime();
-    callStartTime.current = startTime;
     const MAX_DURATION = durationMinutes * 60;
     
-    // Usar o tempo restante inicial passado como parâmetro, ou calcular baseado no started_at
-    // Se o timer está pausado, usar o remaining_seconds diretamente
-    let initialCallDuration: number;
-    if (isPaused && initialRemaining !== undefined) {
-      initialCallDuration = Math.min(initialRemaining, MAX_DURATION);
-    } else if (initialRemaining !== undefined) {
-      initialCallDuration = Math.min(initialRemaining, MAX_DURATION);
-    } else {
-      initialCallDuration = Math.max(0, MAX_DURATION - Math.floor((Date.now() - startTime) / 1000));
-    }
+    // Usar remaining_seconds do banco como ponto de partida
+    const startValue = Math.min(Math.max(0, initialRemaining), MAX_DURATION);
     
-    setCallDuration(initialCallDuration);
+    setCallDuration(startValue);
+    callDurationRef.current = startValue;
     
-    // Resetar contadores de pausa
-    pausedTime.current = 0;
-    lastPauseTime.current = 0;
-    
-    // Se está pausado quando inicia, registrar o momento
-    if (isPaused) {
-      lastPauseTime.current = Date.now();
-    }
+    // Resetar flags de aviso
+    timeEndedShownRef.current = startValue <= 0;
+    timeWarningShownRef.current = startValue <= 300;
     
     // Limpar intervalo anterior se existir
     if (timerInterval.current) {
       clearInterval(timerInterval.current);
     }
     
-    const isCreator = currentUser?.id === duel?.creator_id;
     let lastDbUpdate = 0;
-    lastSyncedRemaining.current = initialRemaining ?? MAX_DURATION;
     
-    // Timer simples baseado no started_at - mesmo para todos os participantes
+    // Timer simples: decrementa 1 segundo por tick usando o ref como fonte de verdade
     timerInterval.current = setInterval(() => {
       if (isTimerPausedRef.current) return;
 
-      const now = Date.now();
-      const elapsedRaw = Math.floor((now - startTime - pausedTime.current) / 1000);
-      let remaining = Math.max(0, MAX_DURATION - elapsedRaw);
+      const currentVal = callDurationRef.current;
       
-      // Proteger contra valores inválidos
-      if (remaining > MAX_DURATION || remaining < 0) {
-        remaining = 0;
-      }
-      
-      // Atualizar UI local
-      setCallDuration(remaining);
-      
-      // Apenas o criador atualiza o banco a cada 1 segundo (para manter sincronizado)
-      if (isCreator && now - lastDbUpdate > 1000) {
-        lastDbUpdate = now;
-        lastSyncedRemaining.current = remaining;
-        supabase
-          .from('live_duels')
-          .update({ remaining_seconds: remaining })
-          .eq('id', id)
-          .then(() => {});
-      }
-
-      // Aviso quando restar 5 minutos (300 segundos)
-      if (remaining === 300 && !showTimeWarning) {
-        setShowTimeWarning(true);
-        toast({
-          title: "⏰ Atenção: Tempo de chamada",
-          description: "Restam apenas 5 minutos. A chamada será encerrada automaticamente em 0:00.",
-          duration: 10000,
-        });
-      }
-
-      // Tempo chegou a zero - apenas mostrar aviso, NÃO finalizar automaticamente
-      if (remaining === 0) {
-        if (!showTimeEnded) {
-          setShowTimeEnded(true);
+      if (currentVal <= 0) {
+        // Mostrar aviso apenas uma vez
+        if (!timeEndedShownRef.current) {
+          timeEndedShownRef.current = true;
           toast({
             title: "⏱️ Tempo de partida esgotado",
             description: "O tempo acabou! A partida continua até ser finalizada manualmente.",
             duration: 5000,
           });
         }
+        return; // Não decrementar abaixo de 0
+      }
+
+      const newRemaining = currentVal - 1;
+      callDurationRef.current = newRemaining;
+      setCallDuration(newRemaining);
+      
+      // Aviso quando restar 5 minutos (300 segundos)
+      if (newRemaining <= 300 && !timeWarningShownRef.current) {
+        timeWarningShownRef.current = true;
+        toast({
+          title: "⏰ Atenção: Tempo de chamada",
+          description: "Restam apenas 5 minutos!",
+          duration: 10000,
+        });
+      }
+
+      // Apenas o criador atualiza o banco a cada 5 segundos
+      const now = Date.now();
+      if (isCreatorUser && now - lastDbUpdate > 5000) {
+        lastDbUpdate = now;
+        supabase
+          .from('live_duels')
+          .update({ remaining_seconds: newRemaining })
+          .eq('id', id)
+          .then(() => {});
       }
     }, 1000);
   };
@@ -344,7 +306,6 @@ const DuelRoom = () => {
       // Se o usuário é o creator, notificar o opponent que está na fila
       if (isCreator && !data.opponent_id) {
         try {
-          // Buscar opponent na fila de matchmaking
           const { data: queueData } = await supabase
             .from('matchmaking_queue')
             .select('user_id')
@@ -353,7 +314,6 @@ const DuelRoom = () => {
             .single();
 
           if (queueData?.user_id) {
-            // Criar redirect para notificar o opponent
             await supabase
               .from('redirects')
               .upsert({
@@ -361,8 +321,6 @@ const DuelRoom = () => {
                 duel_id: id,
                 created_at: new Date().toISOString()
               }, { onConflict: 'user_id' });
-            
-            console.log('[DuelRoom] Redirect criado para opponent:', queueData.user_id);
           }
         } catch (err) {
           console.error('[DuelRoom] Erro ao criar redirect:', err);
@@ -371,10 +329,8 @@ const DuelRoom = () => {
 
       // Se a sala não tem opponent ainda
       if (!data.opponent_id) {
-        // Se o usuário NÃO é o criador, adicionar como opponent (player 2)
         if (!isCreator) {
           try {
-            // NÃO sobrescrever started_at, apenas adicionar opponent
             const { error: updateError } = await supabase
               .from('live_duels')
               .update({
@@ -394,7 +350,6 @@ const DuelRoom = () => {
               return;
             }
 
-            // Notificar o creator que o opponent entrou
             if (data.creator_id) {
               try {
                 await supabase
@@ -404,14 +359,11 @@ const DuelRoom = () => {
                     duel_id: id,
                     created_at: new Date().toISOString()
                   }, { onConflict: 'user_id' });
-                
-                console.log('[DuelRoom] Redirect criado para creator:', data.creator_id);
               } catch (err) {
                 console.error('[DuelRoom] Erro ao criar redirect para creator:', err);
               }
             }
 
-            // Recarregar dados do duelo
             const { data: updatedData, error: reloadError } = await supabase
               .from('live_duels')
               .select(`
@@ -440,8 +392,6 @@ const DuelRoom = () => {
           }
         }
       } else {
-        // Sala já tem opponent
-        // Se o usuário não é participante, permitir como espectador
         if (!isCreator && !isOpponent) {
           console.log('[DuelRoom] Usuário entrando como espectador');
           toast({
@@ -502,12 +452,17 @@ const DuelRoom = () => {
       if (startedAt) {
         const durationMins = data.duration_minutes || 50;
         const maxSeconds = durationMins * 60;
-        // Usar remaining_seconds do banco se existir, para manter continuidade após pausa
-        const initialRemaining = data.remaining_seconds !== null 
-          ? Math.min(Math.max(0, data.remaining_seconds), maxSeconds)
-          : undefined;
-        const isPaused = data.is_timer_paused || false;
-        startCallTimer(startedAt, durationMins, initialRemaining, isPaused);
+        // Usar remaining_seconds do banco se existir; senão calcular baseado em started_at
+        let initialRemaining: number;
+        if (data.remaining_seconds !== null && data.remaining_seconds !== undefined) {
+          initialRemaining = Math.min(Math.max(0, data.remaining_seconds), maxSeconds);
+        } else {
+          // Primeira vez - calcular baseado em quanto tempo já passou
+          const elapsed = Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000);
+          initialRemaining = Math.max(0, maxSeconds - elapsed);
+        }
+        const isCreatorUser = data.creator_id === userId;
+        startCallTimer(durationMins, initialRemaining, isPaused, isCreatorUser);
       }
     } catch (error: any) {
       console.error('[DuelRoom] Erro em fetchDuel:', error);
@@ -571,10 +526,6 @@ const DuelRoom = () => {
 
   const endDuel = async (winnerId?: string) => {
     try {
-      const durationMinutes = callStartTime.current 
-        ? Math.floor((Date.now() - callStartTime.current) / 60000) 
-        : 0;
-
       // Determinar vencedor baseado nos Life Points se não foi especificado
       let finalWinnerId = winnerId;
       if (!finalWinnerId && duel?.creator_id && duel?.opponent_id) {
@@ -583,7 +534,6 @@ const DuelRoom = () => {
         } else if (player2LP > player1LP) {
           finalWinnerId = duel.opponent_id;
         }
-        // Se empate (player1LP === player2LP), finalWinnerId fica undefined (empate)
       }
 
       // Atualizar status do duelo
@@ -596,8 +546,6 @@ const DuelRoom = () => {
         })
         .eq('id', id);
 
-      // Código de encerramento de stream removido (sistema de lives foi desativado)
-
       // SEMPRE registrar histórico se houver ambos os jogadores (mesmo empate)
       if (duel?.id && duel?.creator_id && duel?.opponent_id) {
         try {
@@ -605,7 +553,7 @@ const DuelRoom = () => {
             p_duel_id: duel.id,
             p_player1_id: duel.creator_id,
             p_player2_id: duel.opponent_id,
-            p_winner_id: finalWinnerId || null, // Aceita null para empates
+            p_winner_id: finalWinnerId || null,
             p_player1_score: player1LP,
             p_player2_score: player2LP,
             p_bet_amount: duel.bet_amount || 0
@@ -687,14 +635,12 @@ const DuelRoom = () => {
       const isOpponent = currentUser.id === duel?.opponent_id;
       const isSpectator = !isCreator && !isOpponent;
 
-      // Se for espectador, apenas sair (não encerrar partida)
       if (isSpectator) {
         console.log('[DuelRoom] Espectador saindo, partida continua');
         navigate('/duels');
         return;
       }
 
-      // Se for o criador, deletar a sala
       if (isCreator) {
         await supabase
           .from('live_duels')
@@ -706,7 +652,6 @@ const DuelRoom = () => {
           description: "Você saiu e a sala foi removida",
         });
       } 
-      // Se for o oponente, remover ele da sala
       else if (isOpponent) {
         await supabase
           .from('live_duels')
@@ -748,7 +693,7 @@ const DuelRoom = () => {
         .from('live_duels')
         .update({ 
           is_timer_paused: newPauseState,
-          remaining_seconds: callDuration 
+          remaining_seconds: callDurationRef.current 
         })
         .eq('id', id);
 
@@ -756,13 +701,6 @@ const DuelRoom = () => {
 
       setIsTimerPaused(newPauseState);
       isTimerPausedRef.current = newPauseState;
-      
-      // Registrar tempo de pausa/despausa
-      if (newPauseState) {
-        lastPauseTime.current = Date.now();
-      } else {
-        pausedTime.current += Date.now() - lastPauseTime.current;
-      }
       
       toast({
         title: newPauseState ? "⏸️ Timer pausado" : "▶️ Timer retomado",
@@ -823,7 +761,6 @@ const DuelRoom = () => {
 
     checkJudgeCall();
 
-    // Realtime para chamadas de juiz
     const channel = supabase
       .channel(`judge-calls-${id}`)
       .on(
@@ -855,7 +792,6 @@ const DuelRoom = () => {
   const isParticipant = isPlayer1 || isPlayer2;
   const isSpectator = currentUser && !isParticipant;
   
-  // Determinar o player atual de forma clara
   const currentUserPlayer: 'player1' | 'player2' | null = isPlayer1 ? 'player1' : (isPlayer2 ? 'player2' : null);
 
   // Hook para gerenciar presença e detecção de desconexão
