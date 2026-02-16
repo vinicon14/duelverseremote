@@ -258,20 +258,13 @@ const DuelRoom = () => {
         remaining = 0;
       }
       
-      // Sincronizar com o banco se a diferença for muito grande (evita desincronização)
-      if (Math.abs(remaining - lastSyncedRemaining.current) > 2) {
-        remaining = lastSyncedRemaining.current - 1;
-        if (remaining < 0) remaining = 0;
-      }
-      
-      lastSyncedRemaining.current = remaining;
-      
       // Atualizar UI local
       setCallDuration(remaining);
       
       // Apenas o criador atualiza o banco a cada 1 segundo (para manter sincronizado)
       if (isCreator && now - lastDbUpdate > 1000) {
         lastDbUpdate = now;
+        lastSyncedRemaining.current = remaining;
         supabase
           .from('live_duels')
           .update({ remaining_seconds: remaining })
