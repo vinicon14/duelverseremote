@@ -325,6 +325,34 @@ const DuelRoom = () => {
       const isCreator = data.creator_id === userId;
       const isOpponent = data.opponent_id === userId;
 
+      // Se o usuário é o creator, notificar o opponent que está na fila
+      if (isCreator && !data.opponent_id) {
+        try {
+          // Buscar opponent na fila de matchmaking
+          const { data: queueData } = await supabase
+            .from('matchmaking_queue')
+            .select('user_id')
+            .eq('duel_id', id)
+            .neq('user_id', userId)
+            .single();
+
+          if (queueData?.user_id) {
+            // Criar redirect para notificar o opponent
+            await supabase
+              .from('redirects')
+              .upsert({
+                user_id: queueData.user_id,
+                duel_id: id,
+                created_at: new Date().toISOString()
+              }, { onConflict: 'user_id' });
+            
+            console.log('[DuelRoom] Redirect criado para opponent:', queueData.user_id);
+          }
+        } catch (err) {
+          console.error('[DuelRoom] Erro ao criar redirect:', err);
+        }
+      }
+
       // Se a sala não tem opponent ainda
       if (!data.opponent_id) {
         // Se o usuário NÃO é o criador, adicionar como opponent (player 2)
@@ -348,6 +376,23 @@ const DuelRoom = () => {
               });
               navigate('/duels');
               return;
+            }
+
+            // Notificar o creator que o opponent entrou
+            if (data.creator_id) {
+              try {
+                await supabase
+                  .from('redirects')
+                  .upsert({
+                    user_id: data.creator_id,
+                    duel_id: id,
+                    created_at: new Date().toISOString()
+                  }, { onConflict: 'user_id' });
+                
+                console.log('[DuelRoom] Redirect criado para creator:', data.creator_id);
+              } catch (err) {
+                console.error('[DuelRoom] Erro ao criar redirect para creator:', err);
+              }
             }
 
             // Recarregar dados do duelo
