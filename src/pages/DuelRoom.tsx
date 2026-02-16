@@ -27,6 +27,7 @@ const DuelRoom = () => {
   const [player2LP, setPlayer2LP] = useState(8000);
   const [callDuration, setCallDuration] = useState(0);
   const [showTimeWarning, setShowTimeWarning] = useState(false);
+  const [showTimeEnded, setShowTimeEnded] = useState(false);
   const [roomUrl, setRoomUrl] = useState<string>('');
   const [isTimerPaused, setIsTimerPaused] = useState(false);
   const [judgeCalled, setJudgeCalled] = useState(false);
@@ -37,6 +38,7 @@ const DuelRoom = () => {
   const timerInitialized = useRef(false);
   const pausedTime = useRef<number>(0);
   const lastPauseTime = useRef<number>(0);
+  const lastSyncedRemaining = useRef<number>(0);
   
   const isJudge = searchParams.get('role') === 'judge';
   const [hideControls, setHideControls] = useState(true);
@@ -164,6 +166,7 @@ const DuelRoom = () => {
               const validRemaining = Math.min(Math.max(0, payload.new.remaining_seconds), maxSeconds);
               console.log('🔴 [REALTIME] Sincronizando countdown para:', validRemaining);
               setCallDuration(validRemaining);
+              lastSyncedRemaining.current = validRemaining;
             }
             
             // Se opponent_id foi atualizado, recarregar dados completos do duel
@@ -199,7 +202,7 @@ const DuelRoom = () => {
     };
   }, [id, currentUser]);
 
-  const startCallTimer = (startedAt: string, durationMinutes: number = 50, initialRemaining?: number) => {
+  const startCallTimer = (startedAt: string, durationMinutes: number = 50, initialRemaining?: number, isPaused: boolean = false) => {
     // Evitar iniciar timer múltiplas vezes
     if (timerInitialized.current) {
       console.log('⚠️ Timer já inicializado, ignorando...');
@@ -212,15 +215,26 @@ const DuelRoom = () => {
     const MAX_DURATION = durationMinutes * 60;
     
     // Usar o tempo restante inicial passado como parâmetro, ou calcular baseado no started_at
-    const initialCallDuration = initialRemaining !== undefined 
-      ? Math.min(initialRemaining, MAX_DURATION)
-      : Math.max(0, MAX_DURATION - Math.floor((Date.now() - startTime) / 1000));
+    // Se o timer está pausado, usar o remaining_seconds diretamente
+    let initialCallDuration: number;
+    if (isPaused && initialRemaining !== undefined) {
+      initialCallDuration = Math.min(initialRemaining, MAX_DURATION);
+    } else if (initialRemaining !== undefined) {
+      initialCallDuration = Math.min(initialRemaining, MAX_DURATION);
+    } else {
+      initialCallDuration = Math.max(0, MAX_DURATION - Math.floor((Date.now() - startTime) / 1000));
+    }
     
     setCallDuration(initialCallDuration);
     
     // Resetar contadores de pausa
     pausedTime.current = 0;
     lastPauseTime.current = 0;
+    
+    // Se está pausado quando inicia, registrar o momento
+    if (isPaused) {
+      lastPauseTime.current = Date.now();
+    }
     
     // Limpar intervalo anterior se existir
     if (timerInterval.current) {
@@ -229,6 +243,7 @@ const DuelRoom = () => {
     
     const isCreator = currentUser?.id === duel?.creator_id;
     let lastDbUpdate = 0;
+    lastSyncedRemaining.current = initialRemaining ?? MAX_DURATION;
     
     // Timer simples baseado no started_at - mesmo para todos os participantes
     timerInterval.current = setInterval(() => {
@@ -242,6 +257,14 @@ const DuelRoom = () => {
       if (remaining > MAX_DURATION || remaining < 0) {
         remaining = 0;
       }
+      
+      // Sincronizar com o banco se a diferença for muito grande (evita desincronização)
+      if (Math.abs(remaining - lastSyncedRemaining.current) > 2) {
+        remaining = lastSyncedRemaining.current - 1;
+        if (remaining < 0) remaining = 0;
+      }
+      
+      lastSyncedRemaining.current = remaining;
       
       // Atualizar UI local
       setCallDuration(remaining);
@@ -268,8 +291,8 @@ const DuelRoom = () => {
 
       // Tempo chegou a zero - apenas mostrar aviso, NÃO finalizar automaticamente
       if (remaining === 0) {
-        if (!showTimeWarning) {
-          setShowTimeWarning(true);
+        if (!showTimeEnded) {
+          setShowTimeEnded(true);
           toast({
             title: "⏱️ Tempo de partida esgotado",
             description: "O tempo acabou! A partida continua até ser finalizada manualmente.",
@@ -490,7 +513,8 @@ const DuelRoom = () => {
         const initialRemaining = data.remaining_seconds !== null 
           ? Math.min(Math.max(0, data.remaining_seconds), maxSeconds)
           : undefined;
-        startCallTimer(startedAt, durationMins, initialRemaining);
+        const isPaused = data.is_timer_paused || false;
+        startCallTimer(startedAt, durationMins, initialRemaining, isPaused);
       }
     } catch (error: any) {
       console.error('[DuelRoom] Erro em fetchDuel:', error);
