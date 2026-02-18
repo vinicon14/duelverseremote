@@ -1268,103 +1268,6 @@ export type Database = {
           },
         ]
       }
-      subscription_plans: {
-        Row: {
-          created_at: string
-          description: string | null
-          duration_days: number
-          duration_type: Database["public"]["Enums"]["plan_duration_type"]
-          id: string
-          image_url: string | null
-          is_active: boolean
-          is_featured: boolean
-          name: string
-          price_duelcoins: number
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          description?: string | null
-          duration_days?: number
-          duration_type?: Database["public"]["Enums"]["plan_duration_type"]
-          id?: string
-          image_url?: string | null
-          is_active?: boolean
-          is_featured?: boolean
-          name: string
-          price_duelcoins: number
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          description?: string | null
-          duration_days?: number
-          duration_type?: Database["public"]["Enums"]["plan_duration_type"]
-          id?: string
-          image_url?: string | null
-          is_active?: boolean
-          is_featured?: boolean
-          name?: string
-          price_duelcoins?: number
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      user_subscriptions: {
-        Row: {
-          created_at: string
-          expires_at: string
-          id: string
-          is_active: boolean
-          plan_id: string
-          started_at: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          expires_at: string
-          id?: string
-          is_active?: boolean
-          plan_id: string
-          started_at?: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          expires_at?: string
-          id?: string
-          is_active?: boolean
-          plan_id?: string
-          started_at?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_subscriptions_plan_id_fkey"
-            columns: ["plan_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_plans"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_subscriptions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "user_subscriptions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "public_profiles"
-            referencedColumns: ["user_id"]
-          },
-        ]
-      }
     }
     Views: {
       public_profiles: {
@@ -1587,7 +1490,6 @@ export type Database = {
       app_role: "admin" | "user" | "judge"
       friend_request_status: "pending" | "accepted" | "rejected"
       game_status: "waiting" | "in_progress" | "finished"
-      plan_duration_type: "weekly" | "monthly" | "yearly"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1719,7 +1621,6 @@ export const Constants = {
       app_role: ["admin", "user", "judge"],
       friend_request_status: ["pending", "accepted", "rejected"],
       game_status: ["waiting", "in_progress", "finished"],
-      plan_duration_type: ["weekly", "monthly", "yearly"],
     },
   },
 } as const
