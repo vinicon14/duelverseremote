@@ -2,7 +2,6 @@ import { useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 const HEARTBEAT_INTERVAL = 30000; // 30 seconds
-const DISCONNECT_TIMEOUT = 60000; // 60 seconds
 
 export const useDuelPresence = (duelId: string | undefined, userId: string | undefined, isParticipant: boolean) => {
   const heartbeatInterval = useRef<NodeJS.Timeout | null>(null);
@@ -12,10 +11,11 @@ export const useDuelPresence = (duelId: string | undefined, userId: string | und
     if (!duelId || !userId || !isParticipant) return;
 
     try {
+      // Just touch the duel to signal presence via updated_at or started_at
       const { error } = await supabase
         .from('live_duels')
         .update({
-          last_activity_at: new Date().toISOString(),
+          is_timer_paused: false,
         })
         .eq('id', duelId);
 
@@ -31,7 +31,6 @@ export const useDuelPresence = (duelId: string | undefined, userId: string | und
     if (!duelId || !userId || !isParticipant) return;
 
     try {
-      // Check current duel state
       const { data: duel } = await supabase
         .from('live_duels')
         .select('creator_id, opponent_id, status')
@@ -39,31 +38,16 @@ export const useDuelPresence = (duelId: string | undefined, userId: string | und
         .single();
 
       if (!duel) return;
-
-      // Don't delete if duel is finished
       if (duel.status === 'finished') return;
 
-      if (duel.creator_id === userId) {
-        // Creator disconnected - just mark as waiting, don't delete
-        await supabase
-          .from('live_duels')
-          .update({
-            opponent_id: null,
-            status: 'waiting',
-            empty_since: new Date().toISOString(),
-          })
-          .eq('id', duelId);
-      } else if (duel.opponent_id === userId) {
-        // Opponent disconnected - remove from room
-        await supabase
-          .from('live_duels')
-          .update({
-            opponent_id: null,
-            status: 'waiting',
-            empty_since: new Date().toISOString(),
-          })
-          .eq('id', duelId);
-      }
+      // Remove opponent or reset duel to waiting
+      await supabase
+        .from('live_duels')
+        .update({
+          opponent_id: null,
+          status: 'waiting',
+        })
+        .eq('id', duelId);
     } catch (err) {
       console.error('[DuelPresence] Erro ao desconectar:', err);
     }
@@ -73,14 +57,10 @@ export const useDuelPresence = (duelId: string | undefined, userId: string | und
     if (!duelId || !userId || !isParticipant) return;
 
     isActive.current = true;
-
-    // Initial presence update
     updatePresence();
 
-    // Start heartbeat
     heartbeatInterval.current = setInterval(updatePresence, HEARTBEAT_INTERVAL);
 
-    // Handle page unload/visibility change
     const handleBeforeUnload = () => {
       handleDisconnect();
     };
@@ -114,19 +94,18 @@ export const useDuelCleanup = (duelId: string | undefined) => {
   useEffect(() => {
     if (!duelId) return;
 
-    // Check for inactive duels every minute
     cleanupInterval.current = setInterval(async () => {
       try {
-        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+        const threeMinutesAgo = new Date(Date.now() - 3 * 60 * 1000).toISOString();
 
-        // Delete duels that have been empty for more than 1 hour
+        // Delete waiting duels with no opponent older than 3 minutes
         const { error } = await supabase
           .from('live_duels')
           .delete()
           .eq('id', duelId)
+          .eq('status', 'waiting')
           .is('opponent_id', null)
-          .not('empty_since', 'is', null)
-          .lt('empty_since', oneHourAgo);
+          .lt('created_at', threeMinutesAgo);
 
         if (error) {
           console.error('[DuelCleanup] Erro ao limpar duelo:', error);
@@ -144,18 +123,16 @@ export const useDuelCleanup = (duelId: string | undefined) => {
   }, [duelId]);
 };
 
-// Global cleanup function to be called from Duels list page
 export const cleanupAllEmptyDuels = async () => {
   try {
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const threeMinutesAgo = new Date(Date.now() - 3 * 60 * 1000).toISOString();
 
-    // Delete all duels that have been empty for more than 1 hour
     const { error } = await supabase
       .from('live_duels')
       .delete()
+      .eq('status', 'waiting')
       .is('opponent_id', null)
-      .not('empty_since', 'is', null)
-      .lt('empty_since', oneHourAgo);
+      .lt('created_at', threeMinutesAgo);
 
     if (error) {
       console.error('[DuelCleanup] Erro ao limpar duelos:', error);
