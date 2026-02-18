@@ -17,7 +17,25 @@ export const useAccountType = () => {
           .single();
         
         if (data) {
-          setAccountType(data.account_type as 'free' | 'pro');
+          if (data.account_type === 'pro') {
+            setAccountType('pro');
+            setLoading(false);
+            return;
+          }
+        }
+
+        const { data: subscriptionData } = await supabase
+          .from('user_subscriptions')
+          .select('expires_at')
+          .eq('user_id', session.user.id)
+          .eq('is_active', true)
+          .gte('expires_at', new Date().toISOString())
+          .maybeSingle();
+
+        if (subscriptionData) {
+          setAccountType('pro');
+        } else {
+          setAccountType('free');
         }
       }
       setLoading(false);
@@ -25,12 +43,10 @@ export const useAccountType = () => {
 
     checkAccountType();
 
-    // Listener para mudanças de autenticação
     const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(() => {
       checkAccountType();
     });
 
-    // Listener para mudanças em tempo real no perfil do usuário
     const channel = supabase
       .channel('account_type_changes')
       .on(
@@ -38,10 +54,32 @@ export const useAccountType = () => {
         {
           event: 'UPDATE',
           schema: 'public',
-          table: 'profiles'
+          table: 'profiles',
+          filter: `user_id=eq.${supabase.auth.getSession().then(({ data }) => data.session?.user?.id)}`
         },
-        (payload) => {
-          console.log('Account type changed:', payload);
+        () => {
+          checkAccountType();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'user_subscriptions'
+        },
+        () => {
+          checkAccountType();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'user_subscriptions'
+        },
+        () => {
           checkAccountType();
         }
       )
