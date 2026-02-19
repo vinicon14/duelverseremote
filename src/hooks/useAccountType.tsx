@@ -10,29 +10,13 @@ export const useAccountType = () => {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session?.user) {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('profiles')
           .select('account_type')
           .eq('user_id', session.user.id)
           .single();
         
-        if (data) {
-          if (data.account_type === 'pro') {
-            setAccountType('pro');
-            setLoading(false);
-            return;
-          }
-        }
-
-        const { data: subscriptionData } = await (supabase as any)
-          .from('user_subscriptions')
-          .select('expires_at')
-          .eq('user_id', session.user.id)
-          .eq('is_active', true)
-          .gte('expires_at', new Date().toISOString())
-          .maybeSingle();
-
-        if (subscriptionData) {
+        if (data && data.account_type === 'pro') {
           setAccountType('pro');
         } else {
           setAccountType('free');
@@ -52,32 +36,9 @@ export const useAccountType = () => {
       .on(
         'postgres_changes',
         {
-          event: 'UPDATE',
+          event: '*',
           schema: 'public',
-          table: 'profiles',
-          filter: `user_id=eq.${supabase.auth.getSession().then(({ data }) => data.session?.user?.id)}`
-        },
-        () => {
-          checkAccountType();
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'user_subscriptions'
-        },
-        () => {
-          checkAccountType();
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'user_subscriptions'
+          table: 'profiles'
         },
         () => {
           checkAccountType();

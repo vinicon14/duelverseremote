@@ -158,8 +158,10 @@ export default function Store() {
 
     setPurchasingPlan(plan.id);
     try {
-      // Simple approach: just update account_type to pro
-      
+      // Calculate expiration (30 days from now)
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 30);
+
       // Deduct coins
       const { error: deductError } = await supabase
         .from('profiles')
@@ -177,6 +179,22 @@ export default function Store() {
       if (proError) {
         console.error('Pro error:', proError);
         throw new Error(proError.message || 'Erro ao ativar PRO');
+      }
+
+      // Also create/update subscription record to prevent automatic downgrade
+      const { error: subError } = await supabase
+        .from('user_subscriptions')
+        .upsert({
+          user_id: user.id,
+          plan_id: plan.id,
+          is_active: true,
+          starts_at: new Date().toISOString(),
+          expires_at: expiresAt.toISOString()
+        }, { onConflict: 'user_id' });
+
+      if (subError) {
+        console.warn('Subscription warning:', subError);
+        // Continue even if subscription record fails
       }
 
       // Refresh profile
