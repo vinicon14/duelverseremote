@@ -162,8 +162,35 @@ export default function Store() {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + plan.duration_days);
 
-      // First, create/update subscription
-      const { error: subUpsertError } = await supabase
+      // FIRST: Set user as pro immediately
+      const { error: proError } = await supabase
+        .from('profiles')
+        .update({ account_type: 'pro' })
+        .eq('user_id', user.id);
+
+      if (proError) {
+        console.error('Pro error:', proError);
+        throw new Error('Erro ao ativar PRO: ' + proError.message);
+      }
+
+      // SECOND: Deduct coins
+      const { error: deductError } = await supabase
+        .from('profiles')
+        .update({ duelcoins_balance: currentBalance - plan.price_duelcoins })
+        .eq('user_id', user.id);
+
+      if (deductError) {
+        console.error('Deduct error:', deductError);
+        // Try to revert the pro status if deduct fails
+        await supabase
+          .from('profiles')
+          .update({ account_type: 'free' })
+          .eq('user_id', user.id);
+        throw new Error('Erro ao deduzir saldo: ' + deductError.message);
+      }
+
+      // THIRD: Create/update subscription (this won't affect PRO status)
+      await supabase
         .from('user_subscriptions')
         .upsert({
           user_id: user.id,
@@ -172,22 +199,6 @@ export default function Store() {
           starts_at: new Date().toISOString(),
           expires_at: expiresAt.toISOString()
         }, { onConflict: 'user_id' });
-
-      // Deduct coins
-      const { error: deductError } = await supabase
-        .from('profiles')
-        .update({ duelcoins_balance: currentBalance - plan.price_duelcoins })
-        .eq('user_id', user.id);
-
-      if (deductError) throw deductError;
-
-      // Set user as pro
-      const { error: proError } = await supabase
-        .from('profiles')
-        .update({ account_type: 'pro' })
-        .eq('user_id', user.id);
-
-      if (proError) throw proError;
 
       // Get admin users to notify
       const { data: admins } = await supabase
