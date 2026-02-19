@@ -20,6 +20,3 @@ verify_jwt = true
 
 [functions.end-live-stream]
 verify_jwt = true
-
-[functions.purchase-subscription]
-verify_jwt = true

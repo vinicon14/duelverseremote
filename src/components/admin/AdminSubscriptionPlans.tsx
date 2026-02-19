@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, Edit2, Save, X, Crown, Upload, Image as ImageIcon, Users, Clock, AlertCircle } from "lucide-react";
+import { Plus, Trash2, Edit2, Save, X, Crown, Upload, Image as ImageIcon } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -24,7 +24,6 @@ import {
 } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface SubscriptionPlan {
   id: string;
@@ -40,23 +39,9 @@ interface SubscriptionPlan {
   updated_at: string;
 }
 
-interface Subscriber {
-  id: string;
-  user_id: string;
-  plan_id: string;
-  plan_name: string;
-  username: string;
-  avatar_url: string | null;
-  is_active: boolean;
-  starts_at: string;
-  expires_at: string;
-}
-
 export const AdminSubscriptionPlans = () => {
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
-  const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingSubscribers, setLoadingSubscribers] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState<SubscriptionPlan | null>(null);
   const { toast } = useToast();
@@ -83,72 +68,18 @@ export const AdminSubscriptionPlans = () => {
 
   const fetchPlans = async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("subscription_plans")
         .select("*")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setPlans(data || []);
+      setPlans((data as SubscriptionPlan[]) || []);
     } catch (error) {
       console.error("Error fetching plans:", error);
     } finally {
       setLoading(false);
     }
-  };
-
-  const fetchSubscribers = async () => {
-    setLoadingSubscribers(true);
-    try {
-      const { data, error } = await supabase
-        .from('user_subscriptions')
-        .select(`
-          id,
-          user_id,
-          plan_id,
-          is_active,
-          starts_at,
-          expires_at,
-          plan:subscription_plans(name),
-          profile:profiles(username, avatar_url)
-        `)
-        .order('expires_at', { ascending: false });
-
-      if (error) throw error;
-
-      const formattedSubscribers: Subscriber[] = (data || []).map((sub: any) => ({
-        id: sub.id,
-        user_id: sub.user_id,
-        plan_id: sub.plan_id,
-        plan_name: sub.plan?.name || 'Plano Desconhecido',
-        username: sub.profile?.username || 'Usuário',
-        avatar_url: sub.profile?.avatar_url || null,
-        is_active: sub.is_active,
-        starts_at: sub.starts_at,
-        expires_at: sub.expires_at,
-      }));
-
-      setSubscribers(formattedSubscribers);
-    } catch (error) {
-      console.error("Error fetching subscribers:", error);
-    } finally {
-      setLoadingSubscribers(false);
-    }
-  };
-
-  const getTimeRemaining = (expiresAt: string) => {
-    const now = new Date();
-    const expires = new Date(expiresAt);
-    const diffMs = expires.getTime() - now.getTime();
-    
-    if (diffMs <= 0) return { text: "Expirado", color: "text-red-500" };
-    
-    const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    
-    if (days > 0) return { text: `${days}d ${hours}h`, color: "text-green-500" };
-    if (hours > 0) return { text: `${hours}h`, color: "text-yellow-500" };
-    return { text: "Expira em breve", color: "text-red-500" };
   };
 
   const resetForm = () => {
@@ -240,7 +171,7 @@ export const AdminSubscriptionPlans = () => {
       if (imageFile && !imageUrl) return;
 
       if (editingPlan) {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from("subscription_plans")
           .update({
             name: formData.name,
@@ -258,7 +189,7 @@ export const AdminSubscriptionPlans = () => {
         if (error) throw error;
         toast({ title: "Plano atualizado com sucesso!" });
       } else {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from("subscription_plans")
           .insert({
             name: formData.name,
@@ -292,7 +223,7 @@ export const AdminSubscriptionPlans = () => {
     if (!confirm("Tem certeza que deseja excluir este plano?")) return;
 
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("subscription_plans")
         .delete()
         .eq("id", planId);
@@ -312,7 +243,7 @@ export const AdminSubscriptionPlans = () => {
 
   const toggleActive = async (plan: SubscriptionPlan) => {
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("subscription_plans")
         .update({ is_active: !plan.is_active, updated_at: new Date().toISOString() })
         .eq("id", plan.id);
@@ -356,364 +287,285 @@ export const AdminSubscriptionPlans = () => {
 
   return (
     <div className="space-y-6">
-      <Tabs defaultValue="plans" onValueChange={(value) => value === 'subscribers' && fetchSubscribers()}>
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="plans">Gerenciar Planos</TabsTrigger>
-          <TabsTrigger value="subscribers" className="gap-2">
-            <Users className="w-4 h-4" />
-            Assinantes PRO
-            <Badge variant="secondary" className="ml-1">{subscribers.length}</Badge>
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="plans" className="mt-6">
-          <div className="flex justify-between items-center shrink-0">
-            <div>
-              <h2 className="text-2xl font-bold">Planos de Assinatura</h2>
-              <p className="text-muted-foreground">
-                Gerencie os planos disponíveis para compra com DuelCoins
-              </p>
-            </div>
-            <Dialog
-              open={isDialogOpen}
-              onOpenChange={(open) => {
-                setIsDialogOpen(open);
-                if (!open) resetForm();
-              }}
-            >
-              <DialogTrigger asChild>
-                <Button onClick={() => handleOpenDialog()} className="btn-mystic">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Adicionar Plano
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>
-                    {editingPlan ? "Editar Plano" : "Adicionar Novo Plano"}
-                  </DialogTitle>
-                  <DialogDescription>
-                    Configure os detalhes do plano de assinatura
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Imagem do Plano</Label>
-                    <div className="flex flex-col items-center justify-center border-2 border-dashed border rounded-lg p-4">
-                      {imagePreview ? (
-                        <div className="relative w-full">
-                          <img
-                            src={imagePreview}
-                            alt="Preview"
-                            className="w-full h-40 object-contain rounded-md"
-                          />
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="sm"
-                            className="absolute top-2 right-2"
-                            onClick={removeImage}
-                          >
-                            <X className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="text-center">
-                          <ImageIcon className="w-10 h-10 mx-auto text-muted-foreground mb-2" />
-                          <p className="text-sm text-muted-foreground mb-2">
-                            Clique ou arraste uma imagem
-                          </p>
-                        </div>
-                      )}
-                      <Input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*"
-                        onChange={handleFileChange}
-                        className="hidden"
-                        id="plan-image"
+      <div className="flex justify-between items-center shrink-0">
+        <div>
+          <h2 className="text-2xl font-bold">Planos de Assinatura</h2>
+          <p className="text-muted-foreground">
+            Gerencie os planos disponíveis para compra com DuelCoins
+          </p>
+        </div>
+        <Dialog
+          open={isDialogOpen}
+          onOpenChange={(open) => {
+            setIsDialogOpen(open);
+            if (!open) resetForm();
+          }}
+        >
+          <DialogTrigger asChild>
+            <Button onClick={() => handleOpenDialog()} className="btn-mystic">
+              <Plus className="w-4 h-4 mr-2" />
+              Adicionar Plano
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                {editingPlan ? "Editar Plano" : "Adicionar Novo Plano"}
+              </DialogTitle>
+              <DialogDescription>
+                Configure os detalhes do plano de assinatura
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Imagem do Plano</Label>
+                <div className="flex flex-col items-center justify-center border-2 border-dashed border rounded-lg p-4">
+                  {imagePreview ? (
+                    <div className="relative w-full">
+                      <img
+                        src={imagePreview}
+                        alt="Preview"
+                        className="w-full h-40 object-contain rounded-md"
                       />
                       <Button
                         type="button"
-                        variant="outline"
+                        variant="destructive"
                         size="sm"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={uploading}
-                        className="mt-2"
+                        className="absolute top-2 right-2"
+                        onClick={removeImage}
                       >
-                        <Upload className="w-4 h-4 mr-2" />
-                        {uploading ? "Enviando..." : "Selecionar Imagem"}
+                        <X className="w-4 h-4" />
                       </Button>
                     </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Nome do Plano</Label>
-                    <Input
-                      id="name"
-                      placeholder="Ex: Plano Pro Mensal"
-                      value={formData.name}
-                      onChange={(e) =>
-                        setFormData({ ...formData, name: e.target.value })
-                      }
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="description">Descrição</Label>
-                    <Textarea
-                      id="description"
-                      placeholder="Descrição do plano..."
-                      value={formData.description}
-                      onChange={(e) =>
-                        setFormData({ ...formData, description: e.target.value })
-                      }
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="price">Preço (DuelCoins)</Label>
-                      <Input
-                        id="price"
-                        type="number"
-                        min="0"
-                        value={formData.price_duelcoins}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            price_duelcoins: parseInt(e.target.value) || 0,
-                          })
-                        }
-                      />
+                  ) : (
+                    <div className="text-center">
+                      <ImageIcon className="w-10 h-10 mx-auto text-muted-foreground mb-2" />
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Clique ou arraste uma imagem
+                      </p>
                     </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="duration_days">Duração (dias)</Label>
-                      <Input
-                        id="duration_days"
-                        type="number"
-                        min="1"
-                        value={formData.duration_days}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            duration_days: parseInt(e.target.value) || 1,
-                          })
-                        }
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Tipo de Duração</Label>
-                    <Select
-                      value={formData.duration_type}
-                      onValueChange={(value: "weekly" | "monthly" | "yearly") =>
-                        setFormData({ ...formData, duration_type: value })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="weekly">Semanal</SelectItem>
-                        <SelectItem value="monthly">Mensal</SelectItem>
-                        <SelectItem value="yearly">Anual</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-2">
-                      <Label>Plano Ativo</Label>
-                      <Switch
-                        checked={formData.is_active}
-                        onCheckedChange={(checked) =>
-                          setFormData({ ...formData, is_active: checked })
-                        }
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Plano em Destaque</Label>
-                      <Switch
-                        checked={formData.is_featured}
-                        onCheckedChange={(checked) =>
-                          setFormData({ ...formData, is_featured: checked })
-                        }
-                      />
-                    </div>
-                  </div>
-
+                  )}
+                  <Input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="hidden"
+                    id="plan-image"
+                  />
                   <Button
-                    onClick={handleSave}
-                    className="w-full btn-mystic"
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
                     disabled={uploading}
+                    className="mt-2"
                   >
-                    <Save className="w-4 h-4 mr-2" />
-                    {uploading ? "Salvando..." : editingPlan ? "Salvar Alterações" : "Criar Plano"}
+                    <Upload className="w-4 h-4 mr-2" />
+                    {uploading ? "Enviando..." : "Selecionar Imagem"}
                   </Button>
                 </div>
-              </DialogContent>
-            </Dialog>
-          </div>
-
-          {plans.length === 0 ? (
-            <Card>
-              <CardContent className="py-8 text-center">
-                <Crown className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">
-                  Nenhum plano de assinatura encontrado.
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Clique em "Adicionar Plano" para criar o primeiro.
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="overflow-x-auto pb-4 -mx-4 px-4">
-              <div className="flex gap-4 md:grid-cols-2 lg:grid-cols-3" style={{ minWidth: 'max-content' }}>
-                {plans.map((plan) => (
-                  <Card key={plan.id} className={!plan.is_active ? "opacity-60" : ""}>
-                    {plan.is_featured && (
-                      <div className="bg-primary text-primary-foreground text-center py-1 text-sm font-medium">
-                        Destaque
-                      </div>
-                    )}
-                    <CardHeader>
-                      <div className="flex justify-between items-start">
-                        <CardTitle className="flex items-center gap-2">
-                          <Crown className="w-5 h-5 text-yellow-500" />
-                          {plan.name}
-                        </CardTitle>
-                        <Badge variant={plan.is_active ? "default" : "secondary"}>
-                          {plan.is_active ? "Ativo" : "Inativo"}
-                        </Badge>
-                      </div>
-                      {plan.image_url && (
-                        <img
-                          src={plan.image_url}
-                          alt={plan.name}
-                          className="w-full h-32 object-cover rounded-md mt-2"
-                        />
-                      )}
-                      <CardDescription>{plan.description}</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <p className="text-2xl font-bold text-primary">
-                            {plan.price_duelcoins}
-                          </p>
-                          <p className="text-sm text-muted-foreground">DuelCoins</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-medium">
-                            {getDurationLabel(plan.duration_type, plan.duration_days)}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1"
-                          onClick={() => handleOpenDialog(plan)}
-                        >
-                          <Edit2 className="w-4 h-4 mr-1" />
-                          Editar
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => toggleActive(plan)}
-                        >
-                          {plan.is_active ? "Desativar" : "Ativar"}
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleDelete(plan.id)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
               </div>
-            </div>
-          )}
-        </TabsContent>
 
-        <TabsContent value="subscribers" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="w-5 h-5" />
-                Assinantes PRO
-              </CardTitle>
-              <CardDescription>
-                Lista de todos os usuários com assinatura PRO ativa
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {loadingSubscribers ? (
-                <div className="text-center py-8">
-                  <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
-                  <p className="mt-2 text-muted-foreground">Carregando assinantes...</p>
+              <div className="space-y-2">
+                <Label htmlFor="name">Nome do Plano</Label>
+                <Input
+                  id="name"
+                  placeholder="Ex: Plano Pro Mensal"
+                  value={formData.name}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="description">Descrição</Label>
+                <Textarea
+                  id="description"
+                  placeholder="Descrição do plano..."
+                  value={formData.description}
+                  onChange={(e) =>
+                    setFormData({ ...formData, description: e.target.value })
+                  }
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="price">Preço (DuelCoins)</Label>
+                  <Input
+                    id="price"
+                    type="number"
+                    min="0"
+                    value={formData.price_duelcoins}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        price_duelcoins: parseInt(e.target.value) || 0,
+                      })
+                    }
+                  />
                 </div>
-              ) : subscribers.length === 0 ? (
-                <div className="text-center py-8">
-                  <AlertCircle className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">Nenhum assinante PRO encontrado.</p>
+
+                <div className="space-y-2">
+                  <Label htmlFor="duration_days">Duração (dias)</Label>
+                  <Input
+                    id="duration_days"
+                    type="number"
+                    min="1"
+                    value={formData.duration_days}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        duration_days: parseInt(e.target.value) || 1,
+                      })
+                    }
+                  />
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  {subscribers.map((sub) => {
-                    const timeRemaining = getTimeRemaining(sub.expires_at);
-                    return (
-                      <div
-                        key={sub.id}
-                        className="flex items-center justify-between p-4 border rounded-lg"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                            {sub.avatar_url ? (
-                              <img
-                                src={sub.avatar_url}
-                                alt={sub.username}
-                                className="w-10 h-10 rounded-full object-cover"
-                              />
-                            ) : (
-                              <Crown className="w-5 h-5 text-yellow-500" />
-                            )}
-                          </div>
-                          <div>
-                            <p className="font-medium">{sub.username}</p>
-                            <p className="text-sm text-muted-foreground">{sub.plan_name}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <Badge variant={sub.is_active ? "default" : "secondary"}>
-                            {sub.is_active ? "Ativo" : "Inativo"}
-                          </Badge>
-                          <div className={`flex items-center gap-1 ${timeRemaining.color}`}>
-                            <Clock className="w-4 h-4" />
-                            <span className="text-sm font-medium">{timeRemaining.text}</span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
+              </div>
+
+              <div className="space-y-2">
+                <Label>Tipo de Duração</Label>
+                <Select
+                  value={formData.duration_type}
+                  onValueChange={(value: "weekly" | "monthly" | "yearly") =>
+                    setFormData({ ...formData, duration_type: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="weekly">Semanal</SelectItem>
+                    <SelectItem value="monthly">Mensal</SelectItem>
+                    <SelectItem value="yearly">Anual</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-2">
+                  <Label>Plano Ativo</Label>
+                  <Switch
+                    checked={formData.is_active}
+                    onCheckedChange={(checked) =>
+                      setFormData({ ...formData, is_active: checked })
+                    }
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Plano em Destaque</Label>
+                  <Switch
+                    checked={formData.is_featured}
+                    onCheckedChange={(checked) =>
+                      setFormData({ ...formData, is_featured: checked })
+                    }
+                  />
+                </div>
+              </div>
+
+              <Button
+                onClick={handleSave}
+                className="w-full btn-mystic"
+                disabled={uploading}
+              >
+                <Save className="w-4 h-4 mr-2" />
+                {uploading ? "Salvando..." : editingPlan ? "Salvar Alterações" : "Criar Plano"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {plans.length === 0 ? (
+        <Card>
+          <CardContent className="py-8 text-center">
+            <Crown className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+            <p className="text-muted-foreground">
+              Nenhum plano de assinatura encontrado.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Clique em "Adicionar Plano" para criar o primeiro.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="overflow-x-auto pb-4 -mx-4 px-4">
+          <div className="flex gap-4 md:grid-cols-2 lg:grid-cols-3" style={{ minWidth: 'max-content' }}>
+            {plans.map((plan) => (
+            <Card key={plan.id} className={!plan.is_active ? "opacity-60" : ""}>
+              {plan.is_featured && (
+                <div className="bg-primary text-primary-foreground text-center py-1 text-sm font-medium">
+                  Destaque
                 </div>
               )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+              <CardHeader>
+                <div className="flex justify-between items-start">
+                  <CardTitle className="flex items-center gap-2">
+                    <Crown className="w-5 h-5 text-yellow-500" />
+                    {plan.name}
+                  </CardTitle>
+                  <Badge variant={plan.is_active ? "default" : "secondary"}>
+                    {plan.is_active ? "Ativo" : "Inativo"}
+                  </Badge>
+                </div>
+                {plan.image_url && (
+                  <img
+                    src={plan.image_url}
+                    alt={plan.name}
+                    className="w-full h-32 object-cover rounded-md mt-2"
+                  />
+                )}
+                <CardDescription>{plan.description}</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="text-2xl font-bold text-primary">
+                      {plan.price_duelcoins}
+                    </p>
+                    <p className="text-sm text-muted-foreground">DuelCoins</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium">
+                      {getDurationLabel(plan.duration_type, plan.duration_days)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => handleOpenDialog(plan)}
+                  >
+                    <Edit2 className="w-4 h-4 mr-1" />
+                    Editar
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => toggleActive(plan)}
+                  >
+                    {plan.is_active ? "Desativar" : "Ativar"}
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => handleDelete(plan.id)}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

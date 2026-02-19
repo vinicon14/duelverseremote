@@ -4,14 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Store as StoreIcon, ExternalLink, Crown, Loader2, Coins, Check, Clock, Info, Star, Zap, Shield } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Store as StoreIcon, ExternalLink, Crown, Loader2, Coins, Check, Clock } from "lucide-react";
 
 interface SubscriptionPlan {
   id: string;
@@ -25,6 +18,13 @@ interface SubscriptionPlan {
   is_featured: boolean;
 }
 
+interface ActiveSubscription {
+  id: string;
+  plan_id: string;
+  expires_at: string;
+  is_active: boolean;
+}
+
 export default function Store() {
   const [storeUrl, setStoreUrl] = useState("");
   const [supportEmail, setSupportEmail] = useState("");
@@ -33,8 +33,8 @@ export default function Store() {
   const [purchasingPlan, setPurchasingPlan] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
+  const [activeSubscription, setActiveSubscription] = useState<ActiveSubscription | null>(null);
   const [timeLeft, setTimeLeft] = useState("");
-  const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -45,12 +45,12 @@ export default function Store() {
 
   // Update countdown every minute
   useEffect(() => {
-    if (!profile?.expires_at) return;
-    const update = () => setTimeLeft(getTimeLeft(profile.expires_at));
+    if (!activeSubscription) return;
+    const update = () => setTimeLeft(getTimeLeft(activeSubscription.expires_at));
     update();
     const interval = setInterval(update, 60000);
     return () => clearInterval(interval);
-  }, [profile?.expires_at]);
+  }, [activeSubscription]);
 
   const getTimeLeft = (expiresAt: string) => {
     const now = new Date();
@@ -69,19 +69,31 @@ export default function Store() {
     setUser(session?.user ?? null);
     if (session?.user) {
       fetchProfile(session.user.id);
+      fetchActiveSubscription(session.user.id);
     }
   };
 
   const fetchProfile = async (userId: string) => {
-    // Force fresh data by adding timestamp
     const { data } = await supabase
       .from('profiles')
       .select('*')
       .eq('user_id', userId)
       .maybeSingle();
-    if (data) {
-      console.log('Fetched profile:', data);
-      setProfile(data);
+    if (data) setProfile(data);
+  };
+
+  const fetchActiveSubscription = async (userId: string) => {
+    const { data } = await (supabase as any)
+      .from('user_subscriptions')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .order('expires_at', { ascending: false })
+      .limit(1);
+    if (data && data.length > 0) {
+      setActiveSubscription(data[0]);
+    } else {
+      setActiveSubscription(null);
     }
   };
 
@@ -149,94 +161,30 @@ export default function Store() {
       toast({ title: "Erro", description: "Perfil não encontrado.", variant: "destructive" });
       return;
     }
-    if (profile.account_type === 'pro') {
-      toast({ title: "Você já é PRO", description: "Você já possui status PRO.", variant: "destructive" });
+    if (activeSubscription) {
+      toast({ title: "Plano ativo", description: "Você já possui um plano ativo. Aguarde ele expirar para comprar outro.", variant: "destructive" });
       return;
     }
-
-    const currentBalance = profile.duelcoins_balance ?? 0;
-    if (currentBalance < plan.price_duelcoins) {
+    if (profile.duelcoins_balance < plan.price_duelcoins) {
       toast({ title: "Saldo insuficiente", description: `Você precisa de ${plan.price_duelcoins} DuelCoins para comprar este plano.`, variant: "destructive" });
       return;
     }
 
     setPurchasingPlan(plan.id);
     try {
-      // Calculate expiration based on plan duration
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + plan.duration_days);
+      const { data: subscriptionData, error: subscriptionError } = await (supabase as any).rpc(
+        'activate_subscription',
+        { p_user_id: user.id, p_plan_id: plan.id }
+      );
 
-      console.log('Setting user as PRO first...');
-
-      // FIRST: Set user as pro - with verification
-      const { error: proError } = await supabase
-        .from('profiles')
-        .update({ account_type: 'pro' })
-        .eq('user_id', user.id);
-
-      if (proError) {
-        console.error('Pro error:', proError);
-        throw new Error('Erro ao ativar PRO: ' + proError.message);
+      if (subscriptionError) throw subscriptionError;
+      if (subscriptionData && !subscriptionData.success) {
+        throw new Error(subscriptionData.message);
       }
 
-      // Verify PRO was set
-      const { data: verifyPro } = await supabase
-        .from('profiles')
-        .select('account_type')
-        .eq('user_id', user.id)
-        .single();
-
-      console.log('Verified PRO status:', verifyPro);
-
-      if (verifyPro?.account_type !== 'pro') {
-        throw new Error('Falha ao definir status PRO');
-      }
-
-      // SECOND: Deduct coins
-      const { error: deductError } = await supabase
-        .from('profiles')
-        .update({ duelcoins_balance: currentBalance - plan.price_duelcoins })
-        .eq('user_id', user.id);
-
-      if (deductError) {
-        console.error('Deduct error:', deductError);
-        throw new Error('Erro ao deduzir saldo: ' + deductError.message);
-      }
-
-      // THIRD: Create/update subscription
-      await supabase
-        .from('user_subscriptions')
-        .upsert({
-          user_id: user.id,
-          plan_id: plan.id,
-          is_active: true,
-          starts_at: new Date().toISOString(),
-          expires_at: expiresAt.toISOString()
-        }, { onConflict: 'user_id' });
-
-      // Get admin users to notify
-      const { data: admins } = await supabase
-        .from('user_roles')
-        .select('user_id')
-        .eq('role', 'admin');
-
-      // Create notification for each admin
-      if (admins && admins.length > 0) {
-        const notifications = admins.map(admin => ({
-          user_id: admin.user_id,
-          type: 'subscription_purchase',
-          title: 'Nova compra de plano PRO',
-          message: `${profile?.username || 'Um usuário'} comprou o plano "${plan.name}" por ${plan.price_duelcoins} DuelCoins. Expira em ${plan.duration_days} dias.`,
-          is_read: false
-        }));
-
-        await supabase.from('notifications').insert(notifications);
-      }
-
-      // Refresh profile with delay to ensure database is updated
-      setTimeout(async () => {
-        await fetchProfile(user.id);
-      }, 500);
+      // Refresh profile and subscription
+      await fetchProfile(user.id);
+      await fetchActiveSubscription(user.id);
 
       toast({
         title: "Plano ativado!",
@@ -259,7 +207,7 @@ export default function Store() {
     }
   };
 
-  const isProUser = profile?.account_type === 'pro';
+  const hasActivePlan = !!activeSubscription;
 
   return (
     <div className="min-h-screen bg-background">
@@ -277,7 +225,7 @@ export default function Store() {
           </div>
 
           {/* Active Subscription Banner */}
-          {isProUser && (
+          {hasActivePlan && (
             <Card className="border-yellow-500 border-2 bg-yellow-500/10">
               <CardContent className="py-4 flex items-center justify-between flex-wrap gap-4">
                 <div className="flex items-center gap-3">
@@ -322,7 +270,7 @@ export default function Store() {
                         plan.is_featured 
                           ? "border-yellow-500 border-2 bg-yellow-500/5" 
                           : "border-primary/30"
-                      } ${isProUser ? "opacity-60" : ""}`}
+                      } ${hasActivePlan ? "opacity-60" : ""}`}
                     >
                       {plan.is_featured && (
                         <div className="absolute top-0 right-0 bg-yellow-500 text-black text-xs font-bold px-3 py-1 rounded-bl-lg">
@@ -363,22 +311,12 @@ export default function Store() {
                             </div>
                           </div>
 
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setSelectedPlan(plan)}
-                              className="flex-1"
-                            >
-                              <Info className="w-4 h-4 mr-1" />
-                              Ver detalhes
-                            </Button>
-                            <Button
-                              onClick={() => handlePurchasePlan(plan)}
-                              disabled={purchasingPlan === plan.id || !user || isProUser || !profile || (profile?.duelcoins_balance ?? 0) < plan.price_duelcoins}
-                              className="flex-1"
-                              variant={plan.is_featured ? "default" : "outline"}
-                            >
+                          <Button
+                            onClick={() => handlePurchasePlan(plan)}
+                            disabled={purchasingPlan === plan.id || !user || hasActivePlan || !profile || (profile?.duelcoins_balance ?? 0) < plan.price_duelcoins}
+                            className="w-full"
+                            variant={plan.is_featured ? "default" : "outline"}
+                          >
                             {purchasingPlan === plan.id ? (
                               <>
                                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -386,7 +324,7 @@ export default function Store() {
                               </>
                             ) : !user ? (
                               "Faça login para comprar"
-                            ) : isProUser ? (
+                            ) : hasActivePlan ? (
                               "Plano ativo"
                             ) : (profile?.duelcoins_balance ?? 0) < plan.price_duelcoins ? (
                               "Saldo Insuficiente"
@@ -394,7 +332,6 @@ export default function Store() {
                               <>Comprar com {plan.price_duelcoins} DC</>
                             )}
                           </Button>
-                          </div>
                         </div>
                       </CardContent>
                     </Card>
@@ -416,103 +353,6 @@ export default function Store() {
               )}
             </CardContent>
           </Card>
-
-          {/* Plan Details Dialog */}
-          <Dialog open={!!selectedPlan} onOpenChange={() => setSelectedPlan(null)}>
-            <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-              {selectedPlan && (
-                <>
-                  <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2 text-xl">
-                      <Crown className="w-6 h-6 text-yellow-500" />
-                      {selectedPlan.name}
-                    </DialogTitle>
-                    <DialogDescription>
-                      Detalhes do plano de assinatura PRO
-                    </DialogDescription>
-                  </DialogHeader>
-                  
-                  <div className="space-y-4">
-                    {selectedPlan.image_url && (
-                      <img 
-                        src={selectedPlan.image_url} 
-                        alt={selectedPlan.name}
-                        className="w-full h-40 object-cover rounded-lg"
-                      />
-                    )}
-                    
-                    <div className="text-center p-4 bg-muted/50 rounded-lg">
-                      <div className="flex items-center justify-center gap-1 text-3xl font-bold text-primary">
-                        <Coins className="w-8 h-8" />
-                        {selectedPlan.price_duelcoins}
-                      </div>
-                      <p className="text-muted-foreground">{getDurationLabel(selectedPlan.duration_type)}</p>
-                    </div>
-
-                    <div className="space-y-3">
-                      <h4 className="font-medium flex items-center gap-2">
-                        <Star className="w-4 h-4 text-yellow-500" />
-                        Benefícios incluídos:
-                      </h4>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex items-center gap-2">
-                          <Zap className="w-4 h-4 text-blue-500" />
-                          <span>Acesso prioritário ao matchmaking</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Shield className="w-4 h-4 text-green-500" />
-                          <span>Perfil verificado com coroa dourada</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Crown className="w-4 h-4 text-yellow-500" />
-                          <span>Badges exclusivos PRO</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Check className="w-4 h-4 text-green-500" />
-                          <span>Acesso a funcionalidades exclusivas</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Check className="w-4 h-4 text-green-500" />
-                          <span>Suporte prioritário</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {selectedPlan.description && (
-                      <div className="p-3 bg-muted/30 rounded-lg">
-                        <p className="text-sm text-muted-foreground">{selectedPlan.description}</p>
-                      </div>
-                    )}
-
-                    <div className="flex items-center justify-between text-sm text-muted-foreground pt-2 border-t">
-                      <span>Duração:</span>
-                      <span className="font-medium">{selectedPlan.duration_days} dias</span>
-                    </div>
-
-                    <Button 
-                      onClick={() => {
-                        setSelectedPlan(null);
-                        handlePurchasePlan(selectedPlan);
-                      }}
-                      disabled={!user || isProUser || !profile || (profile?.duelcoins_balance ?? 0) < selectedPlan.price_duelcoins}
-                      className="w-full"
-                      variant={selectedPlan.is_featured ? "default" : "outline"}
-                    >
-                      {!user ? (
-                        "Faça login para comprar"
-                      ) : isProUser ? (
-                        "Você já tem um plano ativo"
-                      ) : (profile?.duelcoins_balance ?? 0) < selectedPlan.price_duelcoins ? (
-                        "Saldo insuficiente"
-                      ) : (
-                        <>Comprar por {selectedPlan.price_duelcoins} DuelCoins</>
-                      )}
-                    </Button>
-                  </div>
-                </>
-              )}
-            </DialogContent>
-          </Dialog>
 
           {/* Store Access Card */}
           <Card className="card-mystic border-primary/50">
