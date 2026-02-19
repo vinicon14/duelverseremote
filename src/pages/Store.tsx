@@ -25,13 +25,6 @@ interface SubscriptionPlan {
   is_featured: boolean;
 }
 
-interface ActiveSubscription {
-  id: string;
-  plan_id: string;
-  expires_at: string;
-  is_active: boolean;
-}
-
 export default function Store() {
   const [storeUrl, setStoreUrl] = useState("");
   const [supportEmail, setSupportEmail] = useState("");
@@ -40,7 +33,6 @@ export default function Store() {
   const [purchasingPlan, setPurchasingPlan] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
-  const [activeSubscription, setActiveSubscription] = useState<ActiveSubscription | null>(null);
   const [timeLeft, setTimeLeft] = useState("");
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null);
   const { toast } = useToast();
@@ -53,12 +45,12 @@ export default function Store() {
 
   // Update countdown every minute
   useEffect(() => {
-    if (!activeSubscription) return;
-    const update = () => setTimeLeft(getTimeLeft(activeSubscription.expires_at));
+    if (!profile?.expires_at) return;
+    const update = () => setTimeLeft(getTimeLeft(profile.expires_at));
     update();
     const interval = setInterval(update, 60000);
     return () => clearInterval(interval);
-  }, [activeSubscription]);
+  }, [profile?.expires_at]);
 
   const getTimeLeft = (expiresAt: string) => {
     const now = new Date();
@@ -77,7 +69,6 @@ export default function Store() {
     setUser(session?.user ?? null);
     if (session?.user) {
       fetchProfile(session.user.id);
-      fetchActiveSubscription(session.user.id);
     }
   };
 
@@ -88,21 +79,6 @@ export default function Store() {
       .eq('user_id', userId)
       .maybeSingle();
     if (data) setProfile(data);
-  };
-
-  const fetchActiveSubscription = async (userId: string) => {
-    const { data } = await (supabase as any)
-      .from('user_subscriptions')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('is_active', true)
-      .order('expires_at', { ascending: false })
-      .limit(1);
-    if (data && data.length > 0) {
-      setActiveSubscription(data[0]);
-    } else {
-      setActiveSubscription(null);
-    }
   };
 
   const fetchSettings = async () => {
@@ -169,8 +145,8 @@ export default function Store() {
       toast({ title: "Erro", description: "Perfil não encontrado.", variant: "destructive" });
       return;
     }
-    if (activeSubscription) {
-      toast({ title: "Plano ativo", description: "Você já possui um plano ativo. Aguarde ele expirar para comprar outro.", variant: "destructive" });
+    if (profile.account_type === 'pro') {
+      toast({ title: "Você já é PRO", description: "Você já possui status PRO.", variant: "destructive" });
       return;
     }
 
@@ -182,23 +158,29 @@ export default function Store() {
 
     setPurchasingPlan(plan.id);
     try {
-      // Use Supabase Functions to handle the purchase
-      const { data, error } = await supabase.functions.invoke('purchase-subscription', {
-        body: { plan_id: plan.id }
-      });
+      // Simple approach: just update account_type to pro
+      
+      // Deduct coins
+      const { error: deductError } = await supabase
+        .from('profiles')
+        .update({ duelcoins_balance: currentBalance - plan.price_duelcoins })
+        .eq('user_id', user.id);
 
-      if (error) {
-        console.error('Function Error:', error);
-        throw new Error(error.message || 'Erro ao processar compra');
+      if (deductError) throw deductError;
+
+      // Set user as pro
+      const { error: proError } = await supabase
+        .from('profiles')
+        .update({ account_type: 'pro' })
+        .eq('user_id', user.id);
+
+      if (proError) {
+        console.error('Pro error:', proError);
+        throw new Error(proError.message || 'Erro ao ativar PRO');
       }
 
-      if (data && !data.success) {
-        throw new Error(data.message || 'Erro ao ativar assinatura');
-      }
-
-      // Refresh profile and subscription
+      // Refresh profile
       await fetchProfile(user.id);
-      await fetchActiveSubscription(user.id);
 
       toast({
         title: "Plano ativado!",
@@ -221,7 +203,7 @@ export default function Store() {
     }
   };
 
-  const hasActivePlan = !!activeSubscription;
+  const isProUser = profile?.account_type === 'pro';
 
   return (
     <div className="min-h-screen bg-background">
@@ -239,7 +221,7 @@ export default function Store() {
           </div>
 
           {/* Active Subscription Banner */}
-          {hasActivePlan && (
+          {isProUser && (
             <Card className="border-yellow-500 border-2 bg-yellow-500/10">
               <CardContent className="py-4 flex items-center justify-between flex-wrap gap-4">
                 <div className="flex items-center gap-3">
@@ -284,7 +266,7 @@ export default function Store() {
                         plan.is_featured 
                           ? "border-yellow-500 border-2 bg-yellow-500/5" 
                           : "border-primary/30"
-                      } ${hasActivePlan ? "opacity-60" : ""}`}
+                      } ${isProUser ? "opacity-60" : ""}`}
                     >
                       {plan.is_featured && (
                         <div className="absolute top-0 right-0 bg-yellow-500 text-black text-xs font-bold px-3 py-1 rounded-bl-lg">
@@ -337,7 +319,7 @@ export default function Store() {
                             </Button>
                             <Button
                               onClick={() => handlePurchasePlan(plan)}
-                              disabled={purchasingPlan === plan.id || !user || hasActivePlan || !profile || (profile?.duelcoins_balance ?? 0) < plan.price_duelcoins}
+                              disabled={purchasingPlan === plan.id || !user || isProUser || !profile || (profile?.duelcoins_balance ?? 0) < plan.price_duelcoins}
                               className="flex-1"
                               variant={plan.is_featured ? "default" : "outline"}
                             >
@@ -348,7 +330,7 @@ export default function Store() {
                               </>
                             ) : !user ? (
                               "Faça login para comprar"
-                            ) : hasActivePlan ? (
+                            ) : isProUser ? (
                               "Plano ativo"
                             ) : (profile?.duelcoins_balance ?? 0) < plan.price_duelcoins ? (
                               "Saldo Insuficiente"
@@ -456,13 +438,13 @@ export default function Store() {
                         setSelectedPlan(null);
                         handlePurchasePlan(selectedPlan);
                       }}
-                      disabled={!user || hasActivePlan || !profile || (profile?.duelcoins_balance ?? 0) < selectedPlan.price_duelcoins}
+                      disabled={!user || isProUser || !profile || (profile?.duelcoins_balance ?? 0) < selectedPlan.price_duelcoins}
                       className="w-full"
                       variant={selectedPlan.is_featured ? "default" : "outline"}
                     >
                       {!user ? (
                         "Faça login para comprar"
-                      ) : hasActivePlan ? (
+                      ) : isProUser ? (
                         "Você já tem um plano ativo"
                       ) : (profile?.duelcoins_balance ?? 0) < selectedPlan.price_duelcoins ? (
                         "Saldo insuficiente"
