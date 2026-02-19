@@ -230,7 +230,7 @@ export default function Store() {
           </div>
 
           {/* Subscription Plans Section */}
-          {user && (
+          
             <Card className="card-mystic border-primary/50">
               <CardHeader>
                 <CardTitle className="text-2xl flex items-center gap-2">
@@ -304,7 +304,7 @@ export default function Store() {
 
                             <Button
                               onClick={() => handlePurchasePlan(plan)}
-                              disabled={purchasingPlan === plan.id || profile.duelcoins_balance < plan.price_duelcoins}
+                              disabled={purchasingPlan === plan.id || !profile || (profile?.duelcoins_balance ?? 0) < plan.price_duelcoins}
                               className="w-full"
                               variant={plan.is_featured ? "default" : "outline"}
                             >
@@ -313,7 +313,9 @@ export default function Store() {
                                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                                   Comprando...
                                 </>
-                              ) : profile.duelcoins_balance < plan.price_duelcoins ? (
+                              ) : !user ? (
+                                "Faça login para comprar"
+                              ) : (profile?.duelcoins_balance ?? 0) < plan.price_duelcoins ? (
                                 "Saldo Insuficiente"
                               ) : (
                                 <>Comprar com {plan.price_duelcoins} DC</>
@@ -326,19 +328,20 @@ export default function Store() {
                   </div>
                 )}
 
-                <div className="mt-4 p-4 bg-muted/50 rounded-lg flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Coins className="w-5 h-5 text-yellow-500" />
-                    <span className="text-sm">Seu saldo:</span>
-                    <span className="font-bold text-primary">{profile?.duelcoins_balance || 0} DuelCoins</span>
+                {user && (
+                  <div className="mt-4 p-4 bg-muted/50 rounded-lg flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Coins className="w-5 h-5 text-yellow-500" />
+                      <span className="text-sm">Seu saldo:</span>
+                      <span className="font-bold text-primary">{profile?.duelcoins_balance || 0} DuelCoins</span>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => window.location.href = '/duelcoins'}>
+                      Ver saldo
+                    </Button>
                   </div>
-                  <Button variant="outline" size="sm" onClick={() => window.location.href = '/duelcoins'}>
-                    Ver saldo
-                  </Button>
-                </div>
+                )}
               </CardContent>
             </Card>
-          )}
 
           {/* Store Access Card */}
           <Card className="card-mystic border-primary/50">
