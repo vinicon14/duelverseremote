@@ -68,13 +68,13 @@ export const AdminSubscriptionPlans = () => {
 
   const fetchPlans = async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("subscription_plans")
         .select("*")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setPlans(data || []);
+      setPlans((data as SubscriptionPlan[]) || []);
     } catch (error) {
       console.error("Error fetching plans:", error);
     } finally {
@@ -171,7 +171,7 @@ export const AdminSubscriptionPlans = () => {
       if (imageFile && !imageUrl) return;
 
       if (editingPlan) {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from("subscription_plans")
           .update({
             name: formData.name,
@@ -189,7 +189,7 @@ export const AdminSubscriptionPlans = () => {
         if (error) throw error;
         toast({ title: "Plano atualizado com sucesso!" });
       } else {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from("subscription_plans")
           .insert({
             name: formData.name,
@@ -223,7 +223,7 @@ export const AdminSubscriptionPlans = () => {
     if (!confirm("Tem certeza que deseja excluir este plano?")) return;
 
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("subscription_plans")
         .delete()
         .eq("id", planId);
@@ -243,7 +243,7 @@ export const AdminSubscriptionPlans = () => {
 
   const toggleActive = async (plan: SubscriptionPlan) => {
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("subscription_plans")
         .update({ is_active: !plan.is_active, updated_at: new Date().toISOString() })
         .eq("id", plan.id);

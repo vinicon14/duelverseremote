@@ -24,7 +24,7 @@ export const useAccountType = () => {
           }
         }
 
-        const { data: subscriptionData } = await supabase
+        const { data: subscriptionData } = await (supabase as any)
           .from('user_subscriptions')
           .select('expires_at')
           .eq('user_id', session.user.id)

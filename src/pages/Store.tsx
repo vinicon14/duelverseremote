@@ -79,7 +79,7 @@ export default function Store() {
 
   const fetchPlans = async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("subscription_plans")
         .select("*")
         .eq("is_active", true)
@@ -87,7 +87,7 @@ export default function Store() {
         .order("price_duelcoins", { ascending: true });
 
       if (error) throw error;
-      setPlans(data || []);
+      setPlans((data as SubscriptionPlan[]) || []);
     } catch (error) {
       console.error("Error fetching plans:", error);
     } finally {
@@ -151,7 +151,7 @@ export default function Store() {
         p_reason: `Purchase of ${plan.name} plan`
       });
 
-      const { data: subscriptionData, error: subscriptionError } = await supabase.rpc(
+      const { data: subscriptionData, error: subscriptionError } = await (supabase as any).rpc(
         'activate_subscription',
         {
           p_user_id: user.id,
