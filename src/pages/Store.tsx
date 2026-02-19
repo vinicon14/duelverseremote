@@ -158,11 +158,11 @@ export default function Store() {
 
     setPurchasingPlan(plan.id);
     try {
-      // Calculate expiration (very far in the future - essentially permanent)
+      // Calculate expiration based on plan duration
       const expiresAt = new Date();
-      expiresAt.setFullYear(expiresAt.getFullYear() + 100); // 100 years = permanent
+      expiresAt.setDate(expiresAt.getDate() + plan.duration_days);
 
-      // First, let's create/update subscription using a direct insert with onConflict
+      // First, create/update subscription
       const { error: subUpsertError } = await supabase
         .from('user_subscriptions')
         .upsert({
@@ -173,18 +173,13 @@ export default function Store() {
           expires_at: expiresAt.toISOString()
         }, { onConflict: 'user_id' });
 
-      console.log('Subscription upsert:', subUpsertError);
-
       // Deduct coins
       const { error: deductError } = await supabase
         .from('profiles')
         .update({ duelcoins_balance: currentBalance - plan.price_duelcoins })
         .eq('user_id', user.id);
 
-      if (deductError) {
-        console.error('Deduct error:', deductError);
-        throw deductError;
-      }
+      if (deductError) throw deductError;
 
       // Set user as pro
       const { error: proError } = await supabase
@@ -192,9 +187,25 @@ export default function Store() {
         .update({ account_type: 'pro' })
         .eq('user_id', user.id);
 
-      if (proError) {
-        console.error('Pro error:', proError);
-        throw proError;
+      if (proError) throw proError;
+
+      // Get admin users to notify
+      const { data: admins } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'admin');
+
+      // Create notification for each admin
+      if (admins && admins.length > 0) {
+        const notifications = admins.map(admin => ({
+          user_id: admin.user_id,
+          type: 'subscription_purchase',
+          title: 'Nova compra de plano PRO',
+          message: `${profile?.username || 'Um usuário'} comprou o plano "${plan.name}" por ${plan.price_duelcoins} DuelCoins. Expira em ${plan.duration_days} dias.`,
+          is_read: false
+        }));
+
+        await supabase.from('notifications').insert(notifications);
       }
 
       // Refresh profile
