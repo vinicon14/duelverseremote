@@ -158,9 +158,9 @@ export default function Store() {
 
     setPurchasingPlan(plan.id);
     try {
-      // Calculate expiration (30 days from now)
+      // Calculate expiration (very far in the future - essentially permanent)
       const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 30);
+      expiresAt.setFullYear(expiresAt.getFullYear() + 100); // 100 years = permanent
 
       // First, let's create/update subscription using a direct insert with onConflict
       const { error: subUpsertError } = await supabase
