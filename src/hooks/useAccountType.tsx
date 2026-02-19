@@ -10,11 +10,15 @@ export const useAccountType = () => {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session?.user) {
+        console.log('Checking account type for user:', session.user.id);
+        
         const { data, error } = await supabase
           .from('profiles')
           .select('account_type')
           .eq('user_id', session.user.id)
           .single();
+        
+        console.log('Profile data:', data, 'Error:', error);
         
         if (data && data.account_type === 'pro') {
           setAccountType('pro');
