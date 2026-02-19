@@ -162,27 +162,8 @@ export default function Store() {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 30);
 
-      // Deduct coins
-      const { error: deductError } = await supabase
-        .from('profiles')
-        .update({ duelcoins_balance: currentBalance - plan.price_duelcoins })
-        .eq('user_id', user.id);
-
-      if (deductError) throw deductError;
-
-      // Set user as pro
-      const { error: proError } = await supabase
-        .from('profiles')
-        .update({ account_type: 'pro' })
-        .eq('user_id', user.id);
-
-      if (proError) {
-        console.error('Pro error:', proError);
-        throw new Error(proError.message || 'Erro ao ativar PRO');
-      }
-
-      // Also create/update subscription record to prevent automatic downgrade
-      const { error: subError } = await supabase
+      // First, let's create/update subscription using a direct insert with onConflict
+      const { error: subUpsertError } = await supabase
         .from('user_subscriptions')
         .upsert({
           user_id: user.id,
@@ -192,9 +173,28 @@ export default function Store() {
           expires_at: expiresAt.toISOString()
         }, { onConflict: 'user_id' });
 
-      if (subError) {
-        console.warn('Subscription warning:', subError);
-        // Continue even if subscription record fails
+      console.log('Subscription upsert:', subUpsertError);
+
+      // Deduct coins
+      const { error: deductError } = await supabase
+        .from('profiles')
+        .update({ duelcoins_balance: currentBalance - plan.price_duelcoins })
+        .eq('user_id', user.id);
+
+      if (deductError) {
+        console.error('Deduct error:', deductError);
+        throw deductError;
+      }
+
+      // Set user as pro
+      const { error: proError } = await supabase
+        .from('profiles')
+        .update({ account_type: 'pro' })
+        .eq('user_id', user.id);
+
+      if (proError) {
+        console.error('Pro error:', proError);
+        throw proError;
       }
 
       // Refresh profile
