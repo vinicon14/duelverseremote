@@ -73,12 +73,16 @@ export default function Store() {
   };
 
   const fetchProfile = async (userId: string) => {
+    // Force fresh data by adding timestamp
     const { data } = await supabase
       .from('profiles')
       .select('*')
       .eq('user_id', userId)
       .maybeSingle();
-    if (data) setProfile(data);
+    if (data) {
+      console.log('Fetched profile:', data);
+      setProfile(data);
+    }
   };
 
   const fetchSettings = async () => {
@@ -162,7 +166,9 @@ export default function Store() {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + plan.duration_days);
 
-      // FIRST: Set user as pro immediately
+      console.log('Setting user as PRO first...');
+
+      // FIRST: Set user as pro - with verification
       const { error: proError } = await supabase
         .from('profiles')
         .update({ account_type: 'pro' })
@@ -173,6 +179,19 @@ export default function Store() {
         throw new Error('Erro ao ativar PRO: ' + proError.message);
       }
 
+      // Verify PRO was set
+      const { data: verifyPro } = await supabase
+        .from('profiles')
+        .select('account_type')
+        .eq('user_id', user.id)
+        .single();
+
+      console.log('Verified PRO status:', verifyPro);
+
+      if (verifyPro?.account_type !== 'pro') {
+        throw new Error('Falha ao definir status PRO');
+      }
+
       // SECOND: Deduct coins
       const { error: deductError } = await supabase
         .from('profiles')
@@ -181,15 +200,10 @@ export default function Store() {
 
       if (deductError) {
         console.error('Deduct error:', deductError);
-        // Try to revert the pro status if deduct fails
-        await supabase
-          .from('profiles')
-          .update({ account_type: 'free' })
-          .eq('user_id', user.id);
         throw new Error('Erro ao deduzir saldo: ' + deductError.message);
       }
 
-      // THIRD: Create/update subscription (this won't affect PRO status)
+      // THIRD: Create/update subscription
       await supabase
         .from('user_subscriptions')
         .upsert({
@@ -219,8 +233,10 @@ export default function Store() {
         await supabase.from('notifications').insert(notifications);
       }
 
-      // Refresh profile
-      await fetchProfile(user.id);
+      // Refresh profile with delay to ensure database is updated
+      setTimeout(async () => {
+        await fetchProfile(user.id);
+      }, 500);
 
       toast({
         title: "Plano ativado!",
