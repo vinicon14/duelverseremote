@@ -88,6 +88,7 @@ export default function Store() {
       .select('*')
       .eq('user_id', userId)
       .eq('is_active', true)
+      .gte('expires_at', new Date().toISOString())
       .order('expires_at', { ascending: false })
       .limit(1);
     if (data && data.length > 0) {
