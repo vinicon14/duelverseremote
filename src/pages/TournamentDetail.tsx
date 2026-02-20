@@ -644,7 +644,7 @@ const TournamentDetail = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
+                 <div className="space-y-3">
                   {participants.map((participant, index) => (
                     <div key={participant.id}>
                       {index > 0 && <Separator className="my-3" />}
@@ -655,7 +655,7 @@ const TournamentDetail = () => {
                          <div className="flex-1">
                            <p className="font-medium">{participant.profiles?.username || 'Usuário'}</p>
                            <p className="text-xs text-muted-foreground">
-                             Pontos: {participant.profiles?.points || 0}
+                             Pontos: {participant.score ?? 0} • V: {participant.wins ?? 0} D: {participant.losses ?? 0}
                            </p>
                          </div>
                         {participant.placement && (
