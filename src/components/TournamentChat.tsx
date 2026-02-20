@@ -155,9 +155,11 @@ export const TournamentChat = ({ tournamentId }: TournamentChatProps) => {
   };
 
   const scrollToBottom = () => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+    setTimeout(() => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }
+    }, 100);
   };
 
   return (
@@ -166,7 +168,12 @@ export const TournamentChat = ({ tournamentId }: TournamentChatProps) => {
         <CardTitle className="text-lg">Chat do Torneio</CardTitle>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col p-4 gap-4">
-        <ScrollArea className="flex-1 pr-4" ref={scrollRef}>
+        <ScrollArea className="flex-1 pr-4" ref={(node) => {
+          if (node) {
+            const viewport = node.querySelector('[data-radix-scroll-area-viewport]');
+            if (viewport) scrollRef.current = viewport as HTMLDivElement;
+          }
+        }}>
           <div className="space-y-4">
             {messages.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">
