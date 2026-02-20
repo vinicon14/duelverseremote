@@ -1,0 +1,2 @@
+ALTER TABLE public.duelcoins_transactions DROP CONSTRAINT duelcoins_transactions_transaction_type_check;
+ALTER TABLE public.duelcoins_transactions ADD CONSTRAINT duelcoins_transactions_transaction_type_check CHECK (transaction_type = ANY (ARRAY['transfer','admin_add','admin_remove','tournament_entry','tournament_prize','subscription']));
