@@ -168,7 +168,7 @@ export const TournamentChat = ({ tournamentId }: TournamentChatProps) => {
         <CardTitle className="text-lg">Chat do Torneio</CardTitle>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col p-4 gap-4">
-        <ScrollArea className="flex-1 pr-4" ref={(node) => {
+        <ScrollArea className="h-[300px] sm:h-[400px] pr-4" ref={(node) => {
           if (node) {
             const viewport = node.querySelector('[data-radix-scroll-area-viewport]');
             if (viewport) scrollRef.current = viewport as HTMLDivElement;
