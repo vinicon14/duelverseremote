@@ -1,3 +1,10 @@
+/**
+ * DuelVerse - Loja
+ * Desenvolvido por Vinícius
+ * 
+ * Loja de assinaturas Pro e planos de assinatura.
+ * Usuários podem comprar Premium com DuelCoins.
+ */
 import { useEffect, useState } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";

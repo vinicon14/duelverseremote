@@ -1,3 +1,9 @@
+/**
+ * DuelVerse - Compartilhar Vídeo
+ * Desenvolvido por Vinícius
+ * 
+ * Página pública para visualização de vídeo de uma partida específica.
+ */
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";

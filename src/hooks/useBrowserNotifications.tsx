@@ -1,3 +1,9 @@
+/**
+ * DuelVerse - Hook de Notificações do Navegador
+ * Desenvolvido por Vinícius
+ * 
+ * Gerencia permissões e envio de notificações nativas do navegador.
+ */
 import { useEffect, useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 

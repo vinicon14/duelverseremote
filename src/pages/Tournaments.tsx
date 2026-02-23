@@ -1,3 +1,10 @@
+/**
+ * DuelVerse - Torneios
+ * Desenvolvido por Vinícius
+ * 
+ * Lista e gerenciamento de torneios.
+ * Usuários podem criar, participar e gerenciar torneios.
+ */
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";

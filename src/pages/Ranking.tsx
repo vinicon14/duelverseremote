@@ -1,3 +1,10 @@
+/**
+ * DuelVerse - Ranking
+ * Desenvolvido por Vinícius
+ * 
+ * Exibe leaderboard com os melhores jogadores por pontos/vitórias.
+ * Atualiza em tempo real com dados do Supabase.
+ */
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";

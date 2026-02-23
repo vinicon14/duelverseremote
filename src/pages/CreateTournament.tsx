@@ -1,3 +1,10 @@
+/**
+ * DuelVerse - Criar Torneio
+ * Desenvolvido por Vinícius
+ * 
+ * Formulário para criação de torneios customizados.
+ * Suporta diferentes formatos e quantidades de rodadas.
+ */
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";

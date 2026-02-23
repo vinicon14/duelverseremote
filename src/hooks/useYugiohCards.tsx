@@ -1,3 +1,10 @@
+/**
+ * DuelVerse - Hook de Cartas Yu-Gi-Oh!
+ * Desenvolvido por Vinícius
+ * 
+ * Hook para buscar e gerenciar cartas do banco de dados Yu-Gi-Oh!.
+ * Fornece interface de busca e cache local.
+ */
 import { useState, useCallback } from 'react';
 
 export interface YugiohCard {

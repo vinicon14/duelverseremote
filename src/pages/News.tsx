@@ -1,3 +1,9 @@
+/**
+ * DuelVerse - Notícias
+ * Desenvolvido por Vinícius
+ * 
+ * Feed de notícias e atualizações da plataforma.
+ */
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Navbar } from "@/components/Navbar";

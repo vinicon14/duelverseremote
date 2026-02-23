@@ -1,3 +1,9 @@
+/**
+ * DuelVerse - Notificação de Convite de Duelo
+ * Desenvolvido por Vinícius
+ * 
+ * Exibe popup quando o usuário recebe um convite de duelo.
+ */
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";

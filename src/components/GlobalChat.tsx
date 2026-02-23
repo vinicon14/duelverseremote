@@ -1,3 +1,9 @@
+/**
+ * DuelVerse - Componente de Chat Global
+ * Desenvolvido por Vinícius
+ * 
+ * Chat global visível na página de listagem de dueloes.
+ */
 import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";

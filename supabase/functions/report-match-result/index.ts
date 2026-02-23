@@ -1,3 +1,9 @@
+/**
+ * DuelVerse - Edge Function: Reportar Resultado de Partida
+ * Desenvolvido por Vinícius
+ * 
+ * Processa o resultado de uma partida e atualiza estatísticas dos jogadores.
+ */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 

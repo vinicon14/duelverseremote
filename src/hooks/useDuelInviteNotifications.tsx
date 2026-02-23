@@ -1,3 +1,9 @@
+/**
+ * DuelVerse - Hook de Notificações de Convite de Duelo
+ * Desenvolvido por Vinícius
+ * 
+ * Escuta e exibe notificações de convite para dueloes em tempo real.
+ */
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";

@@ -1,3 +1,10 @@
+/**
+ * DuelVerse - Galeria de Partidas
+ * Desenvolvido por Vinícius
+ * 
+ * Galeria de vídeos de partidas gravadas.
+ * Usuários podem compartilhar e visualizar recordings.
+ */
 import { useEffect, useState } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";

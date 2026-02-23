@@ -1,3 +1,10 @@
+/**
+ * DuelVerse - Lista de Duelos
+ * Desenvolvido por Vinícius
+ * 
+ * Exibe salas de duelo disponíveis e permite criar novas salas.
+ * Inclui chat global e popup de anúncio.
+ */
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";

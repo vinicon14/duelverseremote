@@ -1,3 +1,9 @@
+/**
+ * DuelVerse - Utilitário de Notificações Push
+ * Desenvolvido por Vinícius
+ * 
+ * Funções para enviar notificações push para usuários.
+ */
 import { supabase } from "@/integrations/supabase/client";
 
 interface SendNotificationParams {

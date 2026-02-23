@@ -1,3 +1,10 @@
+/**
+ * DuelVerse - Hook de Presença em Duelo
+ * Desenvolvido por Vinícius
+ * 
+ * Gerencia a presença do usuário em uma sala de duelo.
+ * Envia heartbeats para manter a conexão ativa e limpar salas órfãs.
+ */
 import { useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 

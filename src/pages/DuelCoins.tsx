@@ -1,3 +1,10 @@
+/**
+ * DuelVerse - DuelCoins
+ * Desenvolvido por Vinícius
+ * 
+ * Gerenciamento de moeda virtual DuelCoins.
+ * Permite transferência entre usuários e visualização de histórico.
+ */
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";

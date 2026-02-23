@@ -1,3 +1,9 @@
+/**
+ * DuelVerse - Hook de Tipo de Conta
+ * Desenvolvido por Vinícius
+ * 
+ * Verifica se o usuário é Pro (assinante) ou Free.
+ */
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 

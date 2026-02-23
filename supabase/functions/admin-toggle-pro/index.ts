@@ -1,3 +1,9 @@
+/**
+ * DuelVerse - Edge Function: Alternar Status Pro (Admin)
+ * Desenvolvido por Vinícius
+ * 
+ * Permite admin alternar o status Pro de um usuário.
+ */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 

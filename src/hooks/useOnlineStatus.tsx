@@ -1,3 +1,10 @@
+/**
+ * DuelVerse - Hook de Status Online
+ * Desenvolvido por Vinícius
+ * 
+ * Gerencia o status online do usuário em tempo real.
+ * Atualiza a tabela de presença no Supabase.
+ */
 import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 

@@ -1,3 +1,9 @@
+/**
+ * DuelVerse - Edge Function: Cobrar Taxa de Inscrição de Torneio
+ * Desenvolvido por Vinícius
+ * 
+ * Deduz DuelCoins do usuário ao se inscrever em um torneo.
+ */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
 

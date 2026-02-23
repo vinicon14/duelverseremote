@@ -1,3 +1,9 @@
+/**
+ * DuelVerse - Hook de Status Online de Amigos
+ * Desenvolvido por Vinícius
+ * 
+ * Escuta o status online dos amigos em tempo real.
+ */
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 

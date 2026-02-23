@@ -1,3 +1,10 @@
+/**
+ * DuelVerse - Componente de Navegação
+ * Desenvolvido por Vinícius
+ * 
+ * Barra de navegação principal com links para todas as páginas.
+ * Inclui menu mobile, notificações e informações do usuário.
+ */
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";

@@ -1,3 +1,9 @@
+/**
+ * DuelVerse - Hook de Juíz
+ * Desenvolvido por Vinícius
+ * 
+ * Verifica se o usuário atual é um juíz cadastrado.
+ */
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 

@@ -1,3 +1,9 @@
+/**
+ * DuelVerse - Edge Function: Obter Vídeo por Link
+ * Desenvolvido por Vinícius
+ * 
+ * Retorna informações de um vídeo de partida a partir de um link.
+ */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 

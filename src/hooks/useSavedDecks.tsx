@@ -1,3 +1,9 @@
+/**
+ * DuelVerse - Hook de Decks Salvos
+ * Desenvolvido por Vinícius
+ * 
+ * Gerencia operações CRUD para decks salvos no banco de dados.
+ */
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { DeckCard } from '@/components/deckbuilder/DeckPanel';

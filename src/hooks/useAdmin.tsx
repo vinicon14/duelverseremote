@@ -1,3 +1,9 @@
+/**
+ * DuelVerse - Hook de Administrador
+ * Desenvolvido por Vinícius
+ * 
+ * Verifica se o usuário atual é um administrador.
+ */
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 

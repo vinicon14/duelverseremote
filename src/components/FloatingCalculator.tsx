@@ -1,3 +1,10 @@
+/**
+ * DuelVerse - Calculadora de LP Flutuante
+ * Desenvolvido por Vinícius
+ * 
+ * Calculadora de Life Points (LP) arrastável para duelos Yu-Gi-Oh!.
+ * Permite adicionar/remover LP dos jogadores.
+ */
 import { useState, useRef, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";

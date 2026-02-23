@@ -1,3 +1,9 @@
+/**
+ * DuelVerse - Hook de Verificação de Expiração de Assinatura
+ * Desenvolvido por Vinícius
+ * 
+ * Verifica e atualiza assinaturas Pro expiradas automaticamente.
+ */
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 

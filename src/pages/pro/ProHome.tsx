@@ -1,3 +1,10 @@
+/**
+ * DuelVerse - Home Pro
+ * Desenvolvido por Vinícius
+ * 
+ * Dashboard para usuários Pro (assinantes Premium).
+ * Exibe funcionalidades exclusivas para assinantes.
+ */
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ProNavbar } from "@/components/ProNavbar";

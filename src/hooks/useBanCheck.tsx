@@ -1,3 +1,9 @@
+/**
+ * DuelVerse - Hook de Verificação de Banimento
+ * Desenvolvido por Vinícius
+ * 
+ * Verifica se o usuário está banido e redireciona para página de erro.
+ */
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";

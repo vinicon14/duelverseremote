@@ -1,3 +1,9 @@
+/**
+ * DuelVerse - Componente de Chat de Duelo
+ * Desenvolvido por Vinícius
+ * 
+ * Chat em tempo real entre os jogadores durante o duelo.
+ */
 import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";

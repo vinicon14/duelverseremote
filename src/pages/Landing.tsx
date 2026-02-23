@@ -1,3 +1,10 @@
+/**
+ * DuelVerse - Landing Page
+ * Desenvolvido por Vinícius
+ * 
+ * Página inicial pública com informações sobre a plataforma.
+ * Exibe funcionalidades, call-to-action para login/cadastro.
+ */
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";

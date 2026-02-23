@@ -1,3 +1,10 @@
+/**
+ * DuelVerse - Sala de Duelo
+ * Desenvolvido por Vinícius
+ * 
+ * Interface principal de duelo.
+ * Gerencia videochamada (Daily.co), LP, timer, chat e estado do duelo em tempo real.
+ */
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";

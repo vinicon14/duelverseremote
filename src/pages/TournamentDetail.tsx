@@ -1,3 +1,10 @@
+/**
+ * DuelVerse - Detalhes do Torneio
+ * Desenvolvido por Vinícius
+ * 
+ * Exibe informações completas de um torneo, 
+ * participantes, rodadas e permite gerenciar resultados.
+ */
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

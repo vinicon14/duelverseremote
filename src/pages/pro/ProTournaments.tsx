@@ -1,3 +1,9 @@
+/**
+ * DuelVerse - Torneios Pro
+ * Desenvolvido por Vinícius
+ * 
+ * Torneios exclusivos para usuários Pro.
+ */
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";

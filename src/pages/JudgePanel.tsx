@@ -1,3 +1,10 @@
+/**
+ * DuelVerse - Painel de Juíz
+ * Desenvolvido por Vinícius
+ * 
+ * Interface para juizes avaliarem chamadas de jogadores durante duelos.
+ * Permite aceitar/rejeitar pedidos de verificação.
+ */
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";

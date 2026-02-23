@@ -1,3 +1,9 @@
+/**
+ * DuelVerse - Torneios Semanais
+ * Desenvolvido por Vinícius
+ * 
+ * Torneios recorrentes semanais com premiações em DuelCoins.
+ */
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";

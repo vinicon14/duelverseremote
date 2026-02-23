@@ -1,3 +1,9 @@
+/**
+ * DuelVerse - Componente de Saldo de DuelCoins
+ * Desenvolvido por Vinícius
+ * 
+ * Exibe o saldo atual de DuelCoins do usuário em tempo real.
+ */
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Coins } from "lucide-react";

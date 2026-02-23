@@ -1,3 +1,10 @@
+/**
+ * DuelVerse - Hook de Notificações em Tempo Real
+ * Desenvolvido por Vinícius
+ * 
+ * Escuta notificações em tempo real via Supabase Realtime.
+ * Exibe notificações no navegador quando recebidas.
+ */
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useBrowserNotifications } from "./useBrowserNotifications";

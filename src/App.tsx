@@ -1,3 +1,10 @@
+/**
+ * DuelVerse - Plataforma de Duelos Online Yu-Gi-Oh!
+ * Desenvolvido por Vinícius
+ * 
+ * Este é o arquivo principal da aplicação React.
+ * Configura o roteamento, providers globais e listeners de autenticação.
+ */
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";

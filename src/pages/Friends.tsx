@@ -1,3 +1,10 @@
+/**
+ * DuelVerse - Amigos
+ * Desenvolvido por Vinícius
+ * 
+ * Gerenciamento de lista de amigos, solicitações de amizade
+ * e status online dos amigos em tempo real.
+ */
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

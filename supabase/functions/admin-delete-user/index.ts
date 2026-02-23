@@ -1,3 +1,9 @@
+/**
+ * DuelVerse - Edge Function: Deletar Usuário (Admin)
+ * Desenvolvido por Vinícius
+ * 
+ * Permite ao admin excluir um usuário e todos os seus dados.
+ */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 

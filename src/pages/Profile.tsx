@@ -1,3 +1,10 @@
+/**
+ * DuelVerse - Perfil do Usuário
+ * Desenvolvido por Vinícius
+ * 
+ * Exibe perfil do usuário com estatísticas, histórico de partidas,
+ * upload de avatar e configurações de conta.
+ */
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

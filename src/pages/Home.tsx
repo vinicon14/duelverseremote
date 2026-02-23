@@ -1,3 +1,10 @@
+/**
+ * DuelVerse - Página Inicial
+ * Desenvolvido por Vinícius
+ * 
+ * Dashboard principal do aplicativo.
+ * Exibe Quick Play, torneios, saldo de DuelCoins e anúncios.
+ */
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Navbar } from "@/components/Navbar";

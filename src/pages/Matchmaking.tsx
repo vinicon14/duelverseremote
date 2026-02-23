@@ -1,3 +1,10 @@
+/**
+ * DuelVerse - Matchmaking
+ * Desenvolvido por Vinícius
+ * 
+ * Sistema de busca de oponentes para duelos ranqueados ou casuais.
+ * Conecta jogadores através da fila de matchmaking em tempo real.
+ */
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";

@@ -1,3 +1,9 @@
+/**
+ * DuelVerse - Edge Function: Criar Sala Daily.co
+ * Desenvolvido por Vinícius
+ * 
+ * Cria uma sala de videochamada usando a API do Daily.co.
+ */
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 

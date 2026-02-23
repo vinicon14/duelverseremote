@@ -1,3 +1,10 @@
+/**
+ * DuelVerse - Hook de Deck de Duelo
+ * Desenvolvido por Vinícius
+ * 
+ * Gerencia o deck do jogador durante um duelo.
+ * Controla main deck, extra deck, side deck e tokens.
+ */
 import { useState, useCallback } from 'react';
 import { DeckCard } from '@/components/deckbuilder/DeckPanel';
 import { YugiohCard, useYugiohCards } from '@/hooks/useYugiohCards';

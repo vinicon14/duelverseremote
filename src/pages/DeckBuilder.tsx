@@ -1,3 +1,10 @@
+/**
+ * DuelVerse - Construtor de Deck
+ * Desenvolvido por Vinícius
+ * 
+ * Interface para criar, editar e salvar baralhos de Yu-Gi-Oh!.
+ * Inclui busca de cartas, reconhecimento de cartas e gerenciamento de decks.
+ */
 import { useState, useCallback, useEffect } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { CardSearchPanel } from '@/components/deckbuilder/CardSearchPanel';

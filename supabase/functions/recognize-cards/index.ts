@@ -1,3 +1,9 @@
+/**
+ * DuelVerse - Edge Function: Reconhecer Cartas
+ * Desenvolvido por Vinícius
+ * 
+ * Utiliza IA para reconhecer cartas Yu-Gi-Oh! a partir de imagens.
+ */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {

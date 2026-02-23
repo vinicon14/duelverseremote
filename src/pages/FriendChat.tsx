@@ -1,3 +1,9 @@
+/**
+ * DuelVerse - Chat com Amigo
+ * Desenvolvido por Vinícius
+ * 
+ * Chat privado entre amigos com mensagens em tempo real.
+ */
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";

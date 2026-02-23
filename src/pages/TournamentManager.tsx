@@ -1,3 +1,10 @@
+/**
+ * DuelVerse - Gerenciador de Torneios
+ * Desenvolvido por Vinícius
+ * 
+ * Interface para organizadores gerenciarem seus torneios.
+ * Inclui controle de participantes e premiação.
+ */
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
