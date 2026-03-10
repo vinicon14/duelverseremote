@@ -16,6 +16,7 @@ import { DuelChat } from "@/components/DuelChat";
 import { FloatingCalculator } from "@/components/FloatingCalculator";
 import { RecordMatchButton } from "@/components/RecordMatchButton";
 import { HideElementsButton } from "@/components/HideElementsButton";
+import { NativeAppDownloadButton } from "@/components/NativeAppDownloadButton";
 import { useBanCheck } from "@/hooks/useBanCheck";
 import { DuelDeckViewer } from "@/components/duel/DuelDeckViewer";
 import { FloatingOpponentViewer } from "@/components/duel/FloatingOpponentViewer";
@@ -932,6 +933,10 @@ const DuelRoom = () => {
                         <span className="hidden sm:inline">Finalizar</span>
                         <span className="sm:hidden">Fim</span>
                       </Button>
+                      <NativeAppDownloadButton
+                        variant="button"
+                        className="bg-blue-600/95 hover:bg-blue-700 text-white backdrop-blur-sm text-xs sm:text-sm h-8 sm:h-9"
+                      />
                     </>
                   )}
                   <Button
