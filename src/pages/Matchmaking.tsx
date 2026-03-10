@@ -30,8 +30,8 @@ export default function Matchmaking() {
   const [matchFound, setMatchFound] = useState<MatchData | null>(null);
   
   const currentUserId = useRef<string | null>(null);
-  const timerInterval = useRef<NodeJS.Timeout | null>(null);
-  const pollingInterval = useRef<NodeJS.Timeout | null>(null);
+  const timerInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollingInterval = useRef<ReturnType<typeof setInterval> | null>(null);
   const isRedirecting = useRef(false);
 
   const cleanup = useCallback(async () => {

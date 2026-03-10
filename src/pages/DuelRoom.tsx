@@ -38,7 +38,7 @@ const DuelRoom = () => {
   const [judgeCalled, setJudgeCalled] = useState(false);
   const [elementsHidden, setElementsHidden] = useState(false);
   const isTimerPausedRef = useRef(false);
-  const timerInterval = useRef<NodeJS.Timeout | null>(null);
+  const timerInterval = useRef<ReturnType<typeof setInterval> | null>(null);
   const timerInitialized = useRef(false);
   const timeEndedShownRef = useRef(false);
   const timeWarningShownRef = useRef(false);
