@@ -87,27 +87,32 @@ export function NativeAppDownloadButton({ variant = "button", className = "" }: 
   const getAllDownloadOptions = () => {
     const options = [];
     
-    if (import.meta.env.VITE_ANDROID_APK_URL) {
+    // Use env vars or fallback to duelverse.site
+    const androidUrl = import.meta.env.VITE_ANDROID_APK_URL || "https://duelverse.site/downloads/duelverse-app.apk";
+    const iosUrl = import.meta.env.VITE_IOS_APP_URL || "";
+    const windowsUrl = import.meta.env.VITE_WINDOWS_EXE_URL || "https://duelverse.site/downloads/Duelverse.exe";
+    
+    if (androidUrl) {
       options.push({
         platform: "Android",
         icon: <Smartphone className="h-5 w-5" />,
-        url: import.meta.env.VITE_ANDROID_APK_URL,
+        url: androidUrl,
       });
     }
     
-    if (import.meta.env.VITE_IOS_APP_URL) {
+    if (iosUrl) {
       options.push({
         platform: "iOS",
         icon: <Apple className="h-5 w-5" />,
-        url: import.meta.env.VITE_IOS_APP_URL,
+        url: iosUrl,
       });
     }
     
-    if (import.meta.env.VITE_WINDOWS_EXE_URL) {
+    if (windowsUrl) {
       options.push({
         platform: "Windows",
         icon: <Monitor className="h-5 w-5" />,
-        url: import.meta.env.VITE_WINDOWS_EXE_URL,
+        url: windowsUrl,
       });
     }
     
@@ -149,8 +154,40 @@ export function NativeAppDownloadButton({ variant = "button", className = "" }: 
   }
 
   // Button variant shows platform-specific download
+  // If no platform-specific URL, show card variant with all options
   if (!downloadUrl) {
-    return null;
+    const allOptions = getAllDownloadOptions();
+    if (allOptions.length === 0) {
+      return (
+        <Button
+          onClick={handleDownload}
+          variant="secondary"
+          size="lg"
+          className={className}
+          disabled
+        >
+          <Download className="mr-2 h-5 w-5" />
+          Em breve
+        </Button>
+      );
+    }
+    // Show dropdown or all options
+    return (
+      <div className={`flex gap-2 ${className}`}>
+        {allOptions.map((option) => (
+          <Button
+            key={option.platform}
+            onClick={() => window.open(option.url, "_blank")}
+            variant="secondary"
+            size="lg"
+            className="flex items-center gap-2"
+          >
+            {option.icon}
+            {option.platform}
+          </Button>
+        ))}
+      </div>
+    );
   }
 
   return (

@@ -934,7 +934,7 @@ const DuelRoom = () => {
                         <span className="sm:hidden">Fim</span>
                       </Button>
                       <NativeAppDownloadButton
-                        variant="button"
+                        variant="card"
                         className="bg-blue-600/95 hover:bg-blue-700 text-white backdrop-blur-sm text-xs sm:text-sm h-8 sm:h-9"
                       />
                     </>
