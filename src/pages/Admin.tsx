@@ -60,7 +60,7 @@ export default function Admin() {
         </div>
 
         <Tabs defaultValue="news" className="w-full">
-          <TabsList className="grid w-full grid-cols-9">
+          <TabsList className="grid w-full grid-cols-10">
             <TabsTrigger value="news">Notícias</TabsTrigger>
             <TabsTrigger value="ads">Anúncios</TabsTrigger>
             <TabsTrigger value="users">Usuários</TabsTrigger>
@@ -69,7 +69,8 @@ export default function Admin() {
             <TabsTrigger value="duelcoins">DuelCoins</TabsTrigger>
             <TabsTrigger value="judges">Juízes</TabsTrigger>
             <TabsTrigger value="plans">Planos</TabsTrigger>
-            <TabsTrigger value="settings">Configurações</TabsTrigger>
+            <TabsTrigger value="marketplace">Market</TabsTrigger>
+            <TabsTrigger value="settings">Config</TabsTrigger>
           </TabsList>
           
           <TabsContent value="news" className="mt-6">
