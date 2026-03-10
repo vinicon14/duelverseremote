@@ -64,8 +64,8 @@ export const useBrowserNotifications = () => {
       if (!subscription) {
         // Create new subscription
         subscription = await registration.pushManager.subscribe({
-          userVisuallyIndicatesPermission: true,
-          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as any,
         });
         console.log('✅ New push subscription created');
       }
