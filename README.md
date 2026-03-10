@@ -19,13 +19,13 @@
 - [Tecnologias](#tecnologias)
 - [Estrutura do Projeto](#estrutura-do-projeto)
 - [Como Executar](#como-executar)
-- [Variáveis de Ambiente](#variaveis-de-ambiente)
-- [Contribuição](#contribuicao)
-- [Licença](#licenca)
+- [Variáveis de Ambiente](#variáveis-de-ambiente)
+- [Contribuição](#contribuição)
+- [Licença](#licença)
 
 ---
 
-## Sobre o Projeto
+## 🎮 Sobre o Projeto
 
 DuelVerse é uma plataforma completa de duelos online de Yu-Gi-Oh! que permite duelistas de todo o Brasil (e do mundo) jogarem partidas em tempo real com videochamada, sistema de torneios, ranking, loja virtual e muito mais.
 
@@ -38,9 +38,9 @@ O projeto foi desenvolvido com foco em:
 
 ---
 
-## Funcionalidades
+## ✨ Funcionalidades
 
-### Duelos
+### 🗡️ Duelos
 - Criar e entrar em salas de duelo
 - Videochamada em tempo real (Daily.co)
 - Chat durante o duelo
@@ -49,53 +49,53 @@ O projeto foi desenvolvido com foco em:
 - Visualizador de deck do oponente
 - Timer sincronizado
 
-### Matchmaking
+### 🎯 Matchmaking
 - Busca automática de oponentes
 - Modos ranqueado e casual
 - Fila de espera em tempo real
 
-### Torneios
+### 🏆 Torneios
 - Torneios customizados (criação livre)
 - Torneios semanais com premiação em DuelCoins
 - Sistema de rodadas (Swiss)
 - Gerenciamento de participantes
 - Distribuição automática de premiações
 
-### Deck Builder
+### 🃏 Deck Builder
 - Busca de cartas Yu-Gi-Oh!
 - Criação e edição de decks
 - Reconhecimento de cartas por imagem (IA)
 - Deck público e privado
 
-### Social
+### 👥 Social
 - Lista de amigos
 - Solicitações de amizade
 - Chat privado com amigos
 - Chat global
 - Status online em tempo real
 
-### Sistema de Ranking
+### 🏅 Sistema de Ranking
 - Leaderboard de jogadores
 - Pontos por vitórias
 - Estatísticas detalhadas
 
-### DuelCoins
+### 💰 DuelCoins
 - Moeda virtual do plataforma
 - Transferência entre usuários
 - Compra de assinaturas Pro
 - Histórico de transações
 
-### Sistema de Juízes
+### 👨‍⚖️ Sistema de Juízes
 - Painel dejuíz para verificar chamadas
 - Registro de decisões
 
-### Administração
+### ⚙️ Administração
 - Gerenciamento de usuários
 - Criação/edição de notícias
 - Gerenciamento de anúncios
 - Configurações do sistema
 
-### Assinatura Pro
+### 💎 Assinatura Pro
 - Duelos exclusivos Pro
 - Torneios exclusivos
 - Remoção de anúncios
@@ -103,7 +103,7 @@ O projeto foi desenvolvido com foco em:
 
 ---
 
-## Tecnologias
+## 🛠️ Tecnologias
 
 ### Frontend
 - **React 18** - Framework principal
@@ -130,7 +130,7 @@ O projeto foi desenvolvido com foco em:
 
 ---
 
-## Estrutura do Projeto
+## 📁 Estrutura do Projeto
 
 ```
 duelverseremote/
@@ -158,7 +158,7 @@ duelverseremote/
 
 ---
 
-## Como Executar
+## 🚀 Como Executar
 
 ### Pré-requisitos
 - Node.js 18+
@@ -202,7 +202,7 @@ npm run preview
 
 ---
 
-## Variáveis de Ambiente
+## 🔐 Variáveis de Ambiente
 
 Crie um arquivo `.env` com as seguintes variáveis:
 
@@ -213,7 +213,7 @@ VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_anon_key
 
 ---
 
-## Contribuição
+## 🤝 Contribuição
 
 Contribuições são bem-vindas! Sinta-se livre para:
 
@@ -225,13 +225,13 @@ Contribuições são bem-vindas! Sinta-se livre para:
 
 ---
 
-## Licença
+## 📄 Licença
 
 Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
 
 ---
 
-## Contato
+## 📞 Contato
 
 Desenvolvido por **Vinícius**
 

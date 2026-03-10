@@ -9,8 +9,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Navbar } from "@/components/Navbar";
-import { NativeAppDownloadButton } from "@/components/NativeAppDownloadButton";
-import { Swords, Trophy, Users, Video, Zap, Shield, Download, Smartphone } from "lucide-react";
+import { Swords, Trophy, Users, Video, Zap, Shield } from "lucide-react";
 
 const Home = () => {
   return (
@@ -51,7 +50,6 @@ const Home = () => {
                   Ver Duelos
                 </Button>
               </Link>
-              <NativeAppDownloadButton variant="card" className="mt-4 sm:mt-0" />
             </div>
 
             <div className="grid grid-cols-3 gap-8 max-w-2xl mx-auto mt-12">
@@ -68,37 +66,6 @@ const Home = () => {
                 <div className="text-sm text-muted-foreground">Torneios</div>
               </div>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Native App Section */}
-      <section className="py-16 px-4 bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5">
-        <div className="container mx-auto">
-          <div className="max-w-4xl mx-auto">
-            <Card className="card-mystic p-8 text-center">
-              <div className="flex justify-center mb-6">
-                <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center">
-                  <Download className="w-10 h-10 text-primary" />
-                </div>
-              </div>
-              <h2 className="text-2xl md:text-3xl font-bold mb-4">
-                <span className="text-gradient-mystic">Baixe o App Nativo</span>
-              </h2>
-              <p className="text-muted-foreground mb-6 max-w-xl mx-auto">
-                Tenha uma experiência ainda melhor com o app nativo! 
-                Mais rápido, com notificações push e funciona offline.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                <NativeAppDownloadButton variant="button" className="btn-mystic text-white" />
-                <Link to="/install">
-                  <Button size="lg" variant="outline">
-                    <Smartphone className="mr-2 h-5 w-5" />
-                    Ver Instruções
-                  </Button>
-                </Link>
-              </div>
-            </Card>
           </div>
         </div>
       </section>
