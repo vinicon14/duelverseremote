@@ -173,7 +173,6 @@ export const useBrowserNotifications = () => {
         await registration.showNotification(title, {
           icon: '/favicon.png',
           badge: '/favicon.png',
-          vibrate: [200, 100, 200],
           ...options,
         });
         return;
