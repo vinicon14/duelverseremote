@@ -19,6 +19,7 @@ import { AdminDuels } from "@/components/admin/AdminDuels";
 import { AdminDuelCoins } from "@/components/admin/AdminDuelCoins";
 import { AdminJudges } from "@/components/admin/AdminJudges";
 import { AdminSubscriptionPlans } from "@/components/admin/AdminSubscriptionPlans";
+import { AdminMarketplace } from "@/components/admin/AdminMarketplace";
 import { Shield, Loader2 } from "lucide-react";
 
 export default function Admin() {
