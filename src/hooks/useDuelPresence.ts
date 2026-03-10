@@ -11,7 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 const HEARTBEAT_INTERVAL = 30000; // 30 seconds
 
 export const useDuelPresence = (duelId: string | undefined, userId: string | undefined, isParticipant: boolean) => {
-  const heartbeatInterval = useRef<NodeJS.Timeout | null>(null);
+  const heartbeatInterval = useRef<ReturnType<typeof setInterval> | null>(null);
   const isActive = useRef(true);
 
   const updatePresence = useCallback(async () => {
