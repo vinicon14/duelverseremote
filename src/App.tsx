@@ -48,6 +48,7 @@ import WeeklyTournaments from "./pages/WeeklyTournaments";
 import MyTournaments from "./pages/MyTournaments";
 import TournamentManager from "./pages/TournamentManager";
 import TransferHistory from "./pages/TransferHistory";
+import Marketplace from "./pages/Marketplace";
 
 const queryClient = new QueryClient();
 
