@@ -84,6 +84,7 @@ const RouterContent = () => {
       <Route path="/my-tournaments" element={<MyTournaments />} />
       <Route path="/tournament-manager" element={<TournamentManager />} />
       <Route path="/transfer-history" element={<TransferHistory />} />
+      <Route path="/marketplace" element={<Marketplace />} />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
     </Routes>

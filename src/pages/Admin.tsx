@@ -105,6 +105,10 @@ export default function Admin() {
             <AdminSubscriptionPlans />
           </TabsContent>
           
+          <TabsContent value="marketplace" className="mt-6">
+            <AdminMarketplace />
+          </TabsContent>
+
           <TabsContent value="settings" className="mt-6">
             <AdminSettings />
           </TabsContent>
