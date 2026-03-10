@@ -4,11 +4,9 @@
  * 
  * Gerencia permissões, Web Push subscriptions e notificações nativas.
  */
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-
-const VAPID_PUBLIC_KEY = 'BNS-k0J6Rn0gOeP8KjQ6FhPnN_zXFUBZPnOhWJpJeRzFJsBXbBMBl_Lx0hFNqJRH6CUQNCSB4GVfGhFJh9PGTY';
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - base64String.length % 4) % 4);
@@ -25,6 +23,7 @@ export const useBrowserNotifications = () => {
   const [isSupported, setIsSupported] = useState(false);
   const [hasPermission, setHasPermission] = useState(false);
   const [loading, setLoading] = useState(true);
+  const vapidKeyRef = useRef<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -40,13 +39,27 @@ export const useBrowserNotifications = () => {
     };
 
     checkSupport();
+
+    // Fetch VAPID public key
+    const fetchVapidKey = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('get-vapid-key');
+        if (!error && data?.vapid_public_key) {
+          vapidKeyRef.current = data.vapid_public_key;
+          console.log('✅ VAPID key fetched');
+        }
+      } catch (err) {
+        console.error('Failed to fetch VAPID key:', err);
+      }
+    };
+    fetchVapidKey();
   }, []);
 
   // Subscribe to web push and save to DB
   const subscribeToPush = useCallback(async () => {
     try {
       if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-        console.log('⚠️ Push not supported');
+        console.log('⚠️ Push not supported in this browser');
         return;
       }
 
@@ -56,18 +69,27 @@ export const useBrowserNotifications = () => {
         return;
       }
 
+      if (!vapidKeyRef.current) {
+        console.log('⚠️ VAPID key not available yet');
+        return;
+      }
+
       const registration = await navigator.serviceWorker.ready;
       
       // Check existing subscription
       let subscription = await registration.pushManager.getSubscription();
       
       if (!subscription) {
-        // Create new subscription
-        subscription = await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as any,
-        });
-        console.log('✅ New push subscription created');
+        try {
+          subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(vapidKeyRef.current) as any,
+          });
+          console.log('✅ New push subscription created');
+        } catch (subError) {
+          console.error('❌ Failed to subscribe to push:', subError);
+          return;
+        }
       }
 
       const subJson = subscription.toJSON();
@@ -75,43 +97,30 @@ export const useBrowserNotifications = () => {
       const p256dh = subJson.keys!.p256dh!;
       const auth = subJson.keys!.auth!;
 
-      // Upsert subscription in DB
+      // Try to save subscription - delete old ones first, then insert
+      await supabase
+        .from('push_subscriptions')
+        .delete()
+        .eq('user_id', session.user.id)
+        .eq('endpoint', endpoint);
+      
       const { error } = await supabase
         .from('push_subscriptions')
-        .upsert({
+        .insert({
           user_id: session.user.id,
           endpoint,
           p256dh,
           auth,
           user_agent: navigator.userAgent,
-          updated_at: new Date().toISOString(),
-        }, {
-          onConflict: 'endpoint',
         });
 
       if (error) {
-        // If upsert fails due to missing unique constraint, try delete + insert
-        console.log('Upsert failed, trying delete + insert:', error.message);
-        await supabase
-          .from('push_subscriptions')
-          .delete()
-          .eq('user_id', session.user.id)
-          .eq('endpoint', endpoint);
-        
-        await supabase
-          .from('push_subscriptions')
-          .insert({
-            user_id: session.user.id,
-            endpoint,
-            p256dh,
-            auth,
-            user_agent: navigator.userAgent,
-          });
+        console.error('❌ Error saving push subscription:', error);
+      } else {
+        console.log('✅ Push subscription saved to DB');
       }
-
-      console.log('✅ Push subscription saved to DB');
     } catch (error) {
-      console.error('❌ Error subscribing to push:', error);
+      console.error('❌ Error in subscribeToPush:', error);
     }
   }, []);
 
