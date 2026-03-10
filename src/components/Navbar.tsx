@@ -8,7 +8,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Swords, Trophy, User, LogOut, Menu, Users, Zap, Shield, Store, Newspaper, Coins, Scale, Video, Layers, BarChart3, Crown, Download } from "lucide-react";
+import { Swords, Trophy, User, LogOut, Menu, Users, Zap, Shield, Store, Newspaper, Coins, Scale, Video, Layers, BarChart3, Crown, Download, ShoppingBag } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/hooks/useAdmin";
@@ -137,6 +137,12 @@ export const Navbar = () => {
         <Button variant="ghost" className="text-foreground hover:text-primary">
           <Store className="mr-2 h-4 w-4" />
           Loja
+        </Button>
+      </Link>
+      <Link to="/marketplace">
+        <Button variant="ghost" className="text-foreground hover:text-primary">
+          <ShoppingBag className="mr-2 h-4 w-4" />
+          Marketplace
         </Button>
       </Link>
       <Link to="/install">
