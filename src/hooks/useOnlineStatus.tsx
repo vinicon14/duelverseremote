@@ -10,7 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 export const useOnlineStatus = () => {
   const channelRef = useRef<any>(null);
-  const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
+  const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     let isMounted = true;

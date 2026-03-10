@@ -96,7 +96,7 @@ export const useDuelPresence = (duelId: string | undefined, userId: string | und
 };
 
 export const useDuelCleanup = (duelId: string | undefined) => {
-  const cleanupInterval = useRef<NodeJS.Timeout | null>(null);
+  const cleanupInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     if (!duelId) return;
