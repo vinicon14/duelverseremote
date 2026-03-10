@@ -149,8 +149,40 @@ export function NativeAppDownloadButton({ variant = "button", className = "" }: 
   }
 
   // Button variant shows platform-specific download
+  // If no platform-specific URL, show card variant with all options
   if (!downloadUrl) {
-    return null;
+    const allOptions = getAllDownloadOptions();
+    if (allOptions.length === 0) {
+      return (
+        <Button
+          onClick={handleDownload}
+          variant="secondary"
+          size="lg"
+          className={className}
+          disabled
+        >
+          <Download className="mr-2 h-5 w-5" />
+          Em breve
+        </Button>
+      );
+    }
+    // Show dropdown or all options
+    return (
+      <div className={`flex gap-2 ${className}`}>
+        {allOptions.map((option) => (
+          <Button
+            key={option.platform}
+            onClick={() => window.open(option.url, "_blank")}
+            variant="secondary"
+            size="lg"
+            className="flex items-center gap-2"
+          >
+            {option.icon}
+            {option.platform}
+          </Button>
+        ))}
+      </div>
+    );
   }
 
   return (
