@@ -309,7 +309,12 @@ const Duels = () => {
                 </p>
               </div>
 
-              <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                <Button variant="outline" onClick={() => navigate('/install')} className="w-full sm:w-auto">
+                  <Download className="mr-2 h-4 w-4" />
+                  Baixar App
+                </Button>
+                <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
                 <DialogTrigger asChild>
                   <Button className="btn-mystic text-white w-full sm:w-auto">
                     <Plus className="mr-2 h-4 w-4" />
