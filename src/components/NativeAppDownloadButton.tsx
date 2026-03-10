@@ -87,27 +87,32 @@ export function NativeAppDownloadButton({ variant = "button", className = "" }: 
   const getAllDownloadOptions = () => {
     const options = [];
     
-    if (import.meta.env.VITE_ANDROID_APK_URL) {
+    // Use env vars or fallback to duelverse.site
+    const androidUrl = import.meta.env.VITE_ANDROID_APK_URL || "https://duelverse.site/downloads/duelverse-app.apk";
+    const iosUrl = import.meta.env.VITE_IOS_APP_URL || "";
+    const windowsUrl = import.meta.env.VITE_WINDOWS_EXE_URL || "https://duelverse.site/downloads/Duelverse.exe";
+    
+    if (androidUrl) {
       options.push({
         platform: "Android",
         icon: <Smartphone className="h-5 w-5" />,
-        url: import.meta.env.VITE_ANDROID_APK_URL,
+        url: androidUrl,
       });
     }
     
-    if (import.meta.env.VITE_IOS_APP_URL) {
+    if (iosUrl) {
       options.push({
         platform: "iOS",
         icon: <Apple className="h-5 w-5" />,
-        url: import.meta.env.VITE_IOS_APP_URL,
+        url: iosUrl,
       });
     }
     
-    if (import.meta.env.VITE_WINDOWS_EXE_URL) {
+    if (windowsUrl) {
       options.push({
         platform: "Windows",
         icon: <Monitor className="h-5 w-5" />,
-        url: import.meta.env.VITE_WINDOWS_EXE_URL,
+        url: windowsUrl,
       });
     }
     
