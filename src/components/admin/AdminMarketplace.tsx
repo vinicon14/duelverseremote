@@ -72,6 +72,7 @@ export const AdminMarketplace = () => {
   const openCreate = () => {
     setEditingId(null);
     setForm(emptyForm);
+    setImagePreview(null);
     setDialogOpen(true);
   };
 
