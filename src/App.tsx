@@ -49,6 +49,7 @@ import MyTournaments from "./pages/MyTournaments";
 import TournamentManager from "./pages/TournamentManager";
 import TransferHistory from "./pages/TransferHistory";
 import Marketplace from "./pages/Marketplace";
+import MyItems from "./pages/MyItems";
 
 const queryClient = new QueryClient();
 
@@ -85,6 +86,7 @@ const RouterContent = () => {
       <Route path="/tournament-manager" element={<TournamentManager />} />
       <Route path="/transfer-history" element={<TransferHistory />} />
       <Route path="/marketplace" element={<Marketplace />} />
+      <Route path="/my-items" element={<MyItems />} />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
     </Routes>
