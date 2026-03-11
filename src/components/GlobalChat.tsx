@@ -12,6 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Send, MessageCircle } from "lucide-react";
+import { toast } from "@/components/ui/use-toast";
 
 interface GlobalMessage {
   id: string;
@@ -59,6 +60,24 @@ export const GlobalChat = () => {
 
           setMessages(prev => [...prev, newMsg]);
           scrollToBottom();
+          
+          // Show notification for new message (only if not own message)
+          const { data: { user } } = await supabase.auth.getUser();
+          if (payload.new.user_id !== user?.id) {
+            // Show browser notification if permitted
+            if (Notification.permission === 'granted') {
+              new Notification(userData?.username || 'Anônimo', {
+                body: payload.new.message,
+                icon: userData?.avatar_url || undefined
+              });
+            }
+            // Also show in-app toast notification
+            toast({
+              title: userData?.username || 'Anônimo',
+              description: payload.new.message,
+              duration: 3000,
+            });
+          }
         }
       )
       .subscribe();

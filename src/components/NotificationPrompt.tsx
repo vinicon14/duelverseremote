@@ -27,12 +27,25 @@ export const NotificationPrompt = () => {
       setIsAuthenticated(!!session);
     });
 
-    // Check if app is already installed
-    if (window.matchMedia("(display-mode: standalone)").matches) {
-      setIsInstalled(true);
-    }
+    // Check if app is already installed (multiple methods)
+    const checkInstalled = () => {
+      const isStandalone = window.matchMedia("(display-mode: standalone)").matches;
+      const isInStandaloneMode = (window.navigator as any).standalone === true;
+      const hasInstalledFlag = localStorage.getItem('app-installed') === 'true';
+      
+      if (isStandalone || isInStandaloneMode || hasInstalledFlag) {
+        setIsInstalled(true);
+      }
+    };
 
-    return () => subscription.unsubscribe();
+    checkInstalled();
+
+    // Listen for standalone mode changes
+    window.matchMedia("(display-mode: standalone)").addEventListener('change', checkInstalled);
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -72,6 +85,9 @@ export const NotificationPrompt = () => {
   };
 
   const handleInstall = () => {
+    // Mark as installed in localStorage
+    localStorage.setItem('app-installed', 'true');
+    setIsInstalled(true);
     navigate('/install');
     handleDismiss();
   };
