@@ -41,6 +41,7 @@ const categoryLabels: Record<string, { label: string; icon: React.ReactNode; col
 };
 
 export default function Marketplace() {
+  const navigate = useNavigate();
   const [products, setProducts] = useState<MarketplaceProduct[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
