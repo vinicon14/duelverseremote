@@ -3,7 +3,6 @@
  * Desenvolvido por Vinícius
  * 
  * Verifica se o usuário atual é um administrador.
- * Usa função RPC para bypassar políticas RLS.
  */
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -17,15 +16,14 @@ export const useAdmin = () => {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session?.user) {
-        // Usa função RPC para verificar admin (bypass RLS)
-        const { data, error } = await supabase.rpc('check_is_admin');
+        const { data } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', session.user.id)
+          .eq('role', 'admin')
+          .maybeSingle();
         
-        if (error) {
-          console.error('Erro ao verificar admin:', error);
-          setIsAdmin(false);
-        } else {
-          setIsAdmin(!!data);
-        }
+        setIsAdmin(!!data);
       } else {
         setIsAdmin(false);
       }

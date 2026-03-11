@@ -507,21 +507,28 @@ export default function Marketplace() {
 
     setCreatingProduct(true);
     try {
-      // use RPC for product creation so policies are respected
-      const { data: rpcData, error: rpcError } = await supabase.rpc('create_marketplace_product', {
-        p_name: newProduct.name,
-        p_description: newProduct.description,
-        p_price_duelcoins: newProduct.price_duelcoins,
-        p_category: newProduct.category,
-        p_product_type: newProduct.product_type,
-        p_stock: newProduct.stock,
-        p_image_url: newProduct.image_url || ''
-      });
+      // Insert product directly
+      const { data, error } = await supabase
+        .from('marketplace_products')
+        .insert({
+          name: newProduct.name,
+          description: newProduct.description,
+          price_duelcoins: newProduct.price_duelcoins,
+          category: newProduct.category,
+          product_type: newProduct.product_type,
+          stock: newProduct.stock,
+          image_url: newProduct.image_url || null,
+          seller_id: user?.id,
+          is_third_party_seller: true,
+          is_active: true,
+        })
+        .select()
+        .single();
 
-      if (rpcError) throw rpcError;
+      if (error) throw error;
 
-      if (rpcData && rpcData.success) {
-        toast({ title: "Sucesso! ✅", description: rpcData.message || "Produto criado com sucesso!" });
+      if (data) {
+        toast({ title: "Sucesso! ✅", description: "Produto criado com sucesso!" });
         setCreateProductDialogOpen(false);
         setNewProduct({
           name: "",
@@ -535,8 +542,6 @@ export default function Marketplace() {
         setImagePreview(null);
         fetchMyProducts();
         fetchProducts();
-      } else if (rpcData && !rpcData.success) {
-        throw new Error(rpcData.message || "Falha ao criar produto");
       }
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
