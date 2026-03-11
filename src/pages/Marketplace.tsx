@@ -237,25 +237,83 @@ export default function Marketplace() {
     }
     setPurchasing(true);
     try {
-      const items = [{ product_id: product.id, quantity: 1 }];
-      const { data, error } = await supabase.rpc("purchase_marketplace_items", {
-        p_items: items as any,
-      });
-      if (error) throw error;
-      const result = data as any;
-      if (result.success) {
-        toast({ 
-          title: "Compra realizada! ✅", 
-          description: `Você comprou ${product.name}! Verifique suas notificações.`,
-          duration: 5000
-        });
-        setPurchaseSuccess(true);
-        setTimeout(() => setPurchaseSuccess(false), 2000);
-        fetchUser();
-        fetchProducts();
-      } else {
-        toast({ title: "Erro", description: result.message, variant: "destructive" });
+      // Check balance first
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('duelcoins_balance')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!profile || profile.duelcoins_balance < product.price_duelcoins) {
+        toast({ title: "Saldo insuficiente", description: "Você não tem DuelCoins suficientes", variant: "destructive" });
+        setPurchasing(false);
+        return;
       }
+
+      // Deduct balance
+      await supabase
+        .from('profiles')
+        .update({ duelcoins_balance: profile.duelcoins_balance - product.price_duelcoins })
+        .eq('user_id', user.id);
+
+      // Record transaction
+      await supabase
+        .from('duelcoins_transactions')
+        .insert({
+          sender_id: user.id,
+          amount: product.price_duelcoins,
+          transaction_type: 'marketplace_purchase',
+          description: `Compra: ${product.name}`
+        });
+
+      // Add to inventory
+      await supabase
+        .from('user_inventory' as any)
+        .insert({
+          user_id: user.id,
+          product_id: product.id,
+          quantity: 1,
+          is_used: false
+        });
+
+      // Record purchase
+      await supabase
+        .from('marketplace_purchases' as any)
+        .insert({
+          user_id: user.id,
+          product_id: product.id,
+          quantity: 1,
+          total_price: product.price_duelcoins,
+          status: 'completed'
+        });
+
+      // Notify seller/admin about the purchase
+      const { data: sellerData } = await supabase
+        .from('profiles')
+        .select('user_id, username')
+        .eq('user_id', user.id)
+        .single();
+
+      // Create notification for admin
+      await supabase
+        .from('notifications' as any)
+        .insert({
+          user_id: user.id, // This will be filtered by admin query
+          type: 'marketplace_purchase',
+          title: 'Nova Compra!',
+          message: `${sellerData?.username || 'Um usuário'} comprou ${product.name} por ${product.price_duelcoins} DuelCoins`,
+          is_read: false
+        });
+
+      toast({ 
+        title: "Compra realizada! ✅", 
+        description: `Você comprou ${product.name}! Verifique em Meus Itens.`,
+        duration: 5000
+      });
+      setPurchaseSuccess(true);
+      setTimeout(() => setPurchaseSuccess(false), 2000);
+      fetchUser();
+      fetchProducts();
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
     } finally {
@@ -272,29 +330,82 @@ export default function Marketplace() {
 
     setPurchasing(true);
     try {
-      const items = cart.map(item => ({
-        product_id: item.product.id,
-        quantity: item.quantity,
-      }));
-      const { data, error } = await supabase.rpc("purchase_marketplace_items", {
-        p_items: items as any,
-      });
-      if (error) throw error;
-      const result = data as any;
-      if (result.success) {
-        toast({ 
-          title: "Compra realizada! ✅", 
-          description: `Total: ${result.total} DuelCoins! Verifique suas notificações.`,
-          duration: 5000
-        });
-        setCart([]);
-        setPurchaseSuccess(true);
-        setTimeout(() => setPurchaseSuccess(false), 2000);
-        fetchUser();
-        fetchProducts();
-      } else {
-        toast({ title: "Erro", description: result.message, variant: "destructive" });
+      const total = cart.reduce((sum, item) => sum + item.product.price_duelcoins * item.quantity, 0);
+
+      // Check balance first
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('duelcoins_balance')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!profile || profile.duelcoins_balance < total) {
+        toast({ title: "Saldo insuficiente", description: "Você não tem DuelCoins suficientes", variant: "destructive" });
+        setPurchasing(false);
+        return;
       }
+
+      // Deduct balance
+      await supabase
+        .from('profiles')
+        .update({ duelcoins_balance: profile.duelcoins_balance - total })
+        .eq('user_id', user.id);
+
+      // Record transaction
+      await supabase
+        .from('duelcoins_transactions')
+        .insert({
+          sender_id: user.id,
+          amount: total,
+          transaction_type: 'marketplace_purchase',
+          description: `Compra no carrinho: ${cart.length} itens`
+        });
+
+      // Process each item
+      for (const item of cart) {
+        // Add to inventory
+        await supabase
+          .from('user_inventory' as any)
+          .insert({
+            user_id: user.id,
+            product_id: item.product.id,
+            quantity: item.quantity,
+            is_used: false
+          });
+
+        // Record purchase
+        await supabase
+          .from('marketplace_purchases' as any)
+          .insert({
+            user_id: user.id,
+            product_id: item.product.id,
+            quantity: item.quantity,
+            total_price: item.product.price_duelcoins * item.quantity,
+            status: 'completed'
+          });
+      }
+
+      // Notify about the purchase
+      await supabase
+        .from('notifications' as any)
+        .insert({
+          user_id: user.id,
+          type: 'marketplace_purchase',
+          title: 'Nova Compra no Carrinho!',
+          message: `Você comprou ${cart.length} itens por ${total} DuelCoins`,
+          is_read: false
+        });
+
+      toast({ 
+        title: "Compra realizada! ✅", 
+        description: `Total: ${total} DuelCoins! Verifique em Meus Itens.`,
+        duration: 5000
+      });
+      setCart([]);
+      setPurchaseSuccess(true);
+      setTimeout(() => setPurchaseSuccess(false), 2000);
+      fetchUser();
+      fetchProducts();
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
     } finally {
