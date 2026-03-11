@@ -282,7 +282,7 @@ export default function Marketplace() {
         });
 
       // Add to inventory
-      await supabase
+      const { error: inventoryError } = await supabase
         .from('user_inventory')
         .insert({
           user_id: user.id,
@@ -291,8 +291,13 @@ export default function Marketplace() {
           is_used: false
         });
 
+      if (inventoryError) {
+        console.error('Inventory error:', inventoryError);
+        throw new Error(`Erro ao adicionar ao inventário: ${inventoryError.message}`);
+      }
+
       // Record purchase
-      await supabase
+      const { error: purchaseError } = await supabase
         .from('marketplace_purchases')
         .insert({
           user_id: user.id,
@@ -301,6 +306,11 @@ export default function Marketplace() {
           total_price: product.price_duelcoins,
           status: 'completed'
         });
+
+      if (purchaseError) {
+        console.error('Purchase error:', purchaseError);
+        throw new Error(`Erro ao registrar compra: ${purchaseError.message}`);
+      }
 
       // Get buyer username
       const { data: buyerData } = await supabase
@@ -406,7 +416,7 @@ export default function Marketplace() {
       // Process each item
       for (const item of cart) {
         // Add to inventory
-        await supabase
+        const { error: inventoryError } = await supabase
           .from('user_inventory')
           .insert({
             user_id: user.id,
@@ -415,8 +425,13 @@ export default function Marketplace() {
             is_used: false
           });
 
+        if (inventoryError) {
+          console.error('Inventory error:', inventoryError);
+          throw new Error(`Erro ao adicionar ${item.product.name} ao inventário: ${inventoryError.message}`);
+        }
+
         // Record purchase
-        await supabase
+        const { error: purchaseError } = await supabase
           .from('marketplace_purchases')
           .insert({
             user_id: user.id,
@@ -425,6 +440,11 @@ export default function Marketplace() {
             total_price: item.product.price_duelcoins * item.quantity,
             status: 'completed'
           });
+
+        if (purchaseError) {
+          console.error('Purchase error:', purchaseError);
+          throw new Error(`Erro ao registrar compra de ${item.product.name}: ${purchaseError.message}`);
+        }
       }
 
       // Notify about the purchase
