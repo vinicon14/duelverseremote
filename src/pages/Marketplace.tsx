@@ -69,6 +69,68 @@ export default function Marketplace() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({ title: 'Erro', description: 'Por favor, selecione uma imagem', variant: 'destructive' });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: 'Erro', description: 'A imagem deve ter no máximo 5MB', variant: 'destructive' });
+      return;
+    }
+
+    setUploadingImage(true);
+    try {
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setImagePreview(event.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+
+      // Upload to Supabase Storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
+      const filePath = `marketplace/${user?.id || 'public'}/${fileName}`;
+
+      const { data, error } = await supabase.storage
+        .from('marketplace-images')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (error) throw error;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('marketplace-images')
+        .getPublicUrl(filePath);
+
+      setNewProduct({ ...newProduct, image_url: publicUrl });
+      toast({ title: 'Sucesso', description: 'Imagem carregada com sucesso!' });
+    } catch (err: any) {
+      console.error('Upload error:', err);
+      toast({ title: 'Erro', description: 'Falha ao carregar imagem: ' + err.message, variant: 'destructive' });
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const clearImage = () => {
+    setImagePreview(null);
+    setNewProduct({ ...newProduct, image_url: '' });
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
   const [newProduct, setNewProduct] = useState({
     name: "",
     description: "",
