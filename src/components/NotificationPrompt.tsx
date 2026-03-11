@@ -39,10 +39,10 @@ export const NotificationPrompt = () => {
     // - User doesn't have permission
     // - User hasn't been prompted before
     if (isSupported && isAuthenticated && !hasPermission && !hasBeenPrompted && !loading) {
-      // Show prompt after 5 seconds
+      // Show prompt after 2 seconds (faster)
       const timer = setTimeout(() => {
         setShowPrompt(true);
-      }, 5000);
+      }, 2000);
 
       return () => clearTimeout(timer);
     }
