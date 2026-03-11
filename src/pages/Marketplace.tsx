@@ -187,7 +187,19 @@ export default function Marketplace() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-8 pt-24">
+        {/* Tab Navigation */}
+        <div className="flex gap-2 mb-6">
+          <Button variant="outline" onClick={() => navigate('/store')}>
+            <StoreIcon className="w-4 h-4 mr-2" />
+            Planos Pro
+          </Button>
+          <Button className="btn-mystic">
+            <ShoppingBag className="w-4 h-4 mr-2" />
+            Marketplace
+          </Button>
+        </div>
+
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
