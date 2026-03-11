@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 export const NotificationPrompt = () => {
   const [showPrompt, setShowPrompt] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isInstalled, setIsInstalled] = useState(false);
   const { isSupported, hasPermission, loading, requestPermission } = useBrowserNotifications();
   const navigate = useNavigate();
 
@@ -26,12 +27,21 @@ export const NotificationPrompt = () => {
       setIsAuthenticated(!!session);
     });
 
+    // Check if app is already installed
+    if (window.matchMedia("(display-mode: standalone)").matches) {
+      setIsInstalled(true);
+    }
+
     return () => subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
     // Check if user has already been prompted
     const hasBeenPrompted = localStorage.getItem('notification-prompted');
+    
+    // Check if app is already installed
+    const installed = window.matchMedia("(display-mode: standalone)").matches;
+    setIsInstalled(installed);
     
     // Show prompt if:
     // - Notifications are supported
@@ -87,16 +97,20 @@ export const NotificationPrompt = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           <CardDescription>
-            Receba notificações mesmo com o app fechado! Instale o Duelverse na sua tela inicial.
+            {isInstalled 
+              ? "Receba notificações mesmo com o app fechado!" 
+              : "Receba notificações mesmo com o app fechado! Instale o Duelverse na sua tela inicial."}
           </CardDescription>
           <div className="flex flex-col gap-2">
-            <Button onClick={handleInstall} className="w-full">
-              <Download className="mr-2 h-4 w-4" />
-              Instalar App
-            </Button>
+            {!isInstalled && (
+              <Button onClick={handleInstall} className="w-full">
+                <Download className="mr-2 h-4 w-4" />
+                Instalar App
+              </Button>
+            )}
             <div className="flex gap-2">
               <Button onClick={handleSubscribe} variant="outline" className="flex-1">
-                Só notificações
+                {isInstalled ? "Ativar Notificações" : "Só notificações"}
               </Button>
               <Button variant="ghost" onClick={handleDismiss} size="sm">
                 Depois
