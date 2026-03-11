@@ -160,25 +160,27 @@ export default function Marketplace() {
   };
 
   const fetchProducts = async () => {
-    // Fetch official products (is_third_party_seller = false or NULL means official)
-    const { data: officialData, error: officialError } = await (supabase
+    // Fetch all active products
+    const { data: allData, error: allError } = await (supabase
       .from("marketplace_products")
       .select("*")
       .eq("is_active", true)
-      .or("is_third_party_seller.is.null,is_third_party_seller.eq.false")
       .order("created_at", { ascending: false }) as any);
 
-    // Fetch third-party products
-    const { data: thirdPartyData, error: thirdPartyError } = await (supabase
-      .from("marketplace_products")
-      .select("*")
-      .eq("is_active", true)
-      .eq("is_third_party_seller", true)
-      .order("created_at", { ascending: false }) as any);
+    if (allError) {
+      console.error('Error fetching products:', allError);
+      toast({ title: 'Erro', description: 'Falha ao carregar produtos', variant: 'destructive' });
+      return;
+    }
 
-    if (!officialError && officialData) setProducts(officialData);
-    if (!thirdPartyError && thirdPartyData) setThirdPartyProducts(thirdPartyData);
-    
+    if (allData) {
+      // Split into official and third-party
+      const official = allData.filter((p: any) => !p.is_third_party_seller);
+      const thirdParty = allData.filter((p: any) => p.is_third_party_seller);
+      setProducts(official);
+      setThirdPartyProducts(thirdParty);
+    }
+
     setLoading(false);
   };
 
