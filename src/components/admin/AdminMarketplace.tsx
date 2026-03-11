@@ -148,6 +148,45 @@ export const AdminMarketplace = () => {
             message: message,
             is_read: false,
           });
+
+        // Also notify admin about status change
+        const { data: admins } = await supabase
+          .from('user_roles')
+          .select('user_id')
+          .eq('role', 'admin');
+
+        if (admins && admins.length > 0) {
+          const adminNotifications = admins.map((admin) => ({
+            user_id: admin.user_id,
+            type: 'order_status_admin',
+            title: `Pedido ${newStatus === 'delivered' ? 'Entregue' : newStatus === 'cancelled' ? 'Cancelado' : 'Atualizado'} 📦`,
+            message: `Pedido de ${purchase.username}: ${purchase.product_name} - Status: ${ORDER_STATUSES.find(s => s.value === newStatus)?.label || newStatus}`,
+            is_read: false,
+          }));
+
+          await supabase
+            .from('notifications')
+            .insert(adminNotifications);
+        }
+
+        // Delete notification for admin when order is cancelled or delivered
+        if (newStatus === 'cancelled' || newStatus === 'delivered') {
+          // Find and delete the original purchase notification for admins
+          const { data: existingNotifications } = await supabase
+            .from('notifications')
+            .select('id, type, message')
+            .eq('type', 'marketplace_purchase')
+            .ilike('message', `%${purchase.product_name}%`)
+            .eq('is_read', false);
+
+          if (existingNotifications && existingNotifications.length > 0) {
+            const notificationIds = existingNotifications.map(n => n.id);
+            await supabase
+              .from('notifications')
+              .delete()
+              .in('id', notificationIds);
+          }
+        }
       }
 
       toast({ title: 'Status atualizado! ✅' });

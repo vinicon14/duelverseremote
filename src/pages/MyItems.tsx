@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Package, Gift, Send, Zap, Loader2, History, ShoppingCart, Clock, Truck, CheckCircle, X, Coins } from "lucide-react";
+import { Package, Gift, Send, Zap, Loader2, History, ShoppingCart, Clock, Truck, CheckCircle, X, Coins, Sparkles } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface ProductInfo {
@@ -71,6 +71,10 @@ export default function MyItems() {
   const [transferring, setTransferring] = useState(false);
   const [usingItem, setUsingItem] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showCosmeticDescription, setShowCosmeticDescription] = useState(false);
+  const [cosmeticDescription, setCosmeticDescription] = useState<string>("");
+  const [cosmeticItemName, setCosmeticItemName] = useState<string>("");
+  const [pendingCosmeticItem, setPendingCosmeticItem] = useState<InventoryItem | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -190,6 +194,24 @@ export default function MyItems() {
   };
 
   const handleUseItem = async (item: InventoryItem) => {
+    // Check if it's a cosmetic item with description
+    const isCosmetic = item.product?.category === 'cosmetic';
+    const hasDescription = item.product?.description && item.product.description.trim().length > 0;
+    
+    if (isCosmetic && hasDescription) {
+      // Show the description first before marking as used
+      setCosmeticDescription(item.product.description);
+      setCosmeticItemName(item.product.name || 'Item Cosmético');
+      setPendingCosmeticItem(item);
+      setShowCosmeticDescription(true);
+      return;
+    }
+    
+    // For non-cosmetic items, mark as used directly
+    await processUseItem(item);
+  };
+
+  const processUseItem = async (item: InventoryItem) => {
     setUsingItem(true);
     try {
       const { data, error } = await supabase.rpc("use_inventory_item", {
@@ -212,6 +234,14 @@ export default function MyItems() {
       toast({ title: "Erro", description: errorMessage, variant: "destructive" });
     } finally {
       setUsingItem(false);
+    }
+  };
+
+  const handleConfirmCosmeticUse = async () => {
+    setShowCosmeticDescription(false);
+    if (pendingCosmeticItem) {
+      await processUseItem(pendingCosmeticItem);
+      setPendingCosmeticItem(null);
     }
   };
 
@@ -507,6 +537,42 @@ export default function MyItems() {
                   <Send className="w-4 h-4 mr-2" />
                 )}
                 Transferir
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Cosmetic Item Description Dialog */}
+        <Dialog open={showCosmeticDescription} onOpenChange={setShowCosmeticDescription}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-accent" />
+                {cosmeticItemName}
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="py-4">
+              <div className="bg-muted p-4 rounded-lg">
+                <div 
+                  className="prose prose-invert max-w-none text-sm"
+                  dangerouslySetInnerHTML={{ __html: cosmeticDescription }}
+                />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button 
+                className="btn-mystic w-full" 
+                onClick={handleConfirmCosmeticUse}
+                disabled={usingItem}
+              >
+                {usingItem ? (
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                ) : (
+                  <Zap className="w-4 h-4 mr-2" />
+                )}
+                Confirmar Uso
               </Button>
             </DialogFooter>
           </DialogContent>
