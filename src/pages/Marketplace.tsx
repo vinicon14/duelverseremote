@@ -765,13 +765,58 @@ export default function Marketplace() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="image">URL da Imagem</Label>
-                <Input
-                  id="image"
-                  placeholder="https://..."
-                  value={newProduct.image_url}
-                  onChange={(e) => setNewProduct({ ...newProduct, image_url: e.target.value })}
-                />
+                <Label>Imagem do Produto</Label>
+                <div className="flex gap-2 items-start">
+                  <div className="flex-1">
+                    <Input
+                      id="image"
+                      type="file"
+                      accept="image/*"
+                      ref={fileInputRef}
+                      onChange={handleImageChange}
+                      className="hidden"
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploadingImage}
+                      >
+                        {uploadingImage ? (
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        ) : (
+                          <Upload className="w-4 h-4 mr-2" />
+                        )}
+                        {imagePreview ? 'Trocar Imagem' : 'Upload Imagem'}
+                      </Button>
+                      {imagePreview && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={clearImage}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Ou insira uma URL:
+                    </p>
+                    <Input
+                      placeholder="https://..."
+                      value={newProduct.image_url}
+                      onChange={(e) => setNewProduct({ ...newProduct, image_url: e.target.value })}
+                      className="mt-1"
+                    />
+                  </div>
+                  {imagePreview && (
+                    <div className="w-20 h-20 rounded-lg overflow-hidden border">
+                      <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
