@@ -6,12 +6,13 @@
  * Usuários podem comprar Premium com DuelCoins.
  */
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Store as StoreIcon, ExternalLink, Crown, Loader2, Coins, Check, Clock } from "lucide-react";
+import { Store as StoreIcon, ExternalLink, Crown, Loader2, Coins, Check, Clock, ShoppingBag } from "lucide-react";
 
 interface SubscriptionPlan {
   id: string;
@@ -33,6 +34,7 @@ interface ActiveSubscription {
 }
 
 export default function Store() {
+  const navigate = useNavigate();
   const [storeUrl, setStoreUrl] = useState("");
   const [supportEmail, setSupportEmail] = useState("");
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
@@ -223,10 +225,22 @@ export default function Store() {
       
       <main className="container mx-auto px-4 py-8 pt-24">
         <div className="max-w-6xl mx-auto space-y-8">
+          {/* Tab Navigation */}
+          <div className="flex gap-2">
+            <Button className="btn-mystic">
+              <StoreIcon className="w-4 h-4 mr-2" />
+              Planos Pro
+            </Button>
+            <Button variant="outline" onClick={() => navigate('/marketplace')}>
+              <ShoppingBag className="w-4 h-4 mr-2" />
+              Marketplace
+            </Button>
+          </div>
+
           {/* Header */}
           <div className="text-center space-y-4">
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-r from-primary to-primary/70 mb-4">
-              <StoreIcon className="w-10 h-10 text-white" />
+              <StoreIcon className="w-10 h-10 text-primary-foreground" />
             </div>
             <h1 className="text-4xl font-bold gradient-text">Loja Duelverse</h1>
             <p className="text-xl text-muted-foreground">Acesse nossa loja oficial e descubra todas as opções disponíveis</p>

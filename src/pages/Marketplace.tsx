@@ -5,13 +5,14 @@
  * Marketplace para compra de itens digitais e serviços com DuelCoins.
  */
 import { useEffect, useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { ShoppingCart, Coins, Package, Sparkles, Zap, Minus, Plus, X, Loader2, ShoppingBag, Check } from "lucide-react";
+import { ShoppingCart, Coins, Package, Sparkles, Zap, Minus, Plus, X, Loader2, ShoppingBag, Check, Store as StoreIcon } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -40,6 +41,7 @@ const categoryLabels: Record<string, { label: string; icon: React.ReactNode; col
 };
 
 export default function Marketplace() {
+  const navigate = useNavigate();
   const [products, setProducts] = useState<MarketplaceProduct[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -185,7 +187,19 @@ export default function Marketplace() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-8 pt-24">
+        {/* Tab Navigation */}
+        <div className="flex gap-2 mb-6">
+          <Button variant="outline" onClick={() => navigate('/store')}>
+            <StoreIcon className="w-4 h-4 mr-2" />
+            Planos Pro
+          </Button>
+          <Button className="btn-mystic">
+            <ShoppingBag className="w-4 h-4 mr-2" />
+            Marketplace
+          </Button>
+        </div>
+
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
