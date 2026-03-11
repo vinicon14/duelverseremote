@@ -1,8 +1,9 @@
 /**
  * DuelVerse - Marketplace
- * Desenvolvido por Vinícius
+ * Desenvolvido by Vinícius
  * 
  * Marketplace para compra de itens digitais e serviços com DuelCoins.
+ * Inclui aba de Anunciantes Terceiros para usuários PRO.
  */
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
@@ -10,12 +11,19 @@ import { Navbar } from "@/components/Navbar";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { useAccountType } from "@/hooks/useAccountType";
 import { supabase } from "@/integrations/supabase/client";
-import { ShoppingCart, Coins, Package, Sparkles, Zap, Minus, Plus, X, Loader2, ShoppingBag, Check, Store as StoreIcon } from "lucide-react";
+import { ShoppingCart, Coins, Package, Sparkles, Zap, Minus, Plus, X, Loader2, ShoppingBag, Check, Store as StoreIcon, PlusCircle, Tag, Crown } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface MarketplaceProduct {
   id: string;
@@ -27,6 +35,8 @@ interface MarketplaceProduct {
   product_type: string;
   stock: number | null;
   is_active: boolean;
+  seller_id: string | null;
+  is_third_party_seller: boolean;
 }
 
 interface CartItem {
@@ -43,6 +53,8 @@ const categoryLabels: Record<string, { label: string; icon: React.ReactNode; col
 export default function Marketplace() {
   const navigate = useNavigate();
   const [products, setProducts] = useState<MarketplaceProduct[]>([]);
+  const [thirdPartyProducts, setThirdPartyProducts] = useState<MarketplaceProduct[]>([]);
+  const [myProducts, setMyProducts] = useState<MarketplaceProduct[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
@@ -51,6 +63,18 @@ export default function Marketplace() {
   const [purchaseSuccess, setPurchaseSuccess] = useState(false);
   const [filter, setFilter] = useState<string>("all");
   const { toast } = useToast();
+  const { isPro } = useAccountType();
+  const [createProductDialogOpen, setCreateProductDialogOpen] = useState(false);
+  const [creatingProduct, setCreatingProduct] = useState(false);
+  const [newProduct, setNewProduct] = useState({
+    name: "",
+    description: "",
+    price_duelcoins: 0,
+    category: "digital_item",
+    product_type: "one_time",
+    stock: null as number | null,
+    image_url: "",
+  });
 
   useEffect(() => {
     fetchProducts();
@@ -71,14 +95,37 @@ export default function Marketplace() {
   };
 
   const fetchProducts = async () => {
-    const { data, error } = await supabase
+    // Fetch official products
+    const { data: officialData, error: officialError } = await (supabase
       .from("marketplace_products")
       .select("*")
       .eq("is_active", true)
-      .order("created_at", { ascending: false });
+      .eq("is_third_party_seller", false)
+      .order("created_at", { ascending: false }) as any);
 
-    if (!error && data) setProducts(data);
+    // Fetch third-party products
+    const { data: thirdPartyData, error: thirdPartyError } = await (supabase
+      .from("marketplace_products")
+      .select("*")
+      .eq("is_active", true)
+      .eq("is_third_party_seller", true)
+      .order("created_at", { ascending: false }) as any);
+
+    if (!officialError && officialData) setProducts(officialData);
+    if (!thirdPartyError && thirdPartyData) setThirdPartyProducts(thirdPartyData);
+    
     setLoading(false);
+  };
+
+  const fetchMyProducts = async () => {
+    if (!user) return;
+    const { data, error } = await (supabase
+        .from("marketplace_products")
+        .select("*")
+        .eq("seller_id", user.id)
+        .order("created_at", { ascending: false }) as any);
+
+    if (!error && data) setMyProducts(data);
   };
 
   const addToCart = useCallback((product: MarketplaceProduct) => {
@@ -130,7 +177,11 @@ export default function Marketplace() {
       if (error) throw error;
       const result = data as any;
       if (result.success) {
-        toast({ title: "Compra realizada! ✅", description: result.message });
+        toast({ 
+          title: "Compra realizada! ✅", 
+          description: `Você comprou ${product.name}! Verifique suas notificações.`,
+          duration: 5000
+        });
         setPurchaseSuccess(true);
         setTimeout(() => setPurchaseSuccess(false), 2000);
         fetchUser();
@@ -164,7 +215,11 @@ export default function Marketplace() {
       if (error) throw error;
       const result = data as any;
       if (result.success) {
-        toast({ title: "Compra realizada! ✅", description: `Total: ${result.total} DuelCoins` });
+        toast({ 
+          title: "Compra realizada! ✅", 
+          description: `Total: ${result.total} DuelCoins! Verifique suas notificações.`,
+          duration: 5000
+        });
         setCart([]);
         setPurchaseSuccess(true);
         setTimeout(() => setPurchaseSuccess(false), 2000);
@@ -180,7 +235,69 @@ export default function Marketplace() {
     }
   };
 
-  const filteredProducts = filter === "all" ? products : products.filter(p => p.category === filter);
+  const handleCreateProduct = async () => {
+    if (!isPro) {
+      toast({ title: "Apenas PRO", description: "Apenas usuários PRO podem criar produtos para venda", variant: "destructive" });
+      return;
+    }
+
+    if (!newProduct.name || newProduct.price_duelcoins <= 0) {
+      toast({ title: "Erro", description: "Nome e preço são obrigatórios", variant: "destructive" });
+      return;
+    }
+
+    setCreatingProduct(true);
+    try {
+      const { data, error } = await (supabase.rpc("create_marketplace_product" as any, {
+        p_name: newProduct.name,
+        p_description: newProduct.description,
+        p_price_duelcoins: newProduct.price_duelcoins,
+        p_category: newProduct.category,
+        p_product_type: newProduct.product_type,
+        p_stock: newProduct.stock,
+        p_image_url: newProduct.image_url || null,
+      }) as any);
+
+      if (error) throw error;
+      const result = data as any;
+
+      if (result.success) {
+        toast({ title: "Sucesso! ✅", description: result.message });
+        setCreateProductDialogOpen(false);
+        setNewProduct({
+          name: "",
+          description: "",
+          price_duelcoins: 0,
+          category: "digital_item",
+          product_type: "one_time",
+          stock: null,
+          image_url: "",
+        });
+        fetchMyProducts();
+        fetchProducts();
+      } else {
+        toast({ title: "Erro", description: result.message, variant: "destructive" });
+      }
+    } catch (err: any) {
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    } finally {
+      setCreatingProduct(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isPro && user) {
+      fetchMyProducts();
+    }
+  }, [isPro, user]);
+
+  const filteredProducts = filter === "all" 
+    ? products 
+    : products.filter(p => p.category === filter);
+
+  const filteredThirdParty = filter === "all"
+    ? thirdPartyProducts
+    : thirdPartyProducts.filter(p => p.category === filter);
 
   const categories = ["all", ...Array.from(new Set(products.map(p => p.category)))];
 
@@ -189,7 +306,7 @@ export default function Marketplace() {
       <Navbar />
       <main className="container mx-auto px-4 py-8 pt-24">
         {/* Tab Navigation */}
-        <div className="flex gap-2 mb-6">
+        <div className="flex gap-2 mb-6 flex-wrap">
           <Button variant="outline" onClick={() => navigate('/store')}>
             <StoreIcon className="w-4 h-4 mr-2" />
             Planos Pro
@@ -198,6 +315,12 @@ export default function Marketplace() {
             <ShoppingBag className="w-4 h-4 mr-2" />
             Marketplace
           </Button>
+          {isPro && (
+            <Button variant="outline" onClick={() => navigate('/my-items')}>
+              <Tag className="w-4 h-4 mr-2" />
+              Meus Itens
+            </Button>
+          )}
         </div>
 
         {/* Header */}
@@ -309,103 +432,356 @@ export default function Marketplace() {
           </div>
         </div>
 
-        {/* Category Filters */}
-        <div className="flex gap-2 mb-6 flex-wrap">
-          {categories.map(cat => (
-            <Button
-              key={cat}
-              variant={filter === cat ? "default" : "outline"}
-              size="sm"
-              onClick={() => setFilter(cat)}
-              className={filter === cat ? "btn-mystic" : ""}
-            >
-              {cat === "all" ? "Todos" : categoryLabels[cat]?.label || cat}
-            </Button>
-          ))}
-        </div>
+        {/* Tabs for Marketplace */}
+        <Tabs defaultValue="official" className="w-full">
+          <TabsList className="mb-6">
+            <TabsTrigger value="official" className="gap-2">
+              <StoreIcon className="w-4 h-4" />
+              Loja Oficial
+            </TabsTrigger>
+            <TabsTrigger value="third-party" className="gap-2">
+              <Tag className="w-4 h-4" />
+              Anunciantes Terceiros
+            </TabsTrigger>
+            {isPro && (
+              <TabsTrigger value="my-products" className="gap-2">
+                <Crown className="w-4 h-4 text-yellow-500" />
+                Meus Produtos
+              </TabsTrigger>
+            )}
+          </TabsList>
 
-        {/* Products Grid */}
-        {loading ? (
-          <div className="flex items-center justify-center h-64">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          </div>
-        ) : filteredProducts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
-            <ShoppingBag className="w-16 h-16 mb-4 opacity-30" />
-            <p className="text-lg">Nenhum produto disponível</p>
-            <p className="text-sm">Volte em breve para novos itens!</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredProducts.map(product => {
-              const catInfo = categoryLabels[product.category] || categoryLabels.digital_item;
-              return (
-                <Card key={product.id} className="group bg-card border-border hover:border-primary/40 transition-all duration-300 hover:shadow-[0_0_30px_-5px_hsl(var(--primary)/0.3)] overflow-hidden">
-                  {/* Image */}
-                  <div className="aspect-square relative overflow-hidden bg-muted">
-                    {product.image_url ? (
-                      <img
-                        src={product.image_url}
-                        alt={product.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <Package className="w-16 h-16 text-muted-foreground/30" />
+          {/* Official Products Tab */}
+          <TabsContent value="official">
+            {/* Category Filters */}
+            <div className="flex gap-2 mb-6 flex-wrap">
+              {categories.map(cat => (
+                <Button
+                  key={cat}
+                  variant={filter === cat ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setFilter(cat)}
+                  className={filter === cat ? "btn-mystic" : ""}
+                >
+                  {cat === "all" ? "Todos" : categoryLabels[cat]?.label || cat}
+                </Button>
+              ))}
+            </div>
+
+            {/* Products Grid */}
+            {loading ? (
+              <div className="flex items-center justify-center h-64">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              </div>
+            ) : filteredProducts.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+                <ShoppingBag className="w-16 h-16 mb-4 opacity-30" />
+                <p className="text-lg">Nenhum produto disponível</p>
+                <p className="text-sm">Volte em breve para novos itens!</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {filteredProducts.map(product => {
+                  const catInfo = categoryLabels[product.category] || categoryLabels.digital_item;
+                  return (
+                    <Card key={product.id} className="group bg-card border-border hover:border-primary/40 transition-all duration-300 hover:shadow-[0_0_30px_-5px_hsl(var(--primary)/0.3)] overflow-hidden">
+                      <div className="aspect-square relative overflow-hidden bg-muted">
+                        {product.image_url ? (
+                          <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Package className="w-16 h-16 text-muted-foreground/30" />
+                          </div>
+                        )}
+                        <Badge className={`absolute top-3 left-3 ${catInfo.color} border-0 gap-1`}>
+                          {catInfo.icon}
+                          {catInfo.label}
+                        </Badge>
+                        {product.stock !== null && product.stock <= 5 && product.stock > 0 && (
+                          <Badge className="absolute top-3 right-3 bg-destructive/90 text-destructive-foreground border-0">
+                            Restam {product.stock}
+                          </Badge>
+                        )}
+                        {product.stock !== null && product.stock <= 0 && (
+                          <div className="absolute inset-0 bg-background/70 flex items-center justify-center">
+                            <span className="text-xl font-bold text-destructive">Esgotado</span>
+                          </div>
+                        )}
                       </div>
-                    )}
-                    <Badge className={`absolute top-3 left-3 ${catInfo.color} border-0 gap-1`}>
-                      {catInfo.icon}
-                      {catInfo.label}
-                    </Badge>
-                    {product.stock !== null && product.stock <= 5 && product.stock > 0 && (
-                      <Badge className="absolute top-3 right-3 bg-destructive/90 text-destructive-foreground border-0">
-                        Restam {product.stock}
-                      </Badge>
-                    )}
-                    {product.stock !== null && product.stock <= 0 && (
-                      <div className="absolute inset-0 bg-background/70 flex items-center justify-center">
-                        <span className="text-xl font-bold text-destructive">Esgotado</span>
+
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-lg line-clamp-1">{product.name}</CardTitle>
+                        {product.description && (
+                          <p className="text-sm text-muted-foreground line-clamp-2">{product.description}</p>
+                        )}
+                      </CardHeader>
+
+                      <CardFooter className="flex items-center justify-between pt-0">
+                        <div className="flex items-center gap-1 text-secondary font-bold text-lg">
+                          <Coins className="w-5 h-5" />
+                          {product.price_duelcoins.toLocaleString()}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="outline" onClick={() => addToCart(product)} disabled={product.stock !== null && product.stock <= 0}>
+                            <ShoppingCart className="w-4 h-4" />
+                          </Button>
+                          <Button size="sm" className="btn-mystic" onClick={() => handleBuyDirect(product)} disabled={purchasing || (product.stock !== null && product.stock <= 0)}>
+                            Comprar
+                          </Button>
+                        </div>
+                      </CardFooter>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Third Party Products Tab */}
+          <TabsContent value="third-party">
+            {/* Category Filters for Third Party */}
+            <div className="flex gap-2 mb-6 flex-wrap">
+              {categories.map(cat => (
+                <Button
+                  key={`tp-${cat}`}
+                  variant={filter === cat ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setFilter(cat)}
+                  className={filter === cat ? "btn-mystic" : ""}
+                >
+                  {cat === "all" ? "Todos" : categoryLabels[cat]?.label || cat}
+                </Button>
+              ))}
+            </div>
+
+            {filteredThirdParty.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+                <Tag className="w-16 h-16 mb-4 opacity-30" />
+                <p className="text-lg">Nenhum produto de terceiros</p>
+                <p className="text-sm">Anunciantes terceiros aparecerão aqui</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {filteredThirdParty.map(product => {
+                  const catInfo = categoryLabels[product.category] || categoryLabels.digital_item;
+                  return (
+                    <Card key={product.id} className="group bg-card border-border hover:border-primary/40 transition-all duration-300 hover:shadow-[0_0_30px_-5px_hsl(var(--primary)/0.3)] overflow-hidden">
+                      <div className="aspect-square relative overflow-hidden bg-muted">
+                        {product.image_url ? (
+                          <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Package className="w-16 h-16 text-muted-foreground/30" />
+                          </div>
+                        )}
+                        <Badge className={`absolute top-3 left-3 ${catInfo.color} border-0 gap-1`}>
+                          {catInfo.icon}
+                          {catInfo.label}
+                        </Badge>
+                        <Badge className="absolute top-3 right-3 bg-yellow-500/90 text-yellow-foreground border-0 gap-1">
+                          <Tag className="w-3 h-3" />
+                          Terceiro
+                        </Badge>
                       </div>
-                    )}
-                  </div>
 
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-lg line-clamp-1">{product.name}</CardTitle>
-                    {product.description && (
-                      <p className="text-sm text-muted-foreground line-clamp-2">{product.description}</p>
-                    )}
-                  </CardHeader>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-lg line-clamp-1">{product.name}</CardTitle>
+                        {product.description && (
+                          <p className="text-sm text-muted-foreground line-clamp-2">{product.description}</p>
+                        )}
+                      </CardHeader>
 
-                  <CardFooter className="flex items-center justify-between pt-0">
-                    <div className="flex items-center gap-1 text-secondary font-bold text-lg">
-                      <Coins className="w-5 h-5" />
-                      {product.price_duelcoins.toLocaleString()}
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => addToCart(product)}
-                        disabled={product.stock !== null && product.stock <= 0}
-                      >
-                        <ShoppingCart className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        className="btn-mystic"
-                        onClick={() => handleBuyDirect(product)}
-                        disabled={purchasing || (product.stock !== null && product.stock <= 0)}
-                      >
-                        Comprar
-                      </Button>
-                    </div>
-                  </CardFooter>
-                </Card>
-              );
-            })}
-          </div>
-        )}
+                      <CardFooter className="flex items-center justify-between pt-0">
+                        <div className="flex items-center gap-1 text-secondary font-bold text-lg">
+                          <Coins className="w-5 h-5" />
+                          {product.price_duelcoins.toLocaleString()}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="outline" onClick={() => addToCart(product)} disabled={product.stock !== null && product.stock <= 0}>
+                            <ShoppingCart className="w-4 h-4" />
+                          </Button>
+                          <Button size="sm" className="btn-mystic" onClick={() => handleBuyDirect(product)} disabled={purchasing || (product.stock !== null && product.stock <= 0)}>
+                            Comprar
+                          </Button>
+                        </div>
+                      </CardFooter>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* My Products Tab (PRO only) */}
+          {isPro && (
+            <TabsContent value="my-products">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold">Meus Produtos</h2>
+                <Button className="btn-mystic" onClick={() => setCreateProductDialogOpen(true)}>
+                  <PlusCircle className="w-4 h-4 mr-2" />
+                  Criar Produto
+                </Button>
+              </div>
+
+              {myProducts.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+                  <Package className="w-16 h-16 mb-4 opacity-30" />
+                  <p className="text-lg">Você não tem produtos</p>
+                  <p className="text-sm">Crie seu primeiro produto para vender!</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {myProducts.map(product => {
+                    const catInfo = categoryLabels[product.category] || categoryLabels.digital_item;
+                    return (
+                      <Card key={product.id} className="group bg-card border-border hover:border-primary/40 transition-all duration-300 overflow-hidden">
+                        <div className="aspect-square relative overflow-hidden bg-muted">
+                          {product.image_url ? (
+                            <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <Package className="w-16 h-16 text-muted-foreground/30" />
+                            </div>
+                          )}
+                          <Badge className={`absolute top-3 left-3 ${catInfo.color} border-0 gap-1`}>
+                            {catInfo.icon}
+                            {catInfo.label}
+                          </Badge>
+                          <Badge className={`absolute top-3 right-3 ${product.is_active ? 'bg-green-500/90' : 'bg-red-500/90'} text-white border-0`}>
+                            {product.is_active ? 'Ativo' : 'Inativo'}
+                          </Badge>
+                        </div>
+
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-lg line-clamp-1">{product.name}</CardTitle>
+                          {product.description && (
+                            <p className="text-sm text-muted-foreground line-clamp-2">{product.description}</p>
+                          )}
+                        </CardHeader>
+
+                        <CardFooter className="flex items-center justify-between pt-0">
+                          <div className="flex items-center gap-1 text-secondary font-bold text-lg">
+                            <Coins className="w-5 h-5" />
+                            {product.price_duelcoins.toLocaleString()}
+                          </div>
+                          {product.stock !== null && (
+                            <Badge variant="outline">Estoque: {product.stock}</Badge>
+                          )}
+                        </CardFooter>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </TabsContent>
+          )}
+        </Tabs>
+
+        {/* Create Product Dialog */}
+        <Dialog open={createProductDialogOpen} onOpenChange={setCreateProductDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Criar Novo Produto</DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Nome do Produto *</Label>
+                <Input
+                  id="name"
+                  placeholder="Ex: Pacote de Cartas Premium"
+                  value={newProduct.name}
+                  onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="description">Descrição</Label>
+                <Textarea
+                  id="description"
+                  placeholder="Descreva seu produto..."
+                  value={newProduct.description}
+                  onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="price">Preço (DuelCoins) *</Label>
+                  <Input
+                    id="price"
+                    type="number"
+                    min="1"
+                    placeholder="100"
+                    value={newProduct.price_duelcoins || ""}
+                    onChange={(e) => setNewProduct({ ...newProduct, price_duelcoins: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="stock">Estoque (opcional)</Label>
+                  <Input
+                    id="stock"
+                    type="number"
+                    min="1"
+                    placeholder="Ilimitado"
+                    value={newProduct.stock || ""}
+                    onChange={(e) => setNewProduct({ ...newProduct, stock: e.target.value ? parseInt(e.target.value) : null })}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Categoria</Label>
+                  <Select value={newProduct.category} onValueChange={(value) => setNewProduct({ ...newProduct, category: value })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="digital_item">Item Digital</SelectItem>
+                      <SelectItem value="service">Serviço</SelectItem>
+                      <SelectItem value="cosmetic">Cosmético</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Tipo</Label>
+                  <Select value={newProduct.product_type} onValueChange={(value) => setNewProduct({ ...newProduct, product_type: value })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="one_time">Uma vez</SelectItem>
+                      <SelectItem value="subscription">Assinatura</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="image">URL da Imagem</Label>
+                <Input
+                  id="image"
+                  placeholder="https://..."
+                  value={newProduct.image_url}
+                  onChange={(e) => setNewProduct({ ...newProduct, image_url: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setCreateProductDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button className="btn-mystic" onClick={handleCreateProduct} disabled={creatingProduct}>
+                {creatingProduct ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <PlusCircle className="w-4 h-4 mr-2" />}
+                Criar Produto
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );
