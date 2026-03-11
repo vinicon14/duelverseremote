@@ -73,8 +73,8 @@ CREATE POLICY "Admins view all purchases" ON public.marketplace_purchases
   FOR SELECT TO authenticated
   USING (public.is_admin(auth.uid()));
 
--- 6. Create Policies for user_in IF EXISTS "Usersventory
-DROP POLICY view own inventory" ON public.user_inventory;
+-- 6. Create Policies for user_inventory
+DROP POLICY IF EXISTS "Users view own inventory" ON public.user_inventory;
 CREATE POLICY "Users view own inventory" ON public.user_inventory
   FOR SELECT USING (auth.uid() = user_id);
 
@@ -303,3 +303,15 @@ BEGIN
     PERFORM public.add_item_to_inventory(v_user_id, v_item.product_id, v_item.quantity);
 
     -- Update stock
+    IF v_product.stock IS NOT NULL THEN
+      UPDATE marketplace_products SET stock = stock - v_item.quantity WHERE id = v_item.product_id;
+    END IF;
+  END LOOP;
+
+  RETURN json_build_object('success', true, 'message', 'Compra realizada com sucesso!', 'total', v_total);
+END;
+$$;
+
+-- 12. Create indexes
+CREATE INDEX IF NOT EXISTS idx_user_inventory_user_id ON public.user_inventory(user_id);
+CREATE INDEX IF NOT EXISTS idx_marketplace_products_seller ON public.marketplace_products(seller_id);
