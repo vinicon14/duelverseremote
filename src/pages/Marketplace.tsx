@@ -235,6 +235,13 @@ export default function Marketplace() {
       toast({ title: "Faça login", description: "Você precisa estar logado para comprar", variant: "destructive" });
       return;
     }
+
+    // Check stock if applicable
+    if (product.stock !== null && product.stock <= 0) {
+      toast({ title: "Erro", description: "Produto sem estoque", variant: "destructive" });
+      return;
+    }
+
     setPurchasing(true);
     try {
       // Check balance first
@@ -255,6 +262,14 @@ export default function Marketplace() {
         .from('profiles')
         .update({ duelcoins_balance: profile.duelcoins_balance - product.price_duelcoins })
         .eq('user_id', user.id);
+
+      // Reduce stock if applicable
+      if (product.stock !== null) {
+        await supabase
+          .from('marketplace_products')
+          .update({ stock: product.stock - 1 })
+          .eq('id', product.id);
+      }
 
       // Record transaction
       await supabase
@@ -337,6 +352,14 @@ export default function Marketplace() {
     }
     if (cart.length === 0) return;
 
+    // Check stock for all items
+    for (const item of cart) {
+      if (item.product.stock !== null && item.product.stock < item.quantity) {
+        toast({ title: "Estoque insuficiente", description: `Produto ${item.product.name} não tem estoque suficiente`, variant: "destructive" });
+        return;
+      }
+    }
+
     setPurchasing(true);
     try {
       const total = cart.reduce((sum, item) => sum + item.product.price_duelcoins * item.quantity, 0);
@@ -359,6 +382,16 @@ export default function Marketplace() {
         .from('profiles')
         .update({ duelcoins_balance: profile.duelcoins_balance - total })
         .eq('user_id', user.id);
+
+      // Reduce stock for each item
+      for (const item of cart) {
+        if (item.product.stock !== null) {
+          await supabase
+            .from('marketplace_products')
+            .update({ stock: item.product.stock - item.quantity })
+            .eq('id', item.product.id);
+        }
+      }
 
       // Record transaction
       await supabase
