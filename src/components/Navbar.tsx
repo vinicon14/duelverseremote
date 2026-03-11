@@ -136,19 +136,7 @@ export const Navbar = () => {
       <Link to="/store">
         <Button variant="ghost" className="text-foreground hover:text-primary">
           <Store className="mr-2 h-4 w-4" />
-          Loja
-        </Button>
-      </Link>
-      <Link to="/marketplace">
-        <Button variant="ghost" className="text-foreground hover:text-primary">
-          <ShoppingBag className="mr-2 h-4 w-4" />
-          Marketplace
-        </Button>
-      </Link>
-      <Link to="/install">
-        <Button variant="ghost" className="text-foreground hover:text-primary">
-          <Download className="mr-2 h-4 w-4" />
-          Download
+          Loja & Market
         </Button>
       </Link>
       {isAdmin && (
