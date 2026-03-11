@@ -165,7 +165,7 @@ export default function Marketplace() {
       .from("marketplace_products")
       .select("*")
       .eq("is_active", true)
-      .order("created_at", { ascending: false }) as any);
+      .order("created_at", { ascending: false }));
 
     if (allError) {
       console.error('Error fetching products:', allError);
@@ -175,8 +175,8 @@ export default function Marketplace() {
 
     if (allData) {
       // Split into official and third-party
-      const official = allData.filter((p: any) => !p.is_third_party_seller);
-      const thirdParty = allData.filter((p: any) => p.is_third_party_seller);
+      const official = allData.filter((p) => !p.is_third_party_seller);
+      const thirdParty = allData.filter((p) => p.is_third_party_seller);
       setProducts(official);
       setThirdPartyProducts(thirdParty);
     }
@@ -186,11 +186,11 @@ export default function Marketplace() {
 
   const fetchMyProducts = async () => {
     if (!user) return;
-    const { data, error } = await (supabase
+    const { data, error } = await supabase
         .from("marketplace_products")
         .select("*")
         .eq("seller_id", user.id)
-        .order("created_at", { ascending: false }) as any);
+        .order("created_at", { ascending: false });
 
     if (!error && data) setMyProducts(data);
   };
@@ -283,7 +283,7 @@ export default function Marketplace() {
 
       // Add to inventory
       await supabase
-        .from('user_inventory' as any)
+        .from('user_inventory')
         .insert({
           user_id: user.id,
           product_id: product.id,
@@ -293,7 +293,7 @@ export default function Marketplace() {
 
       // Record purchase
       await supabase
-        .from('marketplace_purchases' as any)
+        .from('marketplace_purchases')
         .insert({
           user_id: user.id,
           product_id: product.id,
@@ -311,12 +311,12 @@ export default function Marketplace() {
 
       // Notify all admins about the purchase
       const { data: admins } = await supabase
-        .from('user_roles' as any)
+        .from('user_roles')
         .select('user_id')
         .eq('role', 'admin');
 
       if (admins && admins.length > 0) {
-        const notifications = admins.map((admin: any) => ({
+        const notifications = admins.map((admin) => ({
           user_id: admin.user_id,
           type: 'marketplace_purchase',
           title: 'Nova Compra! 💰',
@@ -325,7 +325,7 @@ export default function Marketplace() {
         }));
 
         await supabase
-          .from('notifications' as any)
+          .from('notifications')
           .insert(notifications);
       }
 
@@ -407,7 +407,7 @@ export default function Marketplace() {
       for (const item of cart) {
         // Add to inventory
         await supabase
-          .from('user_inventory' as any)
+          .from('user_inventory')
           .insert({
             user_id: user.id,
             product_id: item.product.id,
@@ -417,7 +417,7 @@ export default function Marketplace() {
 
         // Record purchase
         await supabase
-          .from('marketplace_purchases' as any)
+          .from('marketplace_purchases')
           .insert({
             user_id: user.id,
             product_id: item.product.id,
@@ -439,12 +439,12 @@ export default function Marketplace() {
 
       // Notify all admins about the purchase
       const { data: admins } = await supabase
-        .from('user_roles' as any)
+        .from('user_roles')
         .select('user_id')
         .eq('role', 'admin');
 
       if (admins && admins.length > 0) {
-        const notifications = admins.map((admin: any) => ({
+        const notifications = admins.map((admin) => ({
           user_id: admin.user_id,
           type: 'marketplace_purchase',
           title: 'Nova Compra no Carrinho! 💰',
@@ -453,7 +453,7 @@ export default function Marketplace() {
         }));
 
         await supabase
-          .from('notifications' as any)
+          .from('notifications')
           .insert(notifications);
       }
 

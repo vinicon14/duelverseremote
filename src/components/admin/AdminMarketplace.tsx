@@ -83,15 +83,15 @@ export const AdminMarketplace = () => {
   }, []);
 
   const fetchPurchases = async () => {
-    const { data, error } = await (supabase
-      .from('marketplace_purchases' as any)
+    const { data, error } = await supabase
+      .from('marketplace_purchases')
       .select('*')
-      .order('created_at', { ascending: false }) as any);
+      .order('created_at', { ascending: false });
 
     if (!error && data && data.length > 0) {
       // Fetch product names and usernames
-      const productIds = [...new Set(data.map((p: Purchase) => p.product_id))];
-      const userIds = [...new Set(data.map((p: Purchase) => p.user_id))];
+      const productIds = Array.from([...new Set(data.map((p: Purchase) => p.product_id))] as string[]);
+      const userIds = Array.from([...new Set(data.map((p: Purchase) => p.user_id))] as string[]);
 
       const { data: productsData } = await supabase
         .from('marketplace_products')
@@ -119,10 +119,10 @@ export const AdminMarketplace = () => {
 
   const updatePurchaseStatus = async (purchaseId: string, newStatus: string) => {
     try {
-      const { error } = await (supabase
-        .from('marketplace_purchases' as any)
+      const { error } = await supabase
+        .from('marketplace_purchases')
         .update({ status: newStatus })
-        .eq('id', purchaseId) as any);
+        .eq('id', purchaseId);
 
       if (error) throw error;
 
@@ -139,15 +139,15 @@ export const AdminMarketplace = () => {
           message = `Seu pedido foi atualizado para: ${statusInfo?.label || newStatus}`;
         }
         
-        await (supabase
-          .from('notifications' as any)
+        await supabase
+          .from('notifications')
           .insert({
             user_id: purchase.user_id,
             type: 'order_status',
             title: newStatus === 'delivered' ? 'Pedido Entregue! 🎉' : newStatus === 'cancelled' ? 'Pedido Cancelado' : 'Status do Pedido Atualizado 📦',
             message: message,
             is_read: false,
-          }) as any);
+          });
       }
 
       toast({ title: 'Status atualizado! ✅' });
