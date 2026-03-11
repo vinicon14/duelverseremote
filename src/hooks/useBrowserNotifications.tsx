@@ -173,6 +173,18 @@ export const useBrowserNotifications = () => {
     }
   }, [hasPermission, loading, subscribeToPush]);
 
+  // also attempt to subscribe whenever the authentication state changes
+  useEffect(() => {
+    const {
+      data: { subscription }
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user && hasPermission) {
+        subscribeToPush();
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [hasPermission, subscribeToPush]);
+
   const showNotification = useCallback(async (title: string, options?: NotificationOptions) => {
     if (!isSupported || !hasPermission) return;
     
