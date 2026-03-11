@@ -2,7 +2,7 @@
  * DuelVerse - Admin Marketplace
  * Desenvolvido por Vinícius
  * 
- * Gerenciamento de produtos do marketplace pelo admin.
+ * Gerenciamento de produtos e pedidos do marketplace pelo admin.
  */
 import { useEffect, useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,10 +14,11 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Pencil, Trash2, Loader2, Package, Coins, Upload, ImageIcon, X } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, Package, Coins, Upload, ImageIcon, X, ShoppingCart, Truck, CheckCircle, Clock, PackageCheck } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface Product {
   id: string;
@@ -32,6 +33,26 @@ interface Product {
   created_at: string;
 }
 
+interface Purchase {
+  id: string;
+  user_id: string;
+  product_id: string;
+  quantity: number;
+  total_price: number;
+  status: string;
+  created_at: string;
+  product_name?: string;
+  username?: string;
+}
+
+const ORDER_STATUSES = [
+  { value: 'pending', label: 'Pendente', color: 'bg-yellow-500' },
+  { value: 'preparing', label: 'Em Preparação', color: 'bg-blue-500' },
+  { value: 'shipping', label: 'A Caminho', color: 'bg-orange-500' },
+  { value: 'delivered', label: 'Entregue', color: 'bg-green-500' },
+  { value: 'cancelled', label: 'Cancelado', color: 'bg-red-500' },
+];
+
 const emptyForm = {
   name: "",
   description: "",
@@ -45,6 +66,7 @@ const emptyForm = {
 
 export const AdminMarketplace = () => {
   const [products, setProducts] = useState<Product[]>([]);
+  const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -57,7 +79,74 @@ export const AdminMarketplace = () => {
 
   useEffect(() => {
     fetchProducts();
+    fetchPurchases();
   }, []);
+
+  const fetchPurchases = async () => {
+    const { data, error } = await (supabase
+      .from('marketplace_purchases' as any)
+      .select('*')
+      .order('created_at', { ascending: false }) as any);
+
+    if (!error && data && data.length > 0) {
+      // Fetch product names and usernames
+      const productIds = [...new Set(data.map((p: Purchase) => p.product_id))];
+      const userIds = [...new Set(data.map((p: Purchase) => p.user_id))];
+
+      const { data: productsData } = await supabase
+        .from('marketplace_products')
+        .select('id, name')
+        .in('id', productIds);
+
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('user_id, username')
+        .in('user_id', userIds);
+
+      const productMap = new Map(productsData?.map(p => [p.id, p.name]) || []);
+      const profileMap = new Map(profilesData?.map(p => [p.user_id, p.username]) || []);
+
+      const purchasesWithDetails = data.map((p: Purchase) => ({
+        ...p,
+        product_name: productMap.get(p.product_id) || 'Produto desconhecido',
+        username: profileMap.get(p.user_id) || 'Usuário desconhecido',
+      }));
+
+      setPurchases(purchasesWithDetails);
+    }
+    setLoading(false);
+  };
+
+  const updatePurchaseStatus = async (purchaseId: string, newStatus: string) => {
+    try {
+      const { error } = await (supabase
+        .from('marketplace_purchases' as any)
+        .update({ status: newStatus })
+        .eq('id', purchaseId) as any);
+
+      if (error) throw error;
+
+      // Notify the user about status change
+      const purchase = purchases.find(p => p.id === purchaseId);
+      if (purchase) {
+        const statusInfo = ORDER_STATUSES.find(s => s.value === newStatus);
+        await (supabase
+          .from('notifications' as any)
+          .insert({
+            user_id: purchase.user_id,
+            type: 'order_status',
+            title: 'Status do Pedido Atualizado! 📦',
+            message: `Seu pedido foi atualizado para: ${statusInfo?.label || newStatus}`,
+            is_read: false,
+          }) as any);
+      }
+
+      toast({ title: 'Status atualizado! ✅' });
+      fetchPurchases();
+    } catch (err: any) {
+      toast({ title: 'Erro ao atualizar', description: err.message, variant: 'destructive' });
+    }
+  };
 
   const fetchProducts = async () => {
     const { data, error } = await supabase
@@ -195,11 +284,24 @@ export const AdminMarketplace = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold flex items-center gap-2">
-          <Package className="w-6 h-6 text-primary" />
-          Marketplace ({products.length})
-        </h2>
+      <Tabs defaultValue="products" className="w-full">
+        <TabsList className="mb-4">
+          <TabsTrigger value="products" className="flex items-center gap-2">
+            <Package className="w-4 h-4" />
+            Produtos
+          </TabsTrigger>
+          <TabsTrigger value="orders" className="flex items-center gap-2">
+            <ShoppingCart className="w-4 h-4" />
+            Pedidos ({purchases.length})
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="products">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold flex items-center gap-2">
+              <Package className="w-6 h-6 text-primary" />
+              Marketplace ({products.length})
+            </h2>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button className="btn-mystic" onClick={openCreate}>
@@ -390,6 +492,92 @@ export const AdminMarketplace = () => {
           </Table>
         </CardContent>
       </Card>
+        </TabsContent>
+
+        <TabsContent value="orders">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ShoppingCart className="w-5 h-5" />
+                Gerenciar Pedidos
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Pedido ID</TableHead>
+                    <TableHead>Usuário</TableHead>
+                    <TableHead>Produto</TableHead>
+                    <TableHead>Qtd</TableHead>
+                    <TableHead>Total</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Ação</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {purchases.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                        Nenhum pedido encontrado
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    purchases.map(purchase => {
+                      const statusInfo = ORDER_STATUSES.find(s => s.value === purchase.status) || ORDER_STATUSES[0];
+                      return (
+                        <TableRow key={purchase.id}>
+                          <TableCell className="font-mono text-xs">{purchase.id.slice(0, 8)}...</TableCell>
+                          <TableCell>{purchase.username}</TableCell>
+                          <TableCell>{purchase.product_name}</TableCell>
+                          <TableCell>{purchase.quantity}</TableCell>
+                          <TableCell className="flex items-center gap-1">
+                            <Coins className="w-3 h-3" />
+                            {purchase.total_price}
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={`${statusInfo.color} text-white`}>
+                              {statusInfo.label}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-xs">
+                            {new Date(purchase.created_at).toLocaleDateString('pt-BR')}
+                          </TableCell>
+                          <TableCell>
+                            <Select
+                              value={purchase.status}
+                              onValueChange={(value) => updatePurchaseStatus(purchase.id, value)}
+                            >
+                              <SelectTrigger className="w-[140px]">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {ORDER_STATUSES.map(status => (
+                                  <SelectItem key={status.value} value={status.value}>
+                                    <div className="flex items-center gap-2">
+                                      {status.value === 'pending' && <Clock className="w-3 h-3" />}
+                                      {status.value === 'preparing' && <Package className="w-3 h-3" />}
+                                      {status.value === 'shipping' && <Truck className="w-3 h-3" />}
+                                      {status.value === 'delivered' && <CheckCircle className="w-3 h-3" />}
+                                      {status.value === 'cancelled' && <X className="w-3 h-3" />}
+                                      {status.label}
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Package, Gift, Send, Zap, Loader2, History } from "lucide-react";
+import { Package, Gift, Send, Zap, Loader2, History, ShoppingCart, Clock, Truck, CheckCircle, X, Coins } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface ProductInfo {
@@ -38,10 +38,31 @@ interface InventoryItem {
   product?: ProductInfo;
 }
 
+interface Purchase {
+  id: string;
+  user_id: string;
+  product_id: string;
+  quantity: number;
+  total_price: number;
+  status: string;
+  created_at: string;
+  product_name?: string;
+  product_image?: string;
+}
+
+const ORDER_STATUSES = [
+  { value: 'pending', label: 'Pendente', color: 'bg-yellow-500' },
+  { value: 'preparing', label: 'Em Preparação', color: 'bg-blue-500' },
+  { value: 'shipping', label: 'A Caminho', color: 'bg-orange-500' },
+  { value: 'delivered', label: 'Entregue', color: 'bg-green-500' },
+  { value: 'cancelled', label: 'Cancelado', color: 'bg-red-500' },
+];
+
 export default function MyItems() {
   const navigate = useNavigate();
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [usedItems, setUsedItems] = useState<InventoryItem[]>([]);
+  const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<{ id: string } | null>(null);
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
@@ -61,8 +82,36 @@ export default function MyItems() {
     if (session?.user) {
       setUser({ id: session.user.id });
       fetchInventory(session.user.id);
+      fetchPurchases(session.user.id);
     }
     setLoading(false);
+  };
+
+  const fetchPurchases = async (userId: string) => {
+    const { data, error } = await (supabase
+      .from('marketplace_purchases' as any)
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false }) as any);
+
+    if (!error && data && data.length > 0) {
+      // Fetch product details
+      const productIds = [...new Set(data.map((p: Purchase) => p.product_id))];
+      const { data: productsData } = await supabase
+        .from('marketplace_products')
+        .select('id, name, image_url')
+        .in('id', productIds);
+
+      const productMap = new Map(productsData?.map(p => [p.id, { name: p.name, image_url: p.image_url }]) || []);
+
+      const purchasesWithDetails = data.map((p: Purchase) => ({
+        ...p,
+        product_name: productMap.get(p.product_id)?.name || 'Produto desconhecido',
+        product_image: productMap.get(p.product_id)?.image_url || null,
+      }));
+
+      setPurchases(purchasesWithDetails);
+    }
   };
 
   const fetchInventory = async (userId: string) => {
@@ -301,6 +350,10 @@ export default function MyItems() {
               <Package className="w-4 h-4" />
               Ativos ({inventory.length})
             </TabsTrigger>
+            <TabsTrigger value="orders" className="gap-2">
+              <ShoppingCart className="w-4 h-4" />
+              Pedidos ({purchases.length})
+            </TabsTrigger>
             <TabsTrigger value="used" className="gap-2">
               <History className="w-4 h-4" />
               Usados ({usedItems.length})
@@ -320,6 +373,62 @@ export default function MyItems() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredInventory.map(item => renderItemCard(item))}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="orders">
+            {purchases.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+                <ShoppingCart className="w-16 h-16 mb-4 opacity-30" />
+                <p className="text-lg">Nenhum pedido</p>
+                <p className="text-sm">Seus pedidos aparecerão aqui</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {purchases.map(purchase => {
+                  const statusInfo = ORDER_STATUSES.find(s => s.value === purchase.status) || ORDER_STATUSES[0];
+                  return (
+                    <Card key={purchase.id} className="bg-card border-border">
+                      <div className="flex items-center gap-4 p-4">
+                        <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                          {purchase.product_image ? (
+                            <img src={purchase.product_image} alt={purchase.product_name} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <Package className="w-8 h-8 text-muted-foreground/50" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold truncate">{purchase.product_name}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            Quantidade: {purchase.quantity} | Total: <span className="flex items-center gap-1 inline-flex"><Coins className="w-3 h-3" />{purchase.total_price}</span>
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {new Date(purchase.created_at).toLocaleDateString('pt-BR', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </p>
+                        </div>
+                        <div className="flex flex-col items-end gap-2">
+                          <Badge className={`${statusInfo.color} text-white flex items-center gap-1`}>
+                            {purchase.status === 'pending' && <Clock className="w-3 h-3" />}
+                            {purchase.status === 'preparing' && <Package className="w-3 h-3" />}
+                            {purchase.status === 'shipping' && <Truck className="w-3 h-3" />}
+                            {purchase.status === 'delivered' && <CheckCircle className="w-3 h-3" />}
+                            {purchase.status === 'cancelled' && <X className="w-3 h-3" />}
+                            {statusInfo.label}
+                          </Badge>
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                })}
               </div>
             )}
           </TabsContent>
