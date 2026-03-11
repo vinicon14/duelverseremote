@@ -225,8 +225,54 @@ export const AdminMarketplace = () => {
                 <Input type="number" min={0} value={form.price_duelcoins} onChange={e => setForm(f => ({ ...f, price_duelcoins: parseInt(e.target.value) || 0 }))} />
               </div>
               <div>
-                <Label>URL da Imagem</Label>
-                <Input value={form.image_url} onChange={e => setForm(f => ({ ...f, image_url: e.target.value }))} placeholder="https://..." />
+                <Label>Imagem do Produto</Label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                />
+                {imagePreview ? (
+                  <div className="relative mt-2 w-full aspect-square max-w-[200px] rounded-lg overflow-hidden border border-border">
+                    <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-1 right-1 h-7 w-7"
+                      onClick={removeImage}
+                      type="button"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ) : null}
+                <div className="flex gap-2 mt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    className="flex-1"
+                  >
+                    {uploading ? (
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    ) : (
+                      <Upload className="w-4 h-4 mr-2" />
+                    )}
+                    {uploading ? "Enviando..." : "Fazer Upload"}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">Ou cole uma URL abaixo:</p>
+                <Input
+                  value={form.image_url}
+                  onChange={e => {
+                    setForm(f => ({ ...f, image_url: e.target.value }));
+                    setImagePreview(e.target.value || null);
+                  }}
+                  placeholder="https://..."
+                  className="mt-1"
+                />
               </div>
               <div>
                 <Label>Categoria</Label>
