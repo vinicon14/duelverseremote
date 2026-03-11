@@ -287,23 +287,32 @@ export default function Marketplace() {
           status: 'completed'
         });
 
-      // Notify seller/admin about the purchase
-      const { data: sellerData } = await supabase
+      // Get buyer username
+      const { data: buyerData } = await supabase
         .from('profiles')
-        .select('user_id, username')
+        .select('username')
         .eq('user_id', user.id)
         .single();
 
-      // Create notification for admin
-      await supabase
-        .from('notifications' as any)
-        .insert({
-          user_id: user.id, // This will be filtered by admin query
+      // Notify all admins about the purchase
+      const { data: admins } = await supabase
+        .from('user_roles' as any)
+        .select('user_id')
+        .eq('role', 'admin');
+
+      if (admins && admins.length > 0) {
+        const notifications = admins.map((admin: any) => ({
+          user_id: admin.user_id,
           type: 'marketplace_purchase',
-          title: 'Nova Compra!',
-          message: `${sellerData?.username || 'Um usuário'} comprou ${product.name} por ${product.price_duelcoins} DuelCoins`,
+          title: 'Nova Compra! 💰',
+          message: `${buyerData?.username || 'Um usuário'} comprou ${product.name} por ${product.price_duelcoins} DuelCoins`,
           is_read: false
-        });
+        }));
+
+        await supabase
+          .from('notifications' as any)
+          .insert(notifications);
+      }
 
       toast({ 
         title: "Compra realizada! ✅", 
@@ -386,15 +395,34 @@ export default function Marketplace() {
       }
 
       // Notify about the purchase
-      await supabase
-        .from('notifications' as any)
-        .insert({
-          user_id: user.id,
+      const buyerItems = cart.map(item => item.product.name).join(', ');
+      
+      // Get buyer username
+      const { data: buyerData } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('user_id', user.id)
+        .single();
+
+      // Notify all admins about the purchase
+      const { data: admins } = await supabase
+        .from('user_roles' as any)
+        .select('user_id')
+        .eq('role', 'admin');
+
+      if (admins && admins.length > 0) {
+        const notifications = admins.map((admin: any) => ({
+          user_id: admin.user_id,
           type: 'marketplace_purchase',
-          title: 'Nova Compra no Carrinho!',
-          message: `Você comprou ${cart.length} itens por ${total} DuelCoins`,
+          title: 'Nova Compra no Carrinho! 💰',
+          message: `${buyerData?.username || 'Um usuário'} comprou ${cart.length} itens (${buyerItems}) por ${total} DuelCoins`,
           is_read: false
-        });
+        }));
+
+        await supabase
+          .from('notifications' as any)
+          .insert(notifications);
+      }
 
       toast({ 
         title: "Compra realizada! ✅", 
