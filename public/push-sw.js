@@ -1,15 +1,5 @@
-// Custom Service Worker for Push Notifications
-// This extends the auto-generated PWA service worker
-
-self.addEventListener('install', (event) => {
-  console.log('✅ Service Worker instalado');
-  self.skipWaiting();
-});
-
-self.addEventListener('activate', (event) => {
-  console.log('✅ Service Worker ativado');
-  event.waitUntil(self.clients.claim());
-});
+// Push Notification handlers for DuelVerse
+// This file is imported by the main Workbox service worker via importScripts
 
 // Handle push notifications - Processa data messages do FCM
 self.addEventListener('push', (event) => {
