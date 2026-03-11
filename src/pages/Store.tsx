@@ -6,12 +6,15 @@
  * Usuários podem comprar Premium com DuelCoins.
  */
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Store as StoreIcon, ExternalLink, Crown, Loader2, Coins, Check, Clock } from "lucide-react";
+import { Store as StoreIcon, ExternalLink, Crown, Loader2, Coins, Check, Clock, ShoppingBag } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import Marketplace from "@/pages/Marketplace";
 
 interface SubscriptionPlan {
   id: string;
