@@ -4,7 +4,7 @@
  * 
  * Gerenciamento de produtos do marketplace pelo admin.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Pencil, Trash2, Loader2, Package, Coins } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, Package, Coins, Upload, ImageIcon, X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -50,6 +50,9 @@ export const AdminMarketplace = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [uploading, setUploading] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -69,6 +72,7 @@ export const AdminMarketplace = () => {
   const openCreate = () => {
     setEditingId(null);
     setForm(emptyForm);
+    setImagePreview(null);
     setDialogOpen(true);
   };
 
@@ -84,7 +88,54 @@ export const AdminMarketplace = () => {
       is_active: product.is_active,
       stock: product.stock,
     });
+    setImagePreview(product.image_url || null);
     setDialogOpen(true);
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Apenas imagens são permitidas", variant: "destructive" });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "Imagem muito grande (máx 5MB)", variant: "destructive" });
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("marketplace-images")
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from("marketplace-images")
+        .getPublicUrl(fileName);
+
+      const publicUrl = urlData.publicUrl;
+      setForm(f => ({ ...f, image_url: publicUrl }));
+      setImagePreview(publicUrl);
+      toast({ title: "Imagem enviada ✅" });
+    } catch (err: any) {
+      toast({ title: "Erro no upload", description: err.message, variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeImage = () => {
+    setForm(f => ({ ...f, image_url: "" }));
+    setImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleSave = async () => {
@@ -174,8 +225,54 @@ export const AdminMarketplace = () => {
                 <Input type="number" min={0} value={form.price_duelcoins} onChange={e => setForm(f => ({ ...f, price_duelcoins: parseInt(e.target.value) || 0 }))} />
               </div>
               <div>
-                <Label>URL da Imagem</Label>
-                <Input value={form.image_url} onChange={e => setForm(f => ({ ...f, image_url: e.target.value }))} placeholder="https://..." />
+                <Label>Imagem do Produto</Label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                />
+                {imagePreview ? (
+                  <div className="relative mt-2 w-full aspect-square max-w-[200px] rounded-lg overflow-hidden border border-border">
+                    <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-1 right-1 h-7 w-7"
+                      onClick={removeImage}
+                      type="button"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ) : null}
+                <div className="flex gap-2 mt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    className="flex-1"
+                  >
+                    {uploading ? (
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    ) : (
+                      <Upload className="w-4 h-4 mr-2" />
+                    )}
+                    {uploading ? "Enviando..." : "Fazer Upload"}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">Ou cole uma URL abaixo:</p>
+                <Input
+                  value={form.image_url}
+                  onChange={e => {
+                    setForm(f => ({ ...f, image_url: e.target.value }));
+                    setImagePreview(e.target.value || null);
+                  }}
+                  placeholder="https://..."
+                  className="mt-1"
+                />
               </div>
               <div>
                 <Label>Categoria</Label>
