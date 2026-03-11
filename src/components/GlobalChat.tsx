@@ -11,8 +11,9 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { Send, MessageCircle } from "lucide-react";
+import { Send, MessageCircle, Trash2 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
+import { useAdmin } from "@/hooks/useAdmin";
 
 interface GlobalMessage {
   id: string;
@@ -25,6 +26,7 @@ interface GlobalMessage {
 
 export const GlobalChat = () => {
   const { toast } = useToast();
+  const { isAdmin } = useAdmin();
   const [messages, setMessages] = useState<GlobalMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -200,6 +202,32 @@ export const GlobalChat = () => {
     }
   };
 
+  const deleteMessage = async (messageId: string) => {
+    if (!isAdmin) return;
+    
+    try {
+      const { error } = await supabase
+        .from('global_chat_messages')
+        .delete()
+        .eq('id', messageId);
+
+      if (error) throw error;
+
+      setMessages(prev => prev.filter(msg => msg.id !== messageId));
+      
+      toast({
+        title: "Mensagem excluída",
+        description: "A mensagem foi removida com sucesso.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao excluir mensagem",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <Card className="card-mystic h-full flex flex-col">
       <CardHeader className="pb-3">
@@ -246,6 +274,16 @@ export const GlobalChat = () => {
                       minute: '2-digit',
                     })}
                   </span>
+                  {isAdmin && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                      onClick={() => deleteMessage(msg.id)}
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  )}
                 </div>
               </div>
             ))}

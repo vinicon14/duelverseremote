@@ -22,3 +22,9 @@ CREATE POLICY "Users insert own inventory" ON public.user_inventory
 GRANT EXECUTE ON FUNCTION public.transfer_inventory_item TO authenticated;
 GRANT EXECUTE ON FUNCTION public.use_inventory_item TO authenticated;
 GRANT EXECUTE ON FUNCTION public.add_item_to_inventory TO authenticated;
+
+-- Add DELETE policy for global_chat_messages for admins
+DROP POLICY IF EXISTS "Admins can delete global chat messages" ON public.global_chat_messages;
+CREATE POLICY "Admins can delete global chat messages" ON public.global_chat_messages
+  FOR DELETE TO authenticated
+  USING (public.is_admin(auth.uid()));
