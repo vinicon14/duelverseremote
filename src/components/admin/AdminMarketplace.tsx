@@ -126,17 +126,26 @@ export const AdminMarketplace = () => {
 
       if (error) throw error;
 
-      // Notify the user about status change
+      // Notify the user about status change and handle delivery/cancellation
       const purchase = purchases.find(p => p.id === purchaseId);
       if (purchase) {
-        const statusInfo = ORDER_STATUSES.find(s => s.value === newStatus);
+        let message = '';
+        if (newStatus === 'delivered') {
+          message = 'Seu pedido foi ENTREGUE! Obrigado por comprar conosco.';
+        } else if (newStatus === 'cancelled') {
+          message = 'Seu pedido foi CANCELADO. O valor será reembolsado em breve.';
+        } else {
+          const statusInfo = ORDER_STATUSES.find(s => s.value === newStatus);
+          message = `Seu pedido foi atualizado para: ${statusInfo?.label || newStatus}`;
+        }
+        
         await (supabase
           .from('notifications' as any)
           .insert({
             user_id: purchase.user_id,
             type: 'order_status',
-            title: 'Status do Pedido Atualizado! 📦',
-            message: `Seu pedido foi atualizado para: ${statusInfo?.label || newStatus}`,
+            title: newStatus === 'delivered' ? 'Pedido Entregue! 🎉' : newStatus === 'cancelled' ? 'Pedido Cancelado' : 'Status do Pedido Atualizado 📦',
+            message: message,
             is_read: false,
           }) as any);
       }
