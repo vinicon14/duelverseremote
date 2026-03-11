@@ -15,6 +15,7 @@ import { Navbar } from "@/components/Navbar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Swords, Plus, Users, Clock, Download } from "lucide-react";
+import { useAppInstalled } from "@/hooks/useAppInstalled";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useBanCheck } from "@/hooks/useBanCheck";
 import { AdPopup } from "@/components/AdPopup";
@@ -292,6 +293,8 @@ const Duels = () => {
     }
   };
 
+  const isInstalled = useAppInstalled();
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -310,10 +313,12 @@ const Duels = () => {
               </div>
 
               <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                <Button variant="outline" onClick={() => navigate('/install')} className="w-full sm:w-auto">
-                  <Download className="mr-2 h-4 w-4" />
-                  Baixar App
-                </Button>
+                {!isInstalled && (
+                  <Button variant="outline" onClick={() => navigate('/install')} className="w-full sm:w-auto">
+                    <Download className="mr-2 h-4 w-4" />
+                    Baixar App
+                  </Button>
+                )}
                 <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
                 <DialogTrigger asChild>
                   <Button className="btn-mystic text-white w-full sm:w-auto">

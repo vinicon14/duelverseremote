@@ -20,7 +20,8 @@ export const useAdmin = () => {
           .from('user_roles')
           .select('role')
           .eq('user_id', session.user.id)
-          .eq('role', 'admin')
+          // treat either admin or moderator as privileged
+          .in('role', ['admin', 'moderator'])
           .maybeSingle();
         
         setIsAdmin(!!data);
