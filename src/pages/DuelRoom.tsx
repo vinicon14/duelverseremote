@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { PhoneOff, Loader2, Scale, Layers, Download } from "lucide-react";
-import { useAppInstalled } from "@/hooks/useAppInstalled";
 import { Navbar } from "@/components/Navbar";
 import { DuelChat } from "@/components/DuelChat";
 import { FloatingCalculator } from "@/components/FloatingCalculator";
@@ -47,7 +46,6 @@ const DuelRoom = () => {
   
   const isJudge = searchParams.get('role') === 'judge';
   const [hideControls, setHideControls] = useState(true);
-  const isInstalled = useAppInstalled();
   
   // Deck viewer state
   const [showDeckViewer, setShowDeckViewer] = useState(false);
@@ -886,17 +884,15 @@ const DuelRoom = () => {
                 <>
                   <HideElementsButton onToggle={() => setHideControls(!hideControls)} isHidden={hideControls} />
                   <RecordMatchButton duelId={id!} />
-                  {!isInstalled && (
-                    <Button
-                      onClick={() => navigate('/install')}
-                      variant="outline"
-                      size="sm"
-                      className="bg-primary/90 hover:bg-primary text-primary-foreground backdrop-blur-sm text-xs sm:text-sm"
-                    >
-                      <Download className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                      <span className="hidden sm:inline">Baixar App</span>
-                    </Button>
-                  )}
+                  <Button
+                    onClick={() => navigate('/install')}
+                    variant="outline"
+                    size="sm"
+                    className="bg-primary/90 hover:bg-primary text-primary-foreground backdrop-blur-sm text-xs sm:text-sm"
+                  >
+                    <Download className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                    <span className="hidden sm:inline">Baixar App</span>
+                  </Button>
                 </>
               )}
 

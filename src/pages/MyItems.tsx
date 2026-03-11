@@ -198,14 +198,9 @@ export default function MyItems() {
 
       if (error) throw error;
 
-      const result = data as { success: boolean; message: string; description?: string };
+      const result = data as { success: boolean; message: string };
       if (result.success) {
-        // show unlocking description for cosmetics
-        if (result.description) {
-          toast({ title: "Item usado!", description: result.description });
-        } else {
-          toast({ title: "Sucesso! ✅", description: result.message });
-        }
+        toast({ title: "Sucesso! ✅", description: result.message });
         if (user) {
           fetchInventory(user.id);
         }
@@ -263,17 +258,8 @@ export default function MyItems() {
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <h3 className="font-semibold truncate">{item.product?.name || "Item Desconhecido"}</h3>
-                {/* cosmetics should hide their description until used */}
-                {item.product?.category === 'cosmetic' && !item.is_used ? (
-                  <p className="text-sm italic text-muted-foreground line-clamp-2 mt-1">
-                    Use para revelar detalhes
-                  </p>
-                ) : (
-                  item.product?.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
-                      {item.product.description}
-                    </p>
-                  )
+                {item.product?.description && (
+                  <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{item.product.description}</p>
                 )}
                 <div className="flex items-center gap-2 mt-2">
                   <Badge className={`${catInfo.color} border-0 text-xs`}>
