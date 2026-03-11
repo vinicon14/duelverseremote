@@ -20,9 +20,10 @@ export default defineConfig(({ mode }) => ({
         enabled: true,
       },
       workbox: {
-        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 3 MB
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
         navigateFallbackDenylist: [/^\/~oauth/],
+        importScripts: ['/push-sw.js'],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
