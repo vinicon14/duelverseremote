@@ -95,12 +95,12 @@ export default function Marketplace() {
   };
 
   const fetchProducts = async () => {
-    // Fetch official products
+    // Fetch official products (is_third_party_seller = false or NULL means official)
     const { data: officialData, error: officialError } = await (supabase
       .from("marketplace_products")
       .select("*")
       .eq("is_active", true)
-      .eq("is_third_party_seller", false)
+      .or("is_third_party_seller.is.null,is_third_party_seller.eq.false")
       .order("created_at", { ascending: false }) as any);
 
     // Fetch third-party products
