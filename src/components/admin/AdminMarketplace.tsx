@@ -146,7 +146,7 @@ export const AdminMarketplace = () => {
             type: 'order_status',
             title: newStatus === 'delivered' ? 'Pedido Entregue! 🎉' : newStatus === 'cancelled' ? 'Pedido Cancelado' : 'Status do Pedido Atualizado 📦',
             message: message,
-            is_read: false,
+            read: false,
           });
 
         // Also notify admin about status change
