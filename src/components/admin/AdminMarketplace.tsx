@@ -161,7 +161,7 @@ export const AdminMarketplace = () => {
             type: 'order_status_admin',
             title: `Pedido ${newStatus === 'delivered' ? 'Entregue' : newStatus === 'cancelled' ? 'Cancelado' : 'Atualizado'} 📦`,
             message: `Pedido de ${purchase.username}: ${purchase.product_name} - Status: ${ORDER_STATUSES.find(s => s.value === newStatus)?.label || newStatus}`,
-            is_read: false,
+            read: false,
           }));
 
           await supabase
