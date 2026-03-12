@@ -166,7 +166,7 @@ export default function MyItems() {
       }
 
       // Call the transfer function
-      const { data, error } = await supabase.rpc("transfer_inventory_item", {
+      const { data, error } = await supabase.rpc("transfer_inventory_item" as any, {
         p_inventory_id: selectedItem.id,
         p_recipient_id: recipientData.user_id,
       });
