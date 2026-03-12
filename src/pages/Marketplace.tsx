@@ -283,7 +283,7 @@ export default function Marketplace() {
 
       // Add to inventory
       const { error: inventoryError } = await supabase
-        .from('user_inventory')
+        .from('user_inventory' as any)
         .insert({
           user_id: user.id,
           product_id: product.id,
