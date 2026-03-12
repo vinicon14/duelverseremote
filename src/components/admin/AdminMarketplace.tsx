@@ -177,7 +177,7 @@ export const AdminMarketplace = () => {
             .select('id, type, message')
             .eq('type', 'marketplace_purchase')
             .ilike('message', `%${purchase.product_name}%`)
-            .eq('is_read', false);
+            .eq('read', false);
 
           if (existingNotifications && existingNotifications.length > 0) {
             const notificationIds = existingNotifications.map(n => n.id);

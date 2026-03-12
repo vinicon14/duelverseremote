@@ -214,7 +214,7 @@ export default function MyItems() {
   const processUseItem = async (item: InventoryItem) => {
     setUsingItem(true);
     try {
-      const { data, error } = await supabase.rpc("use_inventory_item", {
+      const { data, error } = await supabase.rpc("use_inventory_item" as any, {
         p_inventory_id: item.id,
       });
 

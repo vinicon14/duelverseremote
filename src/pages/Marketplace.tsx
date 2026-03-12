@@ -469,7 +469,7 @@ export default function Marketplace() {
           type: 'marketplace_purchase',
           title: 'Nova Compra no Carrinho! 💰',
           message: `${buyerData?.username || 'Um usuário'} comprou ${cart.length} itens (${buyerItems}) por ${total} DuelCoins`,
-          is_read: false
+          read: false
         }));
 
         await supabase
