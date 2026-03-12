@@ -283,7 +283,7 @@ export default function Marketplace() {
 
       // Add to inventory
       const { error: inventoryError } = await supabase
-        .from('user_inventory')
+        .from('user_inventory' as any)
         .insert({
           user_id: user.id,
           product_id: product.id,
@@ -331,7 +331,7 @@ export default function Marketplace() {
           type: 'marketplace_purchase',
           title: 'Nova Compra! 💰',
           message: `${buyerData?.username || 'Um usuário'} comprou ${product.name} por ${product.price_duelcoins} DuelCoins`,
-          is_read: false
+          read: false
         }));
 
         await supabase
@@ -417,7 +417,7 @@ export default function Marketplace() {
       for (const item of cart) {
         // Add to inventory
         const { error: inventoryError } = await supabase
-          .from('user_inventory')
+          .from('user_inventory' as any)
           .insert({
             user_id: user.id,
             product_id: item.product.id,
@@ -469,7 +469,7 @@ export default function Marketplace() {
           type: 'marketplace_purchase',
           title: 'Nova Compra no Carrinho! 💰',
           message: `${buyerData?.username || 'Um usuário'} comprou ${cart.length} itens (${buyerItems}) por ${total} DuelCoins`,
-          is_read: false
+          read: false
         }));
 
         await supabase

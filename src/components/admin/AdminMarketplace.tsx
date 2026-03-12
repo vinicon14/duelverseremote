@@ -146,7 +146,7 @@ export const AdminMarketplace = () => {
             type: 'order_status',
             title: newStatus === 'delivered' ? 'Pedido Entregue! 🎉' : newStatus === 'cancelled' ? 'Pedido Cancelado' : 'Status do Pedido Atualizado 📦',
             message: message,
-            is_read: false,
+            read: false,
           });
 
         // Also notify admin about status change
@@ -161,7 +161,7 @@ export const AdminMarketplace = () => {
             type: 'order_status_admin',
             title: `Pedido ${newStatus === 'delivered' ? 'Entregue' : newStatus === 'cancelled' ? 'Cancelado' : 'Atualizado'} 📦`,
             message: `Pedido de ${purchase.username}: ${purchase.product_name} - Status: ${ORDER_STATUSES.find(s => s.value === newStatus)?.label || newStatus}`,
-            is_read: false,
+            read: false,
           }));
 
           await supabase
@@ -177,7 +177,7 @@ export const AdminMarketplace = () => {
             .select('id, type, message')
             .eq('type', 'marketplace_purchase')
             .ilike('message', `%${purchase.product_name}%`)
-            .eq('is_read', false);
+            .eq('read', false);
 
           if (existingNotifications && existingNotifications.length > 0) {
             const notificationIds = existingNotifications.map(n => n.id);

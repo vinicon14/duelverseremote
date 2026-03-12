@@ -119,8 +119,8 @@ export default function MyItems() {
   };
 
   const fetchInventory = async (userId: string) => {
-    const { data, error } = await supabase
-      .from("user_inventory")
+    const { data, error } = await (supabase
+      .from("user_inventory" as any)
       .select(`
         *,
         product:marketplace_products(
@@ -133,10 +133,10 @@ export default function MyItems() {
         )
       `)
       .eq("user_id", userId)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false }));
 
     if (!error && data) {
-      const allItems = data as InventoryItem[];
+      const allItems = data as unknown as InventoryItem[];
       const active = allItems.filter((item) => !item.is_used);
       const used = allItems.filter((item) => item.is_used);
       setInventory(active);
@@ -166,7 +166,7 @@ export default function MyItems() {
       }
 
       // Call the transfer function
-      const { data, error } = await supabase.rpc("transfer_inventory_item", {
+      const { data, error } = await supabase.rpc("transfer_inventory_item" as any, {
         p_inventory_id: selectedItem.id,
         p_recipient_id: recipientData.user_id,
       });
@@ -214,7 +214,7 @@ export default function MyItems() {
   const processUseItem = async (item: InventoryItem) => {
     setUsingItem(true);
     try {
-      const { data, error } = await supabase.rpc("use_inventory_item", {
+      const { data, error } = await supabase.rpc("use_inventory_item" as any, {
         p_inventory_id: item.id,
       });
 
