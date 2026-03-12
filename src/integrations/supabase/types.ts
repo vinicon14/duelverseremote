@@ -516,10 +516,12 @@ export type Database = {
           id: string
           image_url: string | null
           is_active: boolean
+          is_third_party_seller: boolean
           metadata: Json | null
           name: string
           price_duelcoins: number
           product_type: string
+          seller_id: string | null
           stock: number | null
           updated_at: string
         }
@@ -530,10 +532,12 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean
+          is_third_party_seller?: boolean
           metadata?: Json | null
           name: string
           price_duelcoins?: number
           product_type?: string
+          seller_id?: string | null
           stock?: number | null
           updated_at?: string
         }
@@ -544,10 +548,12 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean
+          is_third_party_seller?: boolean
           metadata?: Json | null
           name?: string
           price_duelcoins?: number
           product_type?: string
+          seller_id?: string | null
           stock?: number | null
           updated_at?: string
         }
@@ -561,6 +567,7 @@ export type Database = {
           quantity: number
           status: string
           total_price: number
+          updated_at: string
           user_id: string
         }
         Insert: {
@@ -570,6 +577,7 @@ export type Database = {
           quantity?: number
           status?: string
           total_price: number
+          updated_at?: string
           user_id: string
         }
         Update: {
@@ -579,6 +587,7 @@ export type Database = {
           quantity?: number
           status?: string
           total_price?: number
+          updated_at?: string
           user_id?: string
         }
         Relationships: [
@@ -1390,6 +1399,44 @@ export type Database = {
         }
         Relationships: []
       }
+      user_inventory: {
+        Row: {
+          created_at: string
+          id: string
+          is_used: boolean
+          product_id: string
+          quantity: number
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_used?: boolean
+          product_id: string
+          quantity?: number
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_used?: boolean
+          product_id?: string
+          quantity?: number
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_inventory_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -1686,6 +1733,11 @@ export type Database = {
         Args: { p_amount: number; p_receiver_id: string }
         Returns: Json
       }
+      transfer_inventory_item: {
+        Args: { p_inventory_id: string; p_recipient_id: string }
+        Returns: Json
+      }
+      use_inventory_item: { Args: { p_inventory_id: string }; Returns: Json }
     }
     Enums: {
       account_type: "free" | "pro"
