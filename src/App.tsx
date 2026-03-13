@@ -88,6 +88,7 @@ const RouterContent = () => {
       <Route path="/transfer-history" element={<TransferHistory />} />
       <Route path="/marketplace" element={<Marketplace />} />
       <Route path="/my-items" element={<MyItems />} />
+      <Route path="/buy-duelcoins" element={<BuyDuelCoins />} />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
     </Routes>

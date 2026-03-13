@@ -99,6 +99,10 @@ export default function Admin() {
             <AdminDuelCoins />
           </TabsContent>
           
+          <TabsContent value="packages" className="mt-6">
+            <AdminDuelCoinsPackages />
+          </TabsContent>
+
           <TabsContent value="judges" className="mt-6">
             <AdminJudges />
           </TabsContent>
