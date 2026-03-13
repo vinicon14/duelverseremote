@@ -316,15 +316,17 @@ export default function MyItems() {
                   <Send className="w-4 h-4 mr-1" />
                   Transferir
                 </Button>
-                <Button
-                  size="sm"
-                  className="btn-mystic flex-1"
-                  onClick={() => handleUseItem(item)}
-                  disabled={usingItem}
-                >
-                  <Zap className="w-4 h-4 mr-1" />
-                  Usar
-                </Button>
+                {item.product?.category === 'cosmetic' && (
+                  <Button
+                    size="sm"
+                    className="btn-mystic flex-1"
+                    onClick={() => handleUseItem(item)}
+                    disabled={usingItem}
+                  >
+                    <Zap className="w-4 h-4 mr-1" />
+                    Usar
+                  </Button>
+                )}
               </div>
             )}
           </div>
