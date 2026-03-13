@@ -256,6 +256,15 @@ export default function DuelCoins() {
                   {loading ? "Transferindo..." : "Enviar DuelCoins"}
                 </Button>
                 <Button
+                  onClick={() => navigate("/buy-duelcoins")}
+                  variant="outline"
+                  size="lg"
+                  className="bg-yellow-500/10 border-yellow-500/30 hover:bg-yellow-500/20"
+                >
+                  <Coins className="w-4 h-4 mr-2 text-yellow-500" />
+                  Comprar
+                </Button>
+                <Button
                   onClick={() => navigate("/transfer-history")}
                   variant="outline"
                   size="lg"
