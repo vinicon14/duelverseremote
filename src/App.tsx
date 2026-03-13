@@ -50,6 +50,7 @@ import TournamentManager from "./pages/TournamentManager";
 import TransferHistory from "./pages/TransferHistory";
 import Marketplace from "./pages/Marketplace";
 import MyItems from "./pages/MyItems";
+import BuyDuelCoins from "./pages/BuyDuelCoins";
 
 const queryClient = new QueryClient();
 
