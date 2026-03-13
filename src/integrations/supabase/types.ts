@@ -131,6 +131,118 @@ export type Database = {
           },
         ]
       }
+      duelcoins_orders: {
+        Row: {
+          amount_brl: number
+          created_at: string
+          duelcoins_amount: number
+          external_order_id: string | null
+          external_payment_id: string | null
+          id: string
+          package_id: string
+          paid_at: string | null
+          payment_method: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount_brl: number
+          created_at?: string
+          duelcoins_amount: number
+          external_order_id?: string | null
+          external_payment_id?: string | null
+          id?: string
+          package_id: string
+          paid_at?: string | null
+          payment_method?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount_brl?: number
+          created_at?: string
+          duelcoins_amount?: number
+          external_order_id?: string | null
+          external_payment_id?: string | null
+          id?: string
+          package_id?: string
+          paid_at?: string | null
+          payment_method?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "duelcoins_orders_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "duelcoins_packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "duelcoins_orders_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "duelcoins_orders_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      duelcoins_packages: {
+        Row: {
+          checkout_url: string | null
+          created_at: string
+          description: string | null
+          duelcoins_amount: number
+          id: string
+          image_url: string | null
+          is_active: boolean
+          is_featured: boolean
+          name: string
+          price_brl: number
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          checkout_url?: string | null
+          created_at?: string
+          description?: string | null
+          duelcoins_amount: number
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          is_featured?: boolean
+          name: string
+          price_brl: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          checkout_url?: string | null
+          created_at?: string
+          description?: string | null
+          duelcoins_amount?: number
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          is_featured?: boolean
+          name?: string
+          price_brl?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       duelcoins_transactions: {
         Row: {
           amount: number

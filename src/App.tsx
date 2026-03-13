@@ -50,6 +50,7 @@ import TournamentManager from "./pages/TournamentManager";
 import TransferHistory from "./pages/TransferHistory";
 import Marketplace from "./pages/Marketplace";
 import MyItems from "./pages/MyItems";
+import BuyDuelCoins from "./pages/BuyDuelCoins";
 
 const queryClient = new QueryClient();
 
@@ -87,6 +88,7 @@ const RouterContent = () => {
       <Route path="/transfer-history" element={<TransferHistory />} />
       <Route path="/marketplace" element={<Marketplace />} />
       <Route path="/my-items" element={<MyItems />} />
+      <Route path="/buy-duelcoins" element={<BuyDuelCoins />} />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
     </Routes>
