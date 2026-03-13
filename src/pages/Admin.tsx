@@ -61,13 +61,14 @@ export default function Admin() {
         </div>
 
         <Tabs defaultValue="news" className="w-full">
-          <TabsList className="grid w-full grid-cols-10">
+          <TabsList className="grid w-full grid-cols-11">
             <TabsTrigger value="news">Notícias</TabsTrigger>
             <TabsTrigger value="ads">Anúncios</TabsTrigger>
             <TabsTrigger value="users">Usuários</TabsTrigger>
             <TabsTrigger value="duels">Salas</TabsTrigger>
             <TabsTrigger value="tournaments">Torneios</TabsTrigger>
             <TabsTrigger value="duelcoins">DuelCoins</TabsTrigger>
+            <TabsTrigger value="packages">Pacotes</TabsTrigger>
             <TabsTrigger value="judges">Juízes</TabsTrigger>
             <TabsTrigger value="plans">Planos</TabsTrigger>
             <TabsTrigger value="marketplace">Market</TabsTrigger>
