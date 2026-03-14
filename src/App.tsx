@@ -41,7 +41,7 @@ import MatchGallery from "./pages/MatchGallery";
 import VideoShare from "./pages/VideoShare";
 import News from "./pages/News";
 import NotFound from "./pages/NotFound";
-import InstallApp from "./pages/InstallApp";
+
 import DeckBuilder from "./pages/DeckBuilder";
 import CreateWeeklyTournament from "./pages/CreateWeeklyTournament";
 import WeeklyTournaments from "./pages/WeeklyTournaments";
