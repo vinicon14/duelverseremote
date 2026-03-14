@@ -179,7 +179,7 @@ export const AdminDuelCoinsPackages = () => {
     }
   };
 
-  const webhookUrl = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/cartpanda-webhook`;
+  const webhookUrl = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/abacatepay-webhook`;
 
   return (
     <div className="space-y-6">
@@ -188,15 +188,15 @@ export const AdminDuelCoinsPackages = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <ExternalLink className="w-5 h-5" />
-            Configuração CartPanda
+            Configuração AbacatePay
           </CardTitle>
           <CardDescription>
-            Configure o webhook abaixo no CartPanda para receber confirmações de pagamento automaticamente
+            Configure o webhook abaixo no AbacatePay para receber confirmações de pagamento automaticamente
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
-            <Label>URL do Webhook (cole no CartPanda)</Label>
+            <Label>URL do Webhook (cole no AbacatePay)</Label>
             <div className="flex gap-2">
               <Input value={webhookUrl} readOnly className="font-mono text-xs" />
               <Button variant="outline" onClick={() => {
@@ -207,7 +207,7 @@ export const AdminDuelCoinsPackages = () => {
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Configure este URL como webhook de notificação de pagamento no painel do CartPanda.
+              Configure este URL como webhook de notificação de pagamento no painel do AbacatePay.
             </p>
           </div>
         </CardContent>
