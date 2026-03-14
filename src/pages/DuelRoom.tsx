@@ -884,15 +884,6 @@ const DuelRoom = () => {
                 <>
                   <HideElementsButton onToggle={() => setHideControls(!hideControls)} isHidden={hideControls} />
                   <RecordMatchButton duelId={id!} />
-                  <Button
-                    onClick={() => navigate('/install')}
-                    variant="outline"
-                    size="sm"
-                    className="bg-primary/90 hover:bg-primary text-primary-foreground backdrop-blur-sm text-xs sm:text-sm"
-                  >
-                    <Download className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                    <span className="hidden sm:inline">Baixar App</span>
-                  </Button>
                 </>
               )}
 

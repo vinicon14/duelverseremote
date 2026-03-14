@@ -224,12 +224,13 @@ export default function Matchmaking() {
         return true;
       }
 
-      // Fallback: verificar se há um duelo recente que o usuário participa
+      // Fallback: verificar se há um duelo recente que o usuário participa (waiting ou in_progress)
       const { data: recentDuel } = await supabase
         .from('live_duels')
         .select('id')
         .or(`creator_id.eq.${currentUserId.current},opponent_id.eq.${currentUserId.current}`)
-        .eq('status', 'in_progress')
+        .in('status', ['waiting', 'in_progress'])
+        .not('opponent_id', 'is', null)
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();

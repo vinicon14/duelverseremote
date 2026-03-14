@@ -79,7 +79,7 @@ const RouterContent = () => {
       <Route path="/news" element={<News />} />
       <Route path="/gallery" element={<MatchGallery />} />
       <Route path="/video/:id" element={<VideoShare />} />
-      <Route path="/install" element={<InstallApp />} />
+      
       <Route path="/deck-builder" element={<DeckBuilder />} />
       <Route path="/weekly-tournaments" element={<WeeklyTournaments />} />
       <Route path="/create-weekly-tournament" element={<CreateWeeklyTournament />} />
