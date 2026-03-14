@@ -7,8 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Coins, ShoppingCart, Star, ExternalLink, History, Loader2 } from "lucide-react";
+import { Coins, ShoppingCart, Star, History, Loader2, Copy, QrCode } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useBanCheck } from "@/hooks/useBanCheck";
 
 interface DuelCoinsPackage {
@@ -32,6 +33,13 @@ interface DuelCoinsOrder {
   paid_at: string | null;
 }
 
+interface PixData {
+  qr_code_image: string;
+  br_code: string;
+  amount_brl: number;
+  duelcoins_amount: number;
+}
+
 export default function BuyDuelCoins() {
   useBanCheck();
   const navigate = useNavigate();
@@ -41,6 +49,7 @@ export default function BuyDuelCoins() {
   const [loading, setLoading] = useState(true);
   const [buying, setBuying] = useState<string | null>(null);
   const [userId, setUserId] = useState<string>("");
+  const [pixDialog, setPixDialog] = useState<PixData | null>(null);
 
   useEffect(() => {
     checkAuthAndLoad();
@@ -77,47 +86,60 @@ export default function BuyDuelCoins() {
   };
 
   const handleBuy = async (pkg: DuelCoinsPackage) => {
-    if (!pkg.checkout_url) {
-      toast({ title: "Link de checkout não configurado", variant: "destructive" });
-      return;
-    }
-
     setBuying(pkg.id);
     try {
-      // Criar pedido pendente
-      const orderId = crypto.randomUUID();
-      const { error } = await supabase
-        .from('duelcoins_orders')
-        .insert({
-          id: orderId,
-          user_id: userId,
-          package_id: pkg.id,
-          amount_brl: pkg.price_brl,
-          duelcoins_amount: pkg.duelcoins_amount,
-          status: 'pending',
-          external_order_id: orderId,
-        } as any);
+      // Try AbacatePay API first
+      const { data, error } = await supabase.functions.invoke('abacatepay-create-pix', {
+        body: { package_id: pkg.id },
+      });
 
       if (error) throw error;
 
-      // Redirecionar para checkout com o ID do pedido
-      const checkoutUrl = new URL(pkg.checkout_url);
-      checkoutUrl.searchParams.set('ref', orderId);
-      checkoutUrl.searchParams.set('email', (await supabase.auth.getUser()).data.user?.email || '');
-      
-      window.open(checkoutUrl.toString(), '_blank');
-      
-      toast({
-        title: "Redirecionando para pagamento",
-        description: "Complete o pagamento na página que abriu. Os DuelCoins serão creditados automaticamente!",
-      });
+      if (data?.success && data?.qr_code_image) {
+        // Show QR code dialog
+        setPixDialog({
+          qr_code_image: data.qr_code_image,
+          br_code: data.br_code,
+          amount_brl: data.amount_brl,
+          duelcoins_amount: data.duelcoins_amount,
+        });
+        fetchOrders(userId);
+      } else if (pkg.checkout_url) {
+        // Fallback to checkout URL
+        const orderId = crypto.randomUUID();
+        await supabase
+          .from('duelcoins_orders')
+          .insert({
+            id: orderId,
+            user_id: userId,
+            package_id: pkg.id,
+            amount_brl: pkg.price_brl,
+            duelcoins_amount: pkg.duelcoins_amount,
+            status: 'pending',
+            external_order_id: orderId,
+          } as any);
 
-      fetchOrders(userId);
+        window.open(pkg.checkout_url, '_blank');
+        toast({
+          title: "Redirecionando para pagamento",
+          description: "Complete o pagamento na página que abriu.",
+        });
+        fetchOrders(userId);
+      } else {
+        toast({ title: "Pagamento não disponível no momento", variant: "destructive" });
+      }
     } catch (error: any) {
-      console.error('Error creating order:', error);
-      toast({ title: "Erro ao criar pedido", description: error.message, variant: "destructive" });
+      console.error('Error creating PIX:', error);
+      toast({ title: "Erro ao gerar PIX", description: error.message, variant: "destructive" });
     } finally {
       setBuying(null);
+    }
+  };
+
+  const copyBrCode = () => {
+    if (pixDialog?.br_code) {
+      navigator.clipboard.writeText(pixDialog.br_code);
+      toast({ title: "Código PIX copiado!" });
     }
   };
 
@@ -210,16 +232,16 @@ export default function BuyDuelCoins() {
                     </div>
                     <Button
                       onClick={() => handleBuy(pkg)}
-                      disabled={buying === pkg.id || !pkg.checkout_url}
+                      disabled={buying === pkg.id}
                       className="w-full btn-mystic"
                       size="lg"
                     >
                       {buying === pkg.id ? (
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       ) : (
-                        <ExternalLink className="w-4 h-4 mr-2" />
+                        <QrCode className="w-4 h-4 mr-2" />
                       )}
-                      {buying === pkg.id ? "Processando..." : "Comprar via PIX"}
+                      {buying === pkg.id ? "Gerando PIX..." : "Pagar via PIX"}
                     </Button>
                   </CardContent>
                 </Card>
@@ -270,6 +292,55 @@ export default function BuyDuelCoins() {
           )}
         </div>
       </main>
+
+      {/* PIX QR Code Dialog */}
+      <Dialog open={!!pixDialog} onOpenChange={(open) => !open && setPixDialog(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center">Pague via PIX</DialogTitle>
+          </DialogHeader>
+          {pixDialog && (
+            <div className="space-y-4 text-center">
+              <p className="text-sm text-muted-foreground">
+                Escaneie o QR Code ou copie o código PIX abaixo
+              </p>
+              <div className="flex justify-center">
+                <img
+                  src={pixDialog.qr_code_image}
+                  alt="QR Code PIX"
+                  className="w-48 h-48 rounded-lg border"
+                />
+              </div>
+              <div className="text-center space-y-1">
+                <div className="text-2xl font-bold text-primary">
+                  R$ {Number(pixDialog.amount_brl).toFixed(2).replace('.', ',')}
+                </div>
+                <div className="text-sm text-yellow-500 font-semibold">
+                  {pixDialog.duelcoins_amount.toLocaleString('pt-BR')} DuelCoins
+                </div>
+              </div>
+              {pixDialog.br_code && (
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">Código Copia e Cola:</p>
+                  <div className="flex gap-2">
+                    <input
+                      readOnly
+                      value={pixDialog.br_code}
+                      className="flex-1 text-xs p-2 rounded border bg-muted font-mono truncate"
+                    />
+                    <Button variant="outline" size="sm" onClick={copyBrCode}>
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Após o pagamento, os DuelCoins serão creditados automaticamente em sua conta.
+              </p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
