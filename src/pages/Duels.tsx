@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Navbar } from "@/components/Navbar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { Swords, Plus, Users, Clock, Download } from "lucide-react";
+import { Swords, Plus, Users, Clock } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useBanCheck } from "@/hooks/useBanCheck";
 import { AdPopup } from "@/components/AdPopup";
