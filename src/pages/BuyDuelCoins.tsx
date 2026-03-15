@@ -42,13 +42,13 @@ interface PixData {
 export default function BuyDuelCoins() {
   useBanCheck();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const [packages, setPackages] = useState<DuelCoinsPackage[]>([]);
   const [orders, setOrders] = useState<DuelCoinsOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [buying, setBuying] = useState<string | null>(null);
   const [userId, setUserId] = useState<string>("");
-  const [pixDialog, setPixDialog] = useState<PixData | null>(null);
 
   useEffect(() => {
     checkAuthAndLoad();
