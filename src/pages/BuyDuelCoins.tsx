@@ -32,12 +32,6 @@ interface DuelCoinsOrder {
   paid_at: string | null;
 }
 
-interface PixData {
-  qr_code_image: string;
-  br_code: string;
-  amount_brl: number;
-  duelcoins_amount: number;
-}
 
 export default function BuyDuelCoins() {
   useBanCheck();
