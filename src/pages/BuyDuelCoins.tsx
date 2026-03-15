@@ -114,12 +114,6 @@ export default function BuyDuelCoins() {
     }
   };
 
-  const copyBrCode = () => {
-    if (pixDialog?.br_code) {
-      navigator.clipboard.writeText(pixDialog.br_code);
-      toast({ title: "Código PIX copiado!" });
-    }
-  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
