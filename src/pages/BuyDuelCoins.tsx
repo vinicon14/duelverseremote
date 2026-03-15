@@ -146,7 +146,7 @@ export default function BuyDuelCoins() {
               Comprar DuelCoins
             </h1>
             <p className="text-muted-foreground">
-              Adquira DuelCoins via PIX de forma rápida e segura
+              Adquira DuelCoins de forma rápida e segura via Stripe
             </p>
           </div>
 
