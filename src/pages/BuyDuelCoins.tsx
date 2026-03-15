@@ -95,49 +95,20 @@ export default function BuyDuelCoins() {
   const handleBuy = async (pkg: DuelCoinsPackage) => {
     setBuying(pkg.id);
     try {
-      // Try AbacatePay API first
-      const { data, error } = await supabase.functions.invoke('abacatepay-create-pix', {
+      const { data, error } = await supabase.functions.invoke('stripe-create-checkout', {
         body: { package_id: pkg.id },
       });
 
       if (error) throw error;
 
-      if (data?.success && data?.qr_code_image) {
-        // Show QR code dialog
-        setPixDialog({
-          qr_code_image: data.qr_code_image,
-          br_code: data.br_code,
-          amount_brl: data.amount_brl,
-          duelcoins_amount: data.duelcoins_amount,
-        });
-        fetchOrders(userId);
-      } else if (pkg.checkout_url) {
-        // Fallback to checkout URL
-        const orderId = crypto.randomUUID();
-        await supabase
-          .from('duelcoins_orders')
-          .insert({
-            id: orderId,
-            user_id: userId,
-            package_id: pkg.id,
-            amount_brl: pkg.price_brl,
-            duelcoins_amount: pkg.duelcoins_amount,
-            status: 'pending',
-            external_order_id: orderId,
-          } as any);
-
-        window.open(pkg.checkout_url, '_blank');
-        toast({
-          title: "Redirecionando para pagamento",
-          description: "Complete o pagamento na página que abriu.",
-        });
-        fetchOrders(userId);
+      if (data?.url) {
+        window.location.href = data.url;
       } else {
-        toast({ title: "Pagamento não disponível no momento", variant: "destructive" });
+        toast({ title: "Erro ao criar checkout", variant: "destructive" });
       }
     } catch (error: any) {
-      console.error('Error creating PIX:', error);
-      toast({ title: "Erro ao gerar PIX", description: error.message, variant: "destructive" });
+      console.error('Error creating checkout:', error);
+      toast({ title: "Erro ao processar pagamento", description: error.message, variant: "destructive" });
     } finally {
       setBuying(null);
     }
