@@ -211,9 +211,9 @@ export default function BuyDuelCoins() {
                       {buying === pkg.id ? (
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       ) : (
-                        <QrCode className="w-4 h-4 mr-2" />
+                        <CreditCard className="w-4 h-4 mr-2" />
                       )}
-                      {buying === pkg.id ? "Gerando PIX..." : "Pagar via PIX"}
+                      {buying === pkg.id ? "Redirecionando..." : "Comprar agora"}
                     </Button>
                   </CardContent>
                 </Card>
