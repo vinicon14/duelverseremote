@@ -54,6 +54,14 @@ export default function BuyDuelCoins() {
     checkAuthAndLoad();
   }, []);
 
+  useEffect(() => {
+    if (searchParams.get("success") === "true") {
+      toast({ title: "Pagamento realizado!", description: "Seus DuelCoins serão creditados em instantes." });
+    } else if (searchParams.get("canceled") === "true") {
+      toast({ title: "Pagamento cancelado", variant: "destructive" });
+    }
+  }, [searchParams]);
+
   const checkAuthAndLoad = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
