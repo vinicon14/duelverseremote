@@ -265,54 +265,6 @@ export default function BuyDuelCoins() {
         </div>
       </main>
 
-      {/* PIX QR Code Dialog */}
-      <Dialog open={!!pixDialog} onOpenChange={(open) => !open && setPixDialog(null)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-center">Pague via PIX</DialogTitle>
-          </DialogHeader>
-          {pixDialog && (
-            <div className="space-y-4 text-center">
-              <p className="text-sm text-muted-foreground">
-                Escaneie o QR Code ou copie o código PIX abaixo
-              </p>
-              <div className="flex justify-center">
-                <img
-                  src={pixDialog.qr_code_image}
-                  alt="QR Code PIX"
-                  className="w-48 h-48 rounded-lg border"
-                />
-              </div>
-              <div className="text-center space-y-1">
-                <div className="text-2xl font-bold text-primary">
-                  R$ {Number(pixDialog.amount_brl).toFixed(2).replace('.', ',')}
-                </div>
-                <div className="text-sm text-yellow-500 font-semibold">
-                  {pixDialog.duelcoins_amount.toLocaleString('pt-BR')} DuelCoins
-                </div>
-              </div>
-              {pixDialog.br_code && (
-                <div className="space-y-2">
-                  <p className="text-xs text-muted-foreground">Código Copia e Cola:</p>
-                  <div className="flex gap-2">
-                    <input
-                      readOnly
-                      value={pixDialog.br_code}
-                      className="flex-1 text-xs p-2 rounded border bg-muted font-mono truncate"
-                    />
-                    <Button variant="outline" size="sm" onClick={copyBrCode}>
-                      <Copy className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              )}
-              <p className="text-xs text-muted-foreground">
-                Após o pagamento, os DuelCoins serão creditados automaticamente em sua conta.
-              </p>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
