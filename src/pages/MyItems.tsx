@@ -194,20 +194,6 @@ export default function MyItems() {
   };
 
   const handleUseItem = async (item: InventoryItem) => {
-    // Check if it's a cosmetic item with description
-    const isCosmetic = item.product?.category === 'cosmetic';
-    const hasDescription = item.product?.description && item.product.description.trim().length > 0;
-    
-    if (isCosmetic && hasDescription) {
-      // Show the description first before marking as used
-      setCosmeticDescription(item.product.description);
-      setCosmeticItemName(item.product.name || 'Item Cosmético');
-      setPendingCosmeticItem(item);
-      setShowCosmeticDescription(true);
-      return;
-    }
-    
-    // For non-cosmetic items, mark as used directly
     await processUseItem(item);
   };
 
