@@ -52,7 +52,6 @@ export const useRealtimeNotifications = (userId: string | undefined) => {
           const notification = payload.new as NotificationData;
           console.log('🔔 New notification received:', notification);
 
-          // Always show browser notification
           showNotification(notification.title, {
             body: notification.message,
             tag: notification.id,
@@ -62,9 +61,42 @@ export const useRealtimeNotifications = (userId: string | undefined) => {
       )
       .subscribe();
 
+    // Subscribe to global chat messages
+    const globalChatChannel = supabase
+      .channel('global-chat-notifications')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'global_chat_messages',
+        },
+        async (payload) => {
+          const msg = payload.new as { id: string; user_id: string; message: string };
+          // Don't notify for own messages
+          if (msg.user_id === userId) return;
+
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('username, avatar_url')
+            .eq('user_id', msg.user_id)
+            .single();
+
+          const senderName = profile?.username || 'Usuário';
+
+          showNotification(`💬 ${senderName}`, {
+            body: msg.message,
+            tag: `global-chat-${msg.id}`,
+            data: { type: 'global_chat', url: '/duels' },
+          });
+        }
+      )
+      .subscribe();
+
     return () => {
       console.log('👋 Cleaning up notifications listener');
       supabase.removeChannel(channel);
+      supabase.removeChannel(globalChatChannel);
     };
   }, [userId, hasPermission, showNotification]);
 };
