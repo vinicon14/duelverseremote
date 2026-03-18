@@ -194,7 +194,14 @@ export default function MyItems() {
   };
 
   const handleUseItem = async (item: InventoryItem) => {
-    await processUseItem(item);
+    if (item.product?.description) {
+      setCosmeticItemName(item.product.name || "Item");
+      setCosmeticDescription(item.product.description);
+      setPendingCosmeticItem(item);
+      setShowCosmeticDescription(true);
+    } else {
+      await processUseItem(item);
+    }
   };
 
   const processUseItem = async (item: InventoryItem) => {
