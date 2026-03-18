@@ -913,9 +913,6 @@ export default function Marketplace() {
 
                         <CardHeader className="pb-2">
                           <CardTitle className="text-lg line-clamp-1">{product.name}</CardTitle>
-                          {product.description && (
-                            <p className="text-sm text-muted-foreground line-clamp-2">{product.description}</p>
-                          )}
                         </CardHeader>
 
                         <CardFooter className="flex items-center justify-between pt-0">
