@@ -32,3 +32,9 @@ verify_jwt = false
 
 [functions.stripe-webhook]
 verify_jwt = false
+
+[functions.mercadopago-create-pix]
+verify_jwt = false
+
+[functions.mercadopago-webhook]
+verify_jwt = false
