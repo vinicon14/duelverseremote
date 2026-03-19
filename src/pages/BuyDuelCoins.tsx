@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Navbar } from "@/components/Navbar";
@@ -7,8 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Coins, ShoppingCart, Star, History, Loader2, CreditCard } from "lucide-react";
+import { Coins, ShoppingCart, Star, History, Loader2, Copy, CheckCircle2, QrCode, X } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useBanCheck } from "@/hooks/useBanCheck";
 
 interface DuelCoinsPackage {
@@ -32,6 +33,14 @@ interface DuelCoinsOrder {
   paid_at: string | null;
 }
 
+interface PixData {
+  qr_code: string;
+  qr_code_base64: string;
+  ticket_url: string;
+  amount_brl: number;
+  duelcoins_amount: number;
+  payment_id: string;
+}
 
 export default function BuyDuelCoins() {
   useBanCheck();
@@ -43,6 +52,10 @@ export default function BuyDuelCoins() {
   const [loading, setLoading] = useState(true);
   const [buying, setBuying] = useState<string | null>(null);
   const [userId, setUserId] = useState<string>("");
+  const [pixData, setPixData] = useState<PixData | null>(null);
+  const [pixDialogOpen, setPixDialogOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const pollInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     checkAuthAndLoad();
@@ -56,12 +69,37 @@ export default function BuyDuelCoins() {
     }
   }, [searchParams]);
 
-  const checkAuthAndLoad = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      navigate("/auth");
+  // Poll for payment confirmation
+  useEffect(() => {
+    if (!pixData || !pixDialogOpen) {
+      if (pollInterval.current) clearInterval(pollInterval.current);
       return;
     }
+
+    pollInterval.current = setInterval(async () => {
+      const { data: order } = await supabase
+        .from('duelcoins_orders')
+        .select('status')
+        .eq('external_order_id', String(pixData.payment_id))
+        .single();
+
+      if (order?.status === 'paid') {
+        clearInterval(pollInterval.current!);
+        setPixDialogOpen(false);
+        setPixData(null);
+        toast({ title: "✅ Pagamento confirmado!", description: "Seus DuelCoins foram creditados!" });
+        fetchOrders(userId);
+      }
+    }, 5000);
+
+    return () => {
+      if (pollInterval.current) clearInterval(pollInterval.current);
+    };
+  }, [pixData, pixDialogOpen]);
+
+  const checkAuthAndLoad = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { navigate("/auth"); return; }
     setUserId(session.user.id);
     await Promise.all([fetchPackages(), fetchOrders(session.user.id)]);
     setLoading(false);
@@ -89,25 +127,45 @@ export default function BuyDuelCoins() {
   const handleBuy = async (pkg: DuelCoinsPackage) => {
     setBuying(pkg.id);
     try {
-      const { data, error } = await supabase.functions.invoke('stripe-create-checkout', {
+      const { data, error } = await supabase.functions.invoke('mercadopago-create-pix', {
         body: { package_id: pkg.id },
       });
 
       if (error) throw error;
 
-      if (data?.url) {
-        window.location.href = data.url;
+      if (data?.success) {
+        setPixData({
+          qr_code: data.qr_code,
+          qr_code_base64: data.qr_code_base64,
+          ticket_url: data.ticket_url,
+          amount_brl: data.amount_brl,
+          duelcoins_amount: data.duelcoins_amount,
+          payment_id: data.payment_id,
+        });
+        setPixDialogOpen(true);
+        setCopied(false);
       } else {
-        toast({ title: "Erro ao criar checkout", variant: "destructive" });
+        toast({ title: "Erro ao gerar PIX", description: data?.error, variant: "destructive" });
       }
     } catch (error: any) {
-      console.error('Error creating checkout:', error);
+      console.error('Error creating PIX:', error);
       toast({ title: "Erro ao processar pagamento", description: error.message, variant: "destructive" });
     } finally {
       setBuying(null);
     }
   };
 
+  const handleCopyPix = async () => {
+    if (!pixData?.qr_code) return;
+    try {
+      await navigator.clipboard.writeText(pixData.qr_code);
+      setCopied(true);
+      toast({ title: "Código PIX copiado!" });
+      setTimeout(() => setCopied(false), 3000);
+    } catch {
+      toast({ title: "Erro ao copiar", variant: "destructive" });
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -140,7 +198,7 @@ export default function BuyDuelCoins() {
               Comprar DuelCoins
             </h1>
             <p className="text-muted-foreground">
-              Adquira DuelCoins de forma rápida e segura via Stripe
+              Adquira DuelCoins de forma rápida e segura via PIX
             </p>
           </div>
 
@@ -205,9 +263,9 @@ export default function BuyDuelCoins() {
                       {buying === pkg.id ? (
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       ) : (
-                        <CreditCard className="w-4 h-4 mr-2" />
+                        <QrCode className="w-4 h-4 mr-2" />
                       )}
-                      {buying === pkg.id ? "Redirecionando..." : "Comprar agora"}
+                      {buying === pkg.id ? "Gerando PIX..." : "Pagar com PIX"}
                     </Button>
                   </CardContent>
                 </Card>
@@ -259,6 +317,66 @@ export default function BuyDuelCoins() {
         </div>
       </main>
 
+      {/* PIX QR Code Dialog */}
+      <Dialog open={pixDialogOpen} onOpenChange={setPixDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <QrCode className="w-5 h-5 text-primary" />
+              Pagamento via PIX
+            </DialogTitle>
+          </DialogHeader>
+          {pixData && (
+            <div className="space-y-4 text-center">
+              <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+                <p className="text-sm text-muted-foreground">Valor</p>
+                <p className="text-2xl font-bold text-primary">
+                  R$ {Number(pixData.amount_brl).toFixed(2).replace('.', ',')}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {pixData.duelcoins_amount.toLocaleString('pt-BR')} DuelCoins
+                </p>
+              </div>
+
+              {pixData.qr_code_base64 && (
+                <div className="flex justify-center">
+                  <img
+                    src={`data:image/png;base64,${pixData.qr_code_base64}`}
+                    alt="QR Code PIX"
+                    className="w-48 h-48 rounded-lg border"
+                  />
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">Ou copie o código PIX:</p>
+                <div className="flex gap-2">
+                  <code className="flex-1 bg-muted p-2 rounded text-xs break-all max-h-20 overflow-y-auto text-left">
+                    {pixData.qr_code}
+                  </code>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={handleCopyPix}
+                    className="shrink-0"
+                  >
+                    {copied ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Aguardando pagamento...
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                O pagamento será confirmado automaticamente. Este QR Code expira em 30 minutos.
+              </p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
