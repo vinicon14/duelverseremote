@@ -3,184 +3,283 @@
  * Desenvolvido por Vinícius
  * 
  * Página inicial pública com informações sobre a plataforma.
- * Exibe funcionalidades, call-to-action para login/cadastro.
+ * Exibe funcionalidades, vídeo promocional e call-to-action para login/cadastro.
  */
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Navbar } from "@/components/Navbar";
-import { Swords, Trophy, Users, Video, Zap, Shield } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { 
+  Swords, Trophy, Users, Video, Zap, Shield, 
+  Play, Star, TrendingUp, Gamepad2, Crown, ChevronDown 
+} from "lucide-react";
 
-const Home = () => {
+const Landing = () => {
+  const [videoUrl, setVideoUrl] = useState("");
+
+  useEffect(() => {
+    const fetchVideo = async () => {
+      const { data } = await supabase
+        .from('system_settings')
+        .select('value')
+        .eq('key', 'landing_video_url')
+        .maybeSingle();
+      if (data?.value) setVideoUrl(data.value);
+    };
+    fetchVideo();
+  }, []);
+
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      
+    <div className="min-h-screen bg-background text-foreground">
+      {/* Navbar simples */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
+        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+              <Swords className="w-5 h-5 text-primary" />
+            </div>
+            <span className="text-xl font-bold text-gradient-mystic">DUELVERSE</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <Link to="/auth">
+              <Button variant="ghost" className="text-muted-foreground hover:text-foreground">
+                Entrar
+              </Button>
+            </Link>
+            <Link to="/auth">
+              <Button className="btn-mystic text-primary-foreground">
+                Criar Conta
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </nav>
+
       {/* Hero Section */}
-      <section className="relative pt-32 pb-20 px-4 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-background to-accent/20" />
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMzLjMxNCAwIDYgMi42ODYgNiA2cy0yLjY4NiA2LTYgNi02LTIuNjg2LTYtNiAyLjY4Ni02IDYtNnoiIHN0cm9rZT0iIzgwNTBhMCIgc3Ryb2tlLXdpZHRoPSIuNSIgb3BhY2l0eT0iLjEiLz48L2c+PC9zdmc+')] opacity-20" />
+      <section className="relative pt-32 pb-24 px-4 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-background to-accent/10" />
+        <div className="absolute top-20 left-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-10 right-10 w-96 h-96 bg-accent/10 rounded-full blur-3xl" />
         
         <div className="container mx-auto relative z-10">
-          <div className="max-w-4xl mx-auto text-center space-y-8 animate-slide-up">
-            <div className="inline-block mb-4">
-              <div className="w-24 h-24 mx-auto rounded-full bg-primary/20 flex items-center justify-center animate-glow-pulse">
-                <Swords className="w-12 h-12 text-primary" />
-              </div>
+          <div className="max-w-4xl mx-auto text-center space-y-8">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-sm text-primary">
+              <Star className="w-4 h-4" />
+              <span>A plataforma #1 de duelos de Yu-Gi-Oh! online</span>
             </div>
             
-            <h1 className="text-5xl md:text-7xl font-bold">
-              <span className="text-gradient-mystic">DUELVERSE</span>
+            <h1 className="text-5xl md:text-7xl font-extrabold leading-tight">
+              <span className="text-gradient-mystic">Duele Online</span>
+              <br />
+              <span className="text-foreground">Como Nunca Antes</span>
             </h1>
             
-            <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto">
-              A plataforma definitiva para duelos de Yu-Gi-Oh ao vivo com chamadas de vídeo
+            <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+              Desafie duelistas do mundo todo com chamadas de vídeo ao vivo, 
+              torneios com premiações em DuelCoins e um sistema de ranking competitivo.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <Link to="/matchmaking">
-                <Button size="lg" className="btn-mystic text-white text-lg px-8">
+              <Link to="/auth">
+                <Button size="lg" className="btn-mystic text-primary-foreground text-lg px-10 py-6 rounded-xl shadow-lg">
                   <Zap className="mr-2 h-5 w-5" />
-                  Encontrar Partida
+                  Comece Agora — É Grátis
                 </Button>
               </Link>
-              <Link to="/duels">
-                <Button size="lg" variant="outline" className="text-lg px-8">
-                  <Swords className="mr-2 h-5 w-5" />
-                  Ver Duelos
-                </Button>
-              </Link>
+              {videoUrl && (
+                <a href="#video">
+                  <Button size="lg" variant="outline" className="text-lg px-8 py-6 rounded-xl border-border">
+                    <Play className="mr-2 h-5 w-5" />
+                    Ver Vídeo
+                  </Button>
+                </a>
+              )}
             </div>
 
-            <div className="grid grid-cols-3 gap-8 max-w-2xl mx-auto mt-12">
+            <div className="grid grid-cols-3 gap-8 max-w-xl mx-auto mt-16">
               <div className="text-center">
-                <div className="text-3xl font-bold text-gradient-mystic mb-1">1000+</div>
-                <div className="text-sm text-muted-foreground">Duelistas</div>
+                <div className="text-3xl md:text-4xl font-bold text-gradient-mystic mb-1">1000+</div>
+                <div className="text-sm text-muted-foreground">Duelistas Ativos</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-gradient-gold mb-1">500+</div>
+                <div className="text-3xl md:text-4xl font-bold text-gradient-gold mb-1">500+</div>
                 <div className="text-sm text-muted-foreground">Duelos Diários</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-gradient-mystic mb-1">50+</div>
+                <div className="text-3xl md:text-4xl font-bold text-gradient-mystic mb-1">50+</div>
                 <div className="text-sm text-muted-foreground">Torneios</div>
               </div>
+            </div>
+
+            <div className="pt-8">
+              <a href="#features">
+                <ChevronDown className="w-8 h-8 text-muted-foreground mx-auto animate-bounce" />
+              </a>
             </div>
           </div>
         </div>
       </section>
 
+      {/* Video Section */}
+      {videoUrl && (
+        <section id="video" className="py-20 px-4">
+          <div className="container mx-auto max-w-4xl">
+            <div className="text-center mb-10">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">
+                <span className="text-gradient-mystic">Conheça o DuelVerse</span>
+              </h2>
+              <p className="text-muted-foreground text-lg">
+                Veja como funciona a plataforma em ação
+              </p>
+            </div>
+            
+            <div className="relative rounded-2xl overflow-hidden border border-border shadow-2xl bg-card aspect-video">
+              {videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be') ? (
+                <iframe
+                  src={videoUrl.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')}
+                  className="w-full h-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  title="Vídeo DuelVerse"
+                />
+              ) : (
+                <video
+                  src={videoUrl}
+                  controls
+                  className="w-full h-full object-cover"
+                  poster=""
+                >
+                  Seu navegador não suporta vídeo.
+                </video>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Features Section */}
-      <section className="py-20 px-4">
+      <section id="features" className="py-20 px-4">
         <div className="container mx-auto">
-          <div className="text-center mb-12">
+          <div className="text-center mb-14">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              <span className="text-gradient-mystic">Recursos Incríveis</span>
+              <span className="text-gradient-mystic">Por Que Escolher o DuelVerse?</span>
             </h2>
-            <p className="text-muted-foreground text-lg">
-              Tudo que você precisa para duelos épicos
+            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+              Recursos desenvolvidos por duelistas, para duelistas
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Card className="card-mystic p-6 hover:border-primary/40 transition-all">
-              <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center mb-4">
-                <Video className="w-6 h-6 text-primary" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2 text-gradient-mystic">
-                Chamadas de Vídeo
-              </h3>
-              <p className="text-muted-foreground">
-                Duele cara a cara com seus oponentes através de chamadas de vídeo integradas
-              </p>
-            </Card>
-
-            <Card className="card-mystic p-6 hover:border-primary/40 transition-all">
-              <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center mb-4">
-                <Zap className="w-6 h-6 text-primary" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2 text-gradient-mystic">
-                Tempo Real
-              </h3>
-              <p className="text-muted-foreground">
-                Acompanhe pontos de vida e movimentos em tempo real durante os duelos
-              </p>
-            </Card>
-
-            <Card className="card-mystic p-6 hover:border-primary/40 transition-all">
-              <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center mb-4">
-                <Trophy className="w-6 h-6 text-primary" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2 text-gradient-mystic">
-                Sistema ELO
-              </h3>
-              <p className="text-muted-foreground">
-                Suba no ranking com o sistema de classificação ELO competitivo
-              </p>
-            </Card>
-
-            <Card className="card-mystic p-6 hover:border-primary/40 transition-all">
-              <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center mb-4">
-                <Users className="w-6 h-6 text-primary" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2 text-gradient-mystic">
-                Sistema Social
-              </h3>
-              <p className="text-muted-foreground">
-                Adicione amigos, envie desafios e construa sua comunidade
-              </p>
-            </Card>
-
-            <Card className="card-mystic p-6 hover:border-primary/40 transition-all">
-              <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center mb-4">
-                <Shield className="w-6 h-6 text-primary" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2 text-gradient-mystic">
-                Histórico Completo
-              </h3>
-              <p className="text-muted-foreground">
-                Acesse todo seu histórico de duelos e estatísticas detalhadas
-              </p>
-            </Card>
-
-            <Card className="card-mystic p-6 hover:border-primary/40 transition-all">
-              <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center mb-4">
-                <Swords className="w-6 h-6 text-primary" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2 text-gradient-mystic">
-                Salas Personalizadas
-              </h3>
-              <p className="text-muted-foreground">
-                Crie salas privadas e convide amigos para duelos personalizados
-              </p>
-            </Card>
+            {[
+              { icon: Video, title: "Chamadas de Vídeo", desc: "Duele cara a cara com seus oponentes através de chamadas de vídeo integradas em tempo real" },
+              { icon: Zap, title: "Matchmaking Automático", desc: "Encontre oponentes do seu nível em segundos com nosso sistema inteligente de fila" },
+              { icon: Trophy, title: "Torneios & Premiações", desc: "Participe de torneios semanais com premiações em DuelCoins e suba no ranking" },
+              { icon: TrendingUp, title: "Sistema de Ranking", desc: "Acompanhe sua evolução com um sistema de pontos competitivo e leaderboard global" },
+              { icon: Users, title: "Comunidade Ativa", desc: "Adicione amigos, envie desafios, troque mensagens e construa sua rede de duelistas" },
+              { icon: Gamepad2, title: "Deck Builder", desc: "Construa e salve seus decks com nosso editor visual completo integrado à plataforma" },
+            ].map((feature, i) => (
+              <Card key={i} className="group p-6 bg-card border-border hover:border-primary/40 transition-all duration-300 hover:shadow-lg hover:shadow-primary/5">
+                <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center mb-4 group-hover:bg-primary/25 transition-colors">
+                  <feature.icon className="w-6 h-6 text-primary" />
+                </div>
+                <h3 className="text-xl font-semibold mb-2 text-foreground">
+                  {feature.title}
+                </h3>
+                <p className="text-muted-foreground leading-relaxed">
+                  {feature.desc}
+                </p>
+              </Card>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
+      {/* How it works */}
+      <section className="py-20 px-4 bg-card/50">
+        <div className="container mx-auto max-w-4xl">
+          <div className="text-center mb-14">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              <span className="text-gradient-gold">Como Funciona</span>
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[
+              { step: "1", title: "Crie Sua Conta", desc: "Cadastre-se gratuitamente e personalize seu perfil de duelista" },
+              { step: "2", title: "Encontre um Oponente", desc: "Use o matchmaking automático ou crie uma sala personalizada" },
+              { step: "3", title: "Duele & Vença!", desc: "Duele por vídeo chamada, ganhe pontos e suba no ranking" },
+            ].map((item, i) => (
+              <div key={i} className="text-center space-y-4">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center mx-auto text-2xl font-bold text-primary-foreground">
+                  {item.step}
+                </div>
+                <h3 className="text-xl font-semibold text-foreground">{item.title}</h3>
+                <p className="text-muted-foreground">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Pro Section */}
       <section className="py-20 px-4">
-        <div className="container mx-auto">
-          <Card className="card-mystic p-12 text-center relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-accent/10" />
-            <div className="relative z-10 space-y-6">
+        <div className="container mx-auto max-w-4xl">
+          <Card className="p-10 md:p-14 relative overflow-hidden border-primary/20 bg-card">
+            <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-accent/5" />
+            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+            <div className="relative z-10 text-center space-y-6">
+              <Crown className="w-12 h-12 text-secondary mx-auto" />
               <h2 className="text-3xl md:text-4xl font-bold">
-                <span className="text-gradient-mystic">Pronto para Duelar?</span>
+                <span className="text-gradient-gold">DuelVerse PRO</span>
               </h2>
-              <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-                Entre na arena e mostre suas habilidades contra duelistas do mundo todo
+              <p className="text-muted-foreground text-lg max-w-xl mx-auto">
+                Sem anúncios, acesso a torneios exclusivos, badge especial e muito mais. 
+                Eleve sua experiência ao próximo nível.
               </p>
               <Link to="/auth">
-                <Button size="lg" className="btn-mystic text-white text-lg px-12">
-                  Criar Conta Grátis
+                <Button size="lg" className="bg-secondary text-secondary-foreground hover:bg-secondary/90 text-lg px-10 py-6 rounded-xl">
+                  <Crown className="mr-2 h-5 w-5" />
+                  Saiba Mais
                 </Button>
               </Link>
             </div>
           </Card>
         </div>
       </section>
+
+      {/* CTA Final */}
+      <section className="py-24 px-4">
+        <div className="container mx-auto text-center space-y-8">
+          <h2 className="text-4xl md:text-5xl font-extrabold">
+            <span className="text-gradient-mystic">Pronto para Duelar?</span>
+          </h2>
+          <p className="text-muted-foreground text-lg max-w-xl mx-auto">
+            Junte-se a milhares de duelistas e comece sua jornada agora mesmo
+          </p>
+          <Link to="/auth">
+            <Button size="lg" className="btn-mystic text-primary-foreground text-xl px-14 py-7 rounded-xl shadow-xl">
+              <Swords className="mr-2 h-6 w-6" />
+              Criar Conta Grátis
+            </Button>
+          </Link>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t border-border py-8 px-4">
+        <div className="container mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Swords className="w-5 h-5 text-primary" />
+            <span className="font-bold text-gradient-mystic">DUELVERSE</span>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            © {new Date().getFullYear()} DuelVerse. Todos os direitos reservados. Desenvolvido por Vinícius.
+          </p>
+        </div>
+      </footer>
     </div>
   );
 };
 
-export default Home;
+export default Landing;
