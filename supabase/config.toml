@@ -21,12 +21,6 @@ verify_jwt = true
 [functions.end-live-stream]
 verify_jwt = true
 
-[functions.abacatepay-webhook]
-verify_jwt = false
-
-[functions.abacatepay-create-pix]
-verify_jwt = false
-
 [functions.stripe-create-checkout]
 verify_jwt = false
 
