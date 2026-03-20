@@ -111,18 +111,15 @@ export default function Store() {
       const { data, error } = await supabase
         .from('system_settings')
         .select('key, value')
-        .in('key', ['support_email', 'store_url']);
+        .in('key', ['support_email']);
       if (error) throw error;
       if (data) {
         const emailSetting = data.find(s => s.key === 'support_email');
-        const urlSetting = data.find(s => s.key === 'store_url');
         setSupportEmail(emailSetting?.value || 'suporte@duelverseonline.vercel.app');
-        setStoreUrl(urlSetting?.value || 'https://loja.duelverseonline.vercel.app');
       }
     } catch (error) {
       console.error('Error fetching settings:', error);
       setSupportEmail('suporte@duelverseonline.vercel.app');
-      setStoreUrl('https://loja.duelverseonline.vercel.app');
     }
   };
 
@@ -140,24 +137,6 @@ export default function Store() {
       console.error("Error fetching plans:", error);
     } finally {
       setLoadingPlans(false);
-    }
-  };
-
-  const handleStoreAccess = () => {
-    if (storeUrl) {
-      const link = document.createElement('a');
-      link.href = storeUrl;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } else {
-      toast({
-        title: "Link não configurado",
-        description: "O administrador ainda não configurou o link da loja.",
-        variant: "destructive"
-      });
     }
   };
 
@@ -191,7 +170,6 @@ export default function Store() {
         throw new Error(subscriptionData.message);
       }
 
-      // Refresh profile and subscription
       await fetchProfile(user.id);
       await fetchActiveSubscription(user.id);
 
@@ -242,7 +220,7 @@ export default function Store() {
               <StoreIcon className="w-10 h-10 text-primary-foreground" />
             </div>
             <h1 className="text-4xl font-bold gradient-text">Loja Duelverse</h1>
-            <p className="text-xl text-muted-foreground">Acesse nossa loja oficial e descubra todas as opções disponíveis</p>
+            <p className="text-xl text-muted-foreground">Compre planos PRO e aproveite benefícios exclusivos</p>
           </div>
 
           {/* Active Subscription Banner */}
@@ -374,7 +352,6 @@ export default function Store() {
               )}
             </CardContent>
           </Card>
-
 
           {/* Support Card */}
           <Card>
