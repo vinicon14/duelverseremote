@@ -35,7 +35,6 @@ interface ActiveSubscription {
 
 export default function Store() {
   const navigate = useNavigate();
-  const [storeUrl, setStoreUrl] = useState("");
   const [supportEmail, setSupportEmail] = useState("");
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [loadingPlans, setLoadingPlans] = useState(true);
