@@ -376,26 +376,6 @@ export default function Store() {
             </CardContent>
           </Card>
 
-          {/* Store Access Card */}
-          <Card className="card-mystic border-primary/50">
-            <CardHeader>
-              <CardTitle className="text-2xl flex items-center gap-2">
-                <StoreIcon className="w-6 h-6 text-primary" />
-                Loja Externa
-              </CardTitle>
-              <CardDescription>Visite nossa loja oficial para produtos físicos e virtuais</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <p className="text-muted-foreground">Na nossa loja você encontra planos personalizados, moedas do game e muito mais</p>
-                <Button onClick={handleStoreAccess} className="w-full btn-mystic" size="lg">
-                  <StoreIcon className="w-5 h-5 mr-2" />
-                  Acessar Loja Duelverse
-                  <ExternalLink className="w-4 h-4 ml-2" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
 
           {/* Support Card */}
           <Card>
