@@ -54,11 +54,17 @@ import BuyDuelCoins from "./pages/BuyDuelCoins";
 
 const queryClient = new QueryClient();
 
+// Componente que redireciona baseado no estado de autenticação
+const HomePage = ({ user }: { user: User | null }) => {
+  if (user) return <Home />;
+  return <Landing />;
+};
+
 // Componente interno que fica dentro do Router para usar useNavigate
-const RouterContent = () => {
+const RouterContent = ({ user }: { user: User | null }) => {
   return (
     <Routes>
-      <Route path="/" element={<Home />} />
+      <Route path="/" element={<HomePage user={user} />} />
       <Route path="/landing" element={<Landing />} />
       <Route path="/admin" element={<Admin />} />
       <Route path="/auth" element={<Auth />} />
@@ -108,7 +114,6 @@ const AppContent = () => {
   useOnlineStatus();
 
   useEffect(() => {
-    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setSession(session);
@@ -116,7 +121,6 @@ const AppContent = () => {
       }
     );
 
-    // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -133,7 +137,7 @@ const AppContent = () => {
       <ConditionalMonetagLoader />
       <DuelInviteNotification currentUserId={user?.id} />
       <NotificationPrompt />
-      <RouterContent />
+      <RouterContent user={user} />
     </BrowserRouter>
   );
 };

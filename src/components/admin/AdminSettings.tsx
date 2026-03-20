@@ -10,7 +10,7 @@ import { Save } from "lucide-react";
 export const AdminSettings = () => {
   const [supportEmail, setSupportEmail] = useState("");
   const [pixKey, setPixKey] = useState("");
-  const [storeUrl, setStoreUrl] = useState("");
+  const [landingVideoUrl, setLandingVideoUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
@@ -29,11 +29,11 @@ export const AdminSettings = () => {
       if (data) {
         const emailSetting = data.find(s => s.key === 'support_email');
         const pixSetting = data.find(s => s.key === 'pix_key');
-        const storeSetting = data.find(s => s.key === 'store_url');
+        const videoSetting = data.find(s => s.key === 'landing_video_url');
         
         if (emailSetting) setSupportEmail(emailSetting.value || '');
         if (pixSetting) setPixKey(pixSetting.value || '');
-        if (storeSetting) setStoreUrl(storeSetting.value || '');
+        if (videoSetting) setLandingVideoUrl(videoSetting.value || '');
       }
     } catch (error) {
       console.error('Error fetching settings:', error);
@@ -43,35 +43,21 @@ export const AdminSettings = () => {
   const saveSettings = async () => {
     setLoading(true);
     try {
-      // Upsert support_email (onConflict especifica a coluna única)
-      const { error: emailError } = await supabase
-        .from('system_settings')
-        .upsert(
-          { key: 'support_email', value: supportEmail, updated_at: new Date().toISOString() },
-          { onConflict: 'key' }
-        );
-      
-      if (emailError) throw emailError;
+      const settings = [
+        { key: 'support_email', value: supportEmail },
+        { key: 'pix_key', value: pixKey },
+        { key: 'landing_video_url', value: landingVideoUrl },
+      ];
 
-      // Upsert pix_key
-      const { error: pixError } = await supabase
-        .from('system_settings')
-        .upsert(
-          { key: 'pix_key', value: pixKey, updated_at: new Date().toISOString() },
-          { onConflict: 'key' }
-        );
-      
-      if (pixError) throw pixError;
-
-      // Upsert store_url
-      const { error: storeError } = await supabase
-        .from('system_settings')
-        .upsert(
-          { key: 'store_url', value: storeUrl, updated_at: new Date().toISOString() },
-          { onConflict: 'key' }
-        );
-      
-      if (storeError) throw storeError;
+      for (const setting of settings) {
+        const { error } = await supabase
+          .from('system_settings')
+          .upsert(
+            { key: setting.key, value: setting.value, updated_at: new Date().toISOString() },
+            { onConflict: 'key' }
+          );
+        if (error) throw error;
+      }
 
       toast({ 
         title: "Configurações salvas",
@@ -127,31 +113,41 @@ export const AdminSettings = () => {
               Chave PIX no formato cópia e cola para pagamentos
             </p>
           </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="store-url">Link da Loja</Label>
-            <Input
-              id="store-url"
-              type="url"
-              placeholder="https://loja.duelverseonline.vercel.app"
-              value={storeUrl}
-              onChange={(e) => setStoreUrl(e.target.value)}
-            />
-            <p className="text-sm text-muted-foreground">
-              URL da loja oficial que será acessada pelos usuários
-            </p>
-          </div>
-
-          <Button 
-            onClick={saveSettings} 
-            disabled={loading}
-            className="w-full"
-          >
-            <Save className="w-4 h-4 mr-2" />
-            {loading ? "Salvando..." : "Salvar Configurações"}
-          </Button>
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Landing Page</CardTitle>
+          <CardDescription>
+            Configure o conteúdo exibido na página inicial para visitantes
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="landing-video">URL do Vídeo da Landing Page</Label>
+            <Input
+              id="landing-video"
+              type="url"
+              placeholder="https://www.youtube.com/watch?v=... ou URL direta do vídeo"
+              value={landingVideoUrl}
+              onChange={(e) => setLandingVideoUrl(e.target.value)}
+            />
+            <p className="text-sm text-muted-foreground">
+              Cole a URL de um vídeo do YouTube ou link direto de vídeo (.mp4). Será exibido na página inicial para visitantes.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Button 
+        onClick={saveSettings} 
+        disabled={loading}
+        className="w-full"
+      >
+        <Save className="w-4 h-4 mr-2" />
+        {loading ? "Salvando..." : "Salvar Configurações"}
+      </Button>
     </div>
   );
 };
