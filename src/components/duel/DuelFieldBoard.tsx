@@ -77,6 +77,7 @@ interface DuelFieldBoardProps {
   onCardClick: (card: GameCard, zone: FieldZoneType) => void;
   onCardDrop: (zone: FieldZoneType, card: GameCard) => void;
   isFullscreen?: boolean;
+  playmatUrl?: string | null;
 }
 
 // Local state for effect modal will be managed inside component
