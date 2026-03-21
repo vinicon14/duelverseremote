@@ -296,12 +296,9 @@ export const DuelFieldBoard = ({
   };
 
   return (
-    <>
-      {/* Dark overlay for readability when using playmat */}
-      
     <div 
       className={cn(
-        "relative w-full rounded-lg p-2 sm:p-3 border border-border/50",
+        "relative w-full rounded-lg p-2 sm:p-3 border border-border/50 overflow-hidden",
         !playmatUrl && "bg-gradient-to-b from-cyan-900/40 via-blue-900/30 to-cyan-900/40",
         isFullscreen && "scale-100 origin-top-left"
       )}
@@ -314,6 +311,10 @@ export const DuelFieldBoard = ({
         backgroundRepeat: playmatUrl ? 'no-repeat' : undefined,
       }}
     >
+      {/* Dark overlay for readability when using playmat */}
+      {playmatUrl && (
+        <div className="absolute inset-0 bg-black/40 rounded-lg pointer-events-none z-0" />
+      )}
       {/* Field Layout */}
       <div className="flex flex-col gap-2 sm:gap-3">
         
