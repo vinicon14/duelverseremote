@@ -298,11 +298,17 @@ export const DuelFieldBoard = ({
   return (
     <div 
       className={cn(
-        "relative w-full bg-gradient-to-b from-cyan-900/40 via-blue-900/30 to-cyan-900/40 rounded-lg p-2 sm:p-3 border border-border/50",
+        "relative w-full rounded-lg p-2 sm:p-3 border border-border/50",
+        !playmatUrl && "bg-gradient-to-b from-cyan-900/40 via-blue-900/30 to-cyan-900/40",
         isFullscreen && "scale-100 origin-top-left"
       )}
       style={{
-        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cpath d='M20 0L40 20 20 40 0 20z' fill='%23ffffff' fill-opacity='0.03'/%3E%3C/svg%3E")`,
+        backgroundImage: playmatUrl 
+          ? `url("${playmatUrl}")` 
+          : `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cpath d='M20 0L40 20 20 40 0 20z' fill='%23ffffff' fill-opacity='0.03'/%3E%3C/svg%3E")`,
+        backgroundSize: playmatUrl ? 'cover' : undefined,
+        backgroundPosition: playmatUrl ? 'center' : undefined,
+        backgroundRepeat: playmatUrl ? 'no-repeat' : undefined,
       }}
     >
       {/* Field Layout */}
