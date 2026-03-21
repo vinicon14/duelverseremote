@@ -296,6 +296,9 @@ export const DuelFieldBoard = ({
   };
 
   return (
+    <>
+      {/* Dark overlay for readability when using playmat */}
+      
     <div 
       className={cn(
         "relative w-full rounded-lg p-2 sm:p-3 border border-border/50",

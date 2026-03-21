@@ -1149,6 +1149,7 @@ export const DuelDeckViewer = ({
                     onCardClick={handleCardOnFieldClick}
                     onCardDrop={handleCardDrop}
                     isFullscreen={isFullscreen}
+                    playmatUrl={localStorage.getItem('activePlaymatUrl')}
                   />
                 </div>
               </ScrollArea>
