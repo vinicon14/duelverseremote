@@ -316,7 +316,7 @@ export const DuelFieldBoard = ({
         <div className="absolute inset-0 bg-black/40 rounded-lg pointer-events-none z-0" />
       )}
       {/* Field Layout */}
-      <div className="flex flex-col gap-2 sm:gap-3">
+      <div className="relative z-10 flex flex-col gap-2 sm:gap-3">
         
         {/* Extra Monster Zones Row */}
         <div className="flex justify-center gap-1 sm:gap-2">
