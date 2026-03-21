@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Coins, ShoppingCart, Star, History, Loader2, Copy, CheckCircle2, QrCode, X } from "lucide-react";
+import { Coins, ShoppingCart, Star, History, Loader2, Copy, CheckCircle2, QrCode, X, CreditCard } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useBanCheck } from "@/hooks/useBanCheck";
@@ -51,6 +51,7 @@ export default function BuyDuelCoins() {
   const [orders, setOrders] = useState<DuelCoinsOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [buying, setBuying] = useState<string | null>(null);
+  const [buyingCard, setBuyingCard] = useState<string | null>(null);
   const [userId, setUserId] = useState<string>("");
   const [pixData, setPixData] = useState<PixData | null>(null);
   const [pixDialogOpen, setPixDialogOpen] = useState(false);
@@ -69,7 +70,6 @@ export default function BuyDuelCoins() {
     }
   }, [searchParams]);
 
-  // Poll for payment confirmation
   useEffect(() => {
     if (!pixData || !pixDialogOpen) {
       if (pollInterval.current) clearInterval(pollInterval.current);
@@ -124,7 +124,7 @@ export default function BuyDuelCoins() {
     setOrders((data as any[]) || []);
   };
 
-  const handleBuy = async (pkg: DuelCoinsPackage) => {
+  const handleBuyPix = async (pkg: DuelCoinsPackage) => {
     setBuying(pkg.id);
     try {
       const { data, error } = await supabase.functions.invoke('mercadopago-create-pix', {
@@ -152,6 +152,28 @@ export default function BuyDuelCoins() {
       toast({ title: "Erro ao processar pagamento", description: error.message, variant: "destructive" });
     } finally {
       setBuying(null);
+    }
+  };
+
+  const handleBuyCard = async (pkg: DuelCoinsPackage) => {
+    setBuyingCard(pkg.id);
+    try {
+      const { data, error } = await supabase.functions.invoke('mercadopago-create-checkout', {
+        body: { package_id: pkg.id, origin_url: window.location.origin },
+      });
+
+      if (error) throw error;
+
+      if (data?.success && data?.checkout_url) {
+        window.location.href = data.checkout_url;
+      } else {
+        toast({ title: "Erro ao criar checkout", description: data?.error, variant: "destructive" });
+      }
+    } catch (error: any) {
+      console.error('Error creating checkout:', error);
+      toast({ title: "Erro ao processar pagamento", description: error.message, variant: "destructive" });
+    } finally {
+      setBuyingCard(null);
     }
   };
 
@@ -198,7 +220,7 @@ export default function BuyDuelCoins() {
               Comprar DuelCoins
             </h1>
             <p className="text-muted-foreground">
-              Adquira DuelCoins de forma rápida e segura via PIX
+              Adquira DuelCoins de forma rápida e segura via PIX ou Cartão
             </p>
           </div>
 
@@ -254,19 +276,35 @@ export default function BuyDuelCoins() {
                         R$ {Number(pkg.price_brl).toFixed(2).replace('.', ',')}
                       </div>
                     </div>
-                    <Button
-                      onClick={() => handleBuy(pkg)}
-                      disabled={buying === pkg.id}
-                      className="w-full btn-mystic"
-                      size="lg"
-                    >
-                      {buying === pkg.id ? (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      ) : (
-                        <QrCode className="w-4 h-4 mr-2" />
-                      )}
-                      {buying === pkg.id ? "Gerando PIX..." : "Pagar com PIX"}
-                    </Button>
+                    <div className="flex flex-col gap-2">
+                      <Button
+                        onClick={() => handleBuyPix(pkg)}
+                        disabled={buying === pkg.id || buyingCard === pkg.id}
+                        className="w-full btn-mystic"
+                        size="lg"
+                      >
+                        {buying === pkg.id ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <QrCode className="w-4 h-4 mr-2" />
+                        )}
+                        {buying === pkg.id ? "Gerando PIX..." : "Pagar com PIX"}
+                      </Button>
+                      <Button
+                        onClick={() => handleBuyCard(pkg)}
+                        disabled={buying === pkg.id || buyingCard === pkg.id}
+                        variant="outline"
+                        className="w-full"
+                        size="lg"
+                      >
+                        {buyingCard === pkg.id ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <CreditCard className="w-4 h-4 mr-2" />
+                        )}
+                        {buyingCard === pkg.id ? "Redirecionando..." : "Cartão de Crédito/Débito"}
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               ))}

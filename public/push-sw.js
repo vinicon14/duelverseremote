@@ -1,7 +1,7 @@
 // Push Notification handlers for DuelVerse
 // This file is imported by the main Workbox service worker via importScripts
 
-// Handle push notifications - Processa data messages do FCM
+// Handle push notifications
 self.addEventListener('push', (event) => {
   console.log('📩 Push notification recebida:', event);
   
@@ -15,11 +15,9 @@ self.addEventListener('push', (event) => {
 
   if (event.data) {
     try {
-      // FCM envia os dados no formato { data: { ... } }
       const payload = event.data.json();
       console.log('📦 Payload recebido:', payload);
       
-      // Extrai os dados do campo 'data' do FCM
       const data = payload.data || payload;
       
       notificationData = {
@@ -32,19 +30,22 @@ self.addEventListener('push', (event) => {
       console.log('📋 Notificação processada:', notificationData);
     } catch (e) {
       console.error('❌ Erro ao fazer parse do payload:', e);
-      // Tenta usar o texto direto
       notificationData.body = event.data.text();
     }
   }
+
+  // Use unique tag per notification to prevent replacing previous ones
+  const uniqueTag = 'duelverse-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5);
 
   const promiseChain = self.registration.showNotification(notificationData.title, {
     body: notificationData.body,
     icon: notificationData.icon,
     badge: notificationData.badge,
     data: notificationData.data,
-    requireInteraction: false,
-    tag: 'duelverse-notification',
+    requireInteraction: true,
+    tag: uniqueTag,
     vibrate: [200, 100, 200],
+    renotify: true,
   });
 
   event.waitUntil(promiseChain);
@@ -61,17 +62,13 @@ self.addEventListener('notificationclick', (event) => {
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then((windowClients) => {
-        // Check if there's already a window open
         for (let i = 0; i < windowClients.length; i++) {
           const client = windowClients[i];
           if (client.url.includes(urlToOpen) && 'focus' in client) {
-            console.log('✅ Focando janela existente');
             return client.focus();
           }
         }
-        // If no window is open, open a new one
         if (self.clients.openWindow) {
-          console.log('🆕 Abrindo nova janela');
           return self.clients.openWindow(urlToOpen);
         }
       })

@@ -2,7 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 Deno.serve(async (req) => {
@@ -19,10 +19,8 @@ Deno.serve(async (req) => {
     const body = await req.json();
     console.log('[MercadoPago Webhook] Received:', JSON.stringify(body));
 
-    // MercadoPago sends different notification types
     const { type, data, action } = body;
 
-    // We only care about payment notifications
     if (type !== 'payment' && action !== 'payment.updated' && action !== 'payment.created') {
       return new Response(JSON.stringify({ message: 'Ignored event type' }), {
         status: 200,
@@ -40,9 +38,7 @@ Deno.serve(async (req) => {
 
     // Fetch full payment details from MercadoPago API
     const mpResponse = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
-      headers: {
-        'Authorization': `Bearer ${mpAccessToken}`,
-      },
+      headers: { 'Authorization': `Bearer ${mpAccessToken}` },
     });
 
     if (!mpResponse.ok) {
@@ -55,33 +51,57 @@ Deno.serve(async (req) => {
     }
 
     const payment = await mpResponse.json();
-    console.log('[MercadoPago Webhook] Payment status:', payment.status, 'ID:', payment.id);
+    console.log('[MercadoPago Webhook] Payment status:', payment.status, 'ID:', payment.id, 'external_reference:', payment.external_reference);
 
     const isPaid = payment.status === 'approved';
 
-    if (!isPaid) {
-      // Update order status
-      await supabase
-        .from('duelcoins_orders')
-        .update({ 
-          status: payment.status || 'unknown', 
-          external_payment_id: String(paymentId) 
-        })
-        .eq('external_order_id', String(paymentId));
+    // Try to find order by external_order_id (PIX direct) or by external_reference (Checkout Pro)
+    let order = null;
+    let orderError = null;
 
-      return new Response(JSON.stringify({ message: 'Status updated', status: payment.status }), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Find pending order
-    const { data: order, error: orderError } = await supabase
+    // First try: PIX flow (external_order_id = payment ID)
+    const res1 = await supabase
       .from('duelcoins_orders')
       .select('*')
       .eq('external_order_id', String(paymentId))
       .eq('status', 'pending')
       .maybeSingle();
+
+    order = res1.data;
+    orderError = res1.error;
+
+    // Second try: Checkout Pro flow (external_reference = "user_id|package_id", order has preference_id as external_order_id)
+    if (!order && payment.external_reference) {
+      const [userId, packageId] = payment.external_reference.split('|');
+      if (userId && packageId) {
+        const res2 = await supabase
+          .from('duelcoins_orders')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('package_id', packageId)
+          .eq('status', 'pending')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        
+        order = res2.data;
+        orderError = res2.error;
+      }
+    }
+
+    if (!isPaid) {
+      // Update order status if found
+      if (order) {
+        await supabase
+          .from('duelcoins_orders')
+          .update({ status: payment.status || 'unknown', external_payment_id: String(paymentId) })
+          .eq('id', order.id);
+      }
+      return new Response(JSON.stringify({ message: 'Status updated', status: payment.status }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     if (orderError) {
       console.error('[MercadoPago Webhook] Error finding order:', orderError);
@@ -100,11 +120,12 @@ Deno.serve(async (req) => {
     }
 
     // Credit DuelCoins
+    const paymentMethodLabel = payment.payment_method_id || 'mercadopago';
     const { error: rpcError } = await supabase.rpc('admin_manage_duelcoins', {
       p_user_id: order.user_id,
       p_amount: order.duelcoins_amount,
       p_operation: 'add',
-      p_reason: `Compra via MercadoPago PIX - Pagamento #${paymentId}`,
+      p_reason: `Compra via MercadoPago (${paymentMethodLabel}) - Pagamento #${paymentId}`,
     });
 
     if (rpcError) {
@@ -122,6 +143,7 @@ Deno.serve(async (req) => {
         status: 'paid',
         paid_at: new Date().toISOString(),
         external_payment_id: String(paymentId),
+        payment_method: payment.payment_method_id || order.payment_method,
       })
       .eq('id', order.id);
 
