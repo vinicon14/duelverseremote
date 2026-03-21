@@ -77,6 +77,7 @@ interface DuelFieldBoardProps {
   onCardClick: (card: GameCard, zone: FieldZoneType) => void;
   onCardDrop: (zone: FieldZoneType, card: GameCard) => void;
   isFullscreen?: boolean;
+  playmatUrl?: string | null;
 }
 
 // Local state for effect modal will be managed inside component
@@ -265,6 +266,7 @@ export const DuelFieldBoard = ({
   onCardClick,
   onCardDrop,
   isFullscreen = false,
+  playmatUrl,
 }: DuelFieldBoardProps) => {
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -296,15 +298,25 @@ export const DuelFieldBoard = ({
   return (
     <div 
       className={cn(
-        "relative w-full bg-gradient-to-b from-cyan-900/40 via-blue-900/30 to-cyan-900/40 rounded-lg p-2 sm:p-3 border border-border/50",
+        "relative w-full rounded-lg p-2 sm:p-3 border border-border/50 overflow-hidden",
+        !playmatUrl && "bg-gradient-to-b from-cyan-900/40 via-blue-900/30 to-cyan-900/40",
         isFullscreen && "scale-100 origin-top-left"
       )}
       style={{
-        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cpath d='M20 0L40 20 20 40 0 20z' fill='%23ffffff' fill-opacity='0.03'/%3E%3C/svg%3E")`,
+        backgroundImage: playmatUrl 
+          ? `url("${playmatUrl}")` 
+          : `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cpath d='M20 0L40 20 20 40 0 20z' fill='%23ffffff' fill-opacity='0.03'/%3E%3C/svg%3E")`,
+        backgroundSize: playmatUrl ? 'cover' : undefined,
+        backgroundPosition: playmatUrl ? 'center' : undefined,
+        backgroundRepeat: playmatUrl ? 'no-repeat' : undefined,
       }}
     >
+      {/* Dark overlay for readability when using playmat */}
+      {playmatUrl && (
+        <div className="absolute inset-0 bg-black/40 rounded-lg pointer-events-none z-0" />
+      )}
       {/* Field Layout */}
-      <div className="flex flex-col gap-2 sm:gap-3">
+      <div className="relative z-10 flex flex-col gap-2 sm:gap-3">
         
         {/* Extra Monster Zones Row */}
         <div className="flex justify-center gap-1 sm:gap-2">

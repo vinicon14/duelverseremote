@@ -233,6 +233,10 @@ export default function MyItems() {
   const handleConfirmCosmeticUse = async () => {
     setShowCosmeticDescription(false);
     if (pendingCosmeticItem) {
+      // If the cosmetic has an image, save it as the active playmat
+      if (pendingCosmeticItem.product?.image_url) {
+        localStorage.setItem('activePlaymatUrl', pendingCosmeticItem.product.image_url);
+      }
       await processUseItem(pendingCosmeticItem);
       setPendingCosmeticItem(null);
     }
