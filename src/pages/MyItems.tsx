@@ -3,6 +3,7 @@
  * Desenvolvido por Vinícius
  * 
  * Página para visualizar, transferir e usar itens do inventário.
+ * Inclui sistema de equipar playmats e mangas de cartas (itens digitais).
  */
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -15,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Package, Gift, Send, Zap, Loader2, History, ShoppingCart, Clock, Truck, CheckCircle, X, Coins, Sparkles } from "lucide-react";
+import { Package, Gift, Send, Zap, Loader2, History, ShoppingCart, Clock, Truck, CheckCircle, X, Coins, Sparkles, Image, Layers } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface ProductInfo {
@@ -75,9 +76,14 @@ export default function MyItems() {
   const [cosmeticDescription, setCosmeticDescription] = useState<string>("");
   const [cosmeticItemName, setCosmeticItemName] = useState<string>("");
   const [pendingCosmeticItem, setPendingCosmeticItem] = useState<InventoryItem | null>(null);
+  const [activePlaymatId, setActivePlaymatId] = useState<string | null>(null);
+  const [activeSleeveId, setActiveSleeveId] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
+    // Load equipped items from localStorage
+    setActivePlaymatId(localStorage.getItem('activePlaymatId'));
+    setActiveSleeveId(localStorage.getItem('activeSleeveId'));
     fetchUserAndInventory();
   }, []);
 
@@ -99,7 +105,6 @@ export default function MyItems() {
       .order('created_at', { ascending: false });
 
     if (!error && data && data.length > 0) {
-      // Fetch product details
       const productIds = [...new Set(data.map((p: Purchase) => p.product_id))];
       const { data: productsData } = await supabase
         .from('marketplace_products')
@@ -152,7 +157,6 @@ export default function MyItems() {
 
     setTransferring(true);
     try {
-      // First, find the recipient user by username
       const { data: recipientData, error: recipientError } = await supabase
         .from("profiles")
         .select("user_id, username")
@@ -165,7 +169,6 @@ export default function MyItems() {
         return;
       }
 
-      // Call the transfer function
       const { data, error } = await supabase.rpc("transfer_inventory_item" as any, {
         p_inventory_id: selectedItem.id,
         p_recipient_id: recipientData.user_id,
@@ -179,9 +182,7 @@ export default function MyItems() {
         setTransferDialogOpen(false);
         setSelectedItem(null);
         setRecipientUsername("");
-        if (user) {
-          fetchInventory(user.id);
-        }
+        if (user) fetchInventory(user.id);
       } else {
         toast({ title: "Erro", description: result.message, variant: "destructive" });
       }
@@ -216,9 +217,7 @@ export default function MyItems() {
       const result = data as { success: boolean; message: string };
       if (result.success) {
         toast({ title: "Sucesso! ✅", description: result.message });
-        if (user) {
-          fetchInventory(user.id);
-        }
+        if (user) fetchInventory(user.id);
       } else {
         toast({ title: "Erro", description: result.message, variant: "destructive" });
       }
@@ -233,13 +232,57 @@ export default function MyItems() {
   const handleConfirmCosmeticUse = async () => {
     setShowCosmeticDescription(false);
     if (pendingCosmeticItem) {
-      // If the cosmetic has an image, save it as the active playmat
-      if (pendingCosmeticItem.product?.image_url) {
-        localStorage.setItem('activePlaymatUrl', pendingCosmeticItem.product.image_url);
-      }
       await processUseItem(pendingCosmeticItem);
       setPendingCosmeticItem(null);
     }
+  };
+
+  // Equip/Unequip playmat
+  const handleEquipPlaymat = (item: InventoryItem) => {
+    if (activePlaymatId === item.id) {
+      // Unequip
+      localStorage.removeItem('activePlaymatUrl');
+      localStorage.removeItem('activePlaymatId');
+      setActivePlaymatId(null);
+      toast({ title: "Playmat removido", description: "O playmat foi desequipado da arena." });
+    } else {
+      // Equip
+      if (item.product?.image_url) {
+        localStorage.setItem('activePlaymatUrl', item.product.image_url);
+        localStorage.setItem('activePlaymatId', item.id);
+        setActivePlaymatId(item.id);
+        toast({ title: "Playmat equipado! 🎨", description: `"${item.product?.name}" está ativo na arena.` });
+      }
+    }
+  };
+
+  // Equip/Unequip card sleeve
+  const handleEquipSleeve = (item: InventoryItem) => {
+    if (activeSleeveId === item.id) {
+      localStorage.removeItem('activeSleeveUrl');
+      localStorage.removeItem('activeSleeveId');
+      setActiveSleeveId(null);
+      toast({ title: "Manga removida", description: "A manga de carta foi desequipada." });
+    } else {
+      if (item.product?.image_url) {
+        localStorage.setItem('activeSleeveUrl', item.product.image_url);
+        localStorage.setItem('activeSleeveId', item.id);
+        setActiveSleeveId(item.id);
+        toast({ title: "Manga equipada! 🃏", description: `"${item.product?.name}" está ativa.` });
+      }
+    }
+  };
+
+  const isPlaymatItem = (item: InventoryItem) => {
+    const name = item.product?.name?.toLowerCase() || '';
+    const meta = item.product?.metadata as Record<string, unknown> | undefined;
+    return meta?.type === 'playmat' || name.includes('playmat') || name.includes('tapete');
+  };
+
+  const isSleeveItem = (item: InventoryItem) => {
+    const name = item.product?.name?.toLowerCase() || '';
+    const meta = item.product?.metadata as Record<string, unknown> | undefined;
+    return meta?.type === 'sleeve' || name.includes('manga') || name.includes('sleeve');
   };
 
   const openTransferDialog = (item: InventoryItem) => {
@@ -253,23 +296,27 @@ export default function MyItems() {
     cosmetic: { label: "Cosmético", color: "bg-accent/20 text-accent" },
   };
 
-  const filteredInventory = inventory.filter(item => 
+  const filteredInventory = inventory.filter(item =>
     item.product?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.product?.description?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const filteredUsedItems = usedItems.filter(item => 
+  const filteredUsedItems = usedItems.filter(item =>
     item.product?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.product?.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // Digital items that are playmats or sleeves (from active inventory)
+  const digitalEquipItems = inventory.filter(item =>
+    item.product?.category === 'digital_item' && (isPlaymatItem(item) || isSleeveItem(item))
   );
 
   const renderItemCard = (item: InventoryItem, showActions: boolean = true) => {
     const catInfo = item.product?.category ? categoryLabels[item.product.category] : categoryLabels.digital_item;
-    
+
     return (
       <Card key={item.id} className="bg-card border-border hover:border-primary/30 transition-all duration-300">
         <div className="flex gap-4 p-4">
-          {/* Image */}
           <div className="w-20 h-20 rounded-lg overflow-hidden bg-muted flex-shrink-0">
             {item.product?.image_url ? (
               <img src={item.product.image_url} alt={item.product.name} className="w-full h-full object-cover" />
@@ -280,7 +327,6 @@ export default function MyItems() {
             )}
           </div>
 
-          {/* Info */}
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
@@ -301,7 +347,6 @@ export default function MyItems() {
               </div>
             </div>
 
-            {/* Actions */}
             {showActions && (
               <div className="flex gap-2 mt-3">
                 <Button
@@ -326,6 +371,60 @@ export default function MyItems() {
                 )}
               </div>
             )}
+          </div>
+        </div>
+      </Card>
+    );
+  };
+
+  const renderEquipCard = (item: InventoryItem) => {
+    const isPlaymat = isPlaymatItem(item);
+    const isSleeve = isSleeveItem(item);
+    const isEquipped = isPlaymat 
+      ? activePlaymatId === item.id 
+      : activeSleeveId === item.id;
+
+    return (
+      <Card key={item.id} className={`bg-card border-border hover:border-primary/30 transition-all duration-300 ${isEquipped ? 'ring-2 ring-primary border-primary' : ''}`}>
+        <div className="flex gap-4 p-4">
+          <div className="w-20 h-20 rounded-lg overflow-hidden bg-muted flex-shrink-0 relative">
+            {item.product?.image_url ? (
+              <img src={item.product.image_url} alt={item.product.name} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                {isPlaymat ? <Image className="w-8 h-8 text-muted-foreground/50" /> : <Layers className="w-8 h-8 text-muted-foreground/50" />}
+              </div>
+            )}
+            {isEquipped && (
+              <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
+                <Badge className="bg-primary text-primary-foreground text-[10px]">Equipado</Badge>
+              </div>
+            )}
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold truncate">{item.product?.name || "Item"}</h3>
+            <Badge className="mt-1 text-xs bg-primary/20 text-primary border-0">
+              {isPlaymat ? '🎨 Playmat' : '🃏 Manga'}
+            </Badge>
+
+            <div className="flex gap-2 mt-3">
+              <Button
+                size="sm"
+                className={isEquipped ? "flex-1" : "btn-mystic flex-1"}
+                variant={isEquipped ? "outline" : "default"}
+                onClick={() => isPlaymat ? handleEquipPlaymat(item) : handleEquipSleeve(item)}
+              >
+                {isEquipped ? 'Desequipar' : 'Equipar'}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => openTransferDialog(item)}
+              >
+                <Send className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </div>
       </Card>
@@ -374,10 +473,14 @@ export default function MyItems() {
 
         {/* Tabs */}
         <Tabs defaultValue="active" className="w-full">
-          <TabsList className="mb-6">
+          <TabsList className="mb-6 flex-wrap">
             <TabsTrigger value="active" className="gap-2">
               <Package className="w-4 h-4" />
               Ativos ({inventory.length})
+            </TabsTrigger>
+            <TabsTrigger value="equip" className="gap-2">
+              <Image className="w-4 h-4" />
+              Equipamentos ({digitalEquipItems.length})
             </TabsTrigger>
             <TabsTrigger value="orders" className="gap-2">
               <ShoppingCart className="w-4 h-4" />
@@ -403,6 +506,57 @@ export default function MyItems() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredInventory.map(item => renderItemCard(item))}
               </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="equip">
+            {digitalEquipItems.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+                <Image className="w-16 h-16 mb-4 opacity-30" />
+                <p className="text-lg">Nenhum equipamento disponível</p>
+                <p className="text-sm">Compre playmats e mangas no Marketplace!</p>
+                <Button className="mt-4 btn-mystic" onClick={() => navigate('/marketplace')}>
+                  Ir para o Marketplace
+                </Button>
+              </div>
+            ) : (
+              <>
+                {/* Playmats Section */}
+                {digitalEquipItems.filter(isPlaymatItem).length > 0 && (
+                  <div className="mb-8">
+                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                      <Image className="w-5 h-5 text-primary" />
+                      Playmats (Tapetes de Campo)
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {digitalEquipItems.filter(isPlaymatItem).map(renderEquipCard)}
+                    </div>
+                  </div>
+                )}
+
+                {/* Sleeves Section */}
+                {digitalEquipItems.filter(isSleeveItem).length > 0 && (
+                  <div className="mb-8">
+                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                      <Layers className="w-5 h-5 text-primary" />
+                      Mangas de Cartas
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {digitalEquipItems.filter(isSleeveItem).map(renderEquipCard)}
+                    </div>
+                  </div>
+                )}
+
+                {/* Items that are digital but not playmat/sleeve */}
+                {digitalEquipItems.filter(i => !isPlaymatItem(i) && !isSleeveItem(i)).length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4">Outros Itens Digitais</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {digitalEquipItems.filter(i => !isPlaymatItem(i) && !isSleeveItem(i)).map(renderEquipCard)}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </TabsContent>
 
@@ -525,8 +679,8 @@ export default function MyItems() {
               <Button variant="outline" onClick={() => setTransferDialogOpen(false)}>
                 Cancelar
               </Button>
-              <Button 
-                className="btn-mystic" 
+              <Button
+                className="btn-mystic"
                 onClick={handleTransfer}
                 disabled={transferring || !recipientUsername.trim()}
               >
@@ -553,7 +707,7 @@ export default function MyItems() {
 
             <div className="py-4">
               <div className="bg-muted p-4 rounded-lg">
-                <div 
+                <div
                   className="prose prose-invert max-w-none text-sm"
                   dangerouslySetInnerHTML={{ __html: cosmeticDescription }}
                 />
@@ -561,8 +715,8 @@ export default function MyItems() {
             </div>
 
             <DialogFooter>
-              <Button 
-                className="btn-mystic w-full" 
+              <Button
+                className="btn-mystic w-full"
                 onClick={handleConfirmCosmeticUse}
                 disabled={usingItem}
               >
