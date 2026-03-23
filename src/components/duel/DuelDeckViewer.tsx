@@ -507,6 +507,9 @@ export const DuelDeckViewer = ({
         const currentTarget = prev[zone as keyof FieldState];
         if (!currentTarget || Array.isArray(currentTarget)) return prev;
 
+        // Remove the card from graveyard (XYZ materials come from graveyard only)
+        const newGraveyard = prev.graveyard.filter(c => c.instanceId !== cardToAttach.instanceId);
+
         // Add the card as material
         const updatedTarget: GameCard = {
           ...(currentTarget as GameCard),
@@ -516,6 +519,7 @@ export const DuelDeckViewer = ({
         return {
           ...prev,
           [zone]: updatedTarget,
+          graveyard: newGraveyard,
         } as FieldState;
       });
       setAttachMode(null);
