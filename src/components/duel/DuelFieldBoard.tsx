@@ -181,7 +181,7 @@ const ZoneSlot = ({
           )}
           
           <img
-            src={card.isFaceDown ? CARD_BACK_URL : card.card_images?.[0]?.image_url_small}
+            src={card.isFaceDown ? (sleeveUrl || CARD_BACK_URL) : card.card_images?.[0]?.image_url_small}
             alt={card.isFaceDown ? 'Face-down card' : card.name}
             className={cn(
               "w-full h-full object-cover rounded-md shadow-sm hover:shadow-lg transition-all hover:scale-105 cursor-grab active:cursor-grabbing"
