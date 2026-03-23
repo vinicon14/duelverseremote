@@ -262,7 +262,7 @@ export default function MyItems() {
       localStorage.removeItem('activeSleeveUrl');
       localStorage.removeItem('activeSleeveId');
       setActiveSleeveId(null);
-      toast({ title: "Manga removida", description: "A manga de carta foi desequipada." });
+      toast({ title: "Sleeve removida", description: "A sleeve foi desequipada." });
     } else {
       if (item.product?.image_url) {
         localStorage.setItem('activeSleeveUrl', item.product.image_url);
