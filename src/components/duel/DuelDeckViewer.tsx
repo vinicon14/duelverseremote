@@ -1218,6 +1218,7 @@ export const DuelDeckViewer = ({
           if (cardActionsModal.zone && cardActionsModal.card) {
             setAttachMode({ targetZone: cardActionsModal.zone, cardToAttach: cardActionsModal.card });
             setCardActionsModal({ open: false, card: null, zone: null });
+            setViewerModal({ open: true, zone: 'graveyard' });
           }
         }}
         onDetachMaterial={handleDetachMaterial}
