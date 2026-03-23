@@ -366,6 +366,7 @@ export const DuelFieldBoard = ({
             onDragOver={handleDragOver}
             onDrop={handleDrop('fieldSpell')}
             className="border-green-500/30"
+            sleeveUrl={sleeveUrl}
           />
 
           {/* Monster Zones */}
