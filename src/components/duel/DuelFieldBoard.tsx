@@ -272,6 +272,7 @@ export const DuelFieldBoard = ({
   onCardDrop,
   isFullscreen = false,
   playmatUrl,
+  sleeveUrl,
 }: DuelFieldBoardProps) => {
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
