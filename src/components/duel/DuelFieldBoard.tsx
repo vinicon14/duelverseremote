@@ -93,6 +93,7 @@ const ZoneSlot = ({
   onDrop,
   className,
   isHorizontal = false,
+  sleeveUrl,
 }: {
   zone: FieldZoneType;
   card: GameCard | null;
@@ -103,6 +104,7 @@ const ZoneSlot = ({
   onDrop: (e: React.DragEvent) => void;
   className?: string;
   isHorizontal?: boolean;
+  sleeveUrl?: string | null;
 }) => {
   const hasCard = card !== null;
 
