@@ -210,6 +210,7 @@ const PileZone = ({
   onDragOver,
   onDrop,
   iconColor,
+  sleeveUrl,
 }: {
   zone: FieldZoneType;
   cards: GameCard[];
@@ -219,6 +220,7 @@ const PileZone = ({
   onDragOver: (e: React.DragEvent) => void;
   onDrop: (e: React.DragEvent) => void;
   iconColor: string;
+  sleeveUrl?: string | null;
 }) => {
   return (
     <div
