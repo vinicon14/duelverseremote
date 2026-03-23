@@ -238,7 +238,7 @@ const PileZone = ({
           {/* Show top card back for deck, or top card for others */}
           {zone === 'deck' ? (
             <img
-              src={CARD_BACK_URL}
+              src={sleeveUrl || CARD_BACK_URL}
               alt="Deck"
               className="w-full h-full object-cover rounded-md shadow-sm"
             />
