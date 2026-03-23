@@ -539,7 +539,7 @@ export default function MyItems() {
                   <div className="mb-8">
                     <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                       <Layers className="w-5 h-5 text-primary" />
-                      Mangas de Cartas
+                      Sleeves
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {digitalEquipItems.filter(isSleeveItem).map(renderEquipCard)}
