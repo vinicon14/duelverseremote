@@ -268,7 +268,7 @@ export default function MyItems() {
         localStorage.setItem('activeSleeveUrl', item.product.image_url);
         localStorage.setItem('activeSleeveId', item.id);
         setActiveSleeveId(item.id);
-        toast({ title: "Manga equipada! 🃏", description: `"${item.product?.name}" está ativa.` });
+        toast({ title: "Sleeve equipada! 🃏", description: `"${item.product?.name}" está ativa.` });
       }
     }
   };
