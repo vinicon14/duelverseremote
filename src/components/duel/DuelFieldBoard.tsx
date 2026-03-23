@@ -78,6 +78,7 @@ interface DuelFieldBoardProps {
   onCardDrop: (zone: FieldZoneType, card: GameCard) => void;
   isFullscreen?: boolean;
   playmatUrl?: string | null;
+  sleeveUrl?: string | null;
 }
 
 // Local state for effect modal will be managed inside component
