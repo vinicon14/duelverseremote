@@ -442,6 +442,19 @@ export const AdminMarketplace = () => {
                   </SelectContent>
                 </Select>
               </div>
+              {form.category === 'digital_item' && (
+              <div>
+                <Label>Tipo de Item Digital</Label>
+                <Select value={form.digital_type} onValueChange={v => setForm(f => ({ ...f, digital_type: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Selecione o tipo" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="playmat">Playmat (Tapete)</SelectItem>
+                    <SelectItem value="sleeve">Sleeve (Manga)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              )}
+              </div>
               <div>
                 <Label>Tipo</Label>
                 <Select value={form.product_type} onValueChange={v => setForm(f => ({ ...f, product_type: v }))}>
