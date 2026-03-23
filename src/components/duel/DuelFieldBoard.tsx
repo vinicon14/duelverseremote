@@ -78,6 +78,7 @@ interface DuelFieldBoardProps {
   onCardDrop: (zone: FieldZoneType, card: GameCard) => void;
   isFullscreen?: boolean;
   playmatUrl?: string | null;
+  sleeveUrl?: string | null;
 }
 
 // Local state for effect modal will be managed inside component
@@ -92,6 +93,7 @@ const ZoneSlot = ({
   onDrop,
   className,
   isHorizontal = false,
+  sleeveUrl,
 }: {
   zone: FieldZoneType;
   card: GameCard | null;
@@ -102,6 +104,7 @@ const ZoneSlot = ({
   onDrop: (e: React.DragEvent) => void;
   className?: string;
   isHorizontal?: boolean;
+  sleeveUrl?: string | null;
 }) => {
   const hasCard = card !== null;
 
@@ -178,7 +181,7 @@ const ZoneSlot = ({
           )}
           
           <img
-            src={card.isFaceDown ? CARD_BACK_URL : card.card_images?.[0]?.image_url_small}
+            src={card.isFaceDown ? (sleeveUrl || CARD_BACK_URL) : card.card_images?.[0]?.image_url_small}
             alt={card.isFaceDown ? 'Face-down card' : card.name}
             className={cn(
               "w-full h-full object-cover rounded-md shadow-sm hover:shadow-lg transition-all hover:scale-105 cursor-grab active:cursor-grabbing"
@@ -207,6 +210,7 @@ const PileZone = ({
   onDragOver,
   onDrop,
   iconColor,
+  sleeveUrl,
 }: {
   zone: FieldZoneType;
   cards: GameCard[];
@@ -216,6 +220,7 @@ const PileZone = ({
   onDragOver: (e: React.DragEvent) => void;
   onDrop: (e: React.DragEvent) => void;
   iconColor: string;
+  sleeveUrl?: string | null;
 }) => {
   return (
     <div
@@ -233,7 +238,7 @@ const PileZone = ({
           {/* Show top card back for deck, or top card for others */}
           {zone === 'deck' ? (
             <img
-              src={CARD_BACK_URL}
+              src={sleeveUrl || CARD_BACK_URL}
               alt="Deck"
               className="w-full h-full object-cover rounded-md shadow-sm"
             />
@@ -267,6 +272,7 @@ export const DuelFieldBoard = ({
   onCardDrop,
   isFullscreen = false,
   playmatUrl,
+  sleeveUrl,
 }: DuelFieldBoardProps) => {
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -331,6 +337,7 @@ export const DuelFieldBoard = ({
               onDrop={handleDrop('extraMonster1')}
               className="border-purple-500/30"
               isHorizontal
+              sleeveUrl={sleeveUrl}
             />
             <ZoneSlot
               zone="extraMonster2"
@@ -342,6 +349,7 @@ export const DuelFieldBoard = ({
               onDrop={handleDrop('extraMonster2')}
               className="border-purple-500/30"
               isHorizontal
+              sleeveUrl={sleeveUrl}
             />
           </div>
         </div>
@@ -358,6 +366,7 @@ export const DuelFieldBoard = ({
             onDragOver={handleDragOver}
             onDrop={handleDrop('fieldSpell')}
             className="border-green-500/30"
+            sleeveUrl={sleeveUrl}
           />
 
           {/* Monster Zones */}
@@ -374,6 +383,7 @@ export const DuelFieldBoard = ({
                 onDrop={handleDrop(zone)}
                 className="border-orange-500/30"
                 isHorizontal
+                sleeveUrl={sleeveUrl}
               />
             ))}
           </div>
@@ -418,6 +428,7 @@ export const DuelFieldBoard = ({
                 onDragOver={handleDragOver}
                 onDrop={handleDrop(zone)}
                 className="border-blue-500/30"
+                sleeveUrl={sleeveUrl}
               />
             ))}
           </div>
@@ -432,6 +443,7 @@ export const DuelFieldBoard = ({
             onDragOver={handleDragOver}
             onDrop={handleDrop('deck')}
             iconColor="text-blue-500"
+            sleeveUrl={sleeveUrl}
           />
         </div>
 
