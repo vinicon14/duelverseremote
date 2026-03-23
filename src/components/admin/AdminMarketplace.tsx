@@ -454,7 +454,6 @@ export const AdminMarketplace = () => {
                 </Select>
               </div>
               )}
-              </div>
               <div>
                 <Label>Tipo</Label>
                 <Select value={form.product_type} onValueChange={v => setForm(f => ({ ...f, product_type: v }))}>
