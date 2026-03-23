@@ -337,6 +337,7 @@ export const DuelFieldBoard = ({
               onDrop={handleDrop('extraMonster1')}
               className="border-purple-500/30"
               isHorizontal
+              sleeveUrl={sleeveUrl}
             />
             <ZoneSlot
               zone="extraMonster2"
@@ -348,6 +349,7 @@ export const DuelFieldBoard = ({
               onDrop={handleDrop('extraMonster2')}
               className="border-purple-500/30"
               isHorizontal
+              sleeveUrl={sleeveUrl}
             />
           </div>
         </div>
