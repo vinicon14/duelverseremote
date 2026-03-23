@@ -405,7 +405,7 @@ export default function MyItems() {
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold truncate">{item.product?.name || "Item"}</h3>
             <Badge className="mt-1 text-xs bg-primary/20 text-primary border-0">
-              {isPlaymat ? '🎨 Playmat' : '🃏 Manga'}
+              {isPlaymat ? '🎨 Playmat' : '🃏 Sleeve'}
             </Badge>
 
             <div className="flex gap-2 mt-3">
