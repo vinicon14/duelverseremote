@@ -285,6 +285,9 @@ export const AdminMarketplace = () => {
     }
     setSaving(true);
     try {
+      const metadata = form.category === 'digital_item' && form.digital_type
+        ? { type: form.digital_type }
+        : {};
       const payload = {
         name: form.name.trim(),
         description: form.description.trim() || null,
@@ -294,6 +297,7 @@ export const AdminMarketplace = () => {
         product_type: form.product_type,
         is_active: form.is_active,
         stock: form.stock,
+        metadata,
       };
 
       if (editingId) {
