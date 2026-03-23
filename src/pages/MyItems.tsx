@@ -262,13 +262,13 @@ export default function MyItems() {
       localStorage.removeItem('activeSleeveUrl');
       localStorage.removeItem('activeSleeveId');
       setActiveSleeveId(null);
-      toast({ title: "Manga removida", description: "A manga de carta foi desequipada." });
+      toast({ title: "Sleeve removida", description: "A sleeve foi desequipada." });
     } else {
       if (item.product?.image_url) {
         localStorage.setItem('activeSleeveUrl', item.product.image_url);
         localStorage.setItem('activeSleeveId', item.id);
         setActiveSleeveId(item.id);
-        toast({ title: "Manga equipada! 🃏", description: `"${item.product?.name}" está ativa.` });
+        toast({ title: "Sleeve equipada! 🃏", description: `"${item.product?.name}" está ativa.` });
       }
     }
   };
@@ -405,7 +405,7 @@ export default function MyItems() {
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold truncate">{item.product?.name || "Item"}</h3>
             <Badge className="mt-1 text-xs bg-primary/20 text-primary border-0">
-              {isPlaymat ? '🎨 Playmat' : '🃏 Manga'}
+              {isPlaymat ? '🎨 Playmat' : '🃏 Sleeve'}
             </Badge>
 
             <div className="flex gap-2 mt-3">
@@ -514,7 +514,7 @@ export default function MyItems() {
               <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
                 <Image className="w-16 h-16 mb-4 opacity-30" />
                 <p className="text-lg">Nenhum equipamento disponível</p>
-                <p className="text-sm">Compre playmats e mangas no Marketplace!</p>
+                <p className="text-sm">Compre playmats e sleeves no Marketplace!</p>
                 <Button className="mt-4 btn-mystic" onClick={() => navigate('/marketplace')}>
                   Ir para o Marketplace
                 </Button>
@@ -539,7 +539,7 @@ export default function MyItems() {
                   <div className="mb-8">
                     <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                       <Layers className="w-5 h-5 text-primary" />
-                      Mangas de Cartas
+                      Sleeves
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {digitalEquipItems.filter(isSleeveItem).map(renderEquipCard)}
