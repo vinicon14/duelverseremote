@@ -383,6 +383,7 @@ export const DuelFieldBoard = ({
                 onDrop={handleDrop(zone)}
                 className="border-orange-500/30"
                 isHorizontal
+                sleeveUrl={sleeveUrl}
               />
             ))}
           </div>
