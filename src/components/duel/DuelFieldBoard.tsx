@@ -428,6 +428,7 @@ export const DuelFieldBoard = ({
                 onDragOver={handleDragOver}
                 onDrop={handleDrop(zone)}
                 className="border-blue-500/30"
+                sleeveUrl={sleeveUrl}
               />
             ))}
           </div>
