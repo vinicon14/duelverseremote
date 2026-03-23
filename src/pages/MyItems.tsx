@@ -514,7 +514,7 @@ export default function MyItems() {
               <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
                 <Image className="w-16 h-16 mb-4 opacity-30" />
                 <p className="text-lg">Nenhum equipamento disponível</p>
-                <p className="text-sm">Compre playmats e mangas no Marketplace!</p>
+                <p className="text-sm">Compre playmats e sleeves no Marketplace!</p>
                 <Button className="mt-4 btn-mystic" onClick={() => navigate('/marketplace')}>
                   Ir para o Marketplace
                 </Button>
