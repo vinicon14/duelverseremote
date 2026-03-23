@@ -507,6 +507,9 @@ export const DuelDeckViewer = ({
         const currentTarget = prev[zone as keyof FieldState];
         if (!currentTarget || Array.isArray(currentTarget)) return prev;
 
+        // Remove the card from graveyard (XYZ materials come from graveyard only)
+        const newGraveyard = prev.graveyard.filter(c => c.instanceId !== cardToAttach.instanceId);
+
         // Add the card as material
         const updatedTarget: GameCard = {
           ...(currentTarget as GameCard),
@@ -516,6 +519,7 @@ export const DuelDeckViewer = ({
         return {
           ...prev,
           [zone]: updatedTarget,
+          graveyard: newGraveyard,
         } as FieldState;
       });
       setAttachMode(null);
@@ -1188,8 +1192,30 @@ export const DuelDeckViewer = ({
         onInvokeToField={(card, idx) => handleZoneViewerAction('toField', card, idx)}
         hasXYZMonster={hasXYZOnField()}
         onAttachAsMaterial={(card, idx) => {
-          setAttachMode({ targetZone: 'monster1' as FieldZoneType, cardToAttach: card });
-          setViewerModal({ open: false, zone: null });
+          if (attachMode) {
+            // We already know the target XYZ monster zone - attach directly
+            setFieldState(prev => {
+              const targetZone = attachMode.targetZone;
+              const currentTarget = prev[targetZone as keyof FieldState];
+              if (!currentTarget || Array.isArray(currentTarget)) return prev;
+              
+              const isTargetXYZ = (currentTarget as GameCard).type?.includes('XYZ');
+              if (!isTargetXYZ) return prev;
+
+              const newGraveyard = prev.graveyard.filter(c => c.instanceId !== card.instanceId);
+              const updatedTarget: GameCard = {
+                ...(currentTarget as GameCard),
+                attachedCards: [...((currentTarget as GameCard).attachedCards || []), card]
+              };
+              return { ...prev, [targetZone]: updatedTarget, graveyard: newGraveyard } as FieldState;
+            });
+            setAttachMode(null);
+            setViewerModal({ open: false, zone: null });
+          } else {
+            // Generic attach mode - user will need to click XYZ monster next
+            setAttachMode({ targetZone: 'monster1' as FieldZoneType, cardToAttach: card });
+            setViewerModal({ open: false, zone: null });
+          }
         }}
         isDeck={viewerModal.zone === 'deck'}
       />
@@ -1214,6 +1240,7 @@ export const DuelDeckViewer = ({
           if (cardActionsModal.zone && cardActionsModal.card) {
             setAttachMode({ targetZone: cardActionsModal.zone, cardToAttach: cardActionsModal.card });
             setCardActionsModal({ open: false, card: null, zone: null });
+            setViewerModal({ open: true, zone: 'graveyard' });
           }
         }}
         onDetachMaterial={handleDetachMaterial}

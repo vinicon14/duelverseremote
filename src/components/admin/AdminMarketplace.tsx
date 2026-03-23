@@ -62,6 +62,7 @@ const emptyForm = {
   product_type: "one_time",
   is_active: true,
   stock: null as number | null,
+  digital_type: "" as string,
 };
 
 export const AdminMarketplace = () => {
@@ -215,6 +216,7 @@ export const AdminMarketplace = () => {
 
   const openEdit = (product: Product) => {
     setEditingId(product.id);
+    const meta = (product as any).metadata as Record<string, any> | null;
     setForm({
       name: product.name,
       description: product.description || "",
@@ -224,6 +226,7 @@ export const AdminMarketplace = () => {
       product_type: product.product_type,
       is_active: product.is_active,
       stock: product.stock,
+      digital_type: meta?.type || "",
     });
     setImagePreview(product.image_url || null);
     setDialogOpen(true);
@@ -282,6 +285,9 @@ export const AdminMarketplace = () => {
     }
     setSaving(true);
     try {
+      const metadata = form.category === 'digital_item' && form.digital_type
+        ? { type: form.digital_type }
+        : {};
       const payload = {
         name: form.name.trim(),
         description: form.description.trim() || null,
@@ -291,6 +297,7 @@ export const AdminMarketplace = () => {
         product_type: form.product_type,
         is_active: form.is_active,
         stock: form.stock,
+        metadata,
       };
 
       if (editingId) {
@@ -435,6 +442,18 @@ export const AdminMarketplace = () => {
                   </SelectContent>
                 </Select>
               </div>
+              {form.category === 'digital_item' && (
+              <div>
+                <Label>Tipo de Item Digital</Label>
+                <Select value={form.digital_type} onValueChange={v => setForm(f => ({ ...f, digital_type: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Selecione o tipo" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="playmat">Playmat (Tapete)</SelectItem>
+                    <SelectItem value="sleeve">Sleeve (Manga)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              )}
               <div>
                 <Label>Tipo</Label>
                 <Select value={form.product_type} onValueChange={v => setForm(f => ({ ...f, product_type: v }))}>

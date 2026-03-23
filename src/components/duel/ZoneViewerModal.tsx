@@ -170,7 +170,7 @@ export const ZoneViewerModal = ({
                         </Button>
                       )}
 
-                      {hasXYZMonster && onAttachAsMaterial && (zone === 'hand' || zone === 'deck' || zone === 'extraDeck' || zone === 'graveyard' || zone === 'banished') && (
+                      {hasXYZMonster && onAttachAsMaterial && zone === 'graveyard' && (
                         <Button
                           variant="default"
                           size="icon"
