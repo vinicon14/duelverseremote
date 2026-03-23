@@ -443,6 +443,7 @@ export const DuelFieldBoard = ({
             onDragOver={handleDragOver}
             onDrop={handleDrop('deck')}
             iconColor="text-blue-500"
+            sleeveUrl={sleeveUrl}
           />
         </div>
 
