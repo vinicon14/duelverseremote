@@ -62,6 +62,7 @@ const emptyForm = {
   product_type: "one_time",
   is_active: true,
   stock: null as number | null,
+  digital_type: "" as string,
 };
 
 export const AdminMarketplace = () => {
