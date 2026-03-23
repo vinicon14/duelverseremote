@@ -216,6 +216,7 @@ export const AdminMarketplace = () => {
 
   const openEdit = (product: Product) => {
     setEditingId(product.id);
+    const meta = (product as any).metadata as Record<string, any> | null;
     setForm({
       name: product.name,
       description: product.description || "",
@@ -225,6 +226,7 @@ export const AdminMarketplace = () => {
       product_type: product.product_type,
       is_active: product.is_active,
       stock: product.stock,
+      digital_type: meta?.type || "",
     });
     setImagePreview(product.image_url || null);
     setDialogOpen(true);
