@@ -389,6 +389,35 @@ const Duels = () => {
                       </p>
                     </div>
                     
+                    {activeTcg === 'magic' && (
+                      <div className="space-y-2">
+                        <Label>Número de Jogadores</Label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Button
+                            type="button"
+                            variant={maxPlayers === 2 ? "default" : "outline"}
+                            onClick={() => setMaxPlayers(2)}
+                            className={maxPlayers === 2 ? "btn-mystic text-white" : ""}
+                          >
+                            👥 2 Jogadores
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={maxPlayers === 4 ? "default" : "outline"}
+                            onClick={() => setMaxPlayers(4)}
+                            className={maxPlayers === 4 ? "btn-mystic text-white" : ""}
+                          >
+                            👥 4 Jogadores
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {maxPlayers === 4 
+                            ? "🎯 Partida multiplayer com 4 jogadores" 
+                            : "⚔️ Duelo 1v1 padrão"}
+                        </p>
+                      </div>
+                    )}
+
                     <Button onClick={handleCreateDuel} className="w-full btn-mystic text-white">
                       Criar e Entrar
                     </Button>
