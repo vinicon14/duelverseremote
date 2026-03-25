@@ -149,14 +149,15 @@ const Duels = () => {
         .insert({
           creator_id: user.id,
           room_name: roomName,
-          status: 'waiting',
           is_ranked: isRanked,
           duration_minutes: durationMinutes,
           tcg_type: activeTcg,
           player1_lp: defaultLP,
           player2_lp: defaultLP,
+          player3_lp: defaultLP,
+          player4_lp: defaultLP,
           max_players: playerCount,
-        } as any)
+        })
         .select()
         .single();
 
@@ -264,15 +265,12 @@ const Duels = () => {
       if (!d.opponent_id) {
         updatePayload.opponent_id = user.id;
         if (maxPlayers === 2) {
-          updatePayload.status = 'in_progress';
           updatePayload.started_at = new Date().toISOString();
         }
       } else if (maxPlayers >= 3 && !d.player3_id) {
         updatePayload.player3_id = user.id;
       } else if (maxPlayers >= 4 && !d.player4_id) {
         updatePayload.player4_id = user.id;
-        // All 4 slots filled - start the game
-        updatePayload.status = 'in_progress';
         updatePayload.started_at = new Date().toISOString();
       } else {
         toast({
