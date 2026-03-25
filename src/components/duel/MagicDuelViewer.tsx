@@ -7,6 +7,7 @@
  */
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -14,7 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { MagicFieldBoard, MagicFieldState, MagicZoneType, MagicCard, MagicPhase } from './MagicFieldBoard';
 import { getMagicCardImage, MTG_CARD_BACK } from './mtgCardImage';
-import { Shuffle, Hand, ArrowDown, RotateCcw, Eye, Undo2 } from 'lucide-react';
+import { Shuffle, Hand, ArrowDown, RotateCcw, Eye, Undo2, Search } from 'lucide-react';
 
 const createInitialFieldState = (): MagicFieldState => ({
   battlefield: [],
@@ -256,6 +257,37 @@ export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId }: Magi
       setSelectedCardZone('library');
       setCardDetailOpen(true);
       return prev;
+    });
+  }, []);
+
+  // --- Search deck mechanic ---
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) return fieldState.library;
+    const q = searchQuery.toLowerCase();
+    return fieldState.library.filter(
+      (c) => c.name.toLowerCase().includes(q) || (c.type_line || '').toLowerCase().includes(q)
+    );
+  }, [fieldState.library, searchQuery]);
+
+  const searchAndPickCard = useCallback((card: MagicCard) => {
+    setFieldState((prev) => ({
+      ...prev,
+      library: prev.library.filter((c) => c.instanceId !== card.instanceId),
+      hand: [...prev.hand, card],
+    }));
+    setSearchOpen(false);
+    setSearchQuery('');
+    // After searching, shuffle library
+    setFieldState((prev) => {
+      const shuffled = [...prev.library];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      return { ...prev, library: shuffled };
     });
   }, []);
 
