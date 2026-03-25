@@ -23,6 +23,8 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { NotificationBell } from "@/components/NotificationBell";
 import { OnlineUsersCounter } from "@/components/OnlineUsersCounter";
+import { TcgSwitcher } from "@/components/TcgSwitcher";
+import { useTcg } from "@/contexts/TcgContext";
 
 export const Navbar = () => {
   const navigate = useNavigate();
