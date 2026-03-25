@@ -1,26 +1,47 @@
 /**
  * DuelVerse - Calculadora de LP Flutuante
- * Desenvolvido por Vinícius
- * 
- * Calculadora de Life Points (LP) arrastável para duelos Yu-Gi-Oh!.
- * Permite adicionar/remover LP dos jogadores.
+ * Suporte para 2-4 jogadores + contadores customizados públicos
  */
 import { useState, useRef, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Heart, Shield, Minus, Plus, GripVertical, X, Maximize2, Minimize2, RotateCcw } from "lucide-react";
+import { Heart, Shield, Minus, Plus, GripVertical, X, Maximize2, Minimize2, RotateCcw, PlusCircle, Trash2 } from "lucide-react";
+
+type PlayerKey = 'player1' | 'player2' | 'player3' | 'player4';
+
+interface CustomCounter {
+  id: string;
+  name: string;
+  value: number;
+}
+
+interface PlayerInfo {
+  key: PlayerKey;
+  name: string;
+  lp: number;
+  color: string;
+}
 
 interface FloatingCalculatorProps {
   player1Name: string;
   player2Name: string;
   player1LP: number;
   player2LP: number;
-  onUpdateLP: (player: 'player1' | 'player2', amount: number) => void;
-  onSetLP: (player: 'player1' | 'player2', value: number) => void;
-  currentUserPlayer?: 'player1' | 'player2' | null;
+  player3Name?: string;
+  player4Name?: string;
+  player3LP?: number;
+  player4LP?: number;
+  maxPlayers?: number;
+  onUpdateLP: (player: PlayerKey, amount: number) => void;
+  onSetLP: (player: PlayerKey, value: number) => void;
+  currentUserPlayer?: PlayerKey | null;
   onClose?: () => void;
   tcgType?: string;
+  customCounters?: CustomCounter[];
+  onUpdateCustomCounter?: (id: string, value: number) => void;
+  onAddCustomCounter?: (name: string, startValue: number) => void;
+  onRemoveCustomCounter?: (id: string) => void;
 }
 
 export const FloatingCalculator = ({
@@ -28,11 +49,20 @@ export const FloatingCalculator = ({
   player2Name,
   player1LP,
   player2LP,
+  player3Name,
+  player4Name,
+  player3LP = 0,
+  player4LP = 0,
+  maxPlayers = 2,
   onUpdateLP,
   onSetLP,
   currentUserPlayer = null,
   onClose,
   tcgType = 'yugioh',
+  customCounters = [],
+  onUpdateCustomCounter,
+  onAddCustomCounter,
+  onRemoveCustomCounter,
 }: FloatingCalculatorProps) => {
   const isMagic = tcgType === 'magic';
   const defaultLP = isMagic ? 40 : 8000;
@@ -42,113 +72,164 @@ export const FloatingCalculator = ({
   const lpButtonsRow2 = isMagic
     ? [{ label: '-10', amount: -10 }, { label: '+10', amount: 10 }]
     : [{ label: '-100', amount: -100 }, { label: '+100', amount: 100 }];
-  // Posição inicial adaptada ao tamanho da tela
+
   const [position, setPosition] = useState(() => {
     const isMobile = window.innerWidth < 768;
-    return { 
-      x: isMobile ? 10 : 20, 
-      y: isMobile ? 80 : 100 
-    };
+    return { x: isMobile ? 10 : 20, y: isMobile ? 80 : 100 };
   });
   const [isDragging, setIsDragging] = useState(false);
   const [isMinimized, setIsMinimized] = useState(true);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const calculatorRef = useRef<HTMLDivElement>(null);
 
-  const [editingPlayer1, setEditingPlayer1] = useState(false);
-  const [editingPlayer2, setEditingPlayer2] = useState(false);
-  const [tempLP1, setTempLP1] = useState(player1LP.toString());
-  const [tempLP2, setTempLP2] = useState(player2LP.toString());
+  const [editingPlayer, setEditingPlayer] = useState<PlayerKey | null>(null);
+  const [tempLP, setTempLP] = useState<Record<PlayerKey, string>>({
+    player1: player1LP.toString(),
+    player2: player2LP.toString(),
+    player3: player3LP.toString(),
+    player4: player4LP.toString(),
+  });
 
-  useEffect(() => {
-    setTempLP1(player1LP.toString());
-  }, [player1LP]);
+  // Custom counter add form
+  const [showAddCounter, setShowAddCounter] = useState(false);
+  const [newCounterName, setNewCounterName] = useState('');
+  const [newCounterValue, setNewCounterValue] = useState('20');
 
-  useEffect(() => {
-    setTempLP2(player2LP.toString());
-  }, [player2LP]);
+  useEffect(() => { setTempLP(prev => ({ ...prev, player1: player1LP.toString() })); }, [player1LP]);
+  useEffect(() => { setTempLP(prev => ({ ...prev, player2: player2LP.toString() })); }, [player2LP]);
+  useEffect(() => { setTempLP(prev => ({ ...prev, player3: player3LP.toString() })); }, [player3LP]);
+  useEffect(() => { setTempLP(prev => ({ ...prev, player4: player4LP.toString() })); }, [player4LP]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('button, input')) return;
-    
     setIsDragging(true);
-    setDragStart({
-      x: e.clientX - position.x,
-      y: e.clientY - position.y,
-    });
+    setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
     if ((e.target as HTMLElement).closest('button, input')) return;
-    
     const touch = e.touches[0];
     setIsDragging(true);
-    setDragStart({
-      x: touch.clientX - position.x,
-      y: touch.clientY - position.y,
-    });
-  };
-
-  const handleMouseMove = (e: MouseEvent) => {
-    if (isDragging) {
-      setPosition({
-        x: e.clientX - dragStart.x,
-        y: e.clientY - dragStart.y,
-      });
-    }
-  };
-
-  const handleTouchMove = (e: TouchEvent) => {
-    if (isDragging) {
-      const touch = e.touches[0];
-      setPosition({
-        x: touch.clientX - dragStart.x,
-        y: touch.clientY - dragStart.y,
-      });
-    }
-  };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
-
-  const handleTouchEnd = () => {
-    setIsDragging(false);
+    setDragStart({ x: touch.clientX - position.x, y: touch.clientY - position.y });
   };
 
   useEffect(() => {
-    if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      document.addEventListener('touchmove', handleTouchMove);
-      document.addEventListener('touchend', handleTouchEnd);
-      return () => {
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
-        document.removeEventListener('touchmove', handleTouchMove);
-        document.removeEventListener('touchend', handleTouchEnd);
-      };
-    }
+    if (!isDragging) return;
+    const handleMove = (e: MouseEvent) => setPosition({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
+    const handleTouchMove = (e: TouchEvent) => {
+      const touch = e.touches[0];
+      setPosition({ x: touch.clientX - dragStart.x, y: touch.clientY - dragStart.y });
+    };
+    const handleUp = () => setIsDragging(false);
+    document.addEventListener('mousemove', handleMove);
+    document.addEventListener('mouseup', handleUp);
+    document.addEventListener('touchmove', handleTouchMove);
+    document.addEventListener('touchend', handleUp);
+    return () => {
+      document.removeEventListener('mousemove', handleMove);
+      document.removeEventListener('mouseup', handleUp);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleUp);
+    };
   }, [isDragging, dragStart]);
 
-  const handleLP1Submit = () => {
-    const value = parseInt(tempLP1);
+  const handleLPSubmit = (player: PlayerKey, currentLP: number) => {
+    const value = parseInt(tempLP[player]);
     if (!isNaN(value) && value >= 0) {
-      onSetLP('player1', value);
+      onSetLP(player, value);
     } else {
-      setTempLP1(player1LP.toString());
+      setTempLP(prev => ({ ...prev, [player]: currentLP.toString() }));
     }
-    setEditingPlayer1(false);
+    setEditingPlayer(null);
   };
 
-  const handleLP2Submit = () => {
-    const value = parseInt(tempLP2);
-    if (!isNaN(value) && value >= 0) {
-      onSetLP('player2', value);
-    } else {
-      setTempLP2(player2LP.toString());
-    }
-    setEditingPlayer2(false);
+  const handleAddCounter = () => {
+    if (!newCounterName.trim() || !onAddCustomCounter) return;
+    const startVal = parseInt(newCounterValue) || 20;
+    onAddCustomCounter(newCounterName.trim(), startVal);
+    setNewCounterName('');
+    setNewCounterValue('20');
+    setShowAddCounter(false);
+  };
+
+  // Build players list
+  const players: PlayerInfo[] = [
+    { key: 'player1', name: player1Name, lp: player1LP, color: 'text-primary' },
+    { key: 'player2', name: player2Name, lp: player2LP, color: 'text-accent' },
+  ];
+  if (maxPlayers >= 3 && player3Name) {
+    players.push({ key: 'player3', name: player3Name, lp: player3LP, color: 'text-green-500' });
+  }
+  if (maxPlayers >= 4 && player4Name) {
+    players.push({ key: 'player4', name: player4Name, lp: player4LP, color: 'text-yellow-500' });
+  }
+
+  const renderPlayerSection = (player: PlayerInfo) => {
+    const isCurrentUser = currentUserPlayer === player.key;
+    const isEditing = editingPlayer === player.key;
+
+    return (
+      <div key={player.key} className="space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1 sm:gap-2">
+            <Shield className={`w-3 h-3 sm:w-4 sm:h-4 ${player.color}`} />
+            <span className="text-xs sm:text-sm font-semibold truncate max-w-[80px] sm:max-w-none">{player.name}</span>
+          </div>
+          <div className="flex items-center gap-1 sm:gap-2">
+            <Heart className="w-3 h-3 sm:w-4 sm:h-4 text-destructive" />
+            {isEditing && isCurrentUser ? (
+              <Input
+                type="number"
+                value={tempLP[player.key]}
+                onChange={(e) => setTempLP(prev => ({ ...prev, [player.key]: e.target.value }))}
+                onBlur={() => handleLPSubmit(player.key, player.lp)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleLPSubmit(player.key, player.lp);
+                  if (e.key === 'Escape') {
+                    setTempLP(prev => ({ ...prev, [player.key]: player.lp.toString() }));
+                    setEditingPlayer(null);
+                  }
+                }}
+                className="w-24 h-8 text-right text-lg font-bold"
+                autoFocus
+              />
+            ) : (
+              <span
+                className={`text-lg sm:text-xl font-bold text-gradient-mystic ${isCurrentUser ? 'cursor-pointer hover:opacity-80' : ''}`}
+                onClick={() => isCurrentUser && setEditingPlayer(player.key)}
+              >
+                {player.lp}
+              </span>
+            )}
+          </div>
+        </div>
+        
+        {isCurrentUser && (
+          <>
+            <div className="grid grid-cols-4 gap-2">
+              {lpButtons.row1.map(btn => (
+                <Button key={btn.label} size="sm" variant="outline" onClick={() => onUpdateLP(player.key, btn.amount)} className="text-xs">
+                  {btn.amount < 0 ? <Minus className="w-3 h-3 mr-1" /> : <Plus className="w-3 h-3 mr-1" />}
+                  {btn.label.replace(/^[+-]/, '')}
+                </Button>
+              ))}
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {lpButtonsRow2.map(btn => (
+                <Button key={btn.label} size="sm" variant="outline" onClick={() => onUpdateLP(player.key, btn.amount)} className="text-xs">
+                  {btn.amount < 0 ? <Minus className="w-3 h-3 mr-1" /> : <Plus className="w-3 h-3 mr-1" />}
+                  {btn.label.replace(/^[+-]/, '')}
+                </Button>
+              ))}
+              <Button size="sm" variant="destructive" onClick={() => onSetLP(player.key, defaultLP)} className="text-xs" title={`Resetar LP para ${defaultLP}`}>
+                <RotateCcw className="w-3 h-3 mr-1" />
+                Reset
+              </Button>
+            </div>
+          </>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -175,21 +256,11 @@ export const FloatingCalculator = ({
             <span className="text-sm font-semibold text-gradient-mystic">Calculadora LP</span>
           </div>
           <div className="flex items-center gap-1">
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-6 w-6 p-0"
-              onClick={() => setIsMinimized(!isMinimized)}
-            >
+            <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => setIsMinimized(!isMinimized)}>
               {isMinimized ? <Maximize2 className="w-3 h-3" /> : <Minimize2 className="w-3 h-3" />}
             </Button>
             {onClose && (
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-6 w-6 p-0"
-                onClick={onClose}
-              >
+              <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={onClose}>
                 <X className="w-3 h-3" />
               </Button>
             )}
@@ -198,170 +269,70 @@ export const FloatingCalculator = ({
 
         {/* Content */}
         {!isMinimized && (
-          <div className="p-3 sm:p-4 space-y-3 sm:space-y-4 w-72 sm:w-80">
-            {/* Player 1 */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1 sm:gap-2">
-                  <Shield className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
-                  <span className="text-xs sm:text-sm font-semibold truncate max-w-[80px] sm:max-w-none">{player1Name}</span>
-                </div>
-                <div className="flex items-center gap-1 sm:gap-2">
-                  <Heart className="w-3 h-3 sm:w-4 sm:h-4 text-destructive" />
-                  {editingPlayer1 && currentUserPlayer === 'player1' ? (
-                    <Input
-                      type="number"
-                      value={tempLP1}
-                      onChange={(e) => setTempLP1(e.target.value)}
-                      onBlur={handleLP1Submit}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleLP1Submit();
-                        if (e.key === 'Escape') {
-                          setTempLP1(player1LP.toString());
-                          setEditingPlayer1(false);
-                        }
-                      }}
-                      className="w-24 h-8 text-right text-lg font-bold"
-                      autoFocus
-                    />
-                   ) : (
-                      <span
-                        className={`text-lg sm:text-xl font-bold text-gradient-mystic ${currentUserPlayer === 'player1' ? 'cursor-pointer hover:opacity-80' : ''}`}
-                        onClick={() => currentUserPlayer === 'player1' && setEditingPlayer1(true)}
-                      >
-                        {player1LP}
-                      </span>
-                   )}
+          <div className="p-3 sm:p-4 space-y-3 w-72 sm:w-80 max-h-[70vh] overflow-y-auto">
+            {players.map((player, idx) => (
+              <div key={player.key}>
+                {idx > 0 && <div className="border-t border-primary/20 my-2" />}
+                {renderPlayerSection(player)}
+              </div>
+            ))}
+
+            {/* Custom Counters */}
+            {customCounters.length > 0 && (
+              <>
+                <div className="border-t border-primary/20 my-2" />
+                <div className="text-xs font-semibold text-muted-foreground mb-1">Contadores Públicos</div>
+                {customCounters.map((counter) => (
+                  <div key={counter.id} className="flex items-center justify-between gap-2 py-1">
+                    <span className="text-xs font-medium truncate max-w-[100px]">{counter.name}</span>
+                    <div className="flex items-center gap-1">
+                      <Button size="sm" variant="outline" className="h-6 w-6 p-0" onClick={() => onUpdateCustomCounter?.(counter.id, counter.value - 1)}>
+                        <Minus className="w-3 h-3" />
+                      </Button>
+                      <span className="text-sm font-bold min-w-[30px] text-center">{counter.value}</span>
+                      <Button size="sm" variant="outline" className="h-6 w-6 p-0" onClick={() => onUpdateCustomCounter?.(counter.id, counter.value + 1)}>
+                        <Plus className="w-3 h-3" />
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-destructive" onClick={() => onRemoveCustomCounter?.(counter.id)}>
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+
+            {/* Add Custom Counter */}
+            <div className="border-t border-primary/20 my-2" />
+            {showAddCounter ? (
+              <div className="space-y-2">
+                <Input
+                  placeholder="Nome do contador"
+                  value={newCounterName}
+                  onChange={(e) => setNewCounterName(e.target.value)}
+                  className="h-8 text-xs"
+                />
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    placeholder="Valor inicial"
+                    value={newCounterValue}
+                    onChange={(e) => setNewCounterValue(e.target.value)}
+                    className="h-8 text-xs flex-1"
+                  />
+                  <Button size="sm" onClick={handleAddCounter} className="h-8 text-xs">
+                    <Plus className="w-3 h-3 mr-1" /> Criar
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setShowAddCounter(false)} className="h-8 text-xs">
+                    <X className="w-3 h-3" />
+                  </Button>
                 </div>
               </div>
-              
-              {currentUserPlayer === 'player1' && (
-                <>
-                  <div className="grid grid-cols-4 gap-2">
-                    {lpButtons.row1.map(btn => (
-                      <Button
-                        key={btn.label}
-                        size="sm"
-                        variant="outline"
-                        onClick={() => onUpdateLP('player1', btn.amount)}
-                        className="text-xs"
-                      >
-                        {btn.amount < 0 ? <Minus className="w-3 h-3 mr-1" /> : <Plus className="w-3 h-3 mr-1" />}
-                        {btn.label.replace(/^[+-]/, '')}
-                      </Button>
-                    ))}
-                  </div>
-                  
-                  <div className="grid grid-cols-3 gap-2">
-                    {lpButtonsRow2.map(btn => (
-                      <Button
-                        key={btn.label}
-                        size="sm"
-                        variant="outline"
-                        onClick={() => onUpdateLP('player1', btn.amount)}
-                        className="text-xs"
-                      >
-                        {btn.amount < 0 ? <Minus className="w-3 h-3 mr-1" /> : <Plus className="w-3 h-3 mr-1" />}
-                        {btn.label.replace(/^[+-]/, '')}
-                      </Button>
-                    ))}
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => onSetLP('player1', defaultLP)}
-                      className="text-xs"
-                      title={`Resetar LP para ${defaultLP}`}
-                    >
-                      <RotateCcw className="w-3 h-3 mr-1" />
-                      Reset
-                    </Button>
-                  </div>
-                </>
-              )}
-            </div>
-
-            <div className="border-t border-primary/20" />
-
-            {/* Player 2 */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1 sm:gap-2">
-                  <Shield className="w-3 h-3 sm:w-4 sm:h-4 text-accent" />
-                  <span className="text-xs sm:text-sm font-semibold truncate max-w-[80px] sm:max-w-none">{player2Name}</span>
-                </div>
-                <div className="flex items-center gap-1 sm:gap-2">
-                  <Heart className="w-3 h-3 sm:w-4 sm:h-4 text-destructive" />
-                  {editingPlayer2 && currentUserPlayer === 'player2' ? (
-                    <Input
-                      type="number"
-                      value={tempLP2}
-                      onChange={(e) => setTempLP2(e.target.value)}
-                      onBlur={handleLP2Submit}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleLP2Submit();
-                        if (e.key === 'Escape') {
-                          setTempLP2(player2LP.toString());
-                          setEditingPlayer2(false);
-                        }
-                      }}
-                      className="w-24 h-8 text-right text-lg font-bold"
-                      autoFocus
-                    />
-                   ) : (
-                      <span
-                        className={`text-lg sm:text-xl font-bold text-gradient-mystic ${currentUserPlayer === 'player2' ? 'cursor-pointer hover:opacity-80' : ''}`}
-                        onClick={() => currentUserPlayer === 'player2' && setEditingPlayer2(true)}
-                      >
-                        {player2LP}
-                      </span>
-                   )}
-                </div>
-              </div>
-              
-              {currentUserPlayer === 'player2' && (
-                <>
-                  <div className="grid grid-cols-4 gap-2">
-                    {lpButtons.row1.map(btn => (
-                      <Button
-                        key={btn.label}
-                        size="sm"
-                        variant="outline"
-                        onClick={() => onUpdateLP('player2', btn.amount)}
-                        className="text-xs"
-                      >
-                        {btn.amount < 0 ? <Minus className="w-3 h-3 mr-1" /> : <Plus className="w-3 h-3 mr-1" />}
-                        {btn.label.replace(/^[+-]/, '')}
-                      </Button>
-                    ))}
-                  </div>
-                  
-                  <div className="grid grid-cols-3 gap-2">
-                    {lpButtonsRow2.map(btn => (
-                      <Button
-                        key={btn.label}
-                        size="sm"
-                        variant="outline"
-                        onClick={() => onUpdateLP('player2', btn.amount)}
-                        className="text-xs"
-                      >
-                        {btn.amount < 0 ? <Minus className="w-3 h-3 mr-1" /> : <Plus className="w-3 h-3 mr-1" />}
-                        {btn.label.replace(/^[+-]/, '')}
-                      </Button>
-                    ))}
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => onSetLP('player2', defaultLP)}
-                      className="text-xs"
-                      title={`Resetar LP para ${defaultLP}`}
-                    >
-                      <RotateCcw className="w-3 h-3 mr-1" />
-                      Reset
-                    </Button>
-                  </div>
-                </>
-              )}
-            </div>
+            ) : (
+              <Button size="sm" variant="outline" className="w-full text-xs" onClick={() => setShowAddCounter(true)}>
+                <PlusCircle className="w-3 h-3 mr-1" /> Adicionar Contador
+              </Button>
+            )}
           </div>
         )}
       </Card>

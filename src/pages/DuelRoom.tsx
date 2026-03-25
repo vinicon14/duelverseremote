@@ -33,6 +33,9 @@ const DuelRoom = () => {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [player1LP, setPlayer1LP] = useState(8000);
   const [player2LP, setPlayer2LP] = useState(8000);
+  const [player3LP, setPlayer3LP] = useState(8000);
+  const [player4LP, setPlayer4LP] = useState(8000);
+  const [customCounters, setCustomCounters] = useState<{ id: string; name: string; value: number }[]>([]);
   const [showMagicViewer, setShowMagicViewer] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
   const [roomUrl, setRoomUrl] = useState<string>('');
@@ -136,9 +139,23 @@ const DuelRoom = () => {
             const defaultLP = payload.new.tcg_type === 'magic' ? 40 : 8000;
             const newP1LP = payload.new.player1_lp ?? defaultLP;
             const newP2LP = payload.new.player2_lp ?? defaultLP;
+            const newP3LP = (payload.new as any).player3_lp ?? defaultLP;
+            const newP4LP = (payload.new as any).player4_lp ?? defaultLP;
             
             setPlayer1LP(newP1LP);
             setPlayer2LP(newP2LP);
+            setPlayer3LP(newP3LP);
+            setPlayer4LP(newP4LP);
+            
+            // Sync custom counters
+            if ((payload.new as any).custom_counters) {
+              try {
+                const counters = typeof (payload.new as any).custom_counters === 'string' 
+                  ? JSON.parse((payload.new as any).custom_counters) 
+                  : (payload.new as any).custom_counters;
+                if (Array.isArray(counters)) setCustomCounters(counters);
+              } catch {}
+            }
             
             // Atualizar estado de pausa do timer
             if (payload.new.is_timer_paused !== undefined) {
@@ -309,9 +326,11 @@ const DuelRoom = () => {
         return;
       }
 
-      // Verificar se o usuário é participante
       const isCreator = data.creator_id === userId;
       const isOpponent = data.opponent_id === userId;
+      const isPlayer3 = (data as any).player3_id === userId;
+      const isPlayer4 = (data as any).player4_id === userId;
+      const maxPlayers = (data as any).max_players || 2;
 
       // Se o usuário é o creator, notificar o opponent que está na fila
       if (isCreator && !data.opponent_id) {
@@ -337,44 +356,42 @@ const DuelRoom = () => {
         }
       }
 
-      // Se a sala não tem opponent ainda
-      if (!data.opponent_id) {
-        if (!isCreator) {
+      // Se a sala tem slots abertos para o jogador entrar
+      const isAlreadyInDuel = isCreator || isOpponent || isPlayer3 || isPlayer4;
+      if (!isAlreadyInDuel) {
+        // Try to join an open slot
+        let joinedSlot: string | null = null;
+        if (!data.opponent_id) {
+          joinedSlot = 'opponent_id';
+        } else if (maxPlayers >= 3 && !(data as any).player3_id) {
+          joinedSlot = 'player3_id';
+        } else if (maxPlayers >= 4 && !(data as any).player4_id) {
+          joinedSlot = 'player4_id';
+        }
+
+        if (joinedSlot) {
           try {
+            const updateData: any = { [joinedSlot]: userId };
+            // Check if all slots are now filled
+            const filledAfter = [data.creator_id, data.opponent_id, (data as any).player3_id, (data as any).player4_id]
+              .filter(Boolean).length + 1;
+            if (filledAfter >= maxPlayers) {
+              updateData.status = 'in_progress';
+            }
+
             const { error: updateError } = await supabase
               .from('live_duels')
-              .update({
-                opponent_id: userId,
-                status: 'in_progress'
-              })
-              .eq('id', id)
-              .is('opponent_id', null);
+              .update(updateData)
+              .eq('id', id);
 
             if (updateError) {
-              toast({
-                title: "Erro ao entrar",
-                description: "Não foi possível entrar nesta sala.",
-                variant: "destructive",
-              });
+              toast({ title: "Erro ao entrar", description: "Não foi possível entrar nesta sala.", variant: "destructive" });
               navigate('/duels');
               return;
             }
 
-            if (data.creator_id) {
-              try {
-                await supabase
-                  .from('redirects')
-                  .upsert({
-                    user_id: data.creator_id,
-                    duel_id: id,
-                    created_at: new Date().toISOString()
-                  }, { onConflict: 'user_id' });
-              } catch (err) {
-                console.error('[DuelRoom] Erro ao criar redirect para creator:', err);
-              }
-            }
-
-            const { data: updatedData, error: reloadError } = await supabase
+            // Reload duel data
+            const { data: updatedData } = await supabase
               .from('live_duels')
               .select(`
                 *,
@@ -384,25 +401,13 @@ const DuelRoom = () => {
               .eq('id', id)
               .maybeSingle();
 
-            if (reloadError) {
-              console.error('[DuelRoom] Erro ao recarregar:', reloadError);
-            }
-
-            if (updatedData) {
-              data = updatedData;
-            }
+            if (updatedData) data = updatedData;
           } catch (error) {
-            toast({
-              title: "Erro ao entrar",
-              description: "Ocorreu um erro ao tentar entrar na sala.",
-              variant: "destructive",
-            });
+            toast({ title: "Erro ao entrar", description: "Ocorreu um erro ao tentar entrar na sala.", variant: "destructive" });
             navigate('/duels');
             return;
           }
-        }
-      } else {
-        if (!isCreator && !isOpponent) {
+        } else {
           console.log('[DuelRoom] Usuário entrando como espectador');
           toast({
             title: "👁️ Modo Espectador",
@@ -415,6 +420,11 @@ const DuelRoom = () => {
       const defaultLP = data.tcg_type === 'magic' ? 40 : 8000;
       setPlayer1LP(data.player1_lp || defaultLP);
       setPlayer2LP(data.player2_lp || defaultLP);
+      setPlayer3LP((data as any).player3_lp || defaultLP);
+      setPlayer4LP((data as any).player4_lp || defaultLP);
+      if ((data as any).custom_counters && Array.isArray((data as any).custom_counters)) {
+        setCustomCounters((data as any).custom_counters);
+      }
       const isPaused = data.is_timer_paused || false;
       setIsTimerPaused(isPaused);
       isTimerPausedRef.current = isPaused;
@@ -486,54 +496,52 @@ const DuelRoom = () => {
     }
   };
 
-  const updateLP = async (player: 'player1' | 'player2', amount: number) => {
+  const updateLP = async (player: 'player1' | 'player2' | 'player3' | 'player4', amount: number) => {
     if (!id) return;
-    
-    const isPlayer1 = player === 'player1';
-    const currentLP = isPlayer1 ? player1LP : player2LP;
-    const newLP = Math.max(0, currentLP + amount);
-
+    const lpMap = { player1: player1LP, player2: player2LP, player3: player3LP, player4: player4LP };
+    const newLP = Math.max(0, lpMap[player] + amount);
     try {
-      const updateData = { [player + '_lp']: newLP };
-      
-      const { error } = await supabase
-        .from('live_duels')
-        .update(updateData)
-        .eq('id', id);
-
+      const { error } = await supabase.from('live_duels').update({ [player + '_lp']: newLP }).eq('id', id);
       if (error) throw error;
     } catch (error: any) {
-      toast({
-        title: "Erro ao atualizar LP",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Erro ao atualizar LP", description: error.message, variant: "destructive" });
     }
   };
 
-  const setLP = async (player: 'player1' | 'player2', value: number) => {
+  const setLP = async (player: 'player1' | 'player2' | 'player3' | 'player4', value: number) => {
     if (!id) return;
-    
     const newLP = Math.max(0, value);
-    
     try {
-      const updateData = { [player + '_lp']: newLP };
-      
-      const { error } = await supabase
-        .from('live_duels')
-        .update(updateData)
-        .eq('id', id);
-
+      const { error } = await supabase.from('live_duels').update({ [player + '_lp']: newLP }).eq('id', id);
       if (error) throw error;
     } catch (error: any) {
-      console.error('💾 [SET LP] ❌ Erro:', error);
-      toast({
-        title: "Erro ao atualizar LP",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Erro ao atualizar LP", description: error.message, variant: "destructive" });
     }
   };
+
+  const updateCustomCounter = async (counterId: string, newValue: number) => {
+    if (!id) return;
+    const updated = customCounters.map(c => c.id === counterId ? { ...c, value: newValue } : c);
+    setCustomCounters(updated);
+    await supabase.from('live_duels').update({ custom_counters: updated } as any).eq('id', id);
+  };
+
+  const addCustomCounter = async (name: string, startValue: number) => {
+    if (!id) return;
+    const newCounter = { id: `cc-${Date.now()}-${Math.random().toString(36).slice(2)}`, name, value: startValue };
+    const updated = [...customCounters, newCounter];
+    setCustomCounters(updated);
+    await supabase.from('live_duels').update({ custom_counters: updated } as any).eq('id', id);
+  };
+
+  const removeCustomCounter = async (counterId: string) => {
+    if (!id) return;
+    const updated = customCounters.filter(c => c.id !== counterId);
+    setCustomCounters(updated);
+    await supabase.from('live_duels').update({ custom_counters: updated } as any).eq('id', id);
+  };
+
+  // Old setLP removed - replaced by the one above that supports 4 players
 
   const endDuel = async (winnerId?: string) => {
     try {
@@ -800,10 +808,13 @@ const DuelRoom = () => {
   // Identificar quem é cada player
   const isPlayer1 = currentUser?.id === duel?.creator_id;
   const isPlayer2 = currentUser?.id === duel?.opponent_id;
-  const isParticipant = isPlayer1 || isPlayer2;
+  const isPlayer3 = currentUser?.id === (duel as any)?.player3_id;
+  const isPlayer4 = currentUser?.id === (duel as any)?.player4_id;
+  const isParticipant = isPlayer1 || isPlayer2 || isPlayer3 || isPlayer4;
   const isSpectator = currentUser && !isParticipant;
   
-  const currentUserPlayer: 'player1' | 'player2' | null = isPlayer1 ? 'player1' : (isPlayer2 ? 'player2' : null);
+  const currentUserPlayer: 'player1' | 'player2' | 'player3' | 'player4' | null = 
+    isPlayer1 ? 'player1' : isPlayer2 ? 'player2' : isPlayer3 ? 'player3' : isPlayer4 ? 'player4' : null;
 
   // Hook para gerenciar presença e detecção de desconexão
   useDuelPresence(id, currentUser?.id, isParticipant);
@@ -973,10 +984,19 @@ const DuelRoom = () => {
           player2Name={duel.opponent?.username || 'Player 2'}
           player1LP={player1LP}
           player2LP={player2LP}
+          player3Name={(duel as any).player3_id ? 'Player 3' : undefined}
+          player4Name={(duel as any).player4_id ? 'Player 4' : undefined}
+          player3LP={player3LP}
+          player4LP={player4LP}
+          maxPlayers={(duel as any).max_players || 2}
           onUpdateLP={updateLP}
           onSetLP={setLP}
           currentUserPlayer={isSpectator ? null : currentUserPlayer}
           tcgType={duel.tcg_type}
+          customCounters={customCounters}
+          onUpdateCustomCounter={updateCustomCounter}
+          onAddCustomCounter={addCustomCounter}
+          onRemoveCustomCounter={removeCustomCounter}
         />
       )}
 
