@@ -235,6 +235,11 @@ export const Navbar = () => {
           </SheetTrigger>
           <SheetContent side="right" className="w-64 h-screen overflow-y-auto">
             <div className="flex flex-col space-y-4 pt-8 h-full">
+              <div className="flex items-center gap-2 pb-2 border-b border-border">
+                <TcgSwitcher />
+                <OnlineUsersCounter />
+                {user && <NotificationBell userId={user.id} />}
+              </div>
               <NavLinks />
               {user ? (
                 <>
