@@ -12,16 +12,18 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { Swords, Sparkles, ChevronDown } from 'lucide-react';
+import { Swords, Sparkles, Zap, ChevronDown } from 'lucide-react';
 
 const TCG_ICONS: Record<TcgType, React.ReactNode> = {
   yugioh: <Swords className="w-4 h-4" />,
   magic: <Sparkles className="w-4 h-4" />,
+  pokemon: <Zap className="w-4 h-4" />,
 };
 
 const TCG_NAMES: Record<TcgType, string> = {
   yugioh: 'YGO',
   magic: 'MTG',
+  pokemon: 'PKM',
 };
 
 export const TcgSwitcher = () => {
