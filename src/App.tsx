@@ -21,7 +21,7 @@ import { DynamicTheme } from "@/components/DynamicTheme";
 import { useRealtimeNotifications } from "@/hooks/useRealtimeNotifications";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useSubscriptionExpirationCheck } from "@/hooks/useSubscriptionExpirationCheck";
-import { TcgProvider } from "./contexts/TcgContext";
+import { TcgProvider, useTcg } from "./contexts/TcgContext";
 import Home from "./pages/Home";
 import Landing from "./pages/Landing";
 import Admin from "./pages/Admin";
