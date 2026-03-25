@@ -490,14 +490,20 @@ export type Database = {
           bet_amount: number
           created_at: string
           creator_id: string
+          custom_counters: Json
           duration_minutes: number
           finished_at: string | null
           id: string
           is_ranked: boolean
           is_timer_paused: boolean
+          max_players: number
           opponent_id: string | null
           player1_lp: number
           player2_lp: number
+          player3_id: string | null
+          player3_lp: number
+          player4_id: string | null
+          player4_lp: number
           remaining_seconds: number | null
           room_name: string | null
           started_at: string | null
@@ -509,14 +515,20 @@ export type Database = {
           bet_amount?: number
           created_at?: string
           creator_id: string
+          custom_counters?: Json
           duration_minutes?: number
           finished_at?: string | null
           id?: string
           is_ranked?: boolean
           is_timer_paused?: boolean
+          max_players?: number
           opponent_id?: string | null
           player1_lp?: number
           player2_lp?: number
+          player3_id?: string | null
+          player3_lp?: number
+          player4_id?: string | null
+          player4_lp?: number
           remaining_seconds?: number | null
           room_name?: string | null
           started_at?: string | null
@@ -528,14 +540,20 @@ export type Database = {
           bet_amount?: number
           created_at?: string
           creator_id?: string
+          custom_counters?: Json
           duration_minutes?: number
           finished_at?: string | null
           id?: string
           is_ranked?: boolean
           is_timer_paused?: boolean
+          max_players?: number
           opponent_id?: string | null
           player1_lp?: number
           player2_lp?: number
+          player3_id?: string | null
+          player3_lp?: number
+          player4_id?: string | null
+          player4_lp?: number
           remaining_seconds?: number | null
           room_name?: string | null
           started_at?: string | null
@@ -857,6 +875,7 @@ export type Database = {
           id: string
           joined_at: string
           match_type: string
+          max_players: number
           status: string
           tcg_type: string
           user_id: string
@@ -867,6 +886,7 @@ export type Database = {
           id?: string
           joined_at?: string
           match_type: string
+          max_players?: number
           status?: string
           tcg_type?: string
           user_id: string
@@ -877,6 +897,7 @@ export type Database = {
           id?: string
           joined_at?: string
           match_type?: string
+          max_players?: number
           status?: string
           tcg_type?: string
           user_id?: string
