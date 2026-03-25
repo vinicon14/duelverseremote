@@ -195,23 +195,23 @@ const DropZone = ({
   return (
     <div
       className={cn(
-        'rounded-lg border border-border/30 bg-card/20 p-2',
+        'rounded-lg border border-border/30 bg-card/20 p-2 sm:p-3',
         className
       )}
       onDragOver={onDragOver}
       onDrop={(e) => onDrop(e, zone)}
     >
-      <div className="flex items-center gap-1 mb-1.5">
+      <div className="flex items-center gap-1.5 mb-2">
         {icon}
-        <span className="text-[11px] font-medium text-muted-foreground">{label}</span>
+        <span className="text-[11px] sm:text-xs font-medium text-muted-foreground">{label}</span>
         <Badge variant="secondary" className="text-[10px] px-1.5 ml-auto">
           {cards.length}
         </Badge>
       </div>
-      <div className="flex flex-wrap gap-1 min-h-[73px] sm:min-h-[89px]">
+      <div className="flex flex-wrap gap-1.5 sm:gap-2 min-h-[84px] sm:min-h-[100px] md:min-h-[112px]">
         {cards.length === 0 && (
-          <div className="w-full flex items-center justify-center text-[10px] text-muted-foreground/50">
-            Vazio
+          <div className="w-full flex items-center justify-center text-xs text-muted-foreground/50 italic">
+            Arraste cartas aqui
           </div>
         )}
         {cards.map((card) => (
