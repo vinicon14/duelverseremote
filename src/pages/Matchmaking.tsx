@@ -14,6 +14,7 @@ import { Navbar } from "@/components/Navbar";
 import { Loader2, Swords, Users, Clock, Video, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { useBanCheck } from "@/hooks/useBanCheck";
+import { useTcg } from "@/contexts/TcgContext";
 
 interface MatchData {
   duelId: string;
@@ -22,6 +23,7 @@ interface MatchData {
 
 export default function Matchmaking() {
   useBanCheck();
+  const { activeTcg } = useTcg();
   const navigate = useNavigate();
   const [searching, setSearching] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
@@ -114,7 +116,8 @@ export default function Matchmaking() {
       const { count } = await supabase
         .from('matchmaking_queue')
         .select('*', { count: 'exact', head: true })
-        .eq('status', 'waiting');
+        .eq('status', 'waiting')
+        .eq('tcg_type', activeTcg);
       setPlayersInQueue(count || 0);
     } catch (error) {
       console.error('Error fetching queue stats:', error);
@@ -310,7 +313,8 @@ export default function Matchmaking() {
       const { data: matchResult, error: matchError } = await supabase
         .rpc('matchmake', { 
           p_match_type: matchType, 
-          p_user_id: userId 
+          p_user_id: userId,
+          p_tcg_type: activeTcg
         });
 
       if (matchError) {

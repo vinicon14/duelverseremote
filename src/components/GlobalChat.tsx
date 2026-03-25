@@ -14,6 +14,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Send, MessageCircle, Trash2 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { useAdmin } from "@/hooks/useAdmin";
+import { useTcg } from "@/contexts/TcgContext";
 
 interface GlobalMessage {
   id: string;
@@ -27,6 +28,7 @@ interface GlobalMessage {
 export const GlobalChat = () => {
   const { toast } = useToast();
   const { isAdmin } = useAdmin();
+  const { activeTcg } = useTcg();
   const [messages, setMessages] = useState<GlobalMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -38,13 +40,14 @@ export const GlobalChat = () => {
 
     // Realtime subscription para novas mensagens
     const channel = supabase
-      .channel('global-chat')
+      .channel('global-chat-' + activeTcg)
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'global_chat_messages'
+          table: 'global_chat_messages',
+          filter: `tcg_type=eq.${activeTcg}`
         },
         async (payload) => {
           // Buscar dados do usuário junto com a mensagem
@@ -66,14 +69,12 @@ export const GlobalChat = () => {
           // Show notification for new message (only if not own message)
           const { data: { user } } = await supabase.auth.getUser();
           if (payload.new.user_id !== user?.id) {
-            // Show browser notification if permitted
             if (Notification.permission === 'granted') {
               new Notification(userData?.username || 'Anônimo', {
                 body: payload.new.message,
                 icon: userData?.avatar_url || undefined
               });
             }
-            // Also show in-app toast notification
             toast({
               title: userData?.username || 'Anônimo',
               description: payload.new.message,
@@ -87,7 +88,7 @@ export const GlobalChat = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [activeTcg]);
 
   const checkAuth = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -108,6 +109,7 @@ export const GlobalChat = () => {
       const { data, error } = await supabase
         .from('global_chat_messages')
         .select('*')
+        .eq('tcg_type', activeTcg)
         .order('created_at', { ascending: false })
         .limit(30);
 
@@ -184,7 +186,8 @@ export const GlobalChat = () => {
         .from('global_chat_messages')
         .insert({
           user_id: currentUser.id,
-          message: newMessage.trim()
+          message: newMessage.trim(),
+          tcg_type: activeTcg
         });
 
       if (error) throw error;

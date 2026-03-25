@@ -17,9 +17,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from '@supabase/supabase-js';
 import { DuelInviteNotification } from "@/components/DuelInviteNotification";
 import { NotificationPrompt } from "@/components/NotificationPrompt";
+import { DynamicTheme } from "@/components/DynamicTheme";
 import { useRealtimeNotifications } from "@/hooks/useRealtimeNotifications";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useSubscriptionExpirationCheck } from "@/hooks/useSubscriptionExpirationCheck";
+import { TcgProvider } from "./contexts/TcgContext";
 import Home from "./pages/Home";
 import Landing from "./pages/Landing";
 import Admin from "./pages/Admin";
@@ -43,6 +45,8 @@ import News from "./pages/News";
 import NotFound from "./pages/NotFound";
 
 import DeckBuilder from "./pages/DeckBuilder";
+import MagicDeckBuilder from "./pages/MagicDeckBuilder";
+import ProfileSelect from "./pages/ProfileSelect";
 import CreateWeeklyTournament from "./pages/CreateWeeklyTournament";
 import WeeklyTournaments from "./pages/WeeklyTournaments";
 import MyTournaments from "./pages/MyTournaments";
@@ -87,6 +91,8 @@ const RouterContent = ({ user }: { user: User | null }) => {
       <Route path="/video/:id" element={<VideoShare />} />
       
       <Route path="/deck-builder" element={<DeckBuilder />} />
+      <Route path="/magic-deck-builder" element={<MagicDeckBuilder />} />
+      <Route path="/profile-select" element={<ProfileSelect />} />
       <Route path="/weekly-tournaments" element={<WeeklyTournaments />} />
       <Route path="/create-weekly-tournament" element={<CreateWeeklyTournament />} />
       <Route path="/my-tournaments" element={<MyTournaments />} />
@@ -133,6 +139,7 @@ const AppContent = () => {
 
   return (
     <BrowserRouter>
+      <DynamicTheme />
       <UniversalNewTabBlocker />
       <ConditionalMonetagLoader />
       <DuelInviteNotification currentUserId={user?.id} />
@@ -144,11 +151,13 @@ const AppContent = () => {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <AppContent />
-    </TooltipProvider>
+    <TcgProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <AppContent />
+      </TooltipProvider>
+    </TcgProvider>
   </QueryClientProvider>
 );
 

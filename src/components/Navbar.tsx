@@ -23,6 +23,8 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { NotificationBell } from "@/components/NotificationBell";
 import { OnlineUsersCounter } from "@/components/OnlineUsersCounter";
+import { TcgSwitcher } from "@/components/TcgSwitcher";
+import { useTcg } from "@/contexts/TcgContext";
 
 export const Navbar = () => {
   const navigate = useNavigate();
@@ -31,6 +33,7 @@ export const Navbar = () => {
   const { isAdmin } = useAdmin();
   const { isJudge } = useJudge();
   const { isPro } = useAccountType();
+  const { activeTcg } = useTcg();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -121,7 +124,7 @@ export const Navbar = () => {
           Galeria
         </Button>
       </Link>
-      <Link to="/deck-builder">
+      <Link to={activeTcg === 'magic' ? '/magic-deck-builder' : '/deck-builder'}>
         <Button variant="ghost" className="text-foreground hover:text-primary">
           <Layers className="mr-2 h-4 w-4" />
           Deck Build
@@ -182,6 +185,7 @@ export const Navbar = () => {
         </div>
         
         <div className="hidden md:flex items-center space-x-2 shrink-0">
+          <TcgSwitcher />
           <OnlineUsersCounter />
           
           {user && <NotificationBell userId={user.id} />}
