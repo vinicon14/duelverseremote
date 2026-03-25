@@ -541,29 +541,7 @@ const DuelRoom = () => {
     await supabase.from('live_duels').update({ custom_counters: updated } as any).eq('id', id);
   };
 
-  const setLP = async (player: 'player1' | 'player2', value: number) => {
-    if (!id) return;
-    
-    const newLP = Math.max(0, value);
-    
-    try {
-      const updateData = { [player + '_lp']: newLP };
-      
-      const { error } = await supabase
-        .from('live_duels')
-        .update(updateData)
-        .eq('id', id);
-
-      if (error) throw error;
-    } catch (error: any) {
-      console.error('💾 [SET LP] ❌ Erro:', error);
-      toast({
-        title: "Erro ao atualizar LP",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
+  // Old setLP removed - replaced by the one above that supports 4 players
 
   const endDuel = async (winnerId?: string) => {
     try {
