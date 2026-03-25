@@ -10,7 +10,7 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { PhoneOff, Loader2, Scale, Layers, Sparkles } from "lucide-react";
+import { PhoneOff, Loader2, Scale, Layers, Sparkles, Zap } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { DuelChat } from "@/components/DuelChat";
 import { FloatingCalculator } from "@/components/FloatingCalculator";
@@ -1044,6 +1044,14 @@ const DuelRoom = () => {
             }
           />
         </>
+      )}
+
+      {/* Pokemon Arena Viewer */}
+      {isParticipant && !isJudge && duel?.tcg_type === 'pokemon' && showPokemonViewer && currentUser && id && (
+        <PokemonDuelViewer
+          duelId={id}
+          currentUserId={currentUser.id}
+        />
       )}
 
       {/* Magic Arena Viewer */}
