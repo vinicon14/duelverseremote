@@ -90,6 +90,8 @@ const RouterContent = ({ user }: { user: User | null }) => {
       <Route path="/video/:id" element={<VideoShare />} />
       
       <Route path="/deck-builder" element={<DeckBuilder />} />
+      <Route path="/magic-deck-builder" element={<MagicDeckBuilder />} />
+      <Route path="/profile-select" element={<ProfileSelect />} />
       <Route path="/weekly-tournaments" element={<WeeklyTournaments />} />
       <Route path="/create-weekly-tournament" element={<CreateWeeklyTournament />} />
       <Route path="/my-tournaments" element={<MyTournaments />} />
@@ -147,11 +149,13 @@ const AppContent = () => {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <AppContent />
-    </TooltipProvider>
+    <TcgProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <AppContent />
+      </TooltipProvider>
+    </TcgProvider>
   </QueryClientProvider>
 );
 
