@@ -91,8 +91,8 @@ const CardSlot = ({
   return (
     <div
       className={cn(
-        'relative w-[52px] h-[73px] sm:w-[64px] sm:h-[89px] rounded border border-border/40 cursor-pointer transition-all hover:border-primary/60 hover:shadow-md overflow-hidden flex-shrink-0',
-        card.isTapped && 'rotate-90 origin-center mx-2'
+        'relative w-[60px] h-[84px] sm:w-[72px] sm:h-[100px] md:w-[80px] md:h-[112px] rounded-md border border-border/40 cursor-pointer transition-all hover:border-primary/60 hover:shadow-lg hover:scale-105 overflow-hidden flex-shrink-0',
+        card.isTapped && 'rotate-90 origin-center mx-3'
       )}
       draggable
       onDragStart={(e) => onDragStart(e, card, zone)}
@@ -108,10 +108,13 @@ const CardSlot = ({
         onError={(e) => { (e.target as HTMLImageElement).src = MTG_CARD_BACK; }}
       />
       {card.counters && card.counters > 0 && (
-        <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-[9px] px-1 rounded-bl font-bold">
+        <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-[10px] px-1.5 rounded-bl font-bold">
           {card.counters}
         </div>
       )}
+      <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-[8px] sm:text-[9px] text-center truncate px-0.5 py-px">
+        {card.isFaceDown ? '???' : card.name}
+      </div>
     </div>
   );
 };

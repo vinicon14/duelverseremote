@@ -486,6 +486,52 @@ export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId }: Magi
           </ScrollArea>
         </DialogContent>
       </Dialog>
+
+      {/* Search Library Dialog */}
+      <Dialog open={searchOpen} onOpenChange={(open) => { setSearchOpen(open); if (!open) setSearchQuery(''); }}>
+        <DialogContent className="max-w-md max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle className="text-sm flex items-center gap-2">
+              <Search className="w-4 h-4" />
+              Buscar no Grimório
+              <Badge variant="secondary">{fieldState.library.length}</Badge>
+            </DialogTitle>
+          </DialogHeader>
+          <Input
+            placeholder="Buscar por nome ou tipo..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="h-9 text-sm"
+            autoFocus
+          />
+          <ScrollArea className="max-h-[50vh]">
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 p-1">
+              {searchResults.length === 0 && (
+                <p className="col-span-full text-center text-sm text-muted-foreground py-8">
+                  Nenhuma carta encontrada
+                </p>
+              )}
+              {searchResults.map((card) => (
+                <div
+                  key={card.instanceId}
+                  className="cursor-pointer hover:ring-2 ring-primary rounded overflow-hidden transition-all"
+                  onClick={() => searchAndPickCard(card)}
+                  title={`Adicionar "${card.name}" à mão`}
+                >
+                  <img
+                    src={getMagicCardImage(card, 'small')}
+                    alt={card.name}
+                    className="w-full aspect-[63/88] object-cover"
+                    loading="lazy"
+                    onError={(e) => { (e.target as HTMLImageElement).src = MTG_CARD_BACK; }}
+                  />
+                  <p className="text-[9px] text-center truncate px-0.5 py-0.5 bg-card">{card.name}</p>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
