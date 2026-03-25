@@ -420,6 +420,11 @@ const DuelRoom = () => {
       const defaultLP = data.tcg_type === 'magic' ? 40 : 8000;
       setPlayer1LP(data.player1_lp || defaultLP);
       setPlayer2LP(data.player2_lp || defaultLP);
+      setPlayer3LP((data as any).player3_lp || defaultLP);
+      setPlayer4LP((data as any).player4_lp || defaultLP);
+      if ((data as any).custom_counters && Array.isArray((data as any).custom_counters)) {
+        setCustomCounters((data as any).custom_counters);
+      }
       const isPaused = data.is_timer_paused || false;
       setIsTimerPaused(isPaused);
       isTimerPausedRef.current = isPaused;
