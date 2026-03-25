@@ -1022,7 +1022,7 @@ const DuelRoom = () => {
       )}
 
       {/* Deck Viewer Component - YGO */}
-      {isParticipant && !isJudge && duel?.tcg_type !== 'magic' && (
+      {isParticipant && !isJudge && duel?.tcg_type === 'yugioh' && (
         <>
           <input
             ref={fileInputRef}
