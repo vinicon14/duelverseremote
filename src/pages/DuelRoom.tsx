@@ -20,6 +20,7 @@ import { useBanCheck } from "@/hooks/useBanCheck";
 import { DuelDeckViewer } from "@/components/duel/DuelDeckViewer";
 import { FloatingOpponentViewer } from "@/components/duel/FloatingOpponentViewer";
 import { MagicDuelViewer } from "@/components/duel/MagicDuelViewer";
+import { PokemonDuelViewer } from "@/components/duel/PokemonDuelViewer";
 import { useDuelDeck } from "@/hooks/useDuelDeck";
 import { useDuelPresence, useDuelCleanup } from "@/hooks/useDuelPresence";
 
@@ -37,6 +38,7 @@ const DuelRoom = () => {
   const [player4LP, setPlayer4LP] = useState(8000);
   const [customCounters, setCustomCounters] = useState<{ id: string; name: string; value: number }[]>([]);
   const [showMagicViewer, setShowMagicViewer] = useState(false);
+  const [showPokemonViewer, setShowPokemonViewer] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
   const [roomUrl, setRoomUrl] = useState<string>('');
   const [isTimerPaused, setIsTimerPaused] = useState(false);
