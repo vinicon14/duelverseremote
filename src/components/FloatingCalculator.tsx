@@ -238,69 +238,39 @@ export const FloatingCalculator = ({
               {currentUserPlayer === 'player1' && (
                 <>
                   <div className="grid grid-cols-4 gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => onUpdateLP('player1', -1000)}
-                      className="text-xs"
-                    >
-                      <Minus className="w-3 h-3 mr-1" />
-                      1k
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => onUpdateLP('player1', -500)}
-                      className="text-xs"
-                    >
-                      <Minus className="w-3 h-3 mr-1" />
-                      500
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => onUpdateLP('player1', 500)}
-                      className="text-xs"
-                    >
-                      <Plus className="w-3 h-3 mr-1" />
-                      500
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => onUpdateLP('player1', 1000)}
-                      className="text-xs"
-                    >
-                      <Plus className="w-3 h-3 mr-1" />
-                      1k
-                    </Button>
+                    {lpButtons.row1.map(btn => (
+                      <Button
+                        key={btn.label}
+                        size="sm"
+                        variant="outline"
+                        onClick={() => onUpdateLP('player1', btn.amount)}
+                        className="text-xs"
+                      >
+                        {btn.amount < 0 ? <Minus className="w-3 h-3 mr-1" /> : <Plus className="w-3 h-3 mr-1" />}
+                        {btn.label.replace(/^[+-]/, '')}
+                      </Button>
+                    ))}
                   </div>
                   
                   <div className="grid grid-cols-3 gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => onUpdateLP('player1', -100)}
-                      className="text-xs"
-                    >
-                      <Minus className="w-3 h-3 mr-1" />
-                      100
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => onUpdateLP('player1', 100)}
-                      className="text-xs"
-                    >
-                      <Plus className="w-3 h-3 mr-1" />
-                      100
-                    </Button>
+                    {lpButtonsRow2.map(btn => (
+                      <Button
+                        key={btn.label}
+                        size="sm"
+                        variant="outline"
+                        onClick={() => onUpdateLP('player1', btn.amount)}
+                        className="text-xs"
+                      >
+                        {btn.amount < 0 ? <Minus className="w-3 h-3 mr-1" /> : <Plus className="w-3 h-3 mr-1" />}
+                        {btn.label.replace(/^[+-]/, '')}
+                      </Button>
+                    ))}
                     <Button
                       size="sm"
                       variant="destructive"
-                      onClick={() => onSetLP('player1', 8000)}
+                      onClick={() => onSetLP('player1', defaultLP)}
                       className="text-xs"
-                      title="Resetar LP para 8000"
+                      title={`Resetar LP para ${defaultLP}`}
                     >
                       <RotateCcw className="w-3 h-3 mr-1" />
                       Reset
@@ -351,69 +321,39 @@ export const FloatingCalculator = ({
               {currentUserPlayer === 'player2' && (
                 <>
                   <div className="grid grid-cols-4 gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => onUpdateLP('player2', -1000)}
-                      className="text-xs"
-                    >
-                      <Minus className="w-3 h-3 mr-1" />
-                      1k
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => onUpdateLP('player2', -500)}
-                      className="text-xs"
-                    >
-                      <Minus className="w-3 h-3 mr-1" />
-                      500
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => onUpdateLP('player2', 500)}
-                      className="text-xs"
-                    >
-                      <Plus className="w-3 h-3 mr-1" />
-                      500
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => onUpdateLP('player2', 1000)}
-                      className="text-xs"
-                    >
-                      <Plus className="w-3 h-3 mr-1" />
-                      1k
-                    </Button>
+                    {lpButtons.row1.map(btn => (
+                      <Button
+                        key={btn.label}
+                        size="sm"
+                        variant="outline"
+                        onClick={() => onUpdateLP('player2', btn.amount)}
+                        className="text-xs"
+                      >
+                        {btn.amount < 0 ? <Minus className="w-3 h-3 mr-1" /> : <Plus className="w-3 h-3 mr-1" />}
+                        {btn.label.replace(/^[+-]/, '')}
+                      </Button>
+                    ))}
                   </div>
                   
                   <div className="grid grid-cols-3 gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => onUpdateLP('player2', -100)}
-                      className="text-xs"
-                    >
-                      <Minus className="w-3 h-3 mr-1" />
-                      100
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => onUpdateLP('player2', 100)}
-                      className="text-xs"
-                    >
-                      <Plus className="w-3 h-3 mr-1" />
-                      100
-                    </Button>
+                    {lpButtonsRow2.map(btn => (
+                      <Button
+                        key={btn.label}
+                        size="sm"
+                        variant="outline"
+                        onClick={() => onUpdateLP('player2', btn.amount)}
+                        className="text-xs"
+                      >
+                        {btn.amount < 0 ? <Minus className="w-3 h-3 mr-1" /> : <Plus className="w-3 h-3 mr-1" />}
+                        {btn.label.replace(/^[+-]/, '')}
+                      </Button>
+                    ))}
                     <Button
                       size="sm"
                       variant="destructive"
-                      onClick={() => onSetLP('player2', 8000)}
+                      onClick={() => onSetLP('player2', defaultLP)}
                       className="text-xs"
-                      title="Resetar LP para 8000"
+                      title={`Resetar LP para ${defaultLP}`}
                     >
                       <RotateCcw className="w-3 h-3 mr-1" />
                       Reset
