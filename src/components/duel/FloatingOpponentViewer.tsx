@@ -106,22 +106,42 @@ export const FloatingOpponentViewer = ({
         console.log('[FloatingOpponentViewer] Received broadcast:', payload);
         // Only update if this is the opponent's state (not our own)
         if (payload.userId && payload.userId !== currentUserId) {
-          console.log('[FloatingOpponentViewer] Updating opponent state with zones:', {
-            monsterZones: payload.monsterZones,
-            spellZones: payload.spellZones,
-          });
-          setOpponentState({
-            hand: payload.hand || 0,
-            field: payload.field || [],
-            monsterZones: payload.monsterZones || undefined,
-            spellZones: payload.spellZones || undefined,
-            extraMonsterZones: payload.extraMonsterZones || undefined,
-            fieldSpell: payload.fieldSpell || null,
-            graveyard: payload.graveyard || [],
-            banished: payload.banished || [],
-            deckCount: payload.deckCount || 0,
-            extraCount: payload.extraCount || 0,
-          });
+          if (payload.tcgType === 'magic') {
+            // MTG state
+            setOpponentState({
+              hand: payload.hand || 0,
+              field: [],
+              graveyard: payload.graveyard || [],
+              banished: payload.exile || [],
+              deckCount: payload.deckCount || 0,
+              extraCount: payload.extraCount || 0,
+              tcgType: 'magic',
+              battlefield: payload.battlefield || [],
+              lands: payload.lands || [],
+              exile: payload.exile || [],
+              stack: payload.stack || [],
+              commandZone: payload.commandZone || [],
+              phase: payload.phase,
+            });
+          } else {
+            // YGO state
+            console.log('[FloatingOpponentViewer] Updating opponent state with zones:', {
+              monsterZones: payload.monsterZones,
+              spellZones: payload.spellZones,
+            });
+            setOpponentState({
+              hand: payload.hand || 0,
+              field: payload.field || [],
+              monsterZones: payload.monsterZones || undefined,
+              spellZones: payload.spellZones || undefined,
+              extraMonsterZones: payload.extraMonsterZones || undefined,
+              fieldSpell: payload.fieldSpell || null,
+              graveyard: payload.graveyard || [],
+              banished: payload.banished || [],
+              deckCount: payload.deckCount || 0,
+              extraCount: payload.extraCount || 0,
+            });
+          }
         }
       })
       .subscribe((status) => {
