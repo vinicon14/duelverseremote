@@ -45,7 +45,7 @@ interface PokemonDuelViewerProps {
 
 export const PokemonDuelViewer = ({ duelId, currentUserId }: PokemonDuelViewerProps) => {
   const { toast } = useToast();
-  const { decks: savedDecks, fetchDecks, isLoading: loadingDecks } = useSavedDecks('pokemon');
+  const { savedDecks, fetchDecks, isLoading: loadingDecks } = useSavedDecks();
 
   const [fieldState, setFieldState] = useState<PokemonFieldState>({
     active: null,

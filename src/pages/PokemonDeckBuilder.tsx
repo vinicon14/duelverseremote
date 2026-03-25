@@ -153,11 +153,11 @@ export default function PokemonDeckBuilder() {
         description,
         is_public: isPublic,
         tcg_type: 'pokemon',
-        main_deck: deck,
-        extra_deck: [],
-        side_deck: [],
-        tokens_deck: [],
-      };
+        main_deck: JSON.parse(JSON.stringify(deck)),
+        extra_deck: [] as any[],
+        side_deck: [] as any[],
+        tokens_deck: [] as any[],
+      } as any;
 
       if (currentDeckId) {
         const { error } = await supabase.from('saved_decks').update(deckData).eq('id', currentDeckId);
