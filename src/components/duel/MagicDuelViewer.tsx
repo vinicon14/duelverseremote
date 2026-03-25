@@ -298,7 +298,7 @@ export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId }: Magi
     const channel = supabase.channel(`deck-sync-${duelId}`);
 
     const serializeCard = (c: MagicCard) => ({
-      id: typeof c.id === 'string' ? c.id.hashCode?.() || c.id : c.id,
+      id: typeof c.id === 'string' ? c.id : c.id,
       name: c.name,
       image: getMagicCardImage(c),
       isFaceDown: c.isFaceDown || false,
