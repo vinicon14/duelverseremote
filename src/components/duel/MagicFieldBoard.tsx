@@ -223,7 +223,7 @@ const DropZone = ({
           {cards.length}
         </Badge>
       </div>
-      <div className="flex flex-wrap gap-1.5 sm:gap-2 min-h-[84px] sm:min-h-[100px] md:min-h-[112px]">
+      <div className="flex flex-wrap gap-1 sm:gap-1.5" style={{ minHeight: cardSize.h + 8 }}>
         {cards.length === 0 && (
           <div className="w-full flex items-center justify-center text-xs text-muted-foreground/50 italic">
             Arraste cartas aqui
@@ -237,6 +237,7 @@ const DropZone = ({
             onCardClick={onCardClick}
             onDragStart={onDragStart}
             onTap={onTap}
+            size={cardSize}
           />
         ))}
       </div>
