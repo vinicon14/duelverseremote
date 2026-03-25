@@ -21,7 +21,7 @@ const TCG_ICONS: Record<TcgType, React.ReactNode> = {
 
 const TCG_NAMES: Record<TcgType, string> = {
   yugioh: 'YGO',
-  magic: 'Magic',
+  magic: 'MTG',
 };
 
 export const TcgSwitcher = () => {

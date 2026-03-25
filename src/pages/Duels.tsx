@@ -141,7 +141,7 @@ const Duels = () => {
         return;
       }
 
-      const defaultLP = activeTcg === 'magic' ? 20 : 8000;
+      const defaultLP = activeTcg === 'magic' ? 40 : 8000;
       const { data, error } = await supabase
         .from('live_duels')
         .insert({

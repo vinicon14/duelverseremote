@@ -22,7 +22,7 @@ const TCG_CONFIG: Record<TcgType, { name: string; icon: React.ReactNode; color: 
     description: "Duele com monstros, magias e armadilhas no TCG clássico!"
   },
   magic: {
-    name: "Magic",
+    name: "MTG",
     icon: <Sparkles className="w-10 h-10" />,
     color: "text-amber-400",
     gradient: "from-amber-600 to-red-700",
