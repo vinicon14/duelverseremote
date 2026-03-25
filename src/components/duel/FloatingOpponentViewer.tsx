@@ -70,6 +70,11 @@ interface OpponentState {
   stack?: OpponentCard[];
   commandZone?: OpponentCard[];
   phase?: string;
+  // PKM-specific
+  active?: OpponentCard | null;
+  bench?: OpponentCard[];
+  prizeCardsCount?: number;
+  discardCount?: number;
 }
 
 interface FloatingOpponentViewerProps {
@@ -122,6 +127,21 @@ export const FloatingOpponentViewer = ({
               stack: payload.stack || [],
               commandZone: payload.commandZone || [],
               phase: payload.phase,
+            });
+          } else if (payload.tcgType === 'pokemon') {
+            // PKM state
+            setOpponentState({
+              hand: payload.handCount || 0,
+              field: [],
+              graveyard: [],
+              banished: [],
+              deckCount: payload.deckCount || 0,
+              extraCount: 0,
+              tcgType: 'pokemon',
+              active: payload.active ? { id: 0, name: payload.active.name, image: payload.active.images?.small || '' } : null,
+              bench: (payload.bench || []).map((c: any, i: number) => ({ id: i, name: c.name, image: c.images?.small || '' })),
+              prizeCardsCount: payload.prizeCardsCount || 0,
+              discardCount: payload.discardCount || 0,
             });
           } else {
             // YGO state
