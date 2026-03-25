@@ -979,8 +979,8 @@ const DuelRoom = () => {
         />
       )}
 
-      {/* Deck Viewer Component */}
-      {isParticipant && !isJudge && (
+      {/* Deck Viewer Component - YGO */}
+      {isParticipant && !isJudge && duel?.tcg_type !== 'magic' && (
         <>
           <input
             ref={fileInputRef}
@@ -1011,6 +1011,16 @@ const DuelRoom = () => {
             }
           />
         </>
+      )}
+
+      {/* Magic Arena Viewer */}
+      {isParticipant && !isJudge && duel?.tcg_type === 'magic' && (
+        <MagicDuelViewer
+          isOpen={showMagicViewer}
+          onClose={() => setShowMagicViewer(false)}
+          duelId={id}
+          currentUserId={currentUser?.id}
+        />
       )}
 
       {/* Floating Opponent Viewer - Always visible for participants */}
