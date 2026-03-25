@@ -141,6 +141,7 @@ const Duels = () => {
         return;
       }
 
+      const defaultLP = activeTcg === 'magic' ? 20 : 8000;
       const { data, error } = await supabase
         .from('live_duels')
         .insert({
@@ -150,6 +151,8 @@ const Duels = () => {
           is_ranked: isRanked,
           duration_minutes: durationMinutes,
           tcg_type: activeTcg,
+          player1_lp: defaultLP,
+          player2_lp: defaultLP,
         })
         .select()
         .single();

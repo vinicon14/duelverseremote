@@ -10,7 +10,7 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { PhoneOff, Loader2, Scale, Layers } from "lucide-react";
+import { PhoneOff, Loader2, Scale, Layers, Sparkles } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { DuelChat } from "@/components/DuelChat";
 import { FloatingCalculator } from "@/components/FloatingCalculator";
@@ -19,6 +19,7 @@ import { HideElementsButton } from "@/components/HideElementsButton";
 import { useBanCheck } from "@/hooks/useBanCheck";
 import { DuelDeckViewer } from "@/components/duel/DuelDeckViewer";
 import { FloatingOpponentViewer } from "@/components/duel/FloatingOpponentViewer";
+import { MagicDuelViewer } from "@/components/duel/MagicDuelViewer";
 import { useDuelDeck } from "@/hooks/useDuelDeck";
 import { useDuelPresence, useDuelCleanup } from "@/hooks/useDuelPresence";
 
@@ -32,6 +33,7 @@ const DuelRoom = () => {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [player1LP, setPlayer1LP] = useState(8000);
   const [player2LP, setPlayer2LP] = useState(8000);
+  const [showMagicViewer, setShowMagicViewer] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
   const [roomUrl, setRoomUrl] = useState<string>('');
   const [isTimerPaused, setIsTimerPaused] = useState(false);
@@ -131,8 +133,9 @@ const DuelRoom = () => {
           console.log('🔴 [REALTIME] NEW:', payload.new);
           
           if (payload.new) {
-            const newP1LP = payload.new.player1_lp ?? 8000;
-            const newP2LP = payload.new.player2_lp ?? 8000;
+            const defaultLP = payload.new.tcg_type === 'magic' ? 20 : 8000;
+            const newP1LP = payload.new.player1_lp ?? defaultLP;
+            const newP2LP = payload.new.player2_lp ?? defaultLP;
             
             setPlayer1LP(newP1LP);
             setPlayer2LP(newP2LP);
@@ -409,8 +412,9 @@ const DuelRoom = () => {
       }
 
       setDuel(data);
-      setPlayer1LP(data.player1_lp || 8000);
-      setPlayer2LP(data.player2_lp || 8000);
+      const defaultLP = data.tcg_type === 'magic' ? 20 : 8000;
+      setPlayer1LP(data.player1_lp || defaultLP);
+      setPlayer2LP(data.player2_lp || defaultLP);
       const isPaused = data.is_timer_paused || false;
       setIsTimerPaused(isPaused);
       isTimerPausedRef.current = isPaused;
@@ -892,16 +896,28 @@ const DuelRoom = () => {
                 <>
                   {isParticipant && !isJudge && (
                     <>
-                      {/* Botão do Deck */}
-                      <Button
-                        onClick={() => setShowDeckViewer(!showDeckViewer)}
-                        variant="outline"
-                        size="sm"
-                        className="bg-amber-600/95 hover:bg-amber-700 text-white backdrop-blur-sm text-xs sm:text-sm"
-                        title="Abrir Deck"
-                      >
-                        <Layers className="w-3 h-3 sm:w-4 sm:h-4" />
-                      </Button>
+                      {/* Botão do Deck - YGO ou Magic */}
+                      {duel?.tcg_type === 'magic' ? (
+                        <Button
+                          onClick={() => setShowMagicViewer(!showMagicViewer)}
+                          variant="outline"
+                          size="sm"
+                          className="bg-amber-600/95 hover:bg-amber-700 text-white backdrop-blur-sm text-xs sm:text-sm"
+                          title="Abrir Arena Magic"
+                        >
+                          <Sparkles className="w-3 h-3 sm:w-4 sm:h-4" />
+                        </Button>
+                      ) : (
+                        <Button
+                          onClick={() => setShowDeckViewer(!showDeckViewer)}
+                          variant="outline"
+                          size="sm"
+                          className="bg-amber-600/95 hover:bg-amber-700 text-white backdrop-blur-sm text-xs sm:text-sm"
+                          title="Abrir Deck"
+                        >
+                          <Layers className="w-3 h-3 sm:w-4 sm:h-4" />
+                        </Button>
+                      )}
                       <Button
                         onClick={callJudge}
                         disabled={judgeCalled}
@@ -963,8 +979,8 @@ const DuelRoom = () => {
         />
       )}
 
-      {/* Deck Viewer Component */}
-      {isParticipant && !isJudge && (
+      {/* Deck Viewer Component - YGO */}
+      {isParticipant && !isJudge && duel?.tcg_type !== 'magic' && (
         <>
           <input
             ref={fileInputRef}
@@ -995,6 +1011,16 @@ const DuelRoom = () => {
             }
           />
         </>
+      )}
+
+      {/* Magic Arena Viewer */}
+      {isParticipant && !isJudge && duel?.tcg_type === 'magic' && (
+        <MagicDuelViewer
+          isOpen={showMagicViewer}
+          onClose={() => setShowMagicViewer(false)}
+          duelId={id}
+          currentUserId={currentUser?.id}
+        />
       )}
 
       {/* Floating Opponent Viewer - Always visible for participants */}
