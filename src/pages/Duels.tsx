@@ -31,6 +31,7 @@ const Duels = () => {
   const [loading, setLoading] = useState(true);
   const [roomName, setRoomName] = useState("");
   const [isRanked, setIsRanked] = useState(true);
+  const [maxPlayers, setMaxPlayers] = useState(2);
   const [durationMinutes, setDurationMinutes] = useState(50);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showAdPopup, setShowAdPopup] = useState(false);
