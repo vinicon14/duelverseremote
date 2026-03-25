@@ -14,6 +14,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Send, MessageCircle, Trash2 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { useAdmin } from "@/hooks/useAdmin";
+import { useTcg } from "@/contexts/TcgContext";
 
 interface GlobalMessage {
   id: string;
@@ -27,6 +28,7 @@ interface GlobalMessage {
 export const GlobalChat = () => {
   const { toast } = useToast();
   const { isAdmin } = useAdmin();
+  const { activeTcg } = useTcg();
   const [messages, setMessages] = useState<GlobalMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [currentUser, setCurrentUser] = useState<any>(null);
