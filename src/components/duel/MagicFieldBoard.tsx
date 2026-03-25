@@ -1,13 +1,13 @@
 /**
  * DuelVerse - Magic: The Gathering Arena Board
- * 
+ *
  * Campo completo de MTG com Battlefield, Lands, Graveyard, Exile, Stack e sistema de fases.
  */
-import { useState } from 'react';
+import { useState, type CSSProperties, type DragEvent, type ReactNode } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Flame, Skull, Ban, Layers, Zap, ZoomIn, ZoomOut, ChevronUp, ChevronDown } from 'lucide-react';
+import { Flame, Skull, Ban, Layers, Zap, ZoomIn, ZoomOut, ChevronUp, ChevronDown, Droplets } from 'lucide-react';
 import { getMagicCardImage, MTG_CARD_BACK } from './mtgCardImage';
 
 export interface MagicCard {
@@ -29,11 +29,11 @@ export interface MagicCard {
   attachedTo?: string;
 }
 
-export type MagicPhase = 
-  | 'untap' | 'upkeep' | 'draw' 
-  | 'main1' 
+export type MagicPhase =
+  | 'untap' | 'upkeep' | 'draw'
+  | 'main1'
   | 'combat_begin' | 'combat_attackers' | 'combat_blockers' | 'combat_damage' | 'combat_end'
-  | 'main2' 
+  | 'main2'
   | 'end' | 'cleanup';
 
 const PHASES: { key: MagicPhase; label: string; short: string }[] = [
@@ -64,6 +64,21 @@ export interface MagicFieldState {
 
 export type MagicZoneType = keyof MagicFieldState;
 
+type CardSize = { w: number; h: number };
+
+const HAND_CARD_SIZES: CardSize[] = [
+  { w: 36, h: 50 },
+  { w: 44, h: 62 },
+  { w: 52, h: 73 },
+  { w: 60, h: 84 },
+];
+
+const FIELD_CARD_SIZES: CardSize[] = [
+  { w: 32, h: 45 },
+  { w: 40, h: 56 },
+  { w: 44, h: 62 },
+];
+
 interface MagicFieldBoardProps {
   fieldState: MagicFieldState;
   currentPhase: MagicPhase;
@@ -73,15 +88,20 @@ interface MagicFieldBoardProps {
   onCardDrop: (zone: MagicZoneType, card: MagicCard) => void;
   onTapCard: (card: MagicCard) => void;
   isFullscreen?: boolean;
+  playmatUrl?: string | null;
+  sleeveUrl?: string | null;
 }
 
-const CARD_SIZES = [
-  { w: 44, h: 62 },  // 0 - tiny
-  { w: 52, h: 73 },  // 1 - small
-  { w: 60, h: 84 },  // 2 - medium (default)
-  { w: 72, h: 100 }, // 3 - large
-  { w: 88, h: 123 }, // 4 - xl
-];
+const getFaceDownImage = (sleeveUrl?: string | null) => sleeveUrl || MTG_CARD_BACK;
+
+const getPlaymatStyle = (playmatUrl?: string | null): CSSProperties => ({
+  backgroundImage: playmatUrl
+    ? `url("${playmatUrl}")`
+    : `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cpath d='M24 0L48 24 24 48 0 24z' fill='%23ffffff' fill-opacity='0.03'/%3E%3C/svg%3E")`,
+  backgroundSize: playmatUrl ? 'cover' : '48px 48px',
+  backgroundPosition: 'center',
+  backgroundRepeat: playmatUrl ? 'no-repeat' : 'repeat',
+});
 
 const CardSlot = ({
   card,
@@ -90,18 +110,27 @@ const CardSlot = ({
   onDragStart,
   onTap,
   size,
+  sleeveUrl,
+  showName = true,
 }: {
   card: MagicCard;
   zone: MagicZoneType;
   onCardClick: (card: MagicCard, zone: MagicZoneType) => void;
-  onDragStart: (e: React.DragEvent, card: MagicCard, zone: MagicZoneType) => void;
+  onDragStart: (e: DragEvent, card: MagicCard, zone: MagicZoneType) => void;
   onTap?: (card: MagicCard) => void;
-  size: { w: number; h: number };
+  size: CardSize;
+  sleeveUrl?: string | null;
+  showName?: boolean;
 }) => {
+  const imageSrc = card.isFaceDown
+    ? getFaceDownImage(sleeveUrl)
+    : getMagicCardImage(card, size.w >= 52 ? 'normal' : 'small');
+
   return (
     <div
       className={cn(
-        'relative rounded-md border border-border/40 cursor-pointer transition-all hover:border-primary/60 hover:shadow-lg hover:scale-105 overflow-hidden flex-shrink-0',
+        'relative overflow-hidden rounded-md border border-border/50 bg-card/70 shadow-sm transition-all hover:border-primary/60 hover:shadow-md',
+        'cursor-pointer flex-shrink-0',
         card.isTapped && 'rotate-90 origin-center mx-2'
       )}
       style={{ width: size.w, height: size.h }}
@@ -109,25 +138,104 @@ const CardSlot = ({
       onDragStart={(e) => onDragStart(e, card, zone)}
       onClick={() => onCardClick(card, zone)}
       onDoubleClick={() => onTap?.(card)}
-      title={`${card.name}${card.isTapped ? ' (Tapped)' : ''}${card.counters ? ` [${card.counters} counters]` : ''}`}
+      title={`${card.name}${zone === 'lands' ? ' — duplo clique para gerar mana' : ''}${card.isTapped ? ' (virada)' : ''}`}
     >
       <img
-        src={getMagicCardImage(card, 'small')}
-        alt={card.name}
-        className="w-full h-full object-cover"
+        src={imageSrc}
+        alt={card.isFaceDown ? 'Carta virada para baixo' : card.name}
+        className="h-full w-full object-cover"
         loading="lazy"
         onError={(e) => { (e.target as HTMLImageElement).src = MTG_CARD_BACK; }}
       />
+
       {card.counters && card.counters > 0 && (
-        <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-[10px] px-1.5 rounded-bl font-bold">
+        <Badge className="absolute right-1 top-1 h-5 min-w-5 justify-center px-1 text-[10px]">
           {card.counters}
+        </Badge>
+      )}
+
+      {zone === 'lands' && card.isTapped && (
+        <Badge variant="secondary" className="absolute bottom-1 left-1 h-5 px-1.5 text-[9px]">
+          <Droplets className="mr-1 h-3 w-3" /> Mana
+        </Badge>
+      )}
+
+      {showName && size.h >= 56 && (
+        <div className="absolute inset-x-0 bottom-0 bg-background/80 px-1 py-0.5 text-center text-[8px] text-foreground backdrop-blur-sm">
+          <span className="block truncate">{card.isFaceDown ? 'Face down' : card.name}</span>
         </div>
       )}
-      {size.w >= 52 && (
-        <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-[7px] sm:text-[8px] text-center truncate px-0.5 py-px">
-          {card.isFaceDown ? '???' : card.name}
-        </div>
-      )}
+    </div>
+  );
+};
+
+const CompactZone = ({
+  zone,
+  label,
+  icon,
+  cards,
+  onDragOver,
+  onDrop,
+  onCardClick,
+  onDragStart,
+  onZoneClick,
+  hideTopCard = false,
+  sleeveUrl,
+}: {
+  zone: MagicZoneType;
+  label: string;
+  icon?: ReactNode;
+  cards: MagicCard[];
+  onDragOver: (e: DragEvent) => void;
+  onDrop: (e: DragEvent, zone: MagicZoneType) => void;
+  onCardClick: (card: MagicCard, zone: MagicZoneType) => void;
+  onDragStart: (e: DragEvent, card: MagicCard, zone: MagicZoneType) => void;
+  onZoneClick: (zone: MagicZoneType) => void;
+  hideTopCard?: boolean;
+  sleeveUrl?: string | null;
+}) => {
+  const previewCard = cards[cards.length - 1];
+  const previewSrc = hideTopCard
+    ? getFaceDownImage(sleeveUrl)
+    : previewCard?.isFaceDown
+      ? getFaceDownImage(sleeveUrl)
+      : getMagicCardImage(previewCard, 'small');
+
+  return (
+    <div
+      className="flex min-w-[54px] flex-col items-center gap-1 rounded-lg border border-border/40 bg-card/50 p-1.5 transition-colors hover:border-primary/40"
+      onDragOver={onDragOver}
+      onDrop={(e) => onDrop(e, zone)}
+      onClick={() => onZoneClick(zone)}
+    >
+      <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+        {icon}
+        <span>{label}</span>
+      </div>
+      <Badge variant="secondary" className="h-5 min-w-5 justify-center px-1 text-[10px]">
+        {cards.length}
+      </Badge>
+      <div className="h-[58px] w-[42px] overflow-hidden rounded border border-border/40 bg-background/40">
+        {previewCard ? (
+          <img
+            src={previewSrc}
+            alt={hideTopCard ? `${label} fechado` : previewCard.name}
+            className="h-full w-full object-cover"
+            draggable={!hideTopCard}
+            onDragStart={(e) => {
+              if (!hideTopCard) {
+                e.stopPropagation();
+                onDragStart(e, previewCard, zone);
+              }
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!hideTopCard) onCardClick(previewCard, zone);
+            }}
+            onError={(e) => { (e.target as HTMLImageElement).src = MTG_CARD_BACK; }}
+          />
+        ) : null}
+      </div>
     </div>
   );
 };
@@ -142,104 +250,69 @@ const DropZone = ({
   onCardClick,
   onDragStart,
   onTap,
-  onZoneClick,
   className,
-  compact = false,
-  hideTopCard = false,
   cardSize,
+  sleeveUrl,
+  scrollable = false,
+  showCardNames = true,
 }: {
   zone: MagicZoneType;
   label: string;
-  icon?: React.ReactNode;
+  icon?: ReactNode;
   cards: MagicCard[];
-  onDragOver: (e: React.DragEvent) => void;
-  onDrop: (e: React.DragEvent, zone: MagicZoneType) => void;
+  onDragOver: (e: DragEvent) => void;
+  onDrop: (e: DragEvent, zone: MagicZoneType) => void;
   onCardClick: (card: MagicCard, zone: MagicZoneType) => void;
-  onDragStart: (e: React.DragEvent, card: MagicCard, zone: MagicZoneType) => void;
+  onDragStart: (e: DragEvent, card: MagicCard, zone: MagicZoneType) => void;
   onTap?: (card: MagicCard) => void;
-  onZoneClick: (zone: MagicZoneType) => void;
   className?: string;
-  compact?: boolean;
-  hideTopCard?: boolean;
-  cardSize: { w: number; h: number };
+  cardSize: CardSize;
+  sleeveUrl?: string | null;
+  scrollable?: boolean;
+  showCardNames?: boolean;
 }) => {
-  if (compact) {
-    const previewCard = cards[cards.length - 1];
-    const previewImage = hideTopCard ? MTG_CARD_BACK : getMagicCardImage(previewCard, 'small');
-
-    return (
-      <div
-        className={cn(
-          'flex flex-col items-center gap-1 p-1 rounded-lg border border-border/30 bg-card/30 min-w-[60px] sm:min-w-[72px] cursor-pointer hover:bg-card/50 transition-colors',
-          className
-        )}
-        onDragOver={onDragOver}
-        onDrop={(e) => onDrop(e, zone)}
-        onClick={() => onZoneClick(zone)}
-      >
-        <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-          {icon}
-          <span>{label}</span>
-        </div>
-        <Badge variant="secondary" className="text-[10px] px-1.5">
-          {cards.length}
-        </Badge>
-        {cards.length > 0 && (
-          <div
-            className="w-[40px] h-[56px] sm:w-[48px] sm:h-[67px] rounded overflow-hidden border border-border/20"
-            draggable={!hideTopCard}
-            onDragStart={(e) => {
-              if (hideTopCard || !previewCard) return;
-              e.stopPropagation();
-              onDragStart(e, previewCard, zone);
-            }}
-          >
-            <img
-              src={previewImage}
-              alt={hideTopCard ? `${label} fechado` : previewCard?.name || label}
-              className="w-full h-full object-cover"
-              loading="lazy"
-              onError={(e) => { (e.target as HTMLImageElement).src = MTG_CARD_BACK; }}
-            />
-          </div>
-        )}
-      </div>
-    );
-  }
-
   return (
     <div
       className={cn(
-        'rounded-lg border border-border/30 bg-card/20 p-2 sm:p-3 flex flex-col',
+        'flex h-full min-h-0 flex-col rounded-lg border border-border/50 bg-card/45 p-2 backdrop-blur-[1px]',
         className
       )}
       onDragOver={onDragOver}
       onDrop={(e) => onDrop(e, zone)}
     >
-      <div className="flex items-center gap-1.5 mb-1 flex-shrink-0">
+      <div className="mb-1 flex items-center gap-1.5">
         {icon}
-        <span className="text-[11px] sm:text-xs font-medium text-muted-foreground">{label}</span>
-        <Badge variant="secondary" className="text-[10px] px-1.5 ml-auto">
+        <span className="text-[11px] font-medium text-muted-foreground">{label}</span>
+        <Badge variant="secondary" className="ml-auto h-5 min-w-5 justify-center px-1 text-[10px]">
           {cards.length}
         </Badge>
       </div>
-      <div className="flex flex-wrap gap-1 sm:gap-1.5 flex-1 content-start overflow-auto">
-        {cards.length === 0 && (
-          <div className="w-full flex items-center justify-center text-xs text-muted-foreground/50 italic">
+
+      <div
+        className={cn(
+          'flex min-h-0 flex-1 flex-wrap content-start items-start gap-1',
+          scrollable ? 'overflow-auto pr-1' : 'overflow-hidden'
+        )}
+      >
+        {cards.length === 0 ? (
+          <div className="flex h-full min-h-[40px] w-full items-center justify-center text-center text-xs italic text-muted-foreground/60">
             Arraste cartas aqui
           </div>
+        ) : (
+          cards.map((card) => (
+            <CardSlot
+              key={card.instanceId}
+              card={card}
+              zone={zone}
+              onCardClick={onCardClick}
+              onDragStart={onDragStart}
+              onTap={onTap}
+              size={cardSize}
+              sleeveUrl={sleeveUrl}
+              showName={showCardNames}
+            />
+          ))
         )}
-        {cards.map((card) => (
-          <CardSlot
-            key={card.instanceId}
-            card={card}
-            zone={zone}
-            onCardClick={onCardClick}
-            onDragStart={onDragStart}
-            onTap={onTap}
-            size={cardSize}
-          />
-        ))}
       </div>
     </div>
   );
@@ -253,29 +326,37 @@ export const MagicFieldBoard = ({
   onCardClick,
   onCardDrop,
   onTapCard,
+  playmatUrl,
+  sleeveUrl,
 }: MagicFieldBoardProps) => {
   const [dragData, setDragData] = useState<{ card: MagicCard; zone: MagicZoneType } | null>(null);
-  const [sizeIdx, setSizeIdx] = useState(1); // default small
+  const [handSizeIndex, setHandSizeIndex] = useState(1);
   const [handExpanded, setHandExpanded] = useState(false);
 
-  const cardSize = CARD_SIZES[sizeIdx];
+  const handCardSize = HAND_CARD_SIZES[handSizeIndex];
+  const baseFieldSize = FIELD_CARD_SIZES[Math.min(handSizeIndex + 1, FIELD_CARD_SIZES.length - 1)];
 
-  const handleDragStart = (e: React.DragEvent, card: MagicCard, zone: MagicZoneType) => {
+  const getAdaptiveFieldSize = (count: number): CardSize => {
+    if (count >= 12) return FIELD_CARD_SIZES[0];
+    if (count >= 8) return FIELD_CARD_SIZES[1];
+    return baseFieldSize;
+  };
+
+  const handleDragStart = (e: DragEvent, card: MagicCard, zone: MagicZoneType) => {
     setDragData({ card, zone });
     e.dataTransfer.effectAllowed = 'move';
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = (e: DragEvent) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
   };
 
-  const handleDrop = (e: React.DragEvent, zone: MagicZoneType) => {
+  const handleDrop = (e: DragEvent, zone: MagicZoneType) => {
     e.preventDefault();
-    if (dragData) {
-      onCardDrop(zone, dragData.card);
-      setDragData(null);
-    }
+    if (!dragData) return;
+    onCardDrop(zone, dragData.card);
+    setDragData(null);
   };
 
   const advancePhase = () => {
@@ -284,27 +365,22 @@ export const MagicFieldBoard = ({
     onPhaseChange(PHASES[nextIdx].key);
   };
 
-  const commonDropZoneProps = {
-    onDragOver: handleDragOver,
-    onDrop: handleDrop,
-    onCardClick,
-    onDragStart: handleDragStart,
-    onZoneClick,
-    cardSize,
-  };
-
   return (
-    <div className="flex flex-col gap-1.5 h-full">
-      {/* Phase bar + zoom controls */}
-      <div className="flex items-center gap-0.5 overflow-x-auto pb-1 px-1">
+    <div
+      className="relative flex h-full flex-col gap-1.5 overflow-hidden rounded-lg border border-border/50 p-2 sm:p-3"
+      style={getPlaymatStyle(playmatUrl)}
+    >
+      {playmatUrl && <div className="pointer-events-none absolute inset-0 bg-background/50" />}
+
+      <div className="relative z-10 flex items-center gap-0.5 overflow-x-auto pb-1">
         {PHASES.map((phase) => (
           <Button
             key={phase.key}
             variant={currentPhase === phase.key ? 'default' : 'ghost'}
             size="sm"
             className={cn(
-              'text-[9px] sm:text-[10px] px-1.5 py-0.5 h-6 flex-shrink-0',
-              currentPhase === phase.key && 'bg-primary text-primary-foreground shadow-sm'
+              'h-6 flex-shrink-0 px-1.5 py-0.5 text-[9px] sm:text-[10px]',
+              currentPhase === phase.key && 'shadow-sm'
             )}
             onClick={() => onPhaseChange(phase.key)}
             title={phase.label}
@@ -312,81 +388,147 @@ export const MagicFieldBoard = ({
             {phase.short}
           </Button>
         ))}
-        <Button variant="outline" size="sm" className="text-[10px] px-2 h-6 ml-1 flex-shrink-0" onClick={advancePhase}>
-          <Zap className="w-3 h-3 mr-1" /> Next
+
+        <Button variant="outline" size="sm" className="ml-1 h-6 flex-shrink-0 px-2 text-[10px]" onClick={advancePhase}>
+          <Zap className="mr-1 h-3 w-3" /> Next
         </Button>
-        <div className="flex items-center gap-0.5 ml-auto flex-shrink-0">
-          <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setSizeIdx((i) => Math.max(0, i - 1))} disabled={sizeIdx === 0}>
-            <ZoomOut className="w-3.5 h-3.5" />
+
+        <div className="ml-auto flex items-center gap-0.5 pl-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 w-6 p-0"
+            onClick={() => setHandSizeIndex((value) => Math.max(0, value - 1))}
+            disabled={handSizeIndex === 0}
+            title="Diminuir tamanho da mão"
+          >
+            <ZoomOut className="h-3.5 w-3.5" />
           </Button>
-          <span className="text-[9px] text-muted-foreground w-4 text-center">{sizeIdx + 1}</span>
-          <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setSizeIdx((i) => Math.min(CARD_SIZES.length - 1, i + 1))} disabled={sizeIdx === CARD_SIZES.length - 1}>
-            <ZoomIn className="w-3.5 h-3.5" />
+          <span className="w-4 text-center text-[9px] text-muted-foreground">{handSizeIndex + 1}</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 w-6 p-0"
+            onClick={() => setHandSizeIndex((value) => Math.min(HAND_CARD_SIZES.length - 1, value + 1))}
+            disabled={handSizeIndex === HAND_CARD_SIZES.length - 1}
+            title="Aumentar tamanho da mão"
+          >
+            <ZoomIn className="h-3.5 w-3.5" />
           </Button>
         </div>
       </div>
 
       {fieldState.stack.length > 0 && (
-        <DropZone
-          zone="stack"
-          label="Stack"
-          icon={<Layers className="w-3 h-3" />}
-          cards={fieldState.stack}
-          {...commonDropZoneProps}
-          className="border-amber-500/40 bg-amber-500/5"
-        />
+        <div className="relative z-10 h-[84px] flex-shrink-0">
+          <DropZone
+            zone="stack"
+            label="Stack"
+            icon={<Layers className="h-3 w-3" />}
+            cards={fieldState.stack}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+            onCardClick={onCardClick}
+            onDragStart={handleDragStart}
+            cardSize={getAdaptiveFieldSize(fieldState.stack.length)}
+            sleeveUrl={sleeveUrl}
+            showCardNames={false}
+          />
+        </div>
       )}
 
-      {/* Battlefield + Lands - fill remaining space equally */}
-      <div className="flex-1 flex flex-col gap-1 min-h-0">
+      <div className="relative z-10 grid min-h-0 flex-1 grid-rows-[minmax(96px,1fr)_minmax(96px,1fr)_auto] gap-1.5">
         <DropZone
           zone="battlefield"
           label="Battlefield"
-          icon={<Flame className="w-3 h-3" />}
+          icon={<Flame className="h-3 w-3" />}
           cards={fieldState.battlefield}
-          {...commonDropZoneProps}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+          onCardClick={onCardClick}
+          onDragStart={handleDragStart}
           onTap={onTapCard}
-          className="flex-1 min-h-0 border-primary/20"
+          cardSize={getAdaptiveFieldSize(fieldState.battlefield.length)}
+          sleeveUrl={sleeveUrl}
         />
+
         <DropZone
           zone="lands"
           label="Lands"
+          icon={<Droplets className="h-3 w-3" />}
           cards={fieldState.lands}
-          {...commonDropZoneProps}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+          onCardClick={onCardClick}
+          onDragStart={handleDragStart}
           onTap={onTapCard}
-          className="flex-1 min-h-0 border-green-500/20 bg-green-500/5"
+          cardSize={getAdaptiveFieldSize(fieldState.lands.length)}
+          sleeveUrl={sleeveUrl}
         />
-      </div>
 
-      {/* Bottom: side zones + hand - fixed height */}
-      <div className="flex gap-1.5 flex-shrink-0">
-        <div className="flex flex-col gap-1 flex-shrink-0">
-          <DropZone zone="library" label="Library" icon={<Layers className="w-3 h-3" />} cards={fieldState.library} {...commonDropZoneProps} compact hideTopCard />
-          <DropZone zone="graveyard" label="Grave" icon={<Skull className="w-3 h-3" />} cards={fieldState.graveyard} {...commonDropZoneProps} compact className="border-red-500/20" />
-          <DropZone zone="exile" label="Exile" icon={<Ban className="w-3 h-3" />} cards={fieldState.exile} {...commonDropZoneProps} compact className="border-purple-500/20" />
-        </div>
-
-        <div className="flex-1 flex flex-col min-w-0">
-          <button
-            className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors px-1 pb-0.5"
-            onClick={() => setHandExpanded((e) => !e)}
-          >
-            {handExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
-            Mão ({fieldState.hand.length}) — {handExpanded ? 'minimizar' : 'expandir'}
-          </button>
-          <div
-            className={cn(
-              'transition-all overflow-auto rounded-lg border border-blue-500/20 bg-blue-500/5',
-              handExpanded ? 'max-h-[35vh]' : 'max-h-[80px]'
-            )}
-          >
-            <DropZone
-              zone="hand"
-              label="Mão"
-              cards={fieldState.hand}
-              {...commonDropZoneProps}
-              className="border-0 bg-transparent"
+        <div className="grid grid-cols-[58px_minmax(0,1fr)] gap-1.5 items-start">
+          <div className="flex flex-col gap-1">
+            <CompactZone
+              zone="library"
+              label="Library"
+              icon={<Layers className="h-3 w-3" />}
+              cards={fieldState.library}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+              onCardClick={onCardClick}
+              onDragStart={handleDragStart}
+              onZoneClick={onZoneClick}
+              hideTopCard
+              sleeveUrl={sleeveUrl}
             />
+            <CompactZone
+              zone="graveyard"
+              label="Grave"
+              icon={<Skull className="h-3 w-3" />}
+              cards={fieldState.graveyard}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+              onCardClick={onCardClick}
+              onDragStart={handleDragStart}
+              onZoneClick={onZoneClick}
+              sleeveUrl={sleeveUrl}
+            />
+            <CompactZone
+              zone="exile"
+              label="Exile"
+              icon={<Ban className="h-3 w-3" />}
+              cards={fieldState.exile}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+              onCardClick={onCardClick}
+              onDragStart={handleDragStart}
+              onZoneClick={onZoneClick}
+              sleeveUrl={sleeveUrl}
+            />
+          </div>
+
+          <div className="min-w-0">
+            <button
+              className="mb-0.5 flex items-center gap-1 px-1 text-[10px] text-muted-foreground transition-colors hover:text-foreground"
+              onClick={() => setHandExpanded((value) => !value)}
+              type="button"
+            >
+              {handExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3" />}
+              Mão ({fieldState.hand.length}) — {handExpanded ? 'minimizar' : 'expandir'}
+            </button>
+            <div className={cn(handExpanded ? 'h-[min(32vh,220px)]' : 'h-[92px] sm:h-[104px]')}>
+              <DropZone
+                zone="hand"
+                label="Mão"
+                cards={fieldState.hand}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                onCardClick={onCardClick}
+                onDragStart={handleDragStart}
+                cardSize={handCardSize}
+                sleeveUrl={sleeveUrl}
+                scrollable
+              />
+            </div>
           </div>
         </div>
       </div>
