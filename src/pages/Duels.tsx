@@ -211,7 +211,7 @@ const Duels = () => {
       // Verificar se o duelo existe e pegar seus dados
       const { data: duelData } = await supabase
         .from('live_duels')
-        .select('creator_id, opponent_id, status')
+        .select('*')
         .eq('id', duelId)
         .maybeSingle();
 
@@ -225,9 +225,10 @@ const Duels = () => {
       }
 
       console.log('[Duels] Dados do duelo:', duelData);
+      const d = duelData as any;
 
       // Verificar se o usuário já é um dos jogadores deste duelo
-      if (duelData.creator_id === user.id || duelData.opponent_id === user.id) {
+      if (d.creator_id === user.id || d.opponent_id === user.id || d.player3_id === user.id || d.player4_id === user.id) {
         console.log('[Duels] Usuário já participa deste duelo, redirecionando...');
         toast({
           title: "Você já está neste duelo",
@@ -256,22 +257,38 @@ const Duels = () => {
         return;
       }
 
-      console.log('[Duels] Atualizando duelo com opponent...');
-      
-      // CRITICAL: Garantir que user.id é um UUID válido
-      console.log('[Duels] User ID type:', typeof user.id);
-      console.log('[Duels] User ID value:', user.id);
+      // Determine which slot to fill
+      const maxPlayers = d.max_players || 2;
+      let updatePayload: any = {};
 
-      // Atualizar o duelo adicionando o opponent
+      if (!d.opponent_id) {
+        updatePayload.opponent_id = user.id;
+        if (maxPlayers === 2) {
+          updatePayload.status = 'in_progress';
+          updatePayload.started_at = new Date().toISOString();
+        }
+      } else if (maxPlayers >= 3 && !d.player3_id) {
+        updatePayload.player3_id = user.id;
+      } else if (maxPlayers >= 4 && !d.player4_id) {
+        updatePayload.player4_id = user.id;
+        // All 4 slots filled - start the game
+        updatePayload.status = 'in_progress';
+        updatePayload.started_at = new Date().toISOString();
+      } else {
+        toast({
+          title: "Sala cheia",
+          description: "Não há mais vagas neste duelo.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log('[Duels] Atualizando duelo com slot:', updatePayload);
+
       const { error, data: updateResult } = await supabase
         .from('live_duels')
-        .update({
-          opponent_id: user.id,
-          status: 'in_progress',
-          started_at: new Date().toISOString(),
-        })
+        .update(updatePayload)
         .eq('id', duelId)
-        .is('opponent_id', null)
         .select();
 
       if (error) {
@@ -280,14 +297,12 @@ const Duels = () => {
       }
 
       console.log('[Duels] Update result:', updateResult);
-      console.log('[Duels] Opponent adicionado com sucesso, redirecionando...');
 
       toast({
         title: "Entrando na partida!",
         description: "Carregando chamada de vídeo...",
       });
 
-      // Aguardar um pouco para o banco processar
       await new Promise(resolve => setTimeout(resolve, 800));
       
       navigate(`/duel/${duelId}`);
