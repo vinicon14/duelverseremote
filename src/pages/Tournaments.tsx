@@ -24,13 +24,15 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useBanCheck } from "@/hooks/useBanCheck";
+import { useTcg } from "@/contexts/TcgContext";
 
 const Tournaments = () => {
-  useBanCheck(); // Proteger contra usuários banidos
+  useBanCheck();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isAdmin } = useAdmin();
   const { isPro } = useAccountType();
+  const { activeTcg } = useTcg();
   const [tournaments, setTournaments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -40,7 +42,7 @@ const Tournaments = () => {
   useEffect(() => {
     checkAuth();
     fetchTournaments();
-  }, []);
+  }, [activeTcg]);
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -59,6 +61,7 @@ const Tournaments = () => {
           *,
           tournament_participants(count)
         `)
+        .eq('tcg_type', activeTcg)
         .order('start_date', { ascending: true });
 
       if (error) throw error;
