@@ -337,29 +337,33 @@ export const MagicFieldBoard = ({
         />
       )}
 
-      {/* Battlefield + Lands */}
-      <div className="flex-1 flex flex-col gap-1.5 overflow-auto min-h-0">
-        <DropZone
-          zone="battlefield"
-          label="Battlefield"
-          icon={<Flame className="w-3 h-3" />}
-          cards={fieldState.battlefield}
-          {...commonDropZoneProps}
-          onTap={onTapCard}
-          className="flex-1 min-h-[80px] border-primary/20"
-        />
-        <DropZone
-          zone="lands"
-          label="Lands"
-          cards={fieldState.lands}
-          {...commonDropZoneProps}
-          onTap={onTapCard}
-          className="min-h-[60px] border-green-500/20 bg-green-500/5"
-        />
+      {/* Battlefield + Lands - take all remaining space */}
+      <div className="flex-1 flex flex-col gap-1.5 min-h-0 overflow-hidden">
+        <div className="flex-[3] overflow-auto min-h-[100px]">
+          <DropZone
+            zone="battlefield"
+            label="Battlefield"
+            icon={<Flame className="w-3 h-3" />}
+            cards={fieldState.battlefield}
+            {...commonDropZoneProps}
+            onTap={onTapCard}
+            className="h-full border-primary/20"
+          />
+        </div>
+        <div className="flex-[2] overflow-auto min-h-[80px]">
+          <DropZone
+            zone="lands"
+            label="Lands"
+            cards={fieldState.lands}
+            {...commonDropZoneProps}
+            onTap={onTapCard}
+            className="h-full border-green-500/20 bg-green-500/5"
+          />
+        </div>
       </div>
 
-      {/* Bottom: side zones + hand */}
-      <div className="flex gap-1.5">
+      {/* Bottom: side zones + hand - fixed height */}
+      <div className="flex gap-1.5 flex-shrink-0">
         <div className="flex flex-col gap-1 flex-shrink-0">
           <DropZone zone="library" label="Library" icon={<Layers className="w-3 h-3" />} cards={fieldState.library} {...commonDropZoneProps} compact hideTopCard />
           <DropZone zone="graveyard" label="Grave" icon={<Skull className="w-3 h-3" />} cards={fieldState.graveyard} {...commonDropZoneProps} compact className="border-red-500/20" />
@@ -367,7 +371,6 @@ export const MagicFieldBoard = ({
         </div>
 
         <div className="flex-1 flex flex-col min-w-0">
-          {/* Hand toggle */}
           <button
             className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors px-1 pb-0.5"
             onClick={() => setHandExpanded((e) => !e)}
@@ -378,7 +381,7 @@ export const MagicFieldBoard = ({
           <div
             className={cn(
               'transition-all overflow-auto rounded-lg border border-blue-500/20 bg-blue-500/5',
-              handExpanded ? 'max-h-[40vh]' : 'max-h-[90px] sm:max-h-[110px]'
+              handExpanded ? 'max-h-[35vh]' : 'max-h-[80px]'
             )}
           >
             <DropZone
