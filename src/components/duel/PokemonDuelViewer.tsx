@@ -1,9 +1,12 @@
 /**
  * DuelVerse - Pokémon Duel Viewer
  * 
- * Arena digital para Pokémon TCG com zonas:
- * Active, Bench, Prize Cards, Discard, Deck.
- * Broadcast de estado para sincronização em tempo real.
+ * Arena digital para Pokémon TCG com mecânicas:
+ * - Buscar carta no deck
+ * - Colocar/tirar energia
+ * - Ativar treinadores/itens
+ * - Devolver cartas ao deck
+ * - Zonas: Active, Bench, Prize, Discard, Deck, Stadium
  */
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,8 +14,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Zap, RotateCcw, Eye, EyeOff, Shuffle, Star, Trash2 } from 'lucide-react';
+import { Zap, RotateCcw, Eye, EyeOff, Shuffle, Star, Trash2, Search, ArrowUp, Minus, Plus, Undo2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useSavedDecks } from '@/hooks/useSavedDecks';
 
@@ -22,10 +26,11 @@ interface PokemonFieldCard {
   name: string;
   images: { small: string; large: string };
   supertype: string;
+  subtypes?: string[];
   hp?: string;
   types?: string[];
-  energyAttached?: number;
-  damageCounters?: number;
+  energyAttached: number;
+  damageCounters: number;
   isFaceDown?: boolean;
 }
 
@@ -36,6 +41,7 @@ interface PokemonFieldState {
   discard: PokemonFieldCard[];
   hand: PokemonFieldCard[];
   deck: PokemonFieldCard[];
+  stadium: PokemonFieldCard | null;
 }
 
 interface PokemonDuelViewerProps {
@@ -45,7 +51,7 @@ interface PokemonDuelViewerProps {
 
 export const PokemonDuelViewer = ({ duelId, currentUserId }: PokemonDuelViewerProps) => {
   const { toast } = useToast();
-  const { savedDecks, fetchDecks, isLoading: loadingDecks } = useSavedDecks();
+  const { savedDecks, fetchDecks, isLoading: loadingDecks } = useSavedDecks('pokemon');
 
   const [fieldState, setFieldState] = useState<PokemonFieldState>({
     active: null,
@@ -54,13 +60,17 @@ export const PokemonDuelViewer = ({ duelId, currentUserId }: PokemonDuelViewerPr
     discard: [],
     hand: [],
     deck: [],
+    stadium: null,
   });
 
   const [showDeckPicker, setShowDeckPicker] = useState(true);
   const [selectedCard, setSelectedCard] = useState<PokemonFieldCard | null>(null);
+  const [selectedCardZone, setSelectedCardZone] = useState<'hand' | 'active' | 'bench' | 'discard' | 'deck' | null>(null);
   const [showHandModal, setShowHandModal] = useState(false);
   const [showDiscardModal, setShowDiscardModal] = useState(false);
   const [showPrizeModal, setShowPrizeModal] = useState(false);
+  const [showDeckSearchModal, setShowDeckSearchModal] = useState(false);
+  const [deckSearchQuery, setDeckSearchQuery] = useState('');
   const [phase, setPhase] = useState<'setup' | 'draw' | 'main' | 'attack' | 'end'>('setup');
 
   useEffect(() => {
@@ -79,6 +89,7 @@ export const PokemonDuelViewer = ({ duelId, currentUserId }: PokemonDuelViewerPr
           tcgType: 'pokemon',
           active: fieldState.active ? { name: fieldState.active.name, images: fieldState.active.images, hp: fieldState.active.hp, types: fieldState.active.types, energyAttached: fieldState.active.energyAttached, damageCounters: fieldState.active.damageCounters } : null,
           bench: fieldState.bench.map(c => ({ name: c.name, images: c.images, hp: c.hp, types: c.types, energyAttached: c.energyAttached, damageCounters: c.damageCounters })),
+          stadium: fieldState.stadium ? { name: fieldState.stadium.name, images: fieldState.stadium.images } : null,
           prizeCardsCount: fieldState.prizeCards.length,
           discardCount: fieldState.discard.length,
           handCount: fieldState.hand.length,
@@ -86,11 +97,7 @@ export const PokemonDuelViewer = ({ duelId, currentUserId }: PokemonDuelViewerPr
         },
       });
     };
-
-    channel.subscribe(() => {
-      broadcastState();
-    });
-
+    channel.subscribe(() => broadcastState());
     return () => { supabase.removeChannel(channel); };
   }, [fieldState, duelId, currentUserId]);
 
@@ -103,6 +110,7 @@ export const PokemonDuelViewer = ({ duelId, currentUserId }: PokemonDuelViewerPr
         name: card.name,
         images: card.images,
         supertype: card.supertype,
+        subtypes: card.subtypes,
         hp: card.hp,
         types: card.types,
         energyAttached: 0,
@@ -117,20 +125,19 @@ export const PokemonDuelViewer = ({ duelId, currentUserId }: PokemonDuelViewerPr
       [allCards[i], allCards[j]] = [allCards[j], allCards[i]];
     }
 
-    // Setup: 7 hand, 6 prize, rest deck
     const hand = allCards.slice(0, 7);
     const prize = allCards.slice(7, 13);
     const deck = allCards.slice(13);
 
-    setFieldState({ active: null, bench: [], prizeCards: prize, discard: [], hand, deck });
+    setFieldState({ active: null, bench: [], prizeCards: prize, discard: [], hand, deck, stadium: null });
     setShowDeckPicker(false);
     setPhase('setup');
-    toast({ title: `Deck "${savedDeck.name}" carregado!`, description: '7 cartas na mão, 6 prêmios definidos' });
+    toast({ title: `Deck "${savedDeck.name}" carregado!`, description: '7 cartas na mão, 6 prêmios' });
   };
 
   const drawCard = () => {
     if (fieldState.deck.length === 0) {
-      toast({ title: 'Sem cartas!', description: 'Deck vazio — você perde!', variant: 'destructive' });
+      toast({ title: 'Sem cartas!', description: 'Deck vazio', variant: 'destructive' });
       return;
     }
     const [drawn, ...rest] = fieldState.deck;
@@ -169,6 +176,104 @@ export const PokemonDuelViewer = ({ duelId, currentUserId }: PokemonDuelViewerPr
     });
   };
 
+  const returnToDeck = (card: PokemonFieldCard, from: 'hand' | 'active' | 'bench' | 'discard', position: 'top' | 'bottom' | 'shuffle') => {
+    setFieldState(prev => {
+      const newState = { ...prev };
+      if (from === 'hand') newState.hand = prev.hand.filter(c => c.instanceId !== card.instanceId);
+      else if (from === 'active') newState.active = null;
+      else if (from === 'bench') newState.bench = prev.bench.filter(c => c.instanceId !== card.instanceId);
+      else if (from === 'discard') newState.discard = prev.discard.filter(c => c.instanceId !== card.instanceId);
+
+      if (position === 'top') {
+        newState.deck = [card, ...prev.deck];
+      } else if (position === 'bottom') {
+        newState.deck = [...prev.deck, card];
+      } else {
+        const newDeck = [...prev.deck, card];
+        for (let i = newDeck.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [newDeck[i], newDeck[j]] = [newDeck[j], newDeck[i]];
+        }
+        newState.deck = newDeck;
+      }
+      return newState;
+    });
+    toast({ title: 'Carta devolvida ao deck', description: position === 'top' ? 'No topo' : position === 'bottom' ? 'No fundo' : 'Embaralhado' });
+  };
+
+  const attachEnergy = (targetCard: PokemonFieldCard, zone: 'active' | 'bench') => {
+    // Find energy cards in hand
+    const energyInHand = fieldState.hand.filter(c => c.supertype === 'Energy');
+    if (energyInHand.length === 0) {
+      toast({ title: 'Sem energia', description: 'Nenhuma carta de energia na mão', variant: 'destructive' });
+      return;
+    }
+    const energy = energyInHand[0];
+    setFieldState(prev => {
+      const newState = { ...prev };
+      newState.hand = prev.hand.filter(c => c.instanceId !== energy.instanceId);
+      if (zone === 'active' && prev.active) {
+        newState.active = { ...prev.active, energyAttached: prev.active.energyAttached + 1 };
+      } else if (zone === 'bench') {
+        newState.bench = prev.bench.map(c =>
+          c.instanceId === targetCard.instanceId ? { ...c, energyAttached: c.energyAttached + 1 } : c
+        );
+      }
+      // Put the energy card reference into discard for tracking (or we can just count)
+      newState.discard = [...prev.discard, energy];
+      return newState;
+    });
+    toast({ title: `Energia anexada a ${targetCard.name}!` });
+  };
+
+  const detachEnergy = (targetCard: PokemonFieldCard, zone: 'active' | 'bench') => {
+    if (targetCard.energyAttached <= 0) {
+      toast({ title: 'Sem energia', description: 'Este Pokémon não tem energia anexada', variant: 'destructive' });
+      return;
+    }
+    setFieldState(prev => {
+      const newState = { ...prev };
+      if (zone === 'active' && prev.active) {
+        newState.active = { ...prev.active, energyAttached: prev.active.energyAttached - 1 };
+      } else if (zone === 'bench') {
+        newState.bench = prev.bench.map(c =>
+          c.instanceId === targetCard.instanceId ? { ...c, energyAttached: c.energyAttached - 1 } : c
+        );
+      }
+      return newState;
+    });
+    toast({ title: `Energia removida de ${targetCard.name}` });
+  };
+
+  const activateTrainer = (card: PokemonFieldCard) => {
+    const isStadium = card.subtypes?.includes('Stadium');
+    setFieldState(prev => {
+      const newState = { ...prev };
+      newState.hand = prev.hand.filter(c => c.instanceId !== card.instanceId);
+      if (isStadium) {
+        // Replace existing stadium
+        if (prev.stadium) {
+          newState.discard = [...prev.discard, prev.stadium];
+        }
+        newState.stadium = card;
+      } else {
+        // Items/Supporters go to discard after use
+        newState.discard = [...prev.discard, card];
+      }
+      return newState;
+    });
+    toast({ title: isStadium ? `Stadium "${card.name}" ativado!` : `"${card.name}" ativado!` });
+  };
+
+  const searchDeck = (card: PokemonFieldCard) => {
+    setFieldState(prev => ({
+      ...prev,
+      deck: prev.deck.filter(c => c.instanceId !== card.instanceId),
+      hand: [...prev.hand, card],
+    }));
+    toast({ title: `${card.name} adicionado à mão!` });
+  };
+
   const collectPrize = () => {
     if (fieldState.prizeCards.length === 0) return;
     const [prize, ...rest] = fieldState.prizeCards;
@@ -186,6 +291,36 @@ export const PokemonDuelViewer = ({ duelId, currentUserId }: PokemonDuelViewerPr
       return { ...prev, deck: shuffled };
     });
     toast({ title: 'Deck embaralhado!' });
+  };
+
+  const addDamage = (card: PokemonFieldCard, zone: 'active' | 'bench', amount: number) => {
+    setFieldState(prev => {
+      if (zone === 'active' && prev.active) {
+        return { ...prev, active: { ...prev.active, damageCounters: Math.max(0, prev.active.damageCounters + amount) } };
+      } else if (zone === 'bench') {
+        return { ...prev, bench: prev.bench.map(c => c.instanceId === card.instanceId ? { ...c, damageCounters: Math.max(0, c.damageCounters + amount) } : c) };
+      }
+      return prev;
+    });
+  };
+
+  const recoverFromDiscard = (card: PokemonFieldCard) => {
+    setFieldState(prev => ({
+      ...prev,
+      discard: prev.discard.filter(c => c.instanceId !== card.instanceId),
+      hand: [...prev.hand, card],
+    }));
+    toast({ title: `${card.name} recuperado do descarte!` });
+  };
+
+  const filteredDeckCards = deckSearchQuery.trim()
+    ? fieldState.deck.filter(c => c.name.toLowerCase().includes(deckSearchQuery.toLowerCase()))
+    : fieldState.deck;
+
+  // ---- Card action modal for selected card ----
+  const openCardActions = (card: PokemonFieldCard, zone: 'hand' | 'active' | 'bench' | 'discard' | 'deck') => {
+    setSelectedCard(card);
+    setSelectedCardZone(zone);
   };
 
   if (showDeckPicker) {
@@ -250,7 +385,7 @@ export const PokemonDuelViewer = ({ duelId, currentUserId }: PokemonDuelViewerPr
 
       {/* Field Layout */}
       <div className="p-3 space-y-2">
-        {/* Top row: Prize | Active | Deck + Actions */}
+        {/* Top row: Prize | Active | Deck + Stadium */}
         <div className="flex items-center gap-3 justify-center">
           {/* Prize Cards */}
           <div
@@ -266,14 +401,14 @@ export const PokemonDuelViewer = ({ duelId, currentUserId }: PokemonDuelViewerPr
           <div className="relative">
             {fieldState.active ? (
               <div
-                className="w-20 h-28 rounded-lg overflow-hidden border-2 border-primary shadow-lg cursor-pointer"
-                onClick={() => setSelectedCard(fieldState.active)}
+                className="w-20 h-28 rounded-lg overflow-hidden border-2 border-primary shadow-lg cursor-pointer relative"
+                onClick={() => openCardActions(fieldState.active!, 'active')}
               >
                 <img src={fieldState.active.images.small} alt={fieldState.active.name} className="w-full h-full object-cover" />
-                {(fieldState.active.damageCounters || 0) > 0 && (
-                  <Badge className="absolute -top-1 -right-1 text-[9px] bg-destructive">{fieldState.active.damageCounters}</Badge>
+                {fieldState.active.damageCounters > 0 && (
+                  <Badge className="absolute -top-1 -right-1 text-[9px] bg-destructive">{fieldState.active.damageCounters * 10}</Badge>
                 )}
-                {(fieldState.active.energyAttached || 0) > 0 && (
+                {fieldState.active.energyAttached > 0 && (
                   <Badge className="absolute -bottom-1 -right-1 text-[9px] bg-primary">{fieldState.active.energyAttached}⚡</Badge>
                 )}
               </div>
@@ -283,6 +418,26 @@ export const PokemonDuelViewer = ({ duelId, currentUserId }: PokemonDuelViewerPr
               </div>
             )}
           </div>
+
+          {/* Stadium */}
+          {fieldState.stadium && (
+            <div className="relative">
+              <div
+                className="w-14 h-20 rounded overflow-hidden border-2 border-accent cursor-pointer"
+                onClick={() => {
+                  setFieldState(prev => ({
+                    ...prev,
+                    discard: [...prev.discard, prev.stadium!],
+                    stadium: null,
+                  }));
+                  toast({ title: 'Stadium removido' });
+                }}
+              >
+                <img src={fieldState.stadium.images.small} alt={fieldState.stadium.name} className="w-full h-full object-cover" />
+              </div>
+              <span className="text-[8px] text-muted-foreground block text-center">Stadium</span>
+            </div>
+          )}
 
           {/* Deck */}
           <div className="flex flex-col items-center gap-1">
@@ -312,10 +467,16 @@ export const PokemonDuelViewer = ({ duelId, currentUserId }: PokemonDuelViewerPr
           {fieldState.bench.map(card => (
             <div
               key={card.instanceId}
-              className="w-12 h-16 rounded overflow-hidden border border-border cursor-pointer hover:border-primary transition-colors"
-              onClick={() => setSelectedCard(card)}
+              className="relative w-12 h-16 rounded overflow-hidden border border-border cursor-pointer hover:border-primary transition-colors"
+              onClick={() => openCardActions(card, 'bench')}
             >
               <img src={card.images.small} alt={card.name} className="w-full h-full object-cover" />
+              {card.energyAttached > 0 && (
+                <Badge className="absolute -bottom-0.5 -right-0.5 text-[8px] px-1 bg-primary">{card.energyAttached}⚡</Badge>
+              )}
+              {card.damageCounters > 0 && (
+                <Badge className="absolute -top-0.5 -right-0.5 text-[8px] px-1 bg-destructive">{card.damageCounters * 10}</Badge>
+              )}
             </div>
           ))}
           {Array.from({ length: Math.max(0, 5 - fieldState.bench.length) }).map((_, i) => (
@@ -324,17 +485,21 @@ export const PokemonDuelViewer = ({ duelId, currentUserId }: PokemonDuelViewerPr
         </div>
 
         {/* Actions */}
-        <div className="flex gap-2 justify-center flex-wrap">
-          <Button size="sm" variant="outline" onClick={drawCard}>
+        <div className="flex gap-1.5 justify-center flex-wrap">
+          <Button size="sm" variant="outline" onClick={drawCard} className="text-xs h-7">
             Comprar
           </Button>
-          <Button size="sm" variant="outline" onClick={() => setShowHandModal(true)}>
+          <Button size="sm" variant="outline" onClick={() => setShowHandModal(true)} className="text-xs h-7">
             Mão ({fieldState.hand.length})
           </Button>
-          <Button size="sm" variant="outline" onClick={collectPrize}>
+          <Button size="sm" variant="outline" onClick={collectPrize} className="text-xs h-7">
             Prêmio
           </Button>
-          <Button size="sm" variant="outline" onClick={shuffleDeck}>
+          <Button size="sm" variant="outline" onClick={() => { setDeckSearchQuery(''); setShowDeckSearchModal(true); }} className="text-xs h-7">
+            <Search className="w-3 h-3 mr-1" />
+            Buscar Deck
+          </Button>
+          <Button size="sm" variant="outline" onClick={shuffleDeck} className="text-xs h-7">
             <Shuffle className="w-3 h-3 mr-1" />
             Embaralhar
           </Button>
@@ -351,20 +516,41 @@ export const PokemonDuelViewer = ({ duelId, currentUserId }: PokemonDuelViewerPr
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 p-2">
               {fieldState.hand.map(card => (
                 <div key={card.instanceId} className="space-y-1">
-                  <img src={card.images.small} alt={card.name} className="w-full rounded cursor-pointer hover:ring-2 ring-primary" />
-                  <div className="flex gap-0.5">
+                  <img src={card.images.small} alt={card.name} className="w-full rounded cursor-pointer hover:ring-2 ring-primary" onClick={() => { setShowHandModal(false); openCardActions(card, 'hand'); }} />
+                  <p className="text-[10px] font-medium truncate text-center">{card.name}</p>
+                  <div className="flex gap-0.5 flex-wrap">
                     {card.supertype === 'Pokémon' && (
                       <>
-                        <Button size="sm" variant="outline" className="flex-1 text-[10px] h-6" onClick={() => { playToActive(card); setShowHandModal(false); }}>
+                        <Button size="sm" variant="outline" className="flex-1 text-[9px] h-6 px-1" onClick={() => { playToActive(card); setShowHandModal(false); }}>
                           Ativo
                         </Button>
-                        <Button size="sm" variant="outline" className="flex-1 text-[10px] h-6" onClick={() => playToBench(card)}>
+                        <Button size="sm" variant="outline" className="flex-1 text-[9px] h-6 px-1" onClick={() => playToBench(card)}>
                           Banco
                         </Button>
                       </>
                     )}
-                    <Button size="sm" variant="ghost" className="text-[10px] h-6" onClick={() => discardCard(card, 'hand')}>
+                    {card.supertype === 'Trainer' && (
+                      <Button size="sm" variant="default" className="flex-1 text-[9px] h-6 px-1" onClick={() => { activateTrainer(card); setShowHandModal(false); }}>
+                        Ativar
+                      </Button>
+                    )}
+                    {card.supertype === 'Energy' && fieldState.active && (
+                      <Button size="sm" variant="default" className="flex-1 text-[9px] h-6 px-1" onClick={() => {
+                        setFieldState(prev => ({
+                          ...prev,
+                          hand: prev.hand.filter(c => c.instanceId !== card.instanceId),
+                          active: prev.active ? { ...prev.active, energyAttached: prev.active.energyAttached + 1 } : null,
+                        }));
+                        toast({ title: `Energia em ${fieldState.active!.name}` });
+                      }}>
+                        ⚡ Ativo
+                      </Button>
+                    )}
+                    <Button size="sm" variant="ghost" className="text-[9px] h-6 px-1" onClick={() => discardCard(card, 'hand')}>
                       <Trash2 className="w-3 h-3" />
+                    </Button>
+                    <Button size="sm" variant="ghost" className="text-[9px] h-6 px-1" onClick={() => { returnToDeck(card, 'hand', 'shuffle'); setShowHandModal(false); }}>
+                      <Undo2 className="w-3 h-3" />
                     </Button>
                   </div>
                 </div>
@@ -383,7 +569,17 @@ export const PokemonDuelViewer = ({ duelId, currentUserId }: PokemonDuelViewerPr
           <ScrollArea className="max-h-[50vh]">
             <div className="grid grid-cols-3 gap-2 p-2">
               {fieldState.discard.map(card => (
-                <img key={card.instanceId} src={card.images.small} alt={card.name} className="w-full rounded" />
+                <div key={card.instanceId} className="space-y-1">
+                  <img src={card.images.small} alt={card.name} className="w-full rounded" />
+                  <div className="flex gap-0.5">
+                    <Button size="sm" variant="outline" className="flex-1 text-[9px] h-6 px-1" onClick={() => { recoverFromDiscard(card); }}>
+                      Mão
+                    </Button>
+                    <Button size="sm" variant="ghost" className="text-[9px] h-6 px-1" onClick={() => { returnToDeck(card, 'discard', 'bottom'); }}>
+                      <Undo2 className="w-3 h-3" />
+                    </Button>
+                  </div>
+                </div>
               ))}
             </div>
           </ScrollArea>
@@ -409,18 +605,91 @@ export const PokemonDuelViewer = ({ duelId, currentUserId }: PokemonDuelViewerPr
         </DialogContent>
       </Dialog>
 
-      {/* Card Detail */}
-      {selectedCard && (
-        <Dialog open={!!selectedCard} onOpenChange={() => setSelectedCard(null)}>
+      {/* Deck Search Modal */}
+      <Dialog open={showDeckSearchModal} onOpenChange={setShowDeckSearchModal}>
+        <DialogContent className="max-w-lg max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Search className="w-4 h-4" />
+              Buscar no Deck ({fieldState.deck.length} cartas)
+            </DialogTitle>
+          </DialogHeader>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar carta no deck..."
+              value={deckSearchQuery}
+              onChange={e => setDeckSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <ScrollArea className="max-h-[50vh]">
+            <div className="grid grid-cols-3 gap-2 p-2">
+              {filteredDeckCards.map(card => (
+                <div key={card.instanceId} className="space-y-1">
+                  <img src={card.images.small} alt={card.name} className="w-full rounded cursor-pointer hover:ring-2 ring-primary" />
+                  <p className="text-[10px] font-medium truncate text-center">{card.name}</p>
+                  <Button size="sm" variant="outline" className="w-full text-[9px] h-6" onClick={() => { searchDeck(card); setShowDeckSearchModal(false); }}>
+                    Pegar
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+          <Button variant="outline" onClick={() => { shuffleDeck(); setShowDeckSearchModal(false); }}>
+            <Shuffle className="w-3 h-3 mr-1" />
+            Embaralhar e fechar
+          </Button>
+        </DialogContent>
+      </Dialog>
+
+      {/* Card Action Modal */}
+      {selectedCard && selectedCardZone && (
+        <Dialog open={!!selectedCard} onOpenChange={() => { setSelectedCard(null); setSelectedCardZone(null); }}>
           <DialogContent className="max-w-sm">
             <img src={selectedCard.images.large || selectedCard.images.small} alt={selectedCard.name} className="w-full rounded-lg" />
-            <div className="flex gap-2 flex-wrap">
-              {selectedCard === fieldState.active && (
-                <Button size="sm" variant="destructive" onClick={() => { discardCard(selectedCard, 'active'); setSelectedCard(null); }}>
-                  Descartar
-                </Button>
+            <p className="text-sm font-bold text-center">{selectedCard.name}</p>
+
+            {/* Energy & Damage for active/bench */}
+            {(selectedCardZone === 'active' || selectedCardZone === 'bench') && (
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <p className="text-[11px] text-muted-foreground text-center">Energia: {selectedCard.energyAttached}</p>
+                  <div className="flex gap-1 justify-center">
+                    <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => { attachEnergy(selectedCard, selectedCardZone as 'active' | 'bench'); setSelectedCard(null); setSelectedCardZone(null); }}>
+                      <Plus className="w-3 h-3 mr-0.5" />⚡
+                    </Button>
+                    <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => { detachEnergy(selectedCard, selectedCardZone as 'active' | 'bench'); setSelectedCard(null); setSelectedCardZone(null); }}>
+                      <Minus className="w-3 h-3 mr-0.5" />⚡
+                    </Button>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[11px] text-muted-foreground text-center">Dano: {selectedCard.damageCounters * 10}</p>
+                  <div className="flex gap-1 justify-center">
+                    <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => addDamage(selectedCard, selectedCardZone as 'active' | 'bench', 1)}>
+                      <Plus className="w-3 h-3" />10
+                    </Button>
+                    <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => addDamage(selectedCard, selectedCardZone as 'active' | 'bench', -1)}>
+                      <Minus className="w-3 h-3" />10
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-2 flex-wrap justify-center">
+              {selectedCardZone === 'active' && (
+                <>
+                  <Button size="sm" variant="destructive" onClick={() => { discardCard(selectedCard, 'active'); setSelectedCard(null); setSelectedCardZone(null); }}>
+                    Descartar
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => { returnToDeck(selectedCard, 'active', 'shuffle'); setSelectedCard(null); setSelectedCardZone(null); }}>
+                    <Undo2 className="w-3 h-3 mr-1" />Devolver
+                  </Button>
+                </>
               )}
-              {fieldState.bench.includes(selectedCard) && (
+              {selectedCardZone === 'bench' && (
                 <>
                   <Button size="sm" onClick={() => {
                     setFieldState(prev => {
@@ -428,12 +697,36 @@ export const PokemonDuelViewer = ({ duelId, currentUserId }: PokemonDuelViewerPr
                       const oldActive = prev.active;
                       return { ...prev, active: selectedCard, bench: oldActive ? [...newBench, oldActive] : newBench };
                     });
-                    setSelectedCard(null);
+                    setSelectedCard(null); setSelectedCardZone(null);
                   }}>
                     Promover a Ativo
                   </Button>
-                  <Button size="sm" variant="destructive" onClick={() => { discardCard(selectedCard, 'bench'); setSelectedCard(null); }}>
+                  <Button size="sm" variant="destructive" onClick={() => { discardCard(selectedCard, 'bench'); setSelectedCard(null); setSelectedCardZone(null); }}>
                     Descartar
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => { returnToDeck(selectedCard, 'bench', 'shuffle'); setSelectedCard(null); setSelectedCardZone(null); }}>
+                    <Undo2 className="w-3 h-3 mr-1" />Devolver
+                  </Button>
+                </>
+              )}
+              {selectedCardZone === 'hand' && (
+                <>
+                  {selectedCard.supertype === 'Pokémon' && (
+                    <>
+                      <Button size="sm" onClick={() => { playToActive(selectedCard); setSelectedCard(null); setSelectedCardZone(null); }}>Ativo</Button>
+                      <Button size="sm" variant="outline" onClick={() => { playToBench(selectedCard); setSelectedCard(null); setSelectedCardZone(null); }}>Banco</Button>
+                    </>
+                  )}
+                  {selectedCard.supertype === 'Trainer' && (
+                    <Button size="sm" onClick={() => { activateTrainer(selectedCard); setSelectedCard(null); setSelectedCardZone(null); }}>
+                      Ativar Treinador
+                    </Button>
+                  )}
+                  <Button size="sm" variant="destructive" onClick={() => { discardCard(selectedCard, 'hand'); setSelectedCard(null); setSelectedCardZone(null); }}>
+                    Descartar
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => { returnToDeck(selectedCard, 'hand', 'shuffle'); setSelectedCard(null); setSelectedCardZone(null); }}>
+                    <Undo2 className="w-3 h-3 mr-1" />Devolver
                   </Button>
                 </>
               )}
