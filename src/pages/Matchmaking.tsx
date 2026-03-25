@@ -116,7 +116,8 @@ export default function Matchmaking() {
       const { count } = await supabase
         .from('matchmaking_queue')
         .select('*', { count: 'exact', head: true })
-        .eq('status', 'waiting');
+        .eq('status', 'waiting')
+        .eq('tcg_type', activeTcg);
       setPlayersInQueue(count || 0);
     } catch (error) {
       console.error('Error fetching queue stats:', error);
