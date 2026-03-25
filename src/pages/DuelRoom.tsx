@@ -80,11 +80,20 @@ const DuelRoom = () => {
             );
           } else {
             // Fallback: tentar carregar o último deck salvo do usuário no Supabase
+            // Filtra pelo tcg_type do duelo para garantir que só decks compatíveis sejam carregados
             try {
+              const duelData = await supabase
+                .from('live_duels')
+                .select('tcg_type')
+                .eq('id', id)
+                .maybeSingle();
+              const duelTcgType = duelData?.data?.tcg_type || 'yugioh';
+              
               const { data: saved, error } = await supabase
                 .from('saved_decks')
                 .select('*')
                 .eq('user_id', user.id)
+                .eq('tcg_type', duelTcgType)
                 .order('updated_at', { ascending: false })
                 .limit(1);
 
@@ -1013,7 +1022,7 @@ const DuelRoom = () => {
       )}
 
       {/* Deck Viewer Component - YGO */}
-      {isParticipant && !isJudge && duel?.tcg_type !== 'magic' && (
+      {isParticipant && !isJudge && duel?.tcg_type === 'yugioh' && (
         <>
           <input
             ref={fileInputRef}
