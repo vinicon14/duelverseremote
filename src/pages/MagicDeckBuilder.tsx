@@ -475,6 +475,45 @@ export default function MagicDeckBuilder() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Load Dialog */}
+        <Dialog open={loadOpen} onOpenChange={setLoadOpen}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Carregar Deck Salvo</DialogTitle>
+            </DialogHeader>
+            <ScrollArea className="max-h-[60vh]">
+              {loadingDecks ? (
+                <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin" /></div>
+              ) : savedDecks.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">Nenhum deck MTG salvo</p>
+              ) : (
+                <div className="space-y-2">
+                  {savedDecks.map(deck => {
+                    const mainCount = (deck.main_deck as any[] || []).reduce((s: number, c: any) => s + (c.quantity || 1), 0);
+                    const sideCount = (deck.side_deck as any[] || []).reduce((s: number, c: any) => s + (c.quantity || 1), 0);
+                    return (
+                      <div key={deck.id} className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted/50">
+                        <div>
+                          <p className="font-medium text-sm">{deck.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Main: {mainCount} | Side: {sideCount} • {new Date(deck.created_at).toLocaleDateString('pt-BR')}
+                          </p>
+                        </div>
+                        <div className="flex gap-1">
+                          <Button size="sm" onClick={() => loadDeck(deck)}>Carregar</Button>
+                          <Button size="sm" variant="destructive" onClick={() => deleteSavedDeck(deck.id)}>
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </ScrollArea>
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );
