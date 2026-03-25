@@ -216,6 +216,10 @@ export const ProNavbar = () => {
           </SheetTrigger>
           <SheetContent side="right" className="w-64 border-yellow-500/20">
             <div className="flex flex-col space-y-4 mt-8">
+              <div className="flex items-center gap-2 pb-2 border-b border-border">
+                <OnlineUsersCounter />
+                {user && <NotificationBell userId={user.id} />}
+              </div>
               <NavLinks />
               {user ? (
                 <>
