@@ -478,7 +478,14 @@ const Duels = () => {
                         <div className="flex items-center justify-between text-sm">
                           <div className="flex items-center text-muted-foreground">
                             <Users className="w-4 h-4 mr-2" />
-                            {duel.opponent_id ? '2/2' : '1/2'} jogadores
+                            {(() => {
+                              const mp = (duel as any).max_players || 2;
+                              let count = 1;
+                              if (duel.opponent_id) count++;
+                              if ((duel as any).player3_id) count++;
+                              if ((duel as any).player4_id) count++;
+                              return `${count}/${mp} jogadores`;
+                            })()}
                           </div>
                           <div className="flex items-center text-muted-foreground">
                             <Clock className="w-4 h-4 mr-2" />
