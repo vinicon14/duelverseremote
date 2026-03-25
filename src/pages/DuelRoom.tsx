@@ -326,9 +326,11 @@ const DuelRoom = () => {
         return;
       }
 
-      // Verificar se o usuário é participante
       const isCreator = data.creator_id === userId;
       const isOpponent = data.opponent_id === userId;
+      const isPlayer3 = (data as any).player3_id === userId;
+      const isPlayer4 = (data as any).player4_id === userId;
+      const maxPlayers = (data as any).max_players || 2;
 
       // Se o usuário é o creator, notificar o opponent que está na fila
       if (isCreator && !data.opponent_id) {
@@ -354,44 +356,42 @@ const DuelRoom = () => {
         }
       }
 
-      // Se a sala não tem opponent ainda
-      if (!data.opponent_id) {
-        if (!isCreator) {
+      // Se a sala tem slots abertos para o jogador entrar
+      const isAlreadyInDuel = isCreator || isOpponent || isPlayer3 || isPlayer4;
+      if (!isAlreadyInDuel) {
+        // Try to join an open slot
+        let joinedSlot: string | null = null;
+        if (!data.opponent_id) {
+          joinedSlot = 'opponent_id';
+        } else if (maxPlayers >= 3 && !(data as any).player3_id) {
+          joinedSlot = 'player3_id';
+        } else if (maxPlayers >= 4 && !(data as any).player4_id) {
+          joinedSlot = 'player4_id';
+        }
+
+        if (joinedSlot) {
           try {
+            const updateData: any = { [joinedSlot]: userId };
+            // Check if all slots are now filled
+            const filledAfter = [data.creator_id, data.opponent_id, (data as any).player3_id, (data as any).player4_id]
+              .filter(Boolean).length + 1;
+            if (filledAfter >= maxPlayers) {
+              updateData.status = 'in_progress';
+            }
+
             const { error: updateError } = await supabase
               .from('live_duels')
-              .update({
-                opponent_id: userId,
-                status: 'in_progress'
-              })
-              .eq('id', id)
-              .is('opponent_id', null);
+              .update(updateData)
+              .eq('id', id);
 
             if (updateError) {
-              toast({
-                title: "Erro ao entrar",
-                description: "Não foi possível entrar nesta sala.",
-                variant: "destructive",
-              });
+              toast({ title: "Erro ao entrar", description: "Não foi possível entrar nesta sala.", variant: "destructive" });
               navigate('/duels');
               return;
             }
 
-            if (data.creator_id) {
-              try {
-                await supabase
-                  .from('redirects')
-                  .upsert({
-                    user_id: data.creator_id,
-                    duel_id: id,
-                    created_at: new Date().toISOString()
-                  }, { onConflict: 'user_id' });
-              } catch (err) {
-                console.error('[DuelRoom] Erro ao criar redirect para creator:', err);
-              }
-            }
-
-            const { data: updatedData, error: reloadError } = await supabase
+            // Reload duel data
+            const { data: updatedData } = await supabase
               .from('live_duels')
               .select(`
                 *,
@@ -401,25 +401,13 @@ const DuelRoom = () => {
               .eq('id', id)
               .maybeSingle();
 
-            if (reloadError) {
-              console.error('[DuelRoom] Erro ao recarregar:', reloadError);
-            }
-
-            if (updatedData) {
-              data = updatedData;
-            }
+            if (updatedData) data = updatedData;
           } catch (error) {
-            toast({
-              title: "Erro ao entrar",
-              description: "Ocorreu um erro ao tentar entrar na sala.",
-              variant: "destructive",
-            });
+            toast({ title: "Erro ao entrar", description: "Ocorreu um erro ao tentar entrar na sala.", variant: "destructive" });
             navigate('/duels');
             return;
           }
-        }
-      } else {
-        if (!isCreator && !isOpponent) {
+        } else {
           console.log('[DuelRoom] Usuário entrando como espectador');
           toast({
             title: "👁️ Modo Espectador",
