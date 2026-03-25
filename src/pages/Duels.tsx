@@ -531,6 +531,13 @@ const Duels = () => {
                         )}
 
                         {duel.status === 'in_progress' && (() => {
+                          const mp = (duel as any).max_players || 2;
+                          let count = 1;
+                          if (duel.opponent_id) count++;
+                          if ((duel as any).player3_id) count++;
+                          if ((duel as any).player4_id) count++;
+                          return count >= mp;
+                        })() && (
                           <Button
                             onClick={() => navigate(`/duel/${duel.id}`)}
                             className="w-full btn-mystic text-white"
