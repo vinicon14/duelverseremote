@@ -65,6 +65,15 @@ const HomePage = ({ user }: { user: User | null }) => {
   return <Landing />;
 };
 
+// Componente que resolve automaticamente o deck builder com base no TCG ativo
+const ActiveDeckBuilderRoute = () => {
+  const { activeTcg } = useTcg();
+
+  if (activeTcg === "magic") return <MagicDeckBuilder />;
+  if (activeTcg === "pokemon") return <PokemonDeckBuilder />;
+  return <DeckBuilder />;
+};
+
 // Componente interno que fica dentro do Router para usar useNavigate
 const RouterContent = ({ user }: { user: User | null }) => {
   return (
