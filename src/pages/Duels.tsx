@@ -149,7 +149,6 @@ const Duels = () => {
         .insert({
           creator_id: user.id,
           room_name: roomName,
-          status: 'waiting',
           is_ranked: isRanked,
           duration_minutes: durationMinutes,
           tcg_type: activeTcg,
