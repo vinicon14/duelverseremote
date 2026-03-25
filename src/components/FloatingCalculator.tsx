@@ -20,6 +20,7 @@ interface FloatingCalculatorProps {
   onSetLP: (player: 'player1' | 'player2', value: number) => void;
   currentUserPlayer?: 'player1' | 'player2' | null;
   onClose?: () => void;
+  tcgType?: string;
 }
 
 export const FloatingCalculator = ({
@@ -31,7 +32,16 @@ export const FloatingCalculator = ({
   onSetLP,
   currentUserPlayer = null,
   onClose,
+  tcgType = 'yugioh',
 }: FloatingCalculatorProps) => {
+  const isMagic = tcgType === 'magic';
+  const defaultLP = isMagic ? 40 : 8000;
+  const lpButtons = isMagic
+    ? { row1: [{ label: '-5', amount: -5 }, { label: '-1', amount: -1 }, { label: '+1', amount: 1 }, { label: '+5', amount: 5 }] }
+    : { row1: [{ label: '-1k', amount: -1000 }, { label: '-500', amount: -500 }, { label: '+500', amount: 500 }, { label: '+1k', amount: 1000 }] };
+  const lpButtonsRow2 = isMagic
+    ? [{ label: '-10', amount: -10 }, { label: '+10', amount: 10 }]
+    : [{ label: '-100', amount: -100 }, { label: '+100', amount: 100 }];
   // Posição inicial adaptada ao tamanho da tela
   const [position, setPosition] = useState(() => {
     const isMobile = window.innerWidth < 768;
