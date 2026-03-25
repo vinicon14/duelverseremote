@@ -33,6 +33,9 @@ const DuelRoom = () => {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [player1LP, setPlayer1LP] = useState(8000);
   const [player2LP, setPlayer2LP] = useState(8000);
+  const [player3LP, setPlayer3LP] = useState(8000);
+  const [player4LP, setPlayer4LP] = useState(8000);
+  const [customCounters, setCustomCounters] = useState<{ id: string; name: string; value: number }[]>([]);
   const [showMagicViewer, setShowMagicViewer] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
   const [roomUrl, setRoomUrl] = useState<string>('');
@@ -136,9 +139,23 @@ const DuelRoom = () => {
             const defaultLP = payload.new.tcg_type === 'magic' ? 40 : 8000;
             const newP1LP = payload.new.player1_lp ?? defaultLP;
             const newP2LP = payload.new.player2_lp ?? defaultLP;
+            const newP3LP = (payload.new as any).player3_lp ?? defaultLP;
+            const newP4LP = (payload.new as any).player4_lp ?? defaultLP;
             
             setPlayer1LP(newP1LP);
             setPlayer2LP(newP2LP);
+            setPlayer3LP(newP3LP);
+            setPlayer4LP(newP4LP);
+            
+            // Sync custom counters
+            if ((payload.new as any).custom_counters) {
+              try {
+                const counters = typeof (payload.new as any).custom_counters === 'string' 
+                  ? JSON.parse((payload.new as any).custom_counters) 
+                  : (payload.new as any).custom_counters;
+                if (Array.isArray(counters)) setCustomCounters(counters);
+              } catch {}
+            }
             
             // Atualizar estado de pausa do timer
             if (payload.new.is_timer_paused !== undefined) {
