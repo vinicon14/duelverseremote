@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Swords, Sparkles, Plus, Crown, ChevronRight } from 'lucide-react';
+import { Swords, Sparkles, Zap, Plus, Crown, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 
 const TCG_CONFIG: Record<TcgType, { name: string; icon: React.ReactNode; color: string; gradient: string; description: string }> = {
@@ -27,6 +27,13 @@ const TCG_CONFIG: Record<TcgType, { name: string; icon: React.ReactNode; color: 
     color: "text-amber-400",
     gradient: "from-amber-600 to-red-700",
     description: "Explore os planos de MTG com criaturas, feitiços e planeswalkers!"
+  },
+  pokemon: {
+    name: "PKM",
+    icon: <Zap className="w-10 h-10" />,
+    color: "text-yellow-400",
+    gradient: "from-yellow-500 to-blue-600",
+    description: "Capture, evolua e batalhe com Pokémon no TCG oficial!"
   }
 };
 
@@ -83,9 +90,10 @@ export default function ProfileSelect() {
         <p className="text-muted-foreground text-lg">Selecione seu perfil de jogo</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl w-full mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl w-full mb-8">
         {profiles.map(profile => {
           const config = TCG_CONFIG[profile.tcg_type as TcgType];
+          if (!config) return null;
           return (
             <Card
               key={profile.id}
@@ -114,7 +122,7 @@ export default function ProfileSelect() {
       </div>
 
       {/* Create new profile buttons */}
-      <div className="flex gap-4">
+      <div className="flex flex-wrap gap-4 justify-center">
         {(Object.keys(TCG_CONFIG) as TcgType[])
           .filter(tcg => !existingTcgs.has(tcg))
           .map(tcg => (

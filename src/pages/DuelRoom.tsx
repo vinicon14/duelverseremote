@@ -136,7 +136,7 @@ const DuelRoom = () => {
           console.log('🔴 [REALTIME] NEW:', payload.new);
           
           if (payload.new) {
-            const defaultLP = payload.new.tcg_type === 'magic' ? 40 : 8000;
+            const defaultLP = payload.new.tcg_type === 'magic' ? 40 : payload.new.tcg_type === 'pokemon' ? 6 : 8000;
             const newP1LP = payload.new.player1_lp ?? defaultLP;
             const newP2LP = payload.new.player2_lp ?? defaultLP;
             const newP3LP = (payload.new as any).player3_lp ?? defaultLP;
@@ -417,7 +417,7 @@ const DuelRoom = () => {
       }
 
       setDuel(data);
-      const defaultLP = data.tcg_type === 'magic' ? 40 : 8000;
+      const defaultLP = data.tcg_type === 'magic' ? 40 : data.tcg_type === 'pokemon' ? 6 : 8000;
       setPlayer1LP(data.player1_lp || defaultLP);
       setPlayer2LP(data.player2_lp || defaultLP);
       setPlayer3LP((data as any).player3_lp || defaultLP);

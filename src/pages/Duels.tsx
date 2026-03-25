@@ -142,7 +142,7 @@ const Duels = () => {
         return;
       }
 
-      const defaultLP = activeTcg === 'magic' ? 40 : 8000;
+      const defaultLP = activeTcg === 'magic' ? 40 : activeTcg === 'pokemon' ? 6 : 8000;
       const playerCount = activeTcg === 'magic' ? maxPlayers : 2;
       const { data, error } = await supabase
         .from('live_duels')

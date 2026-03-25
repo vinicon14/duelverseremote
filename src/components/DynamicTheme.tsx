@@ -27,6 +27,16 @@ const TCG_THEMES: Record<TcgType, Record<string, string>> = {
     '--gradient-mystic': 'linear-gradient(135deg, hsl(35 90% 50%) 0%, hsl(0 75% 50%) 100%)',
     '--shadow-mystic': '0 10px 40px -10px hsl(35 90% 50% / 0.5)',
   },
+  pokemon: {
+    '--primary': '45 100% 50%',
+    '--primary-foreground': '0 0% 10%',
+    '--primary-glow': '50 100% 60%',
+    '--accent': '210 80% 55%',
+    '--accent-foreground': '0 0% 100%',
+    '--ring': '45 100% 50%',
+    '--gradient-mystic': 'linear-gradient(135deg, hsl(45 100% 50%) 0%, hsl(210 80% 55%) 100%)',
+    '--shadow-mystic': '0 10px 40px -10px hsl(45 100% 50% / 0.5)',
+  },
 };
 
 export const DynamicTheme = () => {
@@ -42,7 +52,6 @@ export const DynamicTheme = () => {
     }
 
     return () => {
-      // Reset to default on unmount
       Object.keys(theme || {}).forEach(key => {
         root.style.removeProperty(key);
       });
