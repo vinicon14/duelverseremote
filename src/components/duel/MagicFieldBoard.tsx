@@ -113,6 +113,7 @@ const CardSlot = ({
         alt={card.name}
         className="w-full h-full object-cover"
         loading="lazy"
+        onError={(e) => { (e.target as HTMLImageElement).src = MTG_CARD_BACK; }}
       />
       {card.counters && card.counters > 0 && (
         <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-[9px] px-1 rounded-bl font-bold">
@@ -169,12 +170,20 @@ const DropZone = ({
           {cards.length}
         </Badge>
         {cards.length > 0 && (
-          <div className="w-[40px] h-[56px] sm:w-[48px] sm:h-[67px] rounded overflow-hidden border border-border/20">
+          <div
+            className="w-[40px] h-[56px] sm:w-[48px] sm:h-[67px] rounded overflow-hidden border border-border/20"
+            draggable
+            onDragStart={(e) => {
+              e.stopPropagation();
+              onDragStart(e, cards[cards.length - 1], zone);
+            }}
+          >
             <img
               src={getCardImage(cards[cards.length - 1])}
               alt={cards[cards.length - 1].name}
               className="w-full h-full object-cover"
               loading="lazy"
+              onError={(e) => { (e.target as HTMLImageElement).src = MTG_CARD_BACK; }}
             />
           </div>
         )}
