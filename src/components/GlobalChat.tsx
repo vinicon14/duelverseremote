@@ -109,6 +109,7 @@ export const GlobalChat = () => {
       const { data, error } = await supabase
         .from('global_chat_messages')
         .select('*')
+        .eq('tcg_type', activeTcg)
         .order('created_at', { ascending: false })
         .limit(30);
 
@@ -185,7 +186,8 @@ export const GlobalChat = () => {
         .from('global_chat_messages')
         .insert({
           user_id: currentUser.id,
-          message: newMessage.trim()
+          message: newMessage.trim(),
+          tcg_type: activeTcg
         });
 
       if (error) throw error;
