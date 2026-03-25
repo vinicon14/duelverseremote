@@ -496,29 +496,49 @@ const DuelRoom = () => {
     }
   };
 
-  const updateLP = async (player: 'player1' | 'player2', amount: number) => {
+  const updateLP = async (player: 'player1' | 'player2' | 'player3' | 'player4', amount: number) => {
     if (!id) return;
-    
-    const isPlayer1 = player === 'player1';
-    const currentLP = isPlayer1 ? player1LP : player2LP;
-    const newLP = Math.max(0, currentLP + amount);
-
+    const lpMap = { player1: player1LP, player2: player2LP, player3: player3LP, player4: player4LP };
+    const newLP = Math.max(0, lpMap[player] + amount);
     try {
-      const updateData = { [player + '_lp']: newLP };
-      
-      const { error } = await supabase
-        .from('live_duels')
-        .update(updateData)
-        .eq('id', id);
-
+      const { error } = await supabase.from('live_duels').update({ [player + '_lp']: newLP }).eq('id', id);
       if (error) throw error;
     } catch (error: any) {
-      toast({
-        title: "Erro ao atualizar LP",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Erro ao atualizar LP", description: error.message, variant: "destructive" });
     }
+  };
+
+  const setLP = async (player: 'player1' | 'player2' | 'player3' | 'player4', value: number) => {
+    if (!id) return;
+    const newLP = Math.max(0, value);
+    try {
+      const { error } = await supabase.from('live_duels').update({ [player + '_lp']: newLP }).eq('id', id);
+      if (error) throw error;
+    } catch (error: any) {
+      toast({ title: "Erro ao atualizar LP", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const updateCustomCounter = async (counterId: string, newValue: number) => {
+    if (!id) return;
+    const updated = customCounters.map(c => c.id === counterId ? { ...c, value: newValue } : c);
+    setCustomCounters(updated);
+    await supabase.from('live_duels').update({ custom_counters: updated } as any).eq('id', id);
+  };
+
+  const addCustomCounter = async (name: string, startValue: number) => {
+    if (!id) return;
+    const newCounter = { id: `cc-${Date.now()}-${Math.random().toString(36).slice(2)}`, name, value: startValue };
+    const updated = [...customCounters, newCounter];
+    setCustomCounters(updated);
+    await supabase.from('live_duels').update({ custom_counters: updated } as any).eq('id', id);
+  };
+
+  const removeCustomCounter = async (counterId: string) => {
+    if (!id) return;
+    const updated = customCounters.filter(c => c.id !== counterId);
+    setCustomCounters(updated);
+    await supabase.from('live_duels').update({ custom_counters: updated } as any).eq('id', id);
   };
 
   const setLP = async (player: 'player1' | 'player2', value: number) => {
@@ -810,10 +830,13 @@ const DuelRoom = () => {
   // Identificar quem é cada player
   const isPlayer1 = currentUser?.id === duel?.creator_id;
   const isPlayer2 = currentUser?.id === duel?.opponent_id;
-  const isParticipant = isPlayer1 || isPlayer2;
+  const isPlayer3 = currentUser?.id === (duel as any)?.player3_id;
+  const isPlayer4 = currentUser?.id === (duel as any)?.player4_id;
+  const isParticipant = isPlayer1 || isPlayer2 || isPlayer3 || isPlayer4;
   const isSpectator = currentUser && !isParticipant;
   
-  const currentUserPlayer: 'player1' | 'player2' | null = isPlayer1 ? 'player1' : (isPlayer2 ? 'player2' : null);
+  const currentUserPlayer: 'player1' | 'player2' | 'player3' | 'player4' | null = 
+    isPlayer1 ? 'player1' : isPlayer2 ? 'player2' : isPlayer3 ? 'player3' : isPlayer4 ? 'player4' : null;
 
   // Hook para gerenciar presença e detecção de desconexão
   useDuelPresence(id, currentUser?.id, isParticipant);
