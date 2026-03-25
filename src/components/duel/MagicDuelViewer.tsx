@@ -362,6 +362,9 @@ export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId }: Magi
                 <Button size="sm" variant="outline" className="text-xs h-7 gap-1" onClick={untapAll}>
                   <RotateCcw className="w-3 h-3" /> Untap All
                 </Button>
+                <Button size="sm" variant="outline" className="text-xs h-7 gap-1" onClick={() => setSearchOpen(true)}>
+                  <Search className="w-3 h-3" /> Buscar
+                </Button>
               </div>
             </SheetTitle>
           </SheetHeader>
