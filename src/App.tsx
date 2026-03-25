@@ -21,7 +21,7 @@ import { DynamicTheme } from "@/components/DynamicTheme";
 import { useRealtimeNotifications } from "@/hooks/useRealtimeNotifications";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useSubscriptionExpirationCheck } from "@/hooks/useSubscriptionExpirationCheck";
-import { TcgProvider } from "./contexts/TcgContext";
+import { TcgProvider, useTcg } from "./contexts/TcgContext";
 import Home from "./pages/Home";
 import Landing from "./pages/Landing";
 import Admin from "./pages/Admin";
@@ -65,6 +65,15 @@ const HomePage = ({ user }: { user: User | null }) => {
   return <Landing />;
 };
 
+// Componente que resolve automaticamente o deck builder com base no TCG ativo
+const ActiveDeckBuilderRoute = () => {
+  const { activeTcg } = useTcg();
+
+  if (activeTcg === "magic") return <MagicDeckBuilder />;
+  if (activeTcg === "pokemon") return <PokemonDeckBuilder />;
+  return <DeckBuilder />;
+};
+
 // Componente interno que fica dentro do Router para usar useNavigate
 const RouterContent = ({ user }: { user: User | null }) => {
   return (
@@ -91,7 +100,7 @@ const RouterContent = ({ user }: { user: User | null }) => {
       <Route path="/gallery" element={<MatchGallery />} />
       <Route path="/video/:id" element={<VideoShare />} />
       
-      <Route path="/deck-builder" element={<DeckBuilder />} />
+      <Route path="/deck-builder" element={<ActiveDeckBuilderRoute />} />
       <Route path="/magic-deck-builder" element={<MagicDeckBuilder />} />
       <Route path="/pokemon-deck-builder" element={<PokemonDeckBuilder />} />
       <Route path="/profile-select" element={<ProfileSelect />} />
