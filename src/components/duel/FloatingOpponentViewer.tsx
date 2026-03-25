@@ -62,6 +62,14 @@ interface OpponentState {
   banished: OpponentCard[];
   deckCount: number;
   extraCount: number;
+  // MTG-specific
+  tcgType?: string;
+  battlefield?: OpponentCard[];
+  lands?: OpponentCard[];
+  exile?: OpponentCard[];
+  stack?: OpponentCard[];
+  commandZone?: OpponentCard[];
+  phase?: string;
 }
 
 interface FloatingOpponentViewerProps {

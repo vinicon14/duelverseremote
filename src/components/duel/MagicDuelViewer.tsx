@@ -291,28 +291,46 @@ export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId }: Magi
     });
   }, []);
 
+  // Broadcast visible field state to opponents via shared channel
   useEffect(() => {
     if (!duelId || !currentUserId) return;
 
-    const channel = supabase.channel(`magic-deck-sync-${duelId}-${currentUserId}`);
+    const channel = supabase.channel(`deck-sync-${duelId}`);
 
-    channel.send({
-      type: 'broadcast',
-      event: 'magic-field-update',
-      payload: {
-        userId: currentUserId,
-        fieldState: {
-          battlefield: fieldState.battlefield.length,
-          lands: fieldState.lands.length,
-          hand: fieldState.hand.length,
-          library: fieldState.library.length,
-          graveyard: fieldState.graveyard.length,
-          exile: fieldState.exile.length,
-          stack: fieldState.stack.length,
-        },
-        phase: currentPhase,
-      },
+    const serializeCard = (c: MagicCard) => ({
+      id: typeof c.id === 'string' ? c.id.hashCode?.() || c.id : c.id,
+      name: c.name,
+      image: getMagicCardImage(c),
+      isFaceDown: c.isFaceDown || false,
+      isTapped: c.isTapped || false,
+      counters: c.counters || 0,
     });
+
+    // Only broadcast after subscription is ready
+    channel
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          channel.send({
+            type: 'broadcast',
+            event: 'deck-state',
+            payload: {
+              userId: currentUserId,
+              tcgType: 'magic',
+              hand: fieldState.hand.length,
+              deckCount: fieldState.library.length,
+              extraCount: 0,
+              phase: currentPhase,
+              // Public zones - cards visible to opponents
+              battlefield: fieldState.battlefield.map(serializeCard),
+              lands: fieldState.lands.map(serializeCard),
+              graveyard: fieldState.graveyard.map(serializeCard),
+              exile: fieldState.exile.map(serializeCard),
+              stack: fieldState.stack.map(serializeCard),
+              commandZone: fieldState.commandZone?.map(serializeCard) || [],
+            },
+          });
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);
