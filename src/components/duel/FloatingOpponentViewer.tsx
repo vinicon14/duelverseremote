@@ -361,7 +361,13 @@ export const FloatingOpponentViewer = ({
                 <Layers className="h-3 w-3 text-muted-foreground" />
                 <span className="text-xs">{opponentState.tcgType === 'magic' ? 'Grimório' : 'Deck'}: {opponentState.deckCount}</span>
               </div>
-              {opponentState.tcgType !== 'magic' && (
+              {opponentState.tcgType === 'pokemon' && (
+                <div className="flex items-center gap-1">
+                  <Star className="h-3 w-3 text-yellow-500" />
+                  <span className="text-xs">Prêmio: {opponentState.prizeCardsCount}</span>
+                </div>
+              )}
+              {opponentState.tcgType !== 'magic' && opponentState.tcgType !== 'pokemon' && (
                 <div className="flex items-center gap-1">
                   <Sparkles className="h-3 w-3 text-accent" />
                   <span className="text-xs">Extra: {opponentState.extraCount}</span>
@@ -443,7 +449,45 @@ export const FloatingOpponentViewer = ({
               </>
             )}
 
-            {!isCollapsed && opponentState.tcgType !== 'magic' && (
+            {/* PKM Field */}
+            {!isCollapsed && opponentState.tcgType === 'pokemon' && (
+              <div className="space-y-2 p-2 bg-muted/20 rounded-lg">
+                <span className="text-[10px] font-medium text-muted-foreground">Campo Pokémon do Oponente</span>
+                
+                {/* Active */}
+                <div className="flex justify-center">
+                  {opponentState.active ? (
+                    <div className="w-14 h-20 rounded-lg overflow-hidden border-2 border-primary">
+                      <img src={opponentState.active.image} alt={opponentState.active.name} className="w-full h-full object-cover" />
+                    </div>
+                  ) : (
+                    <div className="w-14 h-20 rounded-lg border-2 border-dashed border-muted-foreground/30 flex items-center justify-center">
+                      <span className="text-[8px] text-muted-foreground">Ativo</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Bench */}
+                <div className="flex justify-center gap-1">
+                  {(opponentState.bench || []).map((card, i) => (
+                    <div key={i} className="w-10 h-14 rounded overflow-hidden border border-border">
+                      <img src={card.image} alt={card.name} className="w-full h-full object-cover" />
+                    </div>
+                  ))}
+                  {Array.from({ length: Math.max(0, 5 - (opponentState.bench?.length || 0)) }).map((_, i) => (
+                    <div key={`empty-${i}`} className="w-10 h-14 rounded border border-dashed border-border/30" />
+                  ))}
+                </div>
+
+                {/* Discard count */}
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Trash2 className="h-3 w-3" />
+                  <span>Descarte: {opponentState.discardCount || 0}</span>
+                </div>
+              </div>
+            )}
+
+            {!isCollapsed && opponentState.tcgType !== 'magic' && opponentState.tcgType !== 'pokemon' && (
               <>
                 {/* YGO Field Zones Layout */}
                 {opponentState.monsterZones && (
