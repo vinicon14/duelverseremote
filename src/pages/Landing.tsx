@@ -10,21 +10,21 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
-import { 
-  Swords, Trophy, Users, Video, Zap, Shield, 
-  Play, Star, TrendingUp, Gamepad2, Crown, ChevronDown 
-} from "lucide-react";
+import {
+  Swords, Trophy, Users, Video, Zap, Shield,
+  Play, Star, TrendingUp, Gamepad2, Crown, ChevronDown } from
+"lucide-react";
 
 const Landing = () => {
   const [videoUrl, setVideoUrl] = useState("");
 
   useEffect(() => {
     const fetchVideo = async () => {
-      const { data } = await supabase
-        .from('system_settings')
-        .select('value')
-        .eq('key', 'landing_video_url')
-        .maybeSingle();
+      const { data } = await supabase.
+      from('system_settings').
+      select('value').
+      eq('key', 'landing_video_url').
+      maybeSingle();
       if (data?.value) setVideoUrl(data.value);
     };
     fetchVideo();
@@ -66,7 +66,7 @@ const Landing = () => {
           <div className="max-w-4xl mx-auto text-center space-y-8">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-sm text-primary">
               <Star className="w-4 h-4" />
-              <span>A plataforma #1 de duelos de Yu-Gi-Oh! online</span>
+              <span>A plataforma #1 de duelos de TCG  online</span>
             </div>
             
             <h1 className="text-5xl md:text-7xl font-extrabold leading-tight">
@@ -87,14 +87,14 @@ const Landing = () => {
                   Comece Agora — É Grátis
                 </Button>
               </Link>
-              {videoUrl && (
-                <a href="#video">
+              {videoUrl &&
+              <a href="#video">
                   <Button size="lg" variant="outline" className="text-lg px-8 py-6 rounded-xl border-border">
                     <Play className="mr-2 h-5 w-5" />
                     Ver Vídeo
                   </Button>
                 </a>
-              )}
+              }
             </div>
 
             <div className="grid grid-cols-3 gap-8 max-w-xl mx-auto mt-16">
@@ -122,8 +122,8 @@ const Landing = () => {
       </section>
 
       {/* Video Section */}
-      {videoUrl && (
-        <section id="video" className="py-20 px-4">
+      {videoUrl &&
+      <section id="video" className="py-20 px-4">
           <div className="container mx-auto max-w-4xl">
             <div className="text-center mb-10">
               <h2 className="text-3xl md:text-4xl font-bold mb-4">
@@ -135,28 +135,28 @@ const Landing = () => {
             </div>
             
             <div className="relative rounded-2xl overflow-hidden border border-border shadow-2xl bg-card aspect-video">
-              {videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be') ? (
-                <iframe
-                  src={videoUrl.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')}
-                  className="w-full h-full"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  title="Vídeo DuelVerse"
-                />
-              ) : (
-                <video
-                  src={videoUrl}
-                  controls
-                  className="w-full h-full object-cover"
-                  poster=""
-                >
+              {videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be') ?
+            <iframe
+              src={videoUrl.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')}
+              className="w-full h-full"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              title="Vídeo DuelVerse" /> :
+
+
+            <video
+              src={videoUrl}
+              controls
+              className="w-full h-full object-cover"
+              poster="">
+              
                   Seu navegador não suporta vídeo.
                 </video>
-              )}
+            }
             </div>
           </div>
         </section>
-      )}
+      }
 
       {/* Features Section */}
       <section id="features" className="py-20 px-4">
@@ -172,14 +172,14 @@ const Landing = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
-              { icon: Video, title: "Chamadas de Vídeo", desc: "Duele cara a cara com seus oponentes através de chamadas de vídeo integradas em tempo real" },
-              { icon: Zap, title: "Matchmaking Automático", desc: "Encontre oponentes do seu nível em segundos com nosso sistema inteligente de fila" },
-              { icon: Trophy, title: "Torneios & Premiações", desc: "Participe de torneios semanais com premiações em DuelCoins e suba no ranking" },
-              { icon: TrendingUp, title: "Sistema de Ranking", desc: "Acompanhe sua evolução com um sistema de pontos competitivo e leaderboard global" },
-              { icon: Users, title: "Comunidade Ativa", desc: "Adicione amigos, envie desafios, troque mensagens e construa sua rede de duelistas" },
-              { icon: Gamepad2, title: "Deck Builder", desc: "Construa e salve seus decks com nosso editor visual completo integrado à plataforma" },
-            ].map((feature, i) => (
-              <Card key={i} className="group p-6 bg-card border-border hover:border-primary/40 transition-all duration-300 hover:shadow-lg hover:shadow-primary/5">
+            { icon: Video, title: "Chamadas de Vídeo", desc: "Duele cara a cara com seus oponentes através de chamadas de vídeo integradas em tempo real" },
+            { icon: Zap, title: "Matchmaking Automático", desc: "Encontre oponentes do seu nível em segundos com nosso sistema inteligente de fila" },
+            { icon: Trophy, title: "Torneios & Premiações", desc: "Participe de torneios semanais com premiações em DuelCoins e suba no ranking" },
+            { icon: TrendingUp, title: "Sistema de Ranking", desc: "Acompanhe sua evolução com um sistema de pontos competitivo e leaderboard global" },
+            { icon: Users, title: "Comunidade Ativa", desc: "Adicione amigos, envie desafios, troque mensagens e construa sua rede de duelistas" },
+            { icon: Gamepad2, title: "Deck Builder", desc: "Construa e salve seus decks com nosso editor visual completo integrado à plataforma" }].
+            map((feature, i) =>
+            <Card key={i} className="group p-6 bg-card border-border hover:border-primary/40 transition-all duration-300 hover:shadow-lg hover:shadow-primary/5">
                 <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center mb-4 group-hover:bg-primary/25 transition-colors">
                   <feature.icon className="w-6 h-6 text-primary" />
                 </div>
@@ -190,7 +190,7 @@ const Landing = () => {
                   {feature.desc}
                 </p>
               </Card>
-            ))}
+            )}
           </div>
         </div>
       </section>
@@ -206,18 +206,18 @@ const Landing = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
-              { step: "1", title: "Crie Sua Conta", desc: "Cadastre-se gratuitamente e personalize seu perfil de duelista" },
-              { step: "2", title: "Encontre um Oponente", desc: "Use o matchmaking automático ou crie uma sala personalizada" },
-              { step: "3", title: "Duele & Vença!", desc: "Duele por vídeo chamada, ganhe pontos e suba no ranking" },
-            ].map((item, i) => (
-              <div key={i} className="text-center space-y-4">
+            { step: "1", title: "Crie Sua Conta", desc: "Cadastre-se gratuitamente e personalize seu perfil de duelista" },
+            { step: "2", title: "Encontre um Oponente", desc: "Use o matchmaking automático ou crie uma sala personalizada" },
+            { step: "3", title: "Duele & Vença!", desc: "Duele por vídeo chamada, ganhe pontos e suba no ranking" }].
+            map((item, i) =>
+            <div key={i} className="text-center space-y-4">
                 <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center mx-auto text-2xl font-bold text-primary-foreground">
                   {item.step}
                 </div>
                 <h3 className="text-xl font-semibold text-foreground">{item.title}</h3>
                 <p className="text-muted-foreground">{item.desc}</p>
               </div>
-            ))}
+            )}
           </div>
         </div>
       </section>
@@ -278,8 +278,8 @@ const Landing = () => {
           </p>
         </div>
       </footer>
-    </div>
-  );
+    </div>);
+
 };
 
 export default Landing;
