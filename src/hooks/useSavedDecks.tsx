@@ -86,7 +86,7 @@ export const useSavedDecks = (tcgType: string = 'yugioh') => {
     } finally {
       setIsLoading(false);
     }
-  }, [currentUser]);
+  }, [currentUser, tcgType]);
 
   useEffect(() => {
     if (currentUser) {
