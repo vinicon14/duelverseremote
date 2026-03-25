@@ -210,20 +210,20 @@ const DropZone = ({
   return (
     <div
       className={cn(
-        'rounded-lg border border-border/30 bg-card/20 p-2 sm:p-3',
+        'rounded-lg border border-border/30 bg-card/20 p-2 sm:p-3 flex flex-col',
         className
       )}
       onDragOver={onDragOver}
       onDrop={(e) => onDrop(e, zone)}
     >
-      <div className="flex items-center gap-1.5 mb-2">
+      <div className="flex items-center gap-1.5 mb-1 flex-shrink-0">
         {icon}
         <span className="text-[11px] sm:text-xs font-medium text-muted-foreground">{label}</span>
         <Badge variant="secondary" className="text-[10px] px-1.5 ml-auto">
           {cards.length}
         </Badge>
       </div>
-      <div className="flex flex-wrap gap-1 sm:gap-1.5" style={{ minHeight: cardSize.h + 8 }}>
+      <div className="flex flex-wrap gap-1 sm:gap-1.5 flex-1 content-start overflow-auto">
         {cards.length === 0 && (
           <div className="w-full flex items-center justify-center text-xs text-muted-foreground/50 italic">
             Arraste cartas aqui
@@ -337,29 +337,25 @@ export const MagicFieldBoard = ({
         />
       )}
 
-      {/* Battlefield + Lands - take all remaining space */}
-      <div className="flex-1 flex flex-col gap-1.5 min-h-0 overflow-hidden">
-        <div className="flex-[3] overflow-auto min-h-[100px]">
-          <DropZone
-            zone="battlefield"
-            label="Battlefield"
-            icon={<Flame className="w-3 h-3" />}
-            cards={fieldState.battlefield}
-            {...commonDropZoneProps}
-            onTap={onTapCard}
-            className="h-full border-primary/20"
-          />
-        </div>
-        <div className="flex-[2] overflow-auto min-h-[80px]">
-          <DropZone
-            zone="lands"
-            label="Lands"
-            cards={fieldState.lands}
-            {...commonDropZoneProps}
-            onTap={onTapCard}
-            className="h-full border-green-500/20 bg-green-500/5"
-          />
-        </div>
+      {/* Battlefield + Lands - fill remaining space equally */}
+      <div className="flex-1 flex flex-col gap-1 min-h-0">
+        <DropZone
+          zone="battlefield"
+          label="Battlefield"
+          icon={<Flame className="w-3 h-3" />}
+          cards={fieldState.battlefield}
+          {...commonDropZoneProps}
+          onTap={onTapCard}
+          className="flex-1 min-h-0 border-primary/20"
+        />
+        <DropZone
+          zone="lands"
+          label="Lands"
+          cards={fieldState.lands}
+          {...commonDropZoneProps}
+          onTap={onTapCard}
+          className="flex-1 min-h-0 border-green-500/20 bg-green-500/5"
+        />
       </div>
 
       {/* Bottom: side zones + hand - fixed height */}
