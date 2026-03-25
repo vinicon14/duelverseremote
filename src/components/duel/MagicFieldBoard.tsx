@@ -146,6 +146,7 @@ const DropZone = ({
   className,
   compact = false,
   hideTopCard = false,
+  cardSize,
 }: {
   zone: MagicZoneType;
   label: string;
@@ -160,6 +161,7 @@ const DropZone = ({
   className?: string;
   compact?: boolean;
   hideTopCard?: boolean;
+  cardSize: { w: number; h: number };
 }) => {
   if (compact) {
     const previewCard = cards[cards.length - 1];
