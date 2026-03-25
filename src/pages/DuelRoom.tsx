@@ -417,7 +417,7 @@ const DuelRoom = () => {
       }
 
       setDuel(data);
-      const defaultLP = data.tcg_type === 'magic' ? 40 : 8000;
+      const defaultLP = data.tcg_type === 'magic' ? 40 : data.tcg_type === 'pokemon' ? 6 : 8000;
       setPlayer1LP(data.player1_lp || defaultLP);
       setPlayer2LP(data.player2_lp || defaultLP);
       setPlayer3LP((data as any).player3_lp || defaultLP);
