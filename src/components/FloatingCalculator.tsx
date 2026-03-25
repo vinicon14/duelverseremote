@@ -65,11 +65,16 @@ export const FloatingCalculator = ({
   onRemoveCustomCounter,
 }: FloatingCalculatorProps) => {
   const isMagic = tcgType === 'magic';
-  const defaultLP = isMagic ? 40 : 8000;
-  const lpButtons = isMagic
+  const isPokemon = tcgType === 'pokemon';
+  const defaultLP = isPokemon ? 6 : isMagic ? 40 : 8000;
+  const lpButtons = isPokemon
+    ? { row1: [{ label: '-2', amount: -2 }, { label: '-1', amount: -1 }, { label: '+1', amount: 1 }, { label: '+2', amount: 2 }] }
+    : isMagic
     ? { row1: [{ label: '-5', amount: -5 }, { label: '-1', amount: -1 }, { label: '+1', amount: 1 }, { label: '+5', amount: 5 }] }
     : { row1: [{ label: '-1k', amount: -1000 }, { label: '-500', amount: -500 }, { label: '+500', amount: 500 }, { label: '+1k', amount: 1000 }] };
-  const lpButtonsRow2 = isMagic
+  const lpButtonsRow2 = isPokemon
+    ? []
+    : isMagic
     ? [{ label: '-10', amount: -10 }, { label: '+10', amount: 10 }]
     : [{ label: '-100', amount: -100 }, { label: '+100', amount: 100 }];
 
