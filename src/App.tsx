@@ -100,7 +100,7 @@ const RouterContent = ({ user }: { user: User | null }) => {
       <Route path="/gallery" element={<MatchGallery />} />
       <Route path="/video/:id" element={<VideoShare />} />
       
-      <Route path="/deck-builder" element={<DeckBuilder />} />
+      <Route path="/deck-builder" element={<ActiveDeckBuilderRoute />} />
       <Route path="/magic-deck-builder" element={<MagicDeckBuilder />} />
       <Route path="/pokemon-deck-builder" element={<PokemonDeckBuilder />} />
       <Route path="/profile-select" element={<ProfileSelect />} />
