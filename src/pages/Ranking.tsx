@@ -20,7 +20,7 @@ const TCG_LABELS: Record<string, string> = { yugioh: 'YGO', magic: 'Magic' };
 const Ranking = () => {
   const { toast } = useToast();
   const { activeTcg } = useTcg();
-  const [selectedTcg, setSelectedTcg] = useState(activeTcg);
+  const [selectedTcg, setSelectedTcg] = useState<string>(activeTcg);
   const [rankings, setRankings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
