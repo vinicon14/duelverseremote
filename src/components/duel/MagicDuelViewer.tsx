@@ -5,7 +5,7 @@
  * Simula um deck físico com todas as interações: comprar, embaralhar,
  * mover cartas entre zonas (mão, campo, cemitério, exílio, etc).
  */
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -13,6 +13,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { MagicFieldBoard, MagicFieldState, MagicZoneType, MagicCard, MagicPhase } from './MagicFieldBoard';
+import { getMagicCardImage, MTG_CARD_BACK } from './mtgCardImage';
 import { Shuffle, Hand, ArrowDown, RotateCcw, Eye, Undo2 } from 'lucide-react';
 
 const createInitialFieldState = (): MagicFieldState => ({
@@ -43,10 +44,9 @@ export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId }: Magi
   const [selectedCard, setSelectedCard] = useState<MagicCard | null>(null);
   const [selectedCardZone, setSelectedCardZone] = useState<MagicZoneType>('hand');
 
-  // Load last saved Magic deck
   useEffect(() => {
     if (!currentUserId || deckLoaded) return;
-    
+
     const loadDeck = async () => {
       try {
         const { data } = await supabase
@@ -60,7 +60,7 @@ export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId }: Magi
         if (data && data.length > 0) {
           const deck = data[0];
           const mainCards = (deck.main_deck as any[]) || [];
-          
+
           const libraryCards: MagicCard[] = mainCards.flatMap((card: any) => {
             const copies: MagicCard[] = [];
             for (let i = 0; i < (card.quantity || 1); i++) {
@@ -72,13 +72,10 @@ export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId }: Magi
                 mana_cost: card.mana_cost || '',
                 power: card.power,
                 toughness: card.toughness,
-                // Support both formats: image_uris object or flat image field
-                image_uris: card.image_uris || (card.image ? {
-                  small: card.image,
-                  normal: card.image?.replace('/small/', '/normal/') || card.image,
-                  art_crop: card.image,
-                } : undefined),
-                card_faces: card.card_faces,
+                image: card.image,
+                image_url: card.image_url,
+                image_uris: card.image_uris || undefined,
+                card_faces: card.card_faces || undefined,
                 instanceId: `${card.id || card.name}-${i}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
                 isTapped: false,
                 isFaceDown: false,
@@ -87,13 +84,12 @@ export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId }: Magi
             return copies;
           });
 
-          // Shuffle library
           for (let i = libraryCards.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [libraryCards[i], libraryCards[j]] = [libraryCards[j], libraryCards[i]];
           }
 
-          setFieldState(prev => ({ ...prev, library: libraryCards }));
+          setFieldState((prev) => ({ ...prev, library: libraryCards }));
           setDeckLoaded(true);
         }
       } catch (err) {
@@ -104,18 +100,16 @@ export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId }: Magi
     loadDeck();
   }, [currentUserId, deckLoaded]);
 
-  // Draw a card
   const drawCard = useCallback(() => {
-    setFieldState(prev => {
+    setFieldState((prev) => {
       if (prev.library.length === 0) return prev;
       const [drawn, ...rest] = prev.library;
       return { ...prev, library: rest, hand: [...prev.hand, drawn] };
     });
   }, []);
 
-  // Draw initial hand (7 cards)
   const drawInitialHand = useCallback(() => {
-    setFieldState(prev => {
+    setFieldState((prev) => {
       const handSize = 7;
       const drawn = prev.library.slice(0, handSize);
       const rest = prev.library.slice(handSize);
@@ -123,11 +117,9 @@ export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId }: Magi
     });
   }, []);
 
-  // Mulligan: put hand back, shuffle, draw 7 again
   const mulligan = useCallback(() => {
-    setFieldState(prev => {
+    setFieldState((prev) => {
       const allCards = [...prev.library, ...prev.hand];
-      // Shuffle all
       for (let i = allCards.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [allCards[i], allCards[j]] = [allCards[j], allCards[i]];
@@ -138,9 +130,8 @@ export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId }: Magi
     });
   }, []);
 
-  // Shuffle library
   const shuffleLibrary = useCallback(() => {
-    setFieldState(prev => {
+    setFieldState((prev) => {
       const shuffled = [...prev.library];
       for (let i = shuffled.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -150,40 +141,34 @@ export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId }: Magi
     });
   }, []);
 
-  // Untap all
   const untapAll = useCallback(() => {
-    setFieldState(prev => ({
+    setFieldState((prev) => ({
       ...prev,
-      battlefield: prev.battlefield.map(c => ({ ...c, isTapped: false })),
-      lands: prev.lands.map(c => ({ ...c, isTapped: false })),
+      battlefield: prev.battlefield.map((c) => ({ ...c, isTapped: false })),
+      lands: prev.lands.map((c) => ({ ...c, isTapped: false })),
     }));
   }, []);
 
-  // Move card between zones
   const handleCardDrop = useCallback((targetZone: MagicZoneType, card: MagicCard) => {
-    setFieldState(prev => {
+    setFieldState((prev) => {
       const newState = { ...prev };
-      
+
       for (const zone of Object.keys(newState) as MagicZoneType[]) {
         if (Array.isArray(newState[zone])) {
           (newState[zone] as MagicCard[]) = (newState[zone] as MagicCard[]).filter(
-            c => c.instanceId !== card.instanceId
+            (c) => c.instanceId !== card.instanceId
           );
         }
       }
 
       const targetCards = [...(newState[targetZone] as MagicCard[])];
       const movedCard = { ...card };
-      
-      if (targetZone === 'hand' || targetZone === 'library') {
+
+      if (targetZone === 'hand' || targetZone === 'library' || targetZone === 'graveyard' || targetZone === 'exile') {
         movedCard.isTapped = false;
         movedCard.isFaceDown = false;
       }
-      if (targetZone === 'graveyard' || targetZone === 'exile') {
-        movedCard.isTapped = false;
-        movedCard.isFaceDown = false;
-      }
-      
+
       targetCards.push(movedCard);
       (newState[targetZone] as MagicCard[]) = targetCards;
 
@@ -192,9 +177,9 @@ export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId }: Magi
   }, []);
 
   const handleTapCard = useCallback((card: MagicCard) => {
-    setFieldState(prev => {
+    setFieldState((prev) => {
       const tapInZone = (cards: MagicCard[]) =>
-        cards.map(c => c.instanceId === card.instanceId ? { ...c, isTapped: !c.isTapped } : c);
+        cards.map((c) => (c.instanceId === card.instanceId ? { ...c, isTapped: !c.isTapped } : c));
       return {
         ...prev,
         battlefield: tapInZone(prev.battlefield),
@@ -203,14 +188,12 @@ export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId }: Magi
     });
   }, []);
 
-  // Card click: open detail modal with zone move options
   const handleCardClick = useCallback((card: MagicCard, zone: MagicZoneType) => {
     setSelectedCard(card);
     setSelectedCardZone(zone);
     setCardDetailOpen(true);
   }, []);
 
-  // Zone click: open zone viewer (for graveyard, exile, library top cards)
   const handleZoneClick = useCallback((zone: MagicZoneType) => {
     if (zone === 'graveyard' || zone === 'exile' || zone === 'stack' || zone === 'commandZone') {
       setViewingZone(zone);
@@ -218,7 +201,6 @@ export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId }: Magi
     }
   }, []);
 
-  // Move selected card to a zone from the detail modal
   const moveCardTo = useCallback((targetZone: MagicZoneType) => {
     if (selectedCard) {
       handleCardDrop(targetZone, selectedCard);
@@ -227,13 +209,14 @@ export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId }: Magi
     }
   }, [selectedCard, handleCardDrop]);
 
-  // Add/remove counters on a card
   const modifyCounters = useCallback((card: MagicCard, delta: number) => {
-    setFieldState(prev => {
+    setFieldState((prev) => {
       const updateInZone = (cards: MagicCard[]) =>
-        cards.map(c => c.instanceId === card.instanceId 
-          ? { ...c, counters: Math.max(0, (c.counters || 0) + delta) } 
-          : c);
+        cards.map((c) =>
+          c.instanceId === card.instanceId
+            ? { ...c, counters: Math.max(0, (c.counters || 0) + delta) }
+            : c
+        );
       return {
         ...prev,
         battlefield: updateInZone(prev.battlefield),
@@ -242,11 +225,10 @@ export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId }: Magi
     });
   }, []);
 
-  // Flip face up/down
   const toggleFaceDown = useCallback((card: MagicCard) => {
-    setFieldState(prev => {
+    setFieldState((prev) => {
       const flipInZone = (cards: MagicCard[]) =>
-        cards.map(c => c.instanceId === card.instanceId ? { ...c, isFaceDown: !c.isFaceDown } : c);
+        cards.map((c) => (c.instanceId === card.instanceId ? { ...c, isFaceDown: !c.isFaceDown } : c));
       return {
         ...prev,
         battlefield: flipInZone(prev.battlefield),
@@ -256,18 +238,16 @@ export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId }: Magi
     setCardDetailOpen(false);
   }, []);
 
-  // Mill top card of library to graveyard
   const millCard = useCallback(() => {
-    setFieldState(prev => {
+    setFieldState((prev) => {
       if (prev.library.length === 0) return prev;
       const [top, ...rest] = prev.library;
       return { ...prev, library: rest, graveyard: [...prev.graveyard, top] };
     });
   }, []);
 
-  // Scry: look at top card of library
   const scryTop = useCallback(() => {
-    setFieldState(prev => {
+    setFieldState((prev) => {
       if (prev.library.length === 0) return prev;
       const topCard = prev.library[0];
       setSelectedCard(topCard);
@@ -277,12 +257,11 @@ export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId }: Magi
     });
   }, []);
 
-  // Sync field state to Supabase for opponent viewer
   useEffect(() => {
     if (!duelId || !currentUserId) return;
 
     const channel = supabase.channel(`magic-deck-sync-${duelId}-${currentUserId}`);
-    
+
     channel.send({
       type: 'broadcast',
       event: 'magic-field-update',
@@ -318,6 +297,7 @@ export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId }: Magi
   };
 
   const moveTargets: MagicZoneType[] = ['hand', 'battlefield', 'lands', 'graveyard', 'exile', 'stack', 'library'];
+  const viewingCards = useMemo(() => ([...(fieldState[viewingZone] as MagicCard[])]).reverse(), [fieldState, viewingZone]);
 
   return (
     <>
@@ -366,7 +346,6 @@ export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId }: Magi
         </SheetContent>
       </Sheet>
 
-      {/* Card Detail / Move Modal */}
       <Dialog open={cardDetailOpen} onOpenChange={setCardDetailOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
@@ -374,31 +353,27 @@ export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId }: Magi
           </DialogHeader>
           {selectedCard && (
             <div className="space-y-3">
-              {/* Card image */}
               <div className="flex justify-center">
                 <img
-                  src={
-                    selectedCard.isFaceDown 
-                      ? 'https://backs.scryfall.io/large/59/2/0aeebaf5-8c7d-4636-9e82-8c27447861f7.jpg'
-                      : selectedCard.image_uris?.normal || selectedCard.image_uris?.small || ''
-                  }
+                  src={getMagicCardImage(selectedCard, 'normal')}
                   alt={selectedCard.name}
                   className="w-48 rounded-lg shadow-md"
+                  onError={(e) => { (e.target as HTMLImageElement).src = MTG_CARD_BACK; }}
                 />
               </div>
 
-              {/* Card info */}
-              {selectedCard.mana_cost && (
-                <p className="text-xs text-muted-foreground text-center">{selectedCard.mana_cost} — {selectedCard.type_line}</p>
+              {selectedCard.type_line && (
+                <p className="text-xs text-muted-foreground text-center">
+                  {[selectedCard.mana_cost, selectedCard.type_line].filter(Boolean).join(' — ')}
+                </p>
               )}
 
-              {/* Actions */}
               <div className="space-y-2">
                 <p className="text-xs font-semibold text-muted-foreground">Mover para:</p>
                 <div className="grid grid-cols-3 gap-1.5">
                   {moveTargets
-                    .filter(z => z !== selectedCardZone)
-                    .map(zone => (
+                    .filter((z) => z !== selectedCardZone)
+                    .map((zone) => (
                       <Button
                         key={zone}
                         size="sm"
@@ -411,7 +386,6 @@ export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId }: Magi
                     ))}
                 </div>
 
-                {/* Extra actions for battlefield/lands cards */}
                 {(selectedCardZone === 'battlefield' || selectedCardZone === 'lands') && (
                   <div className="flex gap-1.5 pt-1">
                     <Button size="sm" variant="outline" className="text-xs h-7 flex-1" onClick={() => toggleFaceDown(selectedCard)}>
@@ -431,7 +405,6 @@ export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId }: Magi
         </DialogContent>
       </Dialog>
 
-      {/* Zone Viewer Modal (Graveyard, Exile, etc) */}
       <Dialog open={zoneViewerOpen} onOpenChange={setZoneViewerOpen}>
         <DialogContent className="max-w-md max-h-[70vh]">
           <DialogHeader>
@@ -442,12 +415,12 @@ export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId }: Magi
           </DialogHeader>
           <ScrollArea className="max-h-[50vh]">
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 p-1">
-              {(fieldState[viewingZone] as MagicCard[])?.length === 0 && (
+              {viewingCards.length === 0 && (
                 <p className="col-span-full text-center text-sm text-muted-foreground py-8">
                   Zona vazia
                 </p>
               )}
-              {(fieldState[viewingZone] as MagicCard[])?.map((card) => (
+              {viewingCards.map((card) => (
                 <div
                   key={card.instanceId}
                   className="cursor-pointer hover:ring-2 ring-primary rounded overflow-hidden transition-all"
@@ -459,10 +432,11 @@ export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId }: Magi
                   }}
                 >
                   <img
-                    src={card.image_uris?.small || card.image_uris?.normal || ''}
+                    src={getMagicCardImage(card, 'small')}
                     alt={card.name}
                     className="w-full aspect-[63/88] object-cover"
                     loading="lazy"
+                    onError={(e) => { (e.target as HTMLImageElement).src = MTG_CARD_BACK; }}
                   />
                   <p className="text-[9px] text-center truncate px-0.5 py-0.5 bg-card">{card.name}</p>
                 </div>

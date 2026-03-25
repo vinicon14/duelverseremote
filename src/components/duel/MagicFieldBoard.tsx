@@ -6,12 +6,9 @@
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { Flame, Skull, Ban, Eye, EyeOff, RotateCw, Layers, Zap } from 'lucide-react';
-
-// Card back for MTG
-const MTG_CARD_BACK = 'https://backs.scryfall.io/large/59/2/0aeebaf5-8c7d-4636-9e82-8c27447861f7.jpg';
+import { Flame, Skull, Ban, Layers, Zap } from 'lucide-react';
+import { getMagicCardImage, MTG_CARD_BACK } from './mtgCardImage';
 
 export interface MagicCard {
   id: string;
@@ -21,8 +18,10 @@ export interface MagicCard {
   mana_cost?: string;
   power?: string;
   toughness?: string;
-  image_uris?: { normal: string; small: string; art_crop: string };
-  card_faces?: { image_uris?: { normal: string; small: string } }[];
+  image?: string;
+  image_url?: string;
+  image_uris?: Partial<{ normal: string; small: string; art_crop: string; large: string; png: string }>;
+  card_faces?: { image_uris?: Partial<{ normal: string; small: string; large: string; png: string }> }[];
   instanceId: string;
   isTapped?: boolean;
   isFaceDown?: boolean;
@@ -76,13 +75,6 @@ interface MagicFieldBoardProps {
   isFullscreen?: boolean;
 }
 
-const getCardImage = (card: MagicCard): string => {
-  if (card.isFaceDown) return MTG_CARD_BACK;
-  if (card.image_uris?.small) return card.image_uris.small;
-  if (card.card_faces?.[0]?.image_uris?.small) return card.card_faces[0].image_uris.small;
-  return MTG_CARD_BACK;
-};
-
 const CardSlot = ({
   card,
   zone,
@@ -99,8 +91,8 @@ const CardSlot = ({
   return (
     <div
       className={cn(
-        "relative w-[52px] h-[73px] sm:w-[64px] sm:h-[89px] rounded border border-border/40 cursor-pointer transition-all hover:border-primary/60 hover:shadow-md overflow-hidden flex-shrink-0",
-        card.isTapped && "rotate-90 origin-center mx-2"
+        'relative w-[52px] h-[73px] sm:w-[64px] sm:h-[89px] rounded border border-border/40 cursor-pointer transition-all hover:border-primary/60 hover:shadow-md overflow-hidden flex-shrink-0',
+        card.isTapped && 'rotate-90 origin-center mx-2'
       )}
       draggable
       onDragStart={(e) => onDragStart(e, card, zone)}
@@ -109,7 +101,7 @@ const CardSlot = ({
       title={`${card.name}${card.isTapped ? ' (Tapped)' : ''}${card.counters ? ` [${card.counters} counters]` : ''}`}
     >
       <img
-        src={getCardImage(card)}
+        src={getMagicCardImage(card, 'small')}
         alt={card.name}
         className="w-full h-full object-cover"
         loading="lazy"
@@ -137,6 +129,7 @@ const DropZone = ({
   onZoneClick,
   className,
   compact = false,
+  hideTopCard = false,
 }: {
   zone: MagicZoneType;
   label: string;
@@ -150,12 +143,16 @@ const DropZone = ({
   onZoneClick: (zone: MagicZoneType) => void;
   className?: string;
   compact?: boolean;
+  hideTopCard?: boolean;
 }) => {
   if (compact) {
+    const previewCard = cards[cards.length - 1];
+    const previewImage = hideTopCard ? MTG_CARD_BACK : getMagicCardImage(previewCard, 'small');
+
     return (
       <div
         className={cn(
-          "flex flex-col items-center gap-1 p-1 rounded-lg border border-border/30 bg-card/30 min-w-[60px] sm:min-w-[72px] cursor-pointer hover:bg-card/50 transition-colors",
+          'flex flex-col items-center gap-1 p-1 rounded-lg border border-border/30 bg-card/30 min-w-[60px] sm:min-w-[72px] cursor-pointer hover:bg-card/50 transition-colors',
           className
         )}
         onDragOver={onDragOver}
@@ -172,15 +169,16 @@ const DropZone = ({
         {cards.length > 0 && (
           <div
             className="w-[40px] h-[56px] sm:w-[48px] sm:h-[67px] rounded overflow-hidden border border-border/20"
-            draggable
+            draggable={!hideTopCard}
             onDragStart={(e) => {
+              if (hideTopCard || !previewCard) return;
               e.stopPropagation();
-              onDragStart(e, cards[cards.length - 1], zone);
+              onDragStart(e, previewCard, zone);
             }}
           >
             <img
-              src={getCardImage(cards[cards.length - 1])}
-              alt={cards[cards.length - 1].name}
+              src={previewImage}
+              alt={hideTopCard ? `${label} fechado` : previewCard?.name || label}
               className="w-full h-full object-cover"
               loading="lazy"
               onError={(e) => { (e.target as HTMLImageElement).src = MTG_CARD_BACK; }}
@@ -194,7 +192,7 @@ const DropZone = ({
   return (
     <div
       className={cn(
-        "rounded-lg border border-border/30 bg-card/20 p-2",
+        'rounded-lg border border-border/30 bg-card/20 p-2',
         className
       )}
       onDragOver={onDragOver}
@@ -258,14 +256,13 @@ export const MagicFieldBoard = ({
   };
 
   const advancePhase = () => {
-    const currentIdx = PHASES.findIndex(p => p.key === currentPhase);
+    const currentIdx = PHASES.findIndex((p) => p.key === currentPhase);
     const nextIdx = (currentIdx + 1) % PHASES.length;
     onPhaseChange(PHASES[nextIdx].key);
   };
 
   return (
     <div className="flex flex-col gap-2 h-full">
-      {/* Phase Tracker */}
       <div className="flex items-center gap-0.5 overflow-x-auto pb-1 px-1">
         {PHASES.map((phase) => (
           <Button
@@ -273,8 +270,8 @@ export const MagicFieldBoard = ({
             variant={currentPhase === phase.key ? 'default' : 'ghost'}
             size="sm"
             className={cn(
-              "text-[9px] sm:text-[10px] px-1.5 py-0.5 h-6 flex-shrink-0",
-              currentPhase === phase.key && "bg-primary text-primary-foreground shadow-sm"
+              'text-[9px] sm:text-[10px] px-1.5 py-0.5 h-6 flex-shrink-0',
+              currentPhase === phase.key && 'bg-primary text-primary-foreground shadow-sm'
             )}
             onClick={() => onPhaseChange(phase.key)}
             title={phase.label}
@@ -293,7 +290,6 @@ export const MagicFieldBoard = ({
         </Button>
       </div>
 
-      {/* Stack (spells being cast) */}
       {fieldState.stack.length > 0 && (
         <DropZone
           zone="stack"
@@ -309,9 +305,7 @@ export const MagicFieldBoard = ({
         />
       )}
 
-      {/* Main Battlefield area */}
       <div className="flex-1 flex flex-col gap-2 overflow-auto">
-        {/* Creatures / Permanents */}
         <DropZone
           zone="battlefield"
           label="Battlefield (Permanentes)"
@@ -326,7 +320,6 @@ export const MagicFieldBoard = ({
           className="flex-1 min-h-[100px] border-primary/20"
         />
 
-        {/* Lands */}
         <DropZone
           zone="lands"
           label="Lands (Terrenos)"
@@ -341,9 +334,7 @@ export const MagicFieldBoard = ({
         />
       </div>
 
-      {/* Bottom row: side zones + hand */}
       <div className="flex gap-2">
-        {/* Side zones */}
         <div className="flex flex-col gap-1.5 flex-shrink-0">
           <DropZone
             zone="library"
@@ -356,6 +347,7 @@ export const MagicFieldBoard = ({
             onDragStart={handleDragStart}
             onZoneClick={onZoneClick}
             compact
+            hideTopCard
           />
           <DropZone
             zone="graveyard"
@@ -385,7 +377,6 @@ export const MagicFieldBoard = ({
           />
         </div>
 
-        {/* Hand */}
         <DropZone
           zone="hand"
           label="Mão"
