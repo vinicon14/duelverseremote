@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Flame, Skull, Ban, Layers, Zap } from 'lucide-react';
+import { Flame, Skull, Ban, Layers, Zap, ZoomIn, ZoomOut, ChevronUp, ChevronDown } from 'lucide-react';
 import { getMagicCardImage, MTG_CARD_BACK } from './mtgCardImage';
 
 export interface MagicCard {
@@ -75,25 +75,36 @@ interface MagicFieldBoardProps {
   isFullscreen?: boolean;
 }
 
+const CARD_SIZES = [
+  { w: 44, h: 62 },  // 0 - tiny
+  { w: 52, h: 73 },  // 1 - small
+  { w: 60, h: 84 },  // 2 - medium (default)
+  { w: 72, h: 100 }, // 3 - large
+  { w: 88, h: 123 }, // 4 - xl
+];
+
 const CardSlot = ({
   card,
   zone,
   onCardClick,
   onDragStart,
   onTap,
+  size,
 }: {
   card: MagicCard;
   zone: MagicZoneType;
   onCardClick: (card: MagicCard, zone: MagicZoneType) => void;
   onDragStart: (e: React.DragEvent, card: MagicCard, zone: MagicZoneType) => void;
   onTap?: (card: MagicCard) => void;
+  size: { w: number; h: number };
 }) => {
   return (
     <div
       className={cn(
-        'relative w-[60px] h-[84px] sm:w-[72px] sm:h-[100px] md:w-[80px] md:h-[112px] rounded-md border border-border/40 cursor-pointer transition-all hover:border-primary/60 hover:shadow-lg hover:scale-105 overflow-hidden flex-shrink-0',
-        card.isTapped && 'rotate-90 origin-center mx-3'
+        'relative rounded-md border border-border/40 cursor-pointer transition-all hover:border-primary/60 hover:shadow-lg hover:scale-105 overflow-hidden flex-shrink-0',
+        card.isTapped && 'rotate-90 origin-center mx-2'
       )}
+      style={{ width: size.w, height: size.h }}
       draggable
       onDragStart={(e) => onDragStart(e, card, zone)}
       onClick={() => onCardClick(card, zone)}
@@ -112,9 +123,11 @@ const CardSlot = ({
           {card.counters}
         </div>
       )}
-      <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-[8px] sm:text-[9px] text-center truncate px-0.5 py-px">
-        {card.isFaceDown ? '???' : card.name}
-      </div>
+      {size.w >= 52 && (
+        <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-[7px] sm:text-[8px] text-center truncate px-0.5 py-px">
+          {card.isFaceDown ? '???' : card.name}
+        </div>
+      )}
     </div>
   );
 };
@@ -133,6 +146,7 @@ const DropZone = ({
   className,
   compact = false,
   hideTopCard = false,
+  cardSize,
 }: {
   zone: MagicZoneType;
   label: string;
@@ -147,6 +161,7 @@ const DropZone = ({
   className?: string;
   compact?: boolean;
   hideTopCard?: boolean;
+  cardSize: { w: number; h: number };
 }) => {
   if (compact) {
     const previewCard = cards[cards.length - 1];
@@ -208,7 +223,7 @@ const DropZone = ({
           {cards.length}
         </Badge>
       </div>
-      <div className="flex flex-wrap gap-1.5 sm:gap-2 min-h-[84px] sm:min-h-[100px] md:min-h-[112px]">
+      <div className="flex flex-wrap gap-1 sm:gap-1.5" style={{ minHeight: cardSize.h + 8 }}>
         {cards.length === 0 && (
           <div className="w-full flex items-center justify-center text-xs text-muted-foreground/50 italic">
             Arraste cartas aqui
@@ -222,6 +237,7 @@ const DropZone = ({
             onCardClick={onCardClick}
             onDragStart={onDragStart}
             onTap={onTap}
+            size={cardSize}
           />
         ))}
       </div>
@@ -239,6 +255,10 @@ export const MagicFieldBoard = ({
   onTapCard,
 }: MagicFieldBoardProps) => {
   const [dragData, setDragData] = useState<{ card: MagicCard; zone: MagicZoneType } | null>(null);
+  const [sizeIdx, setSizeIdx] = useState(1); // default small
+  const [handExpanded, setHandExpanded] = useState(false);
+
+  const cardSize = CARD_SIZES[sizeIdx];
 
   const handleDragStart = (e: React.DragEvent, card: MagicCard, zone: MagicZoneType) => {
     setDragData({ card, zone });
@@ -264,8 +284,18 @@ export const MagicFieldBoard = ({
     onPhaseChange(PHASES[nextIdx].key);
   };
 
+  const commonDropZoneProps = {
+    onDragOver: handleDragOver,
+    onDrop: handleDrop,
+    onCardClick,
+    onDragStart: handleDragStart,
+    onZoneClick,
+    cardSize,
+  };
+
   return (
-    <div className="flex flex-col gap-2 h-full">
+    <div className="flex flex-col gap-1.5 h-full">
+      {/* Phase bar + zoom controls */}
       <div className="flex items-center gap-0.5 overflow-x-auto pb-1 px-1">
         {PHASES.map((phase) => (
           <Button
@@ -282,15 +312,18 @@ export const MagicFieldBoard = ({
             {phase.short}
           </Button>
         ))}
-        <Button
-          variant="outline"
-          size="sm"
-          className="text-[10px] px-2 h-6 ml-1 flex-shrink-0"
-          onClick={advancePhase}
-        >
-          <Zap className="w-3 h-3 mr-1" />
-          Next
+        <Button variant="outline" size="sm" className="text-[10px] px-2 h-6 ml-1 flex-shrink-0" onClick={advancePhase}>
+          <Zap className="w-3 h-3 mr-1" /> Next
         </Button>
+        <div className="flex items-center gap-0.5 ml-auto flex-shrink-0">
+          <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setSizeIdx((i) => Math.max(0, i - 1))} disabled={sizeIdx === 0}>
+            <ZoomOut className="w-3.5 h-3.5" />
+          </Button>
+          <span className="text-[9px] text-muted-foreground w-4 text-center">{sizeIdx + 1}</span>
+          <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setSizeIdx((i) => Math.min(CARD_SIZES.length - 1, i + 1))} disabled={sizeIdx === CARD_SIZES.length - 1}>
+            <ZoomIn className="w-3.5 h-3.5" />
+          </Button>
+        </div>
       </div>
 
       {fieldState.stack.length > 0 && (
@@ -299,98 +332,64 @@ export const MagicFieldBoard = ({
           label="Stack"
           icon={<Layers className="w-3 h-3" />}
           cards={fieldState.stack}
-          onDragOver={handleDragOver}
-          onDrop={handleDrop}
-          onCardClick={onCardClick}
-          onDragStart={handleDragStart}
-          onZoneClick={onZoneClick}
+          {...commonDropZoneProps}
           className="border-amber-500/40 bg-amber-500/5"
         />
       )}
 
-      <div className="flex-1 flex flex-col gap-2 overflow-auto">
+      {/* Battlefield + Lands */}
+      <div className="flex-1 flex flex-col gap-1.5 overflow-auto min-h-0">
         <DropZone
           zone="battlefield"
-          label="Battlefield (Permanentes)"
+          label="Battlefield"
           icon={<Flame className="w-3 h-3" />}
           cards={fieldState.battlefield}
-          onDragOver={handleDragOver}
-          onDrop={handleDrop}
-          onCardClick={onCardClick}
-          onDragStart={handleDragStart}
+          {...commonDropZoneProps}
           onTap={onTapCard}
-          onZoneClick={onZoneClick}
-          className="flex-1 min-h-[100px] border-primary/20"
+          className="flex-1 min-h-[80px] border-primary/20"
         />
-
         <DropZone
           zone="lands"
-          label="Lands (Terrenos)"
+          label="Lands"
           cards={fieldState.lands}
-          onDragOver={handleDragOver}
-          onDrop={handleDrop}
-          onCardClick={onCardClick}
-          onDragStart={handleDragStart}
+          {...commonDropZoneProps}
           onTap={onTapCard}
-          onZoneClick={onZoneClick}
-          className="min-h-[80px] border-green-500/20 bg-green-500/5"
+          className="min-h-[60px] border-green-500/20 bg-green-500/5"
         />
       </div>
 
-      <div className="flex gap-2">
-        <div className="flex flex-col gap-1.5 flex-shrink-0">
-          <DropZone
-            zone="library"
-            label="Library"
-            icon={<Layers className="w-3 h-3" />}
-            cards={fieldState.library}
-            onDragOver={handleDragOver}
-            onDrop={handleDrop}
-            onCardClick={onCardClick}
-            onDragStart={handleDragStart}
-            onZoneClick={onZoneClick}
-            compact
-            hideTopCard
-          />
-          <DropZone
-            zone="graveyard"
-            label="Graveyard"
-            icon={<Skull className="w-3 h-3" />}
-            cards={fieldState.graveyard}
-            onDragOver={handleDragOver}
-            onDrop={handleDrop}
-            onCardClick={onCardClick}
-            onDragStart={handleDragStart}
-            onZoneClick={onZoneClick}
-            compact
-            className="border-red-500/20"
-          />
-          <DropZone
-            zone="exile"
-            label="Exile"
-            icon={<Ban className="w-3 h-3" />}
-            cards={fieldState.exile}
-            onDragOver={handleDragOver}
-            onDrop={handleDrop}
-            onCardClick={onCardClick}
-            onDragStart={handleDragStart}
-            onZoneClick={onZoneClick}
-            compact
-            className="border-purple-500/20"
-          />
+      {/* Bottom: side zones + hand */}
+      <div className="flex gap-1.5">
+        <div className="flex flex-col gap-1 flex-shrink-0">
+          <DropZone zone="library" label="Library" icon={<Layers className="w-3 h-3" />} cards={fieldState.library} {...commonDropZoneProps} compact hideTopCard />
+          <DropZone zone="graveyard" label="Grave" icon={<Skull className="w-3 h-3" />} cards={fieldState.graveyard} {...commonDropZoneProps} compact className="border-red-500/20" />
+          <DropZone zone="exile" label="Exile" icon={<Ban className="w-3 h-3" />} cards={fieldState.exile} {...commonDropZoneProps} compact className="border-purple-500/20" />
         </div>
 
-        <DropZone
-          zone="hand"
-          label="Mão"
-          cards={fieldState.hand}
-          onDragOver={handleDragOver}
-          onDrop={handleDrop}
-          onCardClick={onCardClick}
-          onDragStart={handleDragStart}
-          onZoneClick={onZoneClick}
-          className="flex-1 border-blue-500/20 bg-blue-500/5"
-        />
+        <div className="flex-1 flex flex-col min-w-0">
+          {/* Hand toggle */}
+          <button
+            className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors px-1 pb-0.5"
+            onClick={() => setHandExpanded((e) => !e)}
+          >
+            {handExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
+            Mão ({fieldState.hand.length}) — {handExpanded ? 'minimizar' : 'expandir'}
+          </button>
+          <div
+            className={cn(
+              'transition-all overflow-auto rounded-lg border border-blue-500/20 bg-blue-500/5',
+              handExpanded ? 'max-h-[40vh]' : 'max-h-[90px] sm:max-h-[110px]'
+            )}
+          >
+            <DropZone
+              zone="hand"
+              label="Mão"
+              cards={fieldState.hand}
+              {...commonDropZoneProps}
+              className="border-0 bg-transparent"
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
