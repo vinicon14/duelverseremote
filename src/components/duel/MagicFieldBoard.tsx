@@ -367,7 +367,7 @@ export const MagicFieldBoard = ({
 
   return (
     <div
-      className="relative flex h-full flex-col gap-1.5 overflow-hidden rounded-lg border border-border/50 p-2 sm:p-3"
+      className="relative flex h-full flex-col gap-1.5 overflow-y-auto rounded-lg border border-border/50 p-2 sm:p-3"
       style={getPlaymatStyle(playmatUrl)}
     >
       {playmatUrl && <div className="pointer-events-none absolute inset-0 bg-background/50" />}
@@ -436,7 +436,7 @@ export const MagicFieldBoard = ({
         </div>
       )}
 
-      <div className="relative z-10 grid min-h-0 flex-1 grid-rows-[minmax(96px,1fr)_minmax(96px,1fr)_auto] gap-1.5">
+      <div className="relative z-10 flex flex-col gap-1.5">
         <DropZone
           zone="battlefield"
           label="Battlefield"
