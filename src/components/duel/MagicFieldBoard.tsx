@@ -337,29 +337,25 @@ export const MagicFieldBoard = ({
         />
       )}
 
-      {/* Battlefield + Lands - take all remaining space */}
-      <div className="flex-1 flex flex-col gap-1.5 min-h-0 overflow-hidden">
-        <div className="flex-[3] overflow-auto min-h-[100px]">
-          <DropZone
-            zone="battlefield"
-            label="Battlefield"
-            icon={<Flame className="w-3 h-3" />}
-            cards={fieldState.battlefield}
-            {...commonDropZoneProps}
-            onTap={onTapCard}
-            className="h-full border-primary/20"
-          />
-        </div>
-        <div className="flex-[2] overflow-auto min-h-[80px]">
-          <DropZone
-            zone="lands"
-            label="Lands"
-            cards={fieldState.lands}
-            {...commonDropZoneProps}
-            onTap={onTapCard}
-            className="h-full border-green-500/20 bg-green-500/5"
-          />
-        </div>
+      {/* Battlefield + Lands - fill remaining space equally */}
+      <div className="flex-1 flex flex-col gap-1 min-h-0">
+        <DropZone
+          zone="battlefield"
+          label="Battlefield"
+          icon={<Flame className="w-3 h-3" />}
+          cards={fieldState.battlefield}
+          {...commonDropZoneProps}
+          onTap={onTapCard}
+          className="flex-1 min-h-0 border-primary/20"
+        />
+        <DropZone
+          zone="lands"
+          label="Lands"
+          cards={fieldState.lands}
+          {...commonDropZoneProps}
+          onTap={onTapCard}
+          className="flex-1 min-h-0 border-green-500/20 bg-green-500/5"
+        />
       </div>
 
       {/* Bottom: side zones + hand - fixed height */}
