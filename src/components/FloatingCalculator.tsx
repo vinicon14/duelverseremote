@@ -219,18 +219,27 @@ export const FloatingCalculator = ({
                 </Button>
               ))}
             </div>
-            <div className="grid grid-cols-3 gap-2">
-              {lpButtonsRow2.map(btn => (
-                <Button key={btn.label} size="sm" variant="outline" onClick={() => onUpdateLP(player.key, btn.amount)} className="text-xs">
-                  {btn.amount < 0 ? <Minus className="w-3 h-3 mr-1" /> : <Plus className="w-3 h-3 mr-1" />}
-                  {btn.label.replace(/^[+-]/, '')}
+            {lpButtonsRow2.length > 0 ? (
+              <div className="grid grid-cols-3 gap-2">
+                {lpButtonsRow2.map(btn => (
+                  <Button key={btn.label} size="sm" variant="outline" onClick={() => onUpdateLP(player.key, btn.amount)} className="text-xs">
+                    {btn.amount < 0 ? <Minus className="w-3 h-3 mr-1" /> : <Plus className="w-3 h-3 mr-1" />}
+                    {btn.label.replace(/^[+-]/, '')}
+                  </Button>
+                ))}
+                <Button size="sm" variant="destructive" onClick={() => onSetLP(player.key, defaultLP)} className="text-xs" title={`Resetar LP para ${defaultLP}`}>
+                  <RotateCcw className="w-3 h-3 mr-1" />
+                  Reset
                 </Button>
-              ))}
-              <Button size="sm" variant="destructive" onClick={() => onSetLP(player.key, defaultLP)} className="text-xs" title={`Resetar LP para ${defaultLP}`}>
-                <RotateCcw className="w-3 h-3 mr-1" />
-                Reset
-              </Button>
-            </div>
+              </div>
+            ) : (
+              <div className="flex justify-end">
+                <Button size="sm" variant="destructive" onClick={() => onSetLP(player.key, defaultLP)} className="text-xs" title={`Resetar para ${defaultLP}`}>
+                  <RotateCcw className="w-3 h-3 mr-1" />
+                  Reset
+                </Button>
+              </div>
+            )}
           </>
         )}
       </div>
