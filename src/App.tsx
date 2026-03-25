@@ -46,6 +46,7 @@ import NotFound from "./pages/NotFound";
 
 import DeckBuilder from "./pages/DeckBuilder";
 import MagicDeckBuilder from "./pages/MagicDeckBuilder";
+import PokemonDeckBuilder from "./pages/PokemonDeckBuilder";
 import ProfileSelect from "./pages/ProfileSelect";
 import CreateWeeklyTournament from "./pages/CreateWeeklyTournament";
 import WeeklyTournaments from "./pages/WeeklyTournaments";
@@ -92,6 +93,7 @@ const RouterContent = ({ user }: { user: User | null }) => {
       
       <Route path="/deck-builder" element={<DeckBuilder />} />
       <Route path="/magic-deck-builder" element={<MagicDeckBuilder />} />
+      <Route path="/pokemon-deck-builder" element={<PokemonDeckBuilder />} />
       <Route path="/profile-select" element={<ProfileSelect />} />
       <Route path="/weekly-tournaments" element={<WeeklyTournaments />} />
       <Route path="/create-weekly-tournament" element={<CreateWeeklyTournament />} />

@@ -10,7 +10,7 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { PhoneOff, Loader2, Scale, Layers, Sparkles } from "lucide-react";
+import { PhoneOff, Loader2, Scale, Layers, Sparkles, Zap } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { DuelChat } from "@/components/DuelChat";
 import { FloatingCalculator } from "@/components/FloatingCalculator";
@@ -20,6 +20,7 @@ import { useBanCheck } from "@/hooks/useBanCheck";
 import { DuelDeckViewer } from "@/components/duel/DuelDeckViewer";
 import { FloatingOpponentViewer } from "@/components/duel/FloatingOpponentViewer";
 import { MagicDuelViewer } from "@/components/duel/MagicDuelViewer";
+import { PokemonDuelViewer } from "@/components/duel/PokemonDuelViewer";
 import { useDuelDeck } from "@/hooks/useDuelDeck";
 import { useDuelPresence, useDuelCleanup } from "@/hooks/useDuelPresence";
 
@@ -37,6 +38,7 @@ const DuelRoom = () => {
   const [player4LP, setPlayer4LP] = useState(8000);
   const [customCounters, setCustomCounters] = useState<{ id: string; name: string; value: number }[]>([]);
   const [showMagicViewer, setShowMagicViewer] = useState(false);
+  const [showPokemonViewer, setShowPokemonViewer] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
   const [roomUrl, setRoomUrl] = useState<string>('');
   const [isTimerPaused, setIsTimerPaused] = useState(false);
@@ -918,6 +920,16 @@ const DuelRoom = () => {
                         >
                           <Sparkles className="w-3 h-3 sm:w-4 sm:h-4" />
                         </Button>
+                      ) : duel?.tcg_type === 'pokemon' ? (
+                        <Button
+                          onClick={() => setShowPokemonViewer(!showPokemonViewer)}
+                          variant="outline"
+                          size="sm"
+                          className="bg-yellow-500/95 hover:bg-yellow-600 text-white backdrop-blur-sm text-xs sm:text-sm"
+                          title="Abrir Arena Pokémon"
+                        >
+                          <Zap className="w-3 h-3 sm:w-4 sm:h-4" />
+                        </Button>
                       ) : (
                         <Button
                           onClick={() => setShowDeckViewer(!showDeckViewer)}
@@ -1032,6 +1044,14 @@ const DuelRoom = () => {
             }
           />
         </>
+      )}
+
+      {/* Pokemon Arena Viewer */}
+      {isParticipant && !isJudge && duel?.tcg_type === 'pokemon' && showPokemonViewer && currentUser && id && (
+        <PokemonDuelViewer
+          duelId={id}
+          currentUserId={currentUser.id}
+        />
       )}
 
       {/* Magic Arena Viewer */}
