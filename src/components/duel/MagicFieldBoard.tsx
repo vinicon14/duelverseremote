@@ -91,8 +91,8 @@ const CardSlot = ({
   return (
     <div
       className={cn(
-        'relative w-[52px] h-[73px] sm:w-[64px] sm:h-[89px] rounded border border-border/40 cursor-pointer transition-all hover:border-primary/60 hover:shadow-md overflow-hidden flex-shrink-0',
-        card.isTapped && 'rotate-90 origin-center mx-2'
+        'relative w-[60px] h-[84px] sm:w-[72px] sm:h-[100px] md:w-[80px] md:h-[112px] rounded-md border border-border/40 cursor-pointer transition-all hover:border-primary/60 hover:shadow-lg hover:scale-105 overflow-hidden flex-shrink-0',
+        card.isTapped && 'rotate-90 origin-center mx-3'
       )}
       draggable
       onDragStart={(e) => onDragStart(e, card, zone)}
@@ -108,10 +108,13 @@ const CardSlot = ({
         onError={(e) => { (e.target as HTMLImageElement).src = MTG_CARD_BACK; }}
       />
       {card.counters && card.counters > 0 && (
-        <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-[9px] px-1 rounded-bl font-bold">
+        <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-[10px] px-1.5 rounded-bl font-bold">
           {card.counters}
         </div>
       )}
+      <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-[8px] sm:text-[9px] text-center truncate px-0.5 py-px">
+        {card.isFaceDown ? '???' : card.name}
+      </div>
     </div>
   );
 };
@@ -192,23 +195,23 @@ const DropZone = ({
   return (
     <div
       className={cn(
-        'rounded-lg border border-border/30 bg-card/20 p-2',
+        'rounded-lg border border-border/30 bg-card/20 p-2 sm:p-3',
         className
       )}
       onDragOver={onDragOver}
       onDrop={(e) => onDrop(e, zone)}
     >
-      <div className="flex items-center gap-1 mb-1.5">
+      <div className="flex items-center gap-1.5 mb-2">
         {icon}
-        <span className="text-[11px] font-medium text-muted-foreground">{label}</span>
+        <span className="text-[11px] sm:text-xs font-medium text-muted-foreground">{label}</span>
         <Badge variant="secondary" className="text-[10px] px-1.5 ml-auto">
           {cards.length}
         </Badge>
       </div>
-      <div className="flex flex-wrap gap-1 min-h-[73px] sm:min-h-[89px]">
+      <div className="flex flex-wrap gap-1.5 sm:gap-2 min-h-[84px] sm:min-h-[100px] md:min-h-[112px]">
         {cards.length === 0 && (
-          <div className="w-full flex items-center justify-center text-[10px] text-muted-foreground/50">
-            Vazio
+          <div className="w-full flex items-center justify-center text-xs text-muted-foreground/50 italic">
+            Arraste cartas aqui
           </div>
         )}
         {cards.map((card) => (
