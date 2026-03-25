@@ -984,8 +984,8 @@ const DuelRoom = () => {
           player2Name={duel.opponent?.username || 'Player 2'}
           player1LP={player1LP}
           player2LP={player2LP}
-          player3Name={(duel as any).player3_id ? 'Player 3' : undefined}
-          player4Name={(duel as any).player4_id ? 'Player 4' : undefined}
+          player3Name={(duel as any).player3_id ? 'Player 3' : ((duel as any).max_players >= 3 ? 'Player 3 (aguardando)' : undefined)}
+          player4Name={(duel as any).player4_id ? 'Player 4' : ((duel as any).max_players >= 4 ? 'Player 4 (aguardando)' : undefined)}
           player3LP={player3LP}
           player4LP={player4LP}
           maxPlayers={(duel as any).max_players || 2}
