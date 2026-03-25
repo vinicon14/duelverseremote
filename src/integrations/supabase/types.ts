@@ -345,18 +345,21 @@ export type Database = {
           created_at: string
           id: string
           message: string
+          tcg_type: string
           user_id: string
         }
         Insert: {
           created_at?: string
           id?: string
           message: string
+          tcg_type?: string
           user_id: string
         }
         Update: {
           created_at?: string
           id?: string
           message?: string
+          tcg_type?: string
           user_id?: string
         }
         Relationships: []
@@ -499,6 +502,7 @@ export type Database = {
           room_name: string | null
           started_at: string | null
           status: Database["public"]["Enums"]["game_status"]
+          tcg_type: string
           winner_id: string | null
         }
         Insert: {
@@ -517,6 +521,7 @@ export type Database = {
           room_name?: string | null
           started_at?: string | null
           status?: Database["public"]["Enums"]["game_status"]
+          tcg_type?: string
           winner_id?: string | null
         }
         Update: {
@@ -535,6 +540,7 @@ export type Database = {
           room_name?: string | null
           started_at?: string | null
           status?: Database["public"]["Enums"]["game_status"]
+          tcg_type?: string
           winner_id?: string | null
         }
         Relationships: [
@@ -852,6 +858,7 @@ export type Database = {
           joined_at: string
           match_type: string
           status: string
+          tcg_type: string
           user_id: string
         }
         Insert: {
@@ -861,6 +868,7 @@ export type Database = {
           joined_at?: string
           match_type: string
           status?: string
+          tcg_type?: string
           user_id: string
         }
         Update: {
@@ -870,6 +878,7 @@ export type Database = {
           joined_at?: string
           match_type?: string
           status?: string
+          tcg_type?: string
           user_id?: string
         }
         Relationships: [
@@ -1159,6 +1168,7 @@ export type Database = {
           main_deck: Json
           name: string
           side_deck: Json
+          tcg_type: string
           tokens_deck: Json
           updated_at: string
           user_id: string
@@ -1172,6 +1182,7 @@ export type Database = {
           main_deck?: Json
           name: string
           side_deck?: Json
+          tcg_type?: string
           tokens_deck?: Json
           updated_at?: string
           user_id: string
@@ -1185,6 +1196,7 @@ export type Database = {
           main_deck?: Json
           name?: string
           side_deck?: Json
+          tcg_type?: string
           tokens_deck?: Json
           updated_at?: string
           user_id?: string
@@ -1254,6 +1266,48 @@ export type Database = {
           key?: string
           updated_at?: string | null
           value?: string | null
+        }
+        Relationships: []
+      }
+      tcg_profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          id: string
+          level: number
+          losses: number
+          points: number
+          tcg_type: string
+          updated_at: string
+          user_id: string
+          username: string
+          wins: number
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          id?: string
+          level?: number
+          losses?: number
+          points?: number
+          tcg_type?: string
+          updated_at?: string
+          user_id: string
+          username: string
+          wins?: number
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          id?: string
+          level?: number
+          losses?: number
+          points?: number
+          tcg_type?: string
+          updated_at?: string
+          user_id?: string
+          username?: string
+          wins?: number
         }
         Relationships: []
       }
@@ -1455,6 +1509,7 @@ export type Database = {
           rules: string | null
           start_date: string
           status: string
+          tcg_type: string
           total_collected: number | null
           total_prize: number
           total_rounds: number | null
@@ -1479,6 +1534,7 @@ export type Database = {
           rules?: string | null
           start_date: string
           status?: string
+          tcg_type?: string
           total_collected?: number | null
           total_prize?: number
           total_rounds?: number | null
@@ -1503,6 +1559,7 @@ export type Database = {
           rules?: string | null
           start_date?: string
           status?: string
+          tcg_type?: string
           total_collected?: number | null
           total_prize?: number
           total_rounds?: number | null
