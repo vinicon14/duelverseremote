@@ -1,0 +1,160 @@
+/**
+ * DuelVerse - Seleção de Perfil TCG
+ * 
+ * Tela pós-login para selecionar ou criar perfil por TCG.
+ */
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useTcg, TcgType } from '@/contexts/TcgContext';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Swords, Sparkles, Plus, Crown, ChevronRight } from 'lucide-react';
+import { toast } from 'sonner';
+
+const TCG_CONFIG: Record<TcgType, { name: string; icon: React.ReactNode; color: string; gradient: string; description: string }> = {
+  yugioh: {
+    name: "Yu-Gi-Oh!",
+    icon: <Swords className="w-10 h-10" />,
+    color: "text-purple-400",
+    gradient: "from-purple-600 to-pink-600",
+    description: "Duele com monstros, magias e armadilhas no TCG clássico!"
+  },
+  magic: {
+    name: "Magic: The Gathering",
+    icon: <Sparkles className="w-10 h-10" />,
+    color: "text-amber-400",
+    gradient: "from-amber-600 to-red-700",
+    description: "Explore os planos de MTG com criaturas, feitiços e planeswalkers!"
+  }
+};
+
+export default function ProfileSelect() {
+  const navigate = useNavigate();
+  const { profiles, switchProfile, createProfile, isLoading } = useTcg();
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [selectedTcg, setSelectedTcg] = useState<TcgType>('yugioh');
+  const [newUsername, setNewUsername] = useState('');
+  const [creating, setCreating] = useState(false);
+
+  const handleSelectProfile = (profileId: string) => {
+    switchProfile(profileId);
+    navigate('/');
+  };
+
+  const handleOpenCreate = (tcg: TcgType) => {
+    setSelectedTcg(tcg);
+    setNewUsername('');
+    setCreateDialogOpen(true);
+  };
+
+  const handleCreate = async () => {
+    if (!newUsername.trim()) {
+      toast.error('Digite um nome de usuário');
+      return;
+    }
+    setCreating(true);
+    const success = await createProfile(selectedTcg, newUsername.trim());
+    setCreating(false);
+    if (success) {
+      toast.success(`Perfil ${TCG_CONFIG[selectedTcg].name} criado!`);
+      setCreateDialogOpen(false);
+      navigate('/');
+    } else {
+      toast.error('Erro ao criar perfil. Talvez já exista um para esse TCG.');
+    }
+  };
+
+  const existingTcgs = new Set(profiles.map(p => p.tcg_type));
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+      <div className="text-center mb-10">
+        <h1 className="text-4xl font-bold text-gradient-mystic mb-2">DUELVERSE</h1>
+        <p className="text-muted-foreground text-lg">Selecione seu perfil de jogo</p>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl w-full mb-8">
+        {profiles.map(profile => {
+          const config = TCG_CONFIG[profile.tcg_type as TcgType];
+          return (
+            <Card
+              key={profile.id}
+              className="cursor-pointer hover:border-primary/60 transition-all group card-mystic"
+              onClick={() => handleSelectProfile(profile.id)}
+            >
+              <CardHeader className="pb-3">
+                <div className={`${config.color} mb-2`}>{config.icon}</div>
+                <CardTitle className="flex items-center gap-2">
+                  {config.name}
+                  <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </CardTitle>
+                <CardDescription>{profile.username}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-4 text-sm text-muted-foreground">
+                  <span className="text-green-400">{profile.wins}W</span>
+                  <span className="text-red-400">{profile.losses}L</span>
+                  <span className="text-primary">{profile.points} pts</span>
+                  <span className="flex items-center gap-1"><Crown className="w-3 h-3" /> Lv.{profile.level}</span>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      {/* Create new profile buttons */}
+      <div className="flex gap-4">
+        {(Object.keys(TCG_CONFIG) as TcgType[])
+          .filter(tcg => !existingTcgs.has(tcg))
+          .map(tcg => (
+            <Button
+              key={tcg}
+              variant="outline"
+              onClick={() => handleOpenCreate(tcg)}
+              className="gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              Criar perfil {TCG_CONFIG[tcg].name}
+            </Button>
+          ))
+        }
+      </div>
+
+      {/* Create profile dialog */}
+      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <span className={TCG_CONFIG[selectedTcg].color}>{TCG_CONFIG[selectedTcg].icon}</span>
+              Criar perfil {TCG_CONFIG[selectedTcg].name}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">{TCG_CONFIG[selectedTcg].description}</p>
+          <Input
+            placeholder="Nome de usuário para este TCG"
+            value={newUsername}
+            onChange={e => setNewUsername(e.target.value)}
+            maxLength={20}
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleCreate} disabled={creating}>
+              {creating ? 'Criando...' : 'Criar Perfil'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
