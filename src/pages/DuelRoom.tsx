@@ -896,16 +896,28 @@ const DuelRoom = () => {
                 <>
                   {isParticipant && !isJudge && (
                     <>
-                      {/* Botão do Deck */}
-                      <Button
-                        onClick={() => setShowDeckViewer(!showDeckViewer)}
-                        variant="outline"
-                        size="sm"
-                        className="bg-amber-600/95 hover:bg-amber-700 text-white backdrop-blur-sm text-xs sm:text-sm"
-                        title="Abrir Deck"
-                      >
-                        <Layers className="w-3 h-3 sm:w-4 sm:h-4" />
-                      </Button>
+                      {/* Botão do Deck - YGO ou Magic */}
+                      {duel?.tcg_type === 'magic' ? (
+                        <Button
+                          onClick={() => setShowMagicViewer(!showMagicViewer)}
+                          variant="outline"
+                          size="sm"
+                          className="bg-amber-600/95 hover:bg-amber-700 text-white backdrop-blur-sm text-xs sm:text-sm"
+                          title="Abrir Arena Magic"
+                        >
+                          <Sparkles className="w-3 h-3 sm:w-4 sm:h-4" />
+                        </Button>
+                      ) : (
+                        <Button
+                          onClick={() => setShowDeckViewer(!showDeckViewer)}
+                          variant="outline"
+                          size="sm"
+                          className="bg-amber-600/95 hover:bg-amber-700 text-white backdrop-blur-sm text-xs sm:text-sm"
+                          title="Abrir Deck"
+                        >
+                          <Layers className="w-3 h-3 sm:w-4 sm:h-4" />
+                        </Button>
+                      )}
                       <Button
                         onClick={callJudge}
                         disabled={judgeCalled}
