@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Flame, Skull, Ban, Layers, Zap } from 'lucide-react';
+import { Flame, Skull, Ban, Layers, Zap, ZoomIn, ZoomOut, ChevronUp, ChevronDown } from 'lucide-react';
 import { getMagicCardImage, MTG_CARD_BACK } from './mtgCardImage';
 
 export interface MagicCard {
@@ -75,25 +75,36 @@ interface MagicFieldBoardProps {
   isFullscreen?: boolean;
 }
 
+const CARD_SIZES = [
+  { w: 44, h: 62 },  // 0 - tiny
+  { w: 52, h: 73 },  // 1 - small
+  { w: 60, h: 84 },  // 2 - medium (default)
+  { w: 72, h: 100 }, // 3 - large
+  { w: 88, h: 123 }, // 4 - xl
+];
+
 const CardSlot = ({
   card,
   zone,
   onCardClick,
   onDragStart,
   onTap,
+  size,
 }: {
   card: MagicCard;
   zone: MagicZoneType;
   onCardClick: (card: MagicCard, zone: MagicZoneType) => void;
   onDragStart: (e: React.DragEvent, card: MagicCard, zone: MagicZoneType) => void;
   onTap?: (card: MagicCard) => void;
+  size: { w: number; h: number };
 }) => {
   return (
     <div
       className={cn(
-        'relative w-[60px] h-[84px] sm:w-[72px] sm:h-[100px] md:w-[80px] md:h-[112px] rounded-md border border-border/40 cursor-pointer transition-all hover:border-primary/60 hover:shadow-lg hover:scale-105 overflow-hidden flex-shrink-0',
-        card.isTapped && 'rotate-90 origin-center mx-3'
+        'relative rounded-md border border-border/40 cursor-pointer transition-all hover:border-primary/60 hover:shadow-lg hover:scale-105 overflow-hidden flex-shrink-0',
+        card.isTapped && 'rotate-90 origin-center mx-2'
       )}
+      style={{ width: size.w, height: size.h }}
       draggable
       onDragStart={(e) => onDragStart(e, card, zone)}
       onClick={() => onCardClick(card, zone)}
@@ -112,9 +123,11 @@ const CardSlot = ({
           {card.counters}
         </div>
       )}
-      <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-[8px] sm:text-[9px] text-center truncate px-0.5 py-px">
-        {card.isFaceDown ? '???' : card.name}
-      </div>
+      {size.w >= 52 && (
+        <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-[7px] sm:text-[8px] text-center truncate px-0.5 py-px">
+          {card.isFaceDown ? '???' : card.name}
+        </div>
+      )}
     </div>
   );
 };
