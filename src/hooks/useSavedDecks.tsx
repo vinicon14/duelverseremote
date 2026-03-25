@@ -37,7 +37,7 @@ interface RawSavedDeck {
   updated_at: string;
 }
 
-export const useSavedDecks = () => {
+export const useSavedDecks = (tcgType: string = 'yugioh') => {
   const [savedDecks, setSavedDecks] = useState<SavedDeck[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState<string | null>(null);
@@ -65,6 +65,7 @@ export const useSavedDecks = () => {
         .from('saved_decks')
         .select('*')
         .eq('user_id', currentUser)
+        .eq('tcg_type', tcgType)
         .order('updated_at', { ascending: false });
 
       if (error) throw error;
@@ -85,7 +86,7 @@ export const useSavedDecks = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [currentUser]);
+  }, [currentUser, tcgType]);
 
   useEffect(() => {
     if (currentUser) {
@@ -120,6 +121,7 @@ export const useSavedDecks = () => {
         side_deck: JSON.parse(JSON.stringify(sideDeck)),
         tokens_deck: JSON.parse(JSON.stringify(tokensDeck)),
         is_public: isPublic || false,
+        tcg_type: tcgType,
       };
 
       if (existingId) {
