@@ -920,6 +920,16 @@ const DuelRoom = () => {
                         >
                           <Sparkles className="w-3 h-3 sm:w-4 sm:h-4" />
                         </Button>
+                      ) : duel?.tcg_type === 'pokemon' ? (
+                        <Button
+                          onClick={() => setShowPokemonViewer(!showPokemonViewer)}
+                          variant="outline"
+                          size="sm"
+                          className="bg-yellow-500/95 hover:bg-yellow-600 text-white backdrop-blur-sm text-xs sm:text-sm"
+                          title="Abrir Arena Pokémon"
+                        >
+                          <Zap className="w-3 h-3 sm:w-4 sm:h-4" />
+                        </Button>
                       ) : (
                         <Button
                           onClick={() => setShowDeckViewer(!showDeckViewer)}
