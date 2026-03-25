@@ -121,6 +121,7 @@ export const useSavedDecks = (tcgType: string = 'yugioh') => {
         side_deck: JSON.parse(JSON.stringify(sideDeck)),
         tokens_deck: JSON.parse(JSON.stringify(tokensDeck)),
         is_public: isPublic || false,
+        tcg_type: tcgType,
       };
 
       if (existingId) {
