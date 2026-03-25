@@ -20,9 +20,11 @@ import { useBanCheck } from "@/hooks/useBanCheck";
 import { AdPopup } from "@/components/AdPopup";
 import { GlobalChat } from "@/components/GlobalChat";
 import { cleanupAllEmptyDuels } from "@/hooks/useDuelPresence";
+import { useTcg } from "@/contexts/TcgContext";
 
 const Duels = () => {
-  useBanCheck(); // Proteger contra usuários banidos
+  useBanCheck();
+  const { activeTcg } = useTcg();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [duels, setDuels] = useState<any[]>([]);
@@ -38,7 +40,6 @@ const Duels = () => {
     checkAuth();
     fetchDuels();
     
-    // Limpar salas vazias ao carregar a página
     const cleanupEmptyRooms = async () => {
       try {
         await cleanupAllEmptyDuels();
@@ -67,7 +68,7 @@ const Duels = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [activeTcg]);
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -85,6 +86,7 @@ const Duels = () => {
           creator:profiles!live_duels_creator_id_fkey(username, avatar_url),
           opponent:profiles!live_duels_opponent_id_fkey(username, avatar_url)
         `)
+        .eq('tcg_type', activeTcg)
         .in('status', ['waiting', 'in_progress'])
         .order('created_at', { ascending: false });
 
@@ -147,6 +149,7 @@ const Duels = () => {
           status: 'waiting',
           is_ranked: isRanked,
           duration_minutes: durationMinutes,
+          tcg_type: activeTcg,
         })
         .select()
         .single();
