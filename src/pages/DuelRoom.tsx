@@ -10,7 +10,7 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { PhoneOff, Loader2, Scale, Layers } from "lucide-react";
+import { PhoneOff, Loader2, Scale, Layers, Sparkles } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { DuelChat } from "@/components/DuelChat";
 import { FloatingCalculator } from "@/components/FloatingCalculator";
@@ -19,6 +19,7 @@ import { HideElementsButton } from "@/components/HideElementsButton";
 import { useBanCheck } from "@/hooks/useBanCheck";
 import { DuelDeckViewer } from "@/components/duel/DuelDeckViewer";
 import { FloatingOpponentViewer } from "@/components/duel/FloatingOpponentViewer";
+import { MagicDuelViewer } from "@/components/duel/MagicDuelViewer";
 import { useDuelDeck } from "@/hooks/useDuelDeck";
 import { useDuelPresence, useDuelCleanup } from "@/hooks/useDuelPresence";
 
@@ -32,6 +33,7 @@ const DuelRoom = () => {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [player1LP, setPlayer1LP] = useState(8000);
   const [player2LP, setPlayer2LP] = useState(8000);
+  const [showMagicViewer, setShowMagicViewer] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
   const [roomUrl, setRoomUrl] = useState<string>('');
   const [isTimerPaused, setIsTimerPaused] = useState(false);
