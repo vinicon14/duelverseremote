@@ -65,11 +65,16 @@ export const FloatingCalculator = ({
   onRemoveCustomCounter,
 }: FloatingCalculatorProps) => {
   const isMagic = tcgType === 'magic';
-  const defaultLP = isMagic ? 40 : 8000;
-  const lpButtons = isMagic
+  const isPokemon = tcgType === 'pokemon';
+  const defaultLP = isPokemon ? 6 : isMagic ? 40 : 8000;
+  const lpButtons = isPokemon
+    ? { row1: [{ label: '-2', amount: -2 }, { label: '-1', amount: -1 }, { label: '+1', amount: 1 }, { label: '+2', amount: 2 }] }
+    : isMagic
     ? { row1: [{ label: '-5', amount: -5 }, { label: '-1', amount: -1 }, { label: '+1', amount: 1 }, { label: '+5', amount: 5 }] }
     : { row1: [{ label: '-1k', amount: -1000 }, { label: '-500', amount: -500 }, { label: '+500', amount: 500 }, { label: '+1k', amount: 1000 }] };
-  const lpButtonsRow2 = isMagic
+  const lpButtonsRow2 = isPokemon
+    ? []
+    : isMagic
     ? [{ label: '-10', amount: -10 }, { label: '+10', amount: 10 }]
     : [{ label: '-100', amount: -100 }, { label: '+100', amount: 100 }];
 
@@ -214,18 +219,27 @@ export const FloatingCalculator = ({
                 </Button>
               ))}
             </div>
-            <div className="grid grid-cols-3 gap-2">
-              {lpButtonsRow2.map(btn => (
-                <Button key={btn.label} size="sm" variant="outline" onClick={() => onUpdateLP(player.key, btn.amount)} className="text-xs">
-                  {btn.amount < 0 ? <Minus className="w-3 h-3 mr-1" /> : <Plus className="w-3 h-3 mr-1" />}
-                  {btn.label.replace(/^[+-]/, '')}
+            {lpButtonsRow2.length > 0 ? (
+              <div className="grid grid-cols-3 gap-2">
+                {lpButtonsRow2.map(btn => (
+                  <Button key={btn.label} size="sm" variant="outline" onClick={() => onUpdateLP(player.key, btn.amount)} className="text-xs">
+                    {btn.amount < 0 ? <Minus className="w-3 h-3 mr-1" /> : <Plus className="w-3 h-3 mr-1" />}
+                    {btn.label.replace(/^[+-]/, '')}
+                  </Button>
+                ))}
+                <Button size="sm" variant="destructive" onClick={() => onSetLP(player.key, defaultLP)} className="text-xs" title={`Resetar LP para ${defaultLP}`}>
+                  <RotateCcw className="w-3 h-3 mr-1" />
+                  Reset
                 </Button>
-              ))}
-              <Button size="sm" variant="destructive" onClick={() => onSetLP(player.key, defaultLP)} className="text-xs" title={`Resetar LP para ${defaultLP}`}>
-                <RotateCcw className="w-3 h-3 mr-1" />
-                Reset
-              </Button>
-            </div>
+              </div>
+            ) : (
+              <div className="flex justify-end">
+                <Button size="sm" variant="destructive" onClick={() => onSetLP(player.key, defaultLP)} className="text-xs" title={`Resetar para ${defaultLP}`}>
+                  <RotateCcw className="w-3 h-3 mr-1" />
+                  Reset
+                </Button>
+              </div>
+            )}
           </>
         )}
       </div>
