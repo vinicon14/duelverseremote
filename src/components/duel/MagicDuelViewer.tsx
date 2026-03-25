@@ -233,6 +233,8 @@ export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId }: Magi
         ...prev,
         battlefield: flipInZone(prev.battlefield),
         lands: flipInZone(prev.lands),
+        hand: flipInZone(prev.hand),
+        stack: flipInZone(prev.stack),
       };
     });
     setCardDetailOpen(false);
@@ -386,17 +388,21 @@ export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId }: Magi
                     ))}
                 </div>
 
-                {(selectedCardZone === 'battlefield' || selectedCardZone === 'lands') && (
-                  <div className="flex gap-1.5 pt-1">
+                {(selectedCardZone === 'battlefield' || selectedCardZone === 'lands' || selectedCardZone === 'hand' || selectedCardZone === 'stack') && (
+                  <div className="flex gap-1.5 pt-1 flex-wrap">
                     <Button size="sm" variant="outline" className="text-xs h-7 flex-1" onClick={() => toggleFaceDown(selectedCard)}>
-                      {selectedCard.isFaceDown ? 'Virar (Face Up)' : 'Virar (Face Down)'}
+                      {selectedCard.isFaceDown ? '🔄 Virar (Face Up)' : '🔄 Virar (Face Down)'}
                     </Button>
-                    <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => { modifyCounters(selectedCard, 1); setCardDetailOpen(false); }}>
-                      +1 Counter
-                    </Button>
-                    <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => { modifyCounters(selectedCard, -1); setCardDetailOpen(false); }}>
-                      -1 Counter
-                    </Button>
+                    {(selectedCardZone === 'battlefield' || selectedCardZone === 'lands') && (
+                      <>
+                        <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => { modifyCounters(selectedCard, 1); setCardDetailOpen(false); }}>
+                          +1 Counter
+                        </Button>
+                        <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => { modifyCounters(selectedCard, -1); setCardDetailOpen(false); }}>
+                          -1 Counter
+                        </Button>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
