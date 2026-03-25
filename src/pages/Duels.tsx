@@ -154,8 +154,10 @@ const Duels = () => {
           tcg_type: activeTcg,
           player1_lp: defaultLP,
           player2_lp: defaultLP,
+          player3_lp: defaultLP,
+          player4_lp: defaultLP,
           max_players: playerCount,
-        } as any)
+        })
         .select()
         .single();
 
