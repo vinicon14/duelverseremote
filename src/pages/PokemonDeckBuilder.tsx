@@ -2,8 +2,11 @@
  * DuelVerse - Pokémon Deck Builder
  * 
  * Deck builder integrado com a API Pokémon TCG.
- * Suporta busca por nome, tipo e filtros.
- * Deck padrão: 60 cartas (Pokémon, Treinadores, Energias).
+ * Segue regras oficiais do Pokémon TCG:
+ * - Deck de exatamente 60 cartas
+ * - Máximo 4 cópias (exceto Energia Básica)
+ * - Precisa de pelo menos 1 Pokémon Básico
+ * - Categorias: Pokémon, Treinador, Energia
  */
 import { useState, useEffect, useCallback } from 'react';
 import { Navbar } from '@/components/Navbar';
@@ -13,7 +16,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Plus, Minus, Trash2, Save, FolderOpen, Zap, Loader2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Search, Plus, Minus, Trash2, Save, FolderOpen, Zap, Loader2, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { SaveDeckModal } from '@/components/deckbuilder/SaveDeckModal';
@@ -22,16 +26,22 @@ import { LoadDeckModal } from '@/components/deckbuilder/LoadDeckModal';
 interface PokemonCard {
   id: string;
   name: string;
-  supertype: string; // Pokémon, Trainer, Energy
+  supertype: string;
   subtypes?: string[];
   types?: string[];
   hp?: string;
+  evolvesFrom?: string;
+  evolvesTo?: string[];
+  rules?: string[];
+  regulationMark?: string;
+  rarity?: string;
   images: {
     small: string;
     large: string;
   };
   set: {
     name: string;
+    id: string;
   };
   quantity?: number;
 }
@@ -47,6 +57,8 @@ const POKEMON_TYPES = [
 
 const SUPERTYPES = ['All', 'Pokémon', 'Trainer', 'Energy'];
 
+const SUBTYPES_TRAINER = ['All', 'Item', 'Supporter', 'Stadium', 'Tool'];
+
 export default function PokemonDeckBuilder() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
@@ -55,6 +67,7 @@ export default function PokemonDeckBuilder() {
   const [loading, setLoading] = useState(false);
   const [typeFilter, setTypeFilter] = useState('All');
   const [supertypeFilter, setSupertypeFilter] = useState('All');
+  const [subtypeFilter, setSubtypeFilter] = useState('All');
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showLoadModal, setShowLoadModal] = useState(false);
   const [savedDecks, setSavedDecks] = useState<any[]>([]);
@@ -63,6 +76,7 @@ export default function PokemonDeckBuilder() {
   const [currentDeckId, setCurrentDeckId] = useState<string | null>(null);
   const [currentDeckName, setCurrentDeckName] = useState('');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [previewCard, setPreviewCard] = useState<PokemonCard | null>(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -76,7 +90,7 @@ export default function PokemonDeckBuilder() {
     if (!searchQuery.trim() && typeFilter === 'All' && supertypeFilter === 'All') return;
     setLoading(true);
     try {
-      let query = 'https://api.pokemontcg.io/v2/cards?pageSize=30';
+      let query = 'https://api.pokemontcg.io/v2/cards?pageSize=40&orderBy=-set.releaseDate';
       const filters: string[] = [];
       
       if (searchQuery.trim()) {
@@ -87,6 +101,9 @@ export default function PokemonDeckBuilder() {
       }
       if (supertypeFilter !== 'All') {
         filters.push(`supertype:"${supertypeFilter}"`);
+        if (supertypeFilter === 'Trainer' && subtypeFilter !== 'All') {
+          filters.push(`subtypes:"${subtypeFilter}"`);
+        }
       }
       
       if (filters.length > 0) {
@@ -101,7 +118,7 @@ export default function PokemonDeckBuilder() {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, typeFilter, supertypeFilter]);
+  }, [searchQuery, typeFilter, supertypeFilter, subtypeFilter]);
 
   const addToDeck = (card: PokemonCard) => {
     const totalCards = deck.reduce((sum, c) => sum + c.quantity, 0);
@@ -111,11 +128,11 @@ export default function PokemonDeckBuilder() {
     }
 
     const existing = deck.find(c => c.id === card.id);
+    const isBasicEnergy = card.supertype === 'Energy' && card.subtypes?.includes('Basic');
+    
     if (existing) {
-      // Max 4 of same card (except basic energy)
-      const isBasicEnergy = card.supertype === 'Energy' && card.subtypes?.includes('Basic');
       if (!isBasicEnergy && existing.quantity >= 4) {
-        toast({ title: 'Limite atingido', description: 'Máximo 4 cópias por carta', variant: 'destructive' });
+        toast({ title: 'Limite atingido', description: 'Máximo 4 cópias por carta (exceto Energia Básica)', variant: 'destructive' });
         return;
       }
       setDeck(deck.map(c => c.id === card.id ? { ...c, quantity: c.quantity + 1 } : c));
@@ -137,9 +154,27 @@ export default function PokemonDeckBuilder() {
   const clearDeck = () => setDeck([]);
 
   const totalCards = deck.reduce((sum, c) => sum + c.quantity, 0);
-  const pokemonCount = deck.filter(c => c.supertype === 'Pokémon').reduce((s, c) => s + c.quantity, 0);
+  const pokemonCards = deck.filter(c => c.supertype === 'Pokémon');
+  const pokemonCount = pokemonCards.reduce((s, c) => s + c.quantity, 0);
   const trainerCount = deck.filter(c => c.supertype === 'Trainer').reduce((s, c) => s + c.quantity, 0);
   const energyCount = deck.filter(c => c.supertype === 'Energy').reduce((s, c) => s + c.quantity, 0);
+  
+  // PKM validation
+  const basicPokemonCount = pokemonCards
+    .filter(c => c.subtypes?.includes('Basic'))
+    .reduce((s, c) => s + c.quantity, 0);
+  
+  const hasBasicPokemon = basicPokemonCount > 0;
+  const isDeckComplete = totalCards === 60;
+  const isDeckValid = isDeckComplete && hasBasicPokemon;
+
+  // Check for evolution cards without their basic
+  const evolutionWarnings: string[] = [];
+  pokemonCards.forEach(card => {
+    if (card.evolvesFrom && !pokemonCards.some(c => c.name === card.evolvesFrom)) {
+      evolutionWarnings.push(`${card.name} evolui de ${card.evolvesFrom} (não está no deck)`);
+    }
+  });
 
   const saveDeck = async (name: string, description: string, isPublic: boolean) => {
     setSavingDeck(true);
@@ -212,6 +247,15 @@ export default function PokemonDeckBuilder() {
     return true;
   };
 
+  const getSupertypeBadgeClass = (supertype: string) => {
+    switch (supertype) {
+      case 'Pokémon': return 'bg-primary/20 text-primary border-primary/30';
+      case 'Trainer': return 'bg-accent/20 text-accent-foreground border-accent/30';
+      case 'Energy': return 'bg-secondary/20 text-secondary-foreground border-secondary/30';
+      default: return '';
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -242,26 +286,40 @@ export default function PokemonDeckBuilder() {
                   />
                 </div>
               </div>
-              <Select value={supertypeFilter} onValueChange={setSupertypeFilter}>
+              <Select value={supertypeFilter} onValueChange={v => { setSupertypeFilter(v); setSubtypeFilter('All'); }}>
                 <SelectTrigger className="w-[130px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {SUPERTYPES.map(t => (
-                    <SelectItem key={t} value={t}>{t === 'All' ? 'Todos' : t}</SelectItem>
+                    <SelectItem key={t} value={t}>{t === 'All' ? 'Categoria' : t}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger className="w-[130px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {POKEMON_TYPES.map(t => (
-                    <SelectItem key={t} value={t}>{t === 'All' ? 'Tipo' : t}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {supertypeFilter === 'Trainer' && (
+                <Select value={subtypeFilter} onValueChange={setSubtypeFilter}>
+                  <SelectTrigger className="w-[120px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SUBTYPES_TRAINER.map(t => (
+                      <SelectItem key={t} value={t}>{t === 'All' ? 'Subtipo' : t}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              {(supertypeFilter === 'All' || supertypeFilter === 'Pokémon') && (
+                <Select value={typeFilter} onValueChange={setTypeFilter}>
+                  <SelectTrigger className="w-[130px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {POKEMON_TYPES.map(t => (
+                      <SelectItem key={t} value={t}>{t === 'All' ? 'Tipo' : t}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
               <Button onClick={searchCards} disabled={loading}>
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
               </Button>
@@ -282,15 +340,33 @@ export default function PokemonDeckBuilder() {
                       className="w-full h-auto rounded-t-lg"
                       loading="lazy"
                     />
-                    <div className="absolute inset-0 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <div className="absolute inset-0 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1">
                       <Plus className="w-8 h-8 text-primary" />
+                      <span className="text-[10px] text-muted-foreground">Adicionar</span>
                     </div>
+                    {/* Quick preview on long press / right-click area */}
+                    <button
+                      className="absolute top-1 right-1 bg-background/70 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => { e.stopPropagation(); setPreviewCard(card); }}
+                    >
+                      <Search className="w-3 h-3" />
+                    </button>
                   </div>
                   <CardContent className="p-2">
                     <p className="text-xs font-medium truncate">{card.name}</p>
-                    <div className="flex gap-1 mt-1">
-                      <Badge variant="outline" className="text-[10px]">{card.supertype}</Badge>
+                    <div className="flex gap-1 mt-1 flex-wrap">
+                      <Badge variant="outline" className={`text-[10px] ${getSupertypeBadgeClass(card.supertype)}`}>
+                        {card.supertype}
+                      </Badge>
                       {card.hp && <Badge variant="secondary" className="text-[10px]">{card.hp} HP</Badge>}
+                      {card.subtypes?.includes('Basic') && (
+                        <Badge variant="outline" className="text-[10px] border-green-500/30 text-green-500">Básico</Badge>
+                      )}
+                      {card.evolvesFrom && (
+                        <Badge variant="outline" className="text-[10px] border-blue-500/30 text-blue-400">
+                          ↑ {card.evolvesFrom}
+                        </Badge>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -301,6 +377,7 @@ export default function PokemonDeckBuilder() {
               <div className="text-center py-12 text-muted-foreground">
                 <Zap className="w-12 h-12 mx-auto mb-3 opacity-30" />
                 <p>Busque cartas Pokémon para começar</p>
+                <p className="text-xs mt-1">Dica: busque por "Pikachu", "Charizard" ou filtre por tipo</p>
               </div>
             )}
           </div>
@@ -325,13 +402,13 @@ export default function PokemonDeckBuilder() {
                 </div>
 
                 {/* Stats */}
-                <div className="grid grid-cols-3 gap-2 mb-4">
+                <div className="grid grid-cols-3 gap-2 mb-3">
                   <div className="text-center p-2 rounded bg-primary/10">
                     <div className="text-sm font-bold text-primary">{pokemonCount}</div>
                     <div className="text-[10px] text-muted-foreground">Pokémon</div>
                   </div>
                   <div className="text-center p-2 rounded bg-accent/10">
-                    <div className="text-sm font-bold text-accent">{trainerCount}</div>
+                    <div className="text-sm font-bold text-accent-foreground">{trainerCount}</div>
                     <div className="text-[10px] text-muted-foreground">Treinador</div>
                   </div>
                   <div className="text-center p-2 rounded bg-secondary/20">
@@ -340,34 +417,82 @@ export default function PokemonDeckBuilder() {
                   </div>
                 </div>
 
+                {/* Validation */}
+                <div className="space-y-1 mb-3">
+                  <div className={`flex items-center gap-1.5 text-[11px] ${hasBasicPokemon ? 'text-green-500' : 'text-destructive'}`}>
+                    {hasBasicPokemon ? <CheckCircle2 className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
+                    {hasBasicPokemon
+                      ? `${basicPokemonCount} Pokémon Básico(s)`
+                      : 'Precisa de pelo menos 1 Pokémon Básico'}
+                  </div>
+                  <div className={`flex items-center gap-1.5 text-[11px] ${isDeckComplete ? 'text-green-500' : 'text-muted-foreground'}`}>
+                    {isDeckComplete ? <CheckCircle2 className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
+                    {isDeckComplete ? 'Deck completo (60/60)' : `Faltam ${60 - totalCards} cartas`}
+                  </div>
+                  {evolutionWarnings.map((w, i) => (
+                    <div key={i} className="flex items-center gap-1.5 text-[11px] text-yellow-500">
+                      <AlertTriangle className="w-3 h-3 flex-shrink-0" />
+                      <span className="truncate">{w}</span>
+                    </div>
+                  ))}
+                </div>
+
                 {/* Progress bar */}
                 <div className="w-full bg-muted rounded-full h-2 mb-4">
                   <div
-                    className="bg-primary h-2 rounded-full transition-all"
+                    className={`h-2 rounded-full transition-all ${isDeckValid ? 'bg-green-500' : 'bg-primary'}`}
                     style={{ width: `${Math.min(100, (totalCards / 60) * 100)}%` }}
                   />
                 </div>
 
                 <ScrollArea className="h-[400px]">
                   <div className="space-y-1 pr-2">
-                    {deck.map(card => (
-                      <div key={card.id} className="flex items-center gap-2 p-1.5 rounded hover:bg-muted/50 group">
-                        <img src={card.images.small} alt={card.name} className="w-8 h-11 rounded object-cover" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium truncate">{card.name}</p>
-                          <p className="text-[10px] text-muted-foreground">{card.supertype}</p>
+                    {/* Group by supertype */}
+                    {['Pokémon', 'Trainer', 'Energy'].map(supertype => {
+                      const groupCards = deck.filter(c => c.supertype === supertype);
+                      if (groupCards.length === 0) return null;
+                      return (
+                        <div key={supertype}>
+                          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-1 py-1 border-b border-border/50 mb-1">
+                            {supertype === 'Pokémon' ? '⚡ Pokémon' : supertype === 'Trainer' ? '🎒 Treinador' : '🔋 Energia'}
+                            {' '}({groupCards.reduce((s, c) => s + c.quantity, 0)})
+                          </div>
+                          {groupCards.map(card => (
+                            <div key={card.id} className="flex items-center gap-2 p-1.5 rounded hover:bg-muted/50 group">
+                              <img
+                                src={card.images.small}
+                                alt={card.name}
+                                className="w-8 h-11 rounded object-cover cursor-pointer"
+                                onClick={() => setPreviewCard(card)}
+                              />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-medium truncate">{card.name}</p>
+                                <div className="flex gap-1">
+                                  {card.subtypes?.includes('Basic') && (
+                                    <span className="text-[9px] text-green-500">Básico</span>
+                                  )}
+                                  {card.evolvesFrom && (
+                                    <span className="text-[9px] text-blue-400">↑{card.evolvesFrom}</span>
+                                  )}
+                                  {!card.subtypes?.includes('Basic') && !card.evolvesFrom && (
+                                    <span className="text-[9px] text-muted-foreground">{card.subtypes?.[0] || card.supertype}</span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => removeFromDeck(card.id)}>
+                                  <Minus className="w-3 h-3" />
+                                </Button>
+                                <span className="text-xs font-bold w-4 text-center">{card.quantity}</span>
+                                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => addToDeck(card)}>
+                                  <Plus className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                        <div className="flex items-center gap-1">
-                          <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => removeFromDeck(card.id)}>
-                            <Minus className="w-3 h-3" />
-                          </Button>
-                          <span className="text-xs font-bold w-4 text-center">{card.quantity}</span>
-                          <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => addToDeck(card)}>
-                            <Plus className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </ScrollArea>
               </CardContent>
@@ -375,6 +500,40 @@ export default function PokemonDeckBuilder() {
           </div>
         </div>
       </main>
+
+      {/* Card Preview Modal */}
+      <Dialog open={!!previewCard} onOpenChange={() => setPreviewCard(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{previewCard?.name}</DialogTitle>
+          </DialogHeader>
+          {previewCard && (
+            <div className="space-y-3">
+              <img src={previewCard.images.large} alt={previewCard.name} className="w-full rounded-lg" />
+              <div className="flex flex-wrap gap-1">
+                <Badge variant="outline">{previewCard.supertype}</Badge>
+                {previewCard.subtypes?.map(st => (
+                  <Badge key={st} variant="secondary" className="text-xs">{st}</Badge>
+                ))}
+                {previewCard.hp && <Badge>HP {previewCard.hp}</Badge>}
+                {previewCard.types?.map(t => (
+                  <Badge key={t} variant="outline" className="text-xs">{t}</Badge>
+                ))}
+              </div>
+              {previewCard.evolvesFrom && (
+                <p className="text-xs text-muted-foreground">Evolui de: {previewCard.evolvesFrom}</p>
+              )}
+              {previewCard.rarity && (
+                <p className="text-xs text-muted-foreground">Raridade: {previewCard.rarity}</p>
+              )}
+              <p className="text-xs text-muted-foreground">Set: {previewCard.set.name}</p>
+              <Button className="w-full" onClick={() => { addToDeck(previewCard); setPreviewCard(null); }}>
+                <Plus className="w-4 h-4 mr-1" /> Adicionar ao Deck
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <SaveDeckModal
         open={showSaveModal}
