@@ -24,17 +24,40 @@ const Auth = () => {
 
   // Verificar se usuário já está logado e redirecionar
   useEffect(() => {
-    // Configurar listener PRIMEIRO
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         if (session?.user) {
-          // Usuário logado, redirecionar para /duels
-          navigate('/duels', { replace: true });
+          if (event === 'SIGNED_IN') {
+            // Check if user has any TCG profiles (new user won't have chosen yet)
+            const { data: tcgProfiles } = await supabase
+              .from('tcg_profiles')
+              .select('id')
+              .eq('user_id', session.user.id)
+              .limit(1);
+            
+            // New users created by handle_new_user get auto-profiles,
+            // but we still want them to choose their primary TCG
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('created_at')
+              .eq('user_id', session.user.id)
+              .single();
+            
+            // If profile was created less than 10 seconds ago, it's a new signup
+            const isNewUser = profile && (Date.now() - new Date(profile.created_at).getTime()) < 10000;
+            
+            if (isNewUser) {
+              navigate('/profile-select', { replace: true });
+            } else {
+              navigate('/duels', { replace: true });
+            }
+          } else {
+            navigate('/duels', { replace: true });
+          }
         }
       }
     );
 
-    // DEPOIS verificar sessão existente
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         navigate('/duels', { replace: true });
@@ -213,10 +236,10 @@ const Auth = () => {
 
       toast({
         title: "Cadastro realizado!",
-        description: "Bem-vindo ao Duelverse! Você já pode fazer login."
+        description: "Bem-vindo ao Duelverse! Escolha seu TCG."
       });
 
-      // Após o cadastro bem-sucedido, fazer login automaticamente
+      // Após o cadastro bem-sucedido, fazer login e ir para seleção de perfil
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password
@@ -224,7 +247,7 @@ const Auth = () => {
 
       if (signInError) throw signInError;
 
-      navigate('/duels');
+      navigate('/profile-select');
     } catch (error: any) {
       const errorMessage = error.message?.toLowerCase().includes('email not confirmed') ?
       "Confirme seu email para continuar" :
