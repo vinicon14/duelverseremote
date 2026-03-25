@@ -37,7 +37,7 @@ interface RawSavedDeck {
   updated_at: string;
 }
 
-export const useSavedDecks = () => {
+export const useSavedDecks = (tcgType: string = 'yugioh') => {
   const [savedDecks, setSavedDecks] = useState<SavedDeck[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState<string | null>(null);
