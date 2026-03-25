@@ -20,6 +20,7 @@ import { NotificationPrompt } from "@/components/NotificationPrompt";
 import { useRealtimeNotifications } from "@/hooks/useRealtimeNotifications";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useSubscriptionExpirationCheck } from "@/hooks/useSubscriptionExpirationCheck";
+import { TcgProvider } from "./contexts/TcgContext";
 import Home from "./pages/Home";
 import Landing from "./pages/Landing";
 import Admin from "./pages/Admin";
@@ -43,6 +44,8 @@ import News from "./pages/News";
 import NotFound from "./pages/NotFound";
 
 import DeckBuilder from "./pages/DeckBuilder";
+import MagicDeckBuilder from "./pages/MagicDeckBuilder";
+import ProfileSelect from "./pages/ProfileSelect";
 import CreateWeeklyTournament from "./pages/CreateWeeklyTournament";
 import WeeklyTournaments from "./pages/WeeklyTournaments";
 import MyTournaments from "./pages/MyTournaments";
