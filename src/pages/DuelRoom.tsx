@@ -976,6 +976,7 @@ const DuelRoom = () => {
           onUpdateLP={updateLP}
           onSetLP={setLP}
           currentUserPlayer={isSpectator ? null : currentUserPlayer}
+          tcgType={duel.tcg_type}
         />
       )}
 
