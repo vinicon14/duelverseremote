@@ -334,17 +334,22 @@ export const FloatingOpponentViewer = ({
             {/* Stats Bar */}
             <div className="flex items-center justify-between gap-2 p-2 bg-muted/50 rounded-lg">
               <div className="flex items-center gap-1">
-                <Hand className="h-3 w-3 text-blue-500" />
+                <Hand className="h-3 w-3 text-primary" />
                 <span className="text-xs">Mão: {opponentState.hand}</span>
               </div>
               <div className="flex items-center gap-1">
-                <Layers className="h-3 w-3 text-gray-500" />
-                <span className="text-xs">Deck: {opponentState.deckCount}</span>
+                <Layers className="h-3 w-3 text-muted-foreground" />
+                <span className="text-xs">{opponentState.tcgType === 'magic' ? 'Grimório' : 'Deck'}: {opponentState.deckCount}</span>
               </div>
-              <div className="flex items-center gap-1">
-                <Sparkles className="h-3 w-3 text-yellow-500" />
-                <span className="text-xs">Extra: {opponentState.extraCount}</span>
-              </div>
+              {opponentState.tcgType !== 'magic' && (
+                <div className="flex items-center gap-1">
+                  <Sparkles className="h-3 w-3 text-accent" />
+                  <span className="text-xs">Extra: {opponentState.extraCount}</span>
+                </div>
+              )}
+              {opponentState.tcgType === 'magic' && opponentState.phase && (
+                <Badge variant="outline" className="text-[10px] h-4 px-1">{opponentState.phase}</Badge>
+              )}
               <Button
                 variant="ghost"
                 size="icon"
@@ -355,14 +360,76 @@ export const FloatingOpponentViewer = ({
               </Button>
             </div>
 
-            {!isCollapsed && (
+            {!isCollapsed && opponentState.tcgType === 'magic' && (
               <>
-                {/* Field Zones Layout */}
+                {/* MTG Battlefield */}
+                {opponentState.battlefield && opponentState.battlefield.length > 0 && (
+                  <ZoneDisplay 
+                    title="Campo de Batalha" 
+                    cards={opponentState.battlefield} 
+                    icon={Layers} 
+                    color="text-primary" 
+                  />
+                )}
+
+                {/* MTG Lands */}
+                {opponentState.lands && opponentState.lands.length > 0 && (
+                  <ZoneDisplay 
+                    title="Terrenos" 
+                    cards={opponentState.lands} 
+                    icon={Layers} 
+                    color="text-primary" 
+                  />
+                )}
+
+                {/* MTG Stack */}
+                {opponentState.stack && opponentState.stack.length > 0 && (
+                  <ZoneDisplay 
+                    title="Pilha" 
+                    cards={opponentState.stack} 
+                    icon={Sparkles} 
+                    color="text-accent" 
+                  />
+                )}
+
+                {/* MTG Graveyard & Exile */}
+                <div className="grid grid-cols-2 gap-2">
+                  <ZoneDisplay 
+                    title="Cemitério" 
+                    cards={opponentState.graveyard} 
+                    icon={Flame} 
+                    color="text-destructive"
+                    compact 
+                  />
+                  <ZoneDisplay 
+                    title="Exílio" 
+                    cards={opponentState.exile || []} 
+                    icon={Ban} 
+                    color="text-muted-foreground"
+                    compact 
+                  />
+                </div>
+
+                {/* MTG Command Zone */}
+                {opponentState.commandZone && opponentState.commandZone.length > 0 && (
+                  <ZoneDisplay 
+                    title="Zona de Comando" 
+                    cards={opponentState.commandZone} 
+                    icon={Sparkles} 
+                    color="text-accent" 
+                    compact
+                  />
+                )}
+              </>
+            )}
+
+            {!isCollapsed && opponentState.tcgType !== 'magic' && (
+              <>
+                {/* YGO Field Zones Layout */}
                 {opponentState.monsterZones && (
                   <div className="space-y-2 p-2 bg-muted/20 rounded-lg">
                     <span className="text-[10px] font-medium text-muted-foreground">Zonas de Campo do Oponente</span>
                     
-                    {/* Extra Monster Zones */}
                     {opponentState.extraMonsterZones && (
                       <div className="flex justify-center gap-8">
                         <ZoneSlotDisplay card={opponentState.extraMonsterZones.extraMonster1} label="EM1" />
@@ -370,7 +437,6 @@ export const FloatingOpponentViewer = ({
                       </div>
                     )}
 
-                    {/* Monster Zones */}
                     <div className="flex justify-center gap-1">
                       <ZoneSlotDisplay card={opponentState.monsterZones.monster1} label="M1" />
                       <ZoneSlotDisplay card={opponentState.monsterZones.monster2} label="M2" />
@@ -379,7 +445,6 @@ export const FloatingOpponentViewer = ({
                       <ZoneSlotDisplay card={opponentState.monsterZones.monster5} label="M5" />
                     </div>
 
-                    {/* Spell/Trap Zones */}
                     {opponentState.spellZones && (
                       <div className="flex justify-center gap-1">
                         <ZoneSlotDisplay card={opponentState.spellZones.spell1} label="S1" />
@@ -390,7 +455,6 @@ export const FloatingOpponentViewer = ({
                       </div>
                     )}
 
-                    {/* Field Spell Zone */}
                     {opponentState.fieldSpell && (
                       <div className="flex items-center gap-2">
                         <span className="text-[10px] text-muted-foreground">Campo:</span>
@@ -400,30 +464,28 @@ export const FloatingOpponentViewer = ({
                   </div>
                 )}
 
-                {/* Fallback to old field display if no zone data */}
                 {!opponentState.monsterZones && opponentState.field.length > 0 && (
                   <ZoneDisplay 
                     title="Campo" 
                     cards={opponentState.field} 
                     icon={Layers} 
-                    color="text-green-500" 
+                    color="text-primary" 
                   />
                 )}
 
-                {/* Graveyard & Banished */}
                 <div className="grid grid-cols-2 gap-2">
                   <ZoneDisplay 
                     title="Cemitério" 
                     cards={opponentState.graveyard} 
                     icon={Flame} 
-                    color="text-orange-500"
+                    color="text-destructive"
                     compact 
                   />
                   <ZoneDisplay 
                     title="Banido" 
                     cards={opponentState.banished} 
                     icon={Ban} 
-                    color="text-purple-500"
+                    color="text-muted-foreground"
                     compact 
                   />
                 </div>
