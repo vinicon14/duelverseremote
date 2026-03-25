@@ -40,13 +40,14 @@ export const GlobalChat = () => {
 
     // Realtime subscription para novas mensagens
     const channel = supabase
-      .channel('global-chat')
+      .channel('global-chat-' + activeTcg)
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'global_chat_messages'
+          table: 'global_chat_messages',
+          filter: `tcg_type=eq.${activeTcg}`
         },
         async (payload) => {
           // Buscar dados do usuário junto com a mensagem
@@ -68,14 +69,12 @@ export const GlobalChat = () => {
           // Show notification for new message (only if not own message)
           const { data: { user } } = await supabase.auth.getUser();
           if (payload.new.user_id !== user?.id) {
-            // Show browser notification if permitted
             if (Notification.permission === 'granted') {
               new Notification(userData?.username || 'Anônimo', {
                 body: payload.new.message,
                 icon: userData?.avatar_url || undefined
               });
             }
-            // Also show in-app toast notification
             toast({
               title: userData?.username || 'Anônimo',
               description: payload.new.message,
@@ -89,7 +88,7 @@ export const GlobalChat = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [activeTcg]);
 
   const checkAuth = async () => {
     const { data: { user } } = await supabase.auth.getUser();
