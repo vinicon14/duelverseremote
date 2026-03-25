@@ -372,7 +372,7 @@ export const MagicFieldBoard = ({
     >
       {playmatUrl && <div className="pointer-events-none absolute inset-0 bg-background/50" />}
 
-      <div className="relative z-10 flex items-center gap-0.5 overflow-x-auto pb-1">
+      <div className="relative z-10 flex items-center gap-0.5 overflow-x-auto rounded-md bg-background/90 backdrop-blur-sm border border-border/60 px-2 py-1.5">
         {PHASES.map((phase) => (
           <Button
             key={phase.key}
