@@ -12,21 +12,27 @@ import { Navbar } from "@/components/Navbar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Trophy, Medal, Award, TrendingUp } from "lucide-react";
+import { useTcg } from "@/contexts/TcgContext";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+const TCG_LABELS: Record<string, string> = { yugioh: 'YGO', magic: 'Magic' };
 
 const Ranking = () => {
   const { toast } = useToast();
+  const { activeTcg } = useTcg();
+  const [selectedTcg, setSelectedTcg] = useState<string>(activeTcg);
   const [rankings, setRankings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchRankings();
-  }, []);
+    fetchRankings(selectedTcg);
+  }, [selectedTcg]);
 
-  const fetchRankings = async () => {
+  const fetchRankings = async (tcg: string) => {
+    setLoading(true);
     try {
-      // Use secure function to get leaderboard data
       const { data, error } = await supabase
-        .rpc('get_leaderboard', { limit_count: 50 });
+        .rpc('get_leaderboard', { limit_count: 50, p_tcg_type: tcg });
 
       if (error) throw error;
       setRankings(data || []);
@@ -61,11 +67,17 @@ const Ranking = () => {
       <main className="container mx-auto px-4 pt-20 sm:pt-24 pb-12">
         <div className="mb-6 sm:mb-8">
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gradient-mystic mb-2">
-            Ranking Global
+            Ranking — {TCG_LABELS[selectedTcg]}
           </h1>
           <p className="text-sm sm:text-base text-muted-foreground">
-            Os melhores duelistas do Duelverse
+            Os melhores duelistas de {TCG_LABELS[selectedTcg]}
           </p>
+          <Tabs value={selectedTcg} onValueChange={setSelectedTcg} className="mt-4">
+            <TabsList>
+              <TabsTrigger value="yugioh">YGO</TabsTrigger>
+              <TabsTrigger value="magic">Magic</TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
 
         {loading ? (

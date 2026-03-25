@@ -1780,17 +1780,29 @@ export type Database = {
         }
         Returns: Json
       }
-      get_leaderboard: {
-        Args: { limit_count?: number }
-        Returns: {
-          avatar_url: string
-          losses: number
-          points: number
-          user_id: string
-          username: string
-          wins: number
-        }[]
-      }
+      get_leaderboard:
+        | {
+            Args: { limit_count?: number }
+            Returns: {
+              avatar_url: string
+              losses: number
+              points: number
+              user_id: string
+              username: string
+              wins: number
+            }[]
+          }
+        | {
+            Args: { limit_count?: number; p_tcg_type?: string }
+            Returns: {
+              avatar_url: string
+              losses: number
+              points: number
+              user_id: string
+              username: string
+              wins: number
+            }[]
+          }
       get_my_created_tournaments: {
         Args: never
         Returns: {

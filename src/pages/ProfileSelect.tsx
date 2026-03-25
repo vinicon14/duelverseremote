@@ -15,14 +15,14 @@ import { toast } from 'sonner';
 
 const TCG_CONFIG: Record<TcgType, { name: string; icon: React.ReactNode; color: string; gradient: string; description: string }> = {
   yugioh: {
-    name: "Yu-Gi-Oh!",
+    name: "YGO",
     icon: <Swords className="w-10 h-10" />,
     color: "text-purple-400",
     gradient: "from-purple-600 to-pink-600",
     description: "Duele com monstros, magias e armadilhas no TCG clássico!"
   },
   magic: {
-    name: "Magic: The Gathering",
+    name: "Magic",
     icon: <Sparkles className="w-10 h-10" />,
     color: "text-amber-400",
     gradient: "from-amber-600 to-red-700",
