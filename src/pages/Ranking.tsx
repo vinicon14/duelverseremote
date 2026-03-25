@@ -15,7 +15,7 @@ import { Trophy, Medal, Award, TrendingUp } from "lucide-react";
 import { useTcg } from "@/contexts/TcgContext";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-const TCG_LABELS: Record<string, string> = { yugioh: 'YGO', magic: 'MTG' };
+const TCG_LABELS: Record<string, string> = { yugioh: 'YGO', magic: 'MTG', pokemon: 'PKM' };
 
 const Ranking = () => {
   const { toast } = useToast();
@@ -76,6 +76,7 @@ const Ranking = () => {
             <TabsList>
               <TabsTrigger value="yugioh">YGO</TabsTrigger>
               <TabsTrigger value="magic">MTG</TabsTrigger>
+              <TabsTrigger value="pokemon">PKM</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
