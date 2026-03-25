@@ -65,6 +65,7 @@ export const useSavedDecks = (tcgType: string = 'yugioh') => {
         .from('saved_decks')
         .select('*')
         .eq('user_id', currentUser)
+        .eq('tcg_type', tcgType)
         .order('updated_at', { ascending: false });
 
       if (error) throw error;
