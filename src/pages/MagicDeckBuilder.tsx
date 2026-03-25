@@ -61,8 +61,11 @@ export default function MagicDeckBuilder() {
   const [sideboard, setSideboard] = useState<DeckCard[]>([]);
   const [selectedCard, setSelectedCard] = useState<ScryfallCard | null>(null);
   const [saveOpen, setSaveOpen] = useState(false);
+  const [loadOpen, setLoadOpen] = useState(false);
   const [deckName, setDeckName] = useState('');
   const [saving, setSaving] = useState(false);
+  const [savedDecks, setSavedDecks] = useState<any[]>([]);
+  const [loadingDecks, setLoadingDecks] = useState(false);
 
   const searchCards = useCallback(async () => {
     if (!query.trim()) return;
