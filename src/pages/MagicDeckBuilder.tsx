@@ -170,17 +170,144 @@ export default function MagicDeckBuilder() {
     }
   };
 
+  const loadSavedDecks = async () => {
+    setLoadingDecks(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { toast.error('Faça login'); setLoadingDecks(false); return; }
+    const { data, error } = await supabase
+      .from('saved_decks')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('tcg_type', 'magic')
+      .order('created_at', { ascending: false });
+    setLoadingDecks(false);
+    if (error) { toast.error('Erro ao carregar decks'); return; }
+    setSavedDecks(data || []);
+    setLoadOpen(true);
+  };
+
+  const loadDeck = (deck: any) => {
+    const mainCards: DeckCard[] = (deck.main_deck as any[] || []).map((c: any) => ({
+      card: {
+        id: c.id,
+        name: c.name,
+        mana_cost: c.mana_cost || '',
+        type_line: c.type_line || '',
+        oracle_text: c.oracle_text || '',
+        image_uris: c.image_uris || (c.image ? { small: c.image, normal: c.image, large: c.image } : undefined),
+        card_faces: c.card_faces || undefined,
+        colors: c.colors || [],
+        rarity: c.rarity || 'common',
+        set_name: c.set_name || '',
+      } as ScryfallCard,
+      quantity: c.quantity || 1,
+    }));
+    const sideCards: DeckCard[] = (deck.side_deck as any[] || []).map((c: any) => ({
+      card: {
+        id: c.id,
+        name: c.name,
+        mana_cost: c.mana_cost || '',
+        type_line: c.type_line || '',
+        oracle_text: c.oracle_text || '',
+        image_uris: c.image_uris || (c.image ? { small: c.image, normal: c.image, large: c.image } : undefined),
+        card_faces: c.card_faces || undefined,
+        colors: c.colors || [],
+        rarity: c.rarity || 'common',
+        set_name: c.set_name || '',
+      } as ScryfallCard,
+      quantity: c.quantity || 1,
+    }));
+    setMainDeck(mainCards);
+    setSideboard(sideCards);
+    setDeckName(deck.name);
+    setLoadOpen(false);
+    toast.success(`Deck "${deck.name}" carregado!`);
+  };
+
+  const deleteSavedDeck = async (deckId: string) => {
+    const { error } = await supabase.from('saved_decks').delete().eq('id', deckId);
+    if (error) { toast.error('Erro ao deletar'); return; }
+    setSavedDecks(prev => prev.filter(d => d.id !== deckId));
+    toast.success('Deck deletado');
+  };
+
+  const exportDeck = () => {
+    if (mainDeck.length === 0 && sideboard.length === 0) {
+      toast.error('Deck vazio');
+      return;
+    }
+    let text = '// Main Deck\n';
+    mainDeck.forEach(c => { text += `${c.quantity} ${c.card.name}\n`; });
+    if (sideboard.length > 0) {
+      text += '\n// Sideboard\n';
+      sideboard.forEach(c => { text += `${c.quantity} ${c.card.name}\n`; });
+    }
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${deckName || 'mtg-deck'}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('Deck exportado!');
+  };
+
+  const importDeck = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.txt';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      const text = await file.text();
+      const lines = text.split('\n').filter(l => l.trim() && !l.startsWith('//'));
+      let target: 'main' | 'side' = 'main';
+      const newMain: DeckCard[] = [];
+      const newSide: DeckCard[] = [];
+
+      for (const line of lines) {
+        if (line.toLowerCase().includes('sideboard')) { target = 'side'; continue; }
+        const match = line.match(/^(\d+)\s+(.+)$/);
+        if (!match) continue;
+        const qty = parseInt(match[1]);
+        const name = match[2].trim();
+        try {
+          const res = await fetch(`https://api.scryfall.com/cards/named?exact=${encodeURIComponent(name)}`);
+          if (!res.ok) continue;
+          const card: ScryfallCard = await res.json();
+          const arr = target === 'main' ? newMain : newSide;
+          arr.push({ card, quantity: qty });
+        } catch { /* skip */ }
+      }
+      setMainDeck(newMain);
+      setSideboard(newSide);
+      toast.success('Deck importado!');
+    };
+    input.click();
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       <main className="container mx-auto px-4 pt-20 pb-8">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
           <h1 className="text-2xl font-bold text-gradient-gold flex items-center gap-2">
             ✨ MTG Deck Builder
           </h1>
-          <Button onClick={() => setSaveOpen(true)} className="gap-2">
-            <Save className="w-4 h-4" /> Salvar Deck
-          </Button>
+          <div className="flex gap-2 flex-wrap">
+            <Button variant="outline" size="sm" onClick={exportDeck} className="gap-1">
+              <Download className="w-4 h-4" /> Exportar
+            </Button>
+            <Button variant="outline" size="sm" onClick={importDeck} className="gap-1">
+              <Upload className="w-4 h-4" /> Importar
+            </Button>
+            <Button variant="outline" size="sm" onClick={loadSavedDecks} className="gap-1">
+              <FolderOpen className="w-4 h-4" /> Carregar
+            </Button>
+            <Button size="sm" onClick={() => setSaveOpen(true)} className="gap-1">
+              <Save className="w-4 h-4" /> Salvar
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
