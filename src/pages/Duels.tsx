@@ -31,6 +31,7 @@ const Duels = () => {
   const [loading, setLoading] = useState(true);
   const [roomName, setRoomName] = useState("");
   const [isRanked, setIsRanked] = useState(true);
+  const [maxPlayers, setMaxPlayers] = useState(2);
   const [durationMinutes, setDurationMinutes] = useState(50);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showAdPopup, setShowAdPopup] = useState(false);
@@ -142,6 +143,7 @@ const Duels = () => {
       }
 
       const defaultLP = activeTcg === 'magic' ? 40 : 8000;
+      const playerCount = activeTcg === 'magic' ? maxPlayers : 2;
       const { data, error } = await supabase
         .from('live_duels')
         .insert({
@@ -153,7 +155,8 @@ const Duels = () => {
           tcg_type: activeTcg,
           player1_lp: defaultLP,
           player2_lp: defaultLP,
-        })
+          max_players: playerCount,
+        } as any)
         .select()
         .single();
 
@@ -208,7 +211,7 @@ const Duels = () => {
       // Verificar se o duelo existe e pegar seus dados
       const { data: duelData } = await supabase
         .from('live_duels')
-        .select('creator_id, opponent_id, status')
+        .select('*')
         .eq('id', duelId)
         .maybeSingle();
 
@@ -222,9 +225,10 @@ const Duels = () => {
       }
 
       console.log('[Duels] Dados do duelo:', duelData);
+      const d = duelData as any;
 
       // Verificar se o usuário já é um dos jogadores deste duelo
-      if (duelData.creator_id === user.id || duelData.opponent_id === user.id) {
+      if (d.creator_id === user.id || d.opponent_id === user.id || d.player3_id === user.id || d.player4_id === user.id) {
         console.log('[Duels] Usuário já participa deste duelo, redirecionando...');
         toast({
           title: "Você já está neste duelo",
@@ -253,22 +257,38 @@ const Duels = () => {
         return;
       }
 
-      console.log('[Duels] Atualizando duelo com opponent...');
-      
-      // CRITICAL: Garantir que user.id é um UUID válido
-      console.log('[Duels] User ID type:', typeof user.id);
-      console.log('[Duels] User ID value:', user.id);
+      // Determine which slot to fill
+      const maxPlayers = d.max_players || 2;
+      let updatePayload: any = {};
 
-      // Atualizar o duelo adicionando o opponent
+      if (!d.opponent_id) {
+        updatePayload.opponent_id = user.id;
+        if (maxPlayers === 2) {
+          updatePayload.status = 'in_progress';
+          updatePayload.started_at = new Date().toISOString();
+        }
+      } else if (maxPlayers >= 3 && !d.player3_id) {
+        updatePayload.player3_id = user.id;
+      } else if (maxPlayers >= 4 && !d.player4_id) {
+        updatePayload.player4_id = user.id;
+        // All 4 slots filled - start the game
+        updatePayload.status = 'in_progress';
+        updatePayload.started_at = new Date().toISOString();
+      } else {
+        toast({
+          title: "Sala cheia",
+          description: "Não há mais vagas neste duelo.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log('[Duels] Atualizando duelo com slot:', updatePayload);
+
       const { error, data: updateResult } = await supabase
         .from('live_duels')
-        .update({
-          opponent_id: user.id,
-          status: 'in_progress',
-          started_at: new Date().toISOString(),
-        })
+        .update(updatePayload)
         .eq('id', duelId)
-        .is('opponent_id', null)
         .select();
 
       if (error) {
@@ -277,14 +297,12 @@ const Duels = () => {
       }
 
       console.log('[Duels] Update result:', updateResult);
-      console.log('[Duels] Opponent adicionado com sucesso, redirecionando...');
 
       toast({
         title: "Entrando na partida!",
         description: "Carregando chamada de vídeo...",
       });
 
-      // Aguardar um pouco para o banco processar
       await new Promise(resolve => setTimeout(resolve, 800));
       
       navigate(`/duel/${duelId}`);
@@ -386,6 +404,35 @@ const Duels = () => {
                       </p>
                     </div>
                     
+                    {activeTcg === 'magic' && (
+                      <div className="space-y-2">
+                        <Label>Número de Jogadores</Label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Button
+                            type="button"
+                            variant={maxPlayers === 2 ? "default" : "outline"}
+                            onClick={() => setMaxPlayers(2)}
+                            className={maxPlayers === 2 ? "btn-mystic text-white" : ""}
+                          >
+                            👥 2 Jogadores
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={maxPlayers === 4 ? "default" : "outline"}
+                            onClick={() => setMaxPlayers(4)}
+                            className={maxPlayers === 4 ? "btn-mystic text-white" : ""}
+                          >
+                            👥 4 Jogadores
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {maxPlayers === 4 
+                            ? "🎯 Partida multiplayer com 4 jogadores" 
+                            : "⚔️ Duelo 1v1 padrão"}
+                        </p>
+                      </div>
+                    )}
+
                     <Button onClick={handleCreateDuel} className="w-full btn-mystic text-white">
                       Criar e Entrar
                     </Button>
@@ -446,7 +493,14 @@ const Duels = () => {
                         <div className="flex items-center justify-between text-sm">
                           <div className="flex items-center text-muted-foreground">
                             <Users className="w-4 h-4 mr-2" />
-                            {duel.opponent_id ? '2/2' : '1/2'} jogadores
+                            {(() => {
+                              const mp = (duel as any).max_players || 2;
+                              let count = 1;
+                              if (duel.opponent_id) count++;
+                              if ((duel as any).player3_id) count++;
+                              if ((duel as any).player4_id) count++;
+                              return `${count}/${mp} jogadores`;
+                            })()}
                           </div>
                           <div className="flex items-center text-muted-foreground">
                             <Clock className="w-4 h-4 mr-2" />
@@ -457,7 +511,14 @@ const Duels = () => {
                           </div>
                         </div>
 
-                        {duel.status === 'waiting' && !duel.opponent_id && (
+                        {duel.status === 'waiting' && (() => {
+                          const mp = (duel as any).max_players || 2;
+                          let count = 1;
+                          if (duel.opponent_id) count++;
+                          if ((duel as any).player3_id) count++;
+                          if ((duel as any).player4_id) count++;
+                          return count < mp;
+                        })() && (
                           <Button
                             onClick={() => handleJoinDuel(duel.id)}
                             className="w-full btn-mystic text-white"
@@ -467,7 +528,14 @@ const Duels = () => {
                           </Button>
                         )}
 
-                        {duel.status === 'in_progress' && !duel.opponent_id && (
+                        {duel.status === 'in_progress' && (() => {
+                          const mp = (duel as any).max_players || 2;
+                          let count = 1;
+                          if (duel.opponent_id) count++;
+                          if ((duel as any).player3_id) count++;
+                          if ((duel as any).player4_id) count++;
+                          return count < mp;
+                        })() && (
                           <Button
                             onClick={() => handleJoinDuel(duel.id)}
                             className="w-full btn-mystic text-white"
@@ -477,7 +545,14 @@ const Duels = () => {
                           </Button>
                         )}
 
-                        {duel.status === 'in_progress' && duel.opponent_id && (
+                        {duel.status === 'in_progress' && (() => {
+                          const mp = (duel as any).max_players || 2;
+                          let count = 1;
+                          if (duel.opponent_id) count++;
+                          if ((duel as any).player3_id) count++;
+                          if ((duel as any).player4_id) count++;
+                          return count >= mp;
+                        })() && (
                           <Button
                             onClick={() => navigate(`/duel/${duel.id}`)}
                             className="w-full btn-mystic text-white"
