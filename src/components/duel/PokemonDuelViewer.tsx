@@ -32,6 +32,9 @@ interface PokemonFieldCard {
   energyAttached: number;
   damageCounters: number;
   isFaceDown?: boolean;
+  attacks?: { name: string; damage: string; text: string; cost: string[] }[];
+  abilities?: { name: string; text: string; type: string }[];
+  rules?: string[];
 }
 
 interface PokemonFieldState {
@@ -119,6 +122,9 @@ export const PokemonDuelViewer = ({ duelId, currentUserId }: PokemonDuelViewerPr
         energyAttached: 0,
         damageCounters: 0,
         isFaceDown: false,
+        attacks: card.attacks || [],
+        abilities: card.abilities || [],
+        rules: card.rules || [],
       }));
     });
 
@@ -671,10 +677,65 @@ export const PokemonDuelViewer = ({ duelId, currentUserId }: PokemonDuelViewerPr
       {/* Card Action Modal */}
       {selectedCard && selectedCardZone && (
         <Dialog open={!!selectedCard} onOpenChange={() => { setSelectedCard(null); setSelectedCardZone(null); }}>
-          <DialogContent className="max-w-sm">
+          <DialogContent className="max-w-sm max-h-[85vh] overflow-y-auto">
             <img src={selectedCard.images.large || selectedCard.images.small} alt={selectedCard.name} className="w-full rounded-lg" />
             <p className="text-sm font-bold text-center">{selectedCard.name}</p>
 
+            {/* HP and Types */}
+            <div className="flex items-center justify-center gap-2 flex-wrap">
+              {selectedCard.hp && (
+                <Badge variant="outline" className="text-xs">HP {selectedCard.hp}</Badge>
+              )}
+              {selectedCard.types?.map(t => (
+                <Badge key={t} className="text-xs bg-accent/20 text-accent-foreground border-0">{t}</Badge>
+              ))}
+              {selectedCard.supertype && (
+                <Badge variant="secondary" className="text-xs">{selectedCard.supertype}</Badge>
+              )}
+            </div>
+
+            {/* Abilities */}
+            {selectedCard.abilities && selectedCard.abilities.length > 0 && (
+              <div className="border-t pt-2 space-y-1">
+                <p className="text-xs font-semibold text-muted-foreground">HABILIDADES</p>
+                {selectedCard.abilities.map((a, i) => (
+                  <div key={i} className="text-xs">
+                    <span className="font-bold text-primary">{a.name}</span>
+                    <span className="text-muted-foreground ml-1">({a.type})</span>
+                    <p className="text-muted-foreground">{a.text}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Attacks */}
+            {selectedCard.attacks && selectedCard.attacks.length > 0 && (
+              <div className="border-t pt-2 space-y-1">
+                <p className="text-xs font-semibold text-muted-foreground">ATAQUES</p>
+                {selectedCard.attacks.map((a, i) => (
+                  <div key={i} className="text-xs">
+                    <div className="flex items-center gap-1">
+                      <span className="font-bold">{a.name}</span>
+                      {a.damage && <Badge variant="destructive" className="text-[10px] h-4 px-1">{a.damage}</Badge>}
+                    </div>
+                    {a.text && <p className="text-muted-foreground">{a.text}</p>}
+                    {a.cost?.length > 0 && (
+                      <p className="text-[10px] text-muted-foreground">Custo: {a.cost.join(', ')}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Rules */}
+            {selectedCard.rules && selectedCard.rules.length > 0 && (
+              <div className="border-t pt-2">
+                <p className="text-xs font-semibold text-muted-foreground">REGRAS</p>
+                {selectedCard.rules.map((r, i) => (
+                  <p key={i} className="text-xs text-muted-foreground">{r}</p>
+                ))}
+              </div>
+            )}
             {/* Energy & Damage for active/bench */}
             {(selectedCardZone === 'active' || selectedCardZone === 'bench') && (
               <div className="grid grid-cols-2 gap-2">
