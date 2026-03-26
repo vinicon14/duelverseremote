@@ -45,6 +45,18 @@ const Landing = () => {
           66% { color: hsl(45 100% 55%); text-shadow: 0 0 20px hsl(45 100% 50% / 0.5); }
         }
         .tcg-text-animate { animation: tcg-text-cycle 9s ease-in-out infinite; }
+        @keyframes tcg-btn-cycle {
+          0%, 100% { background: linear-gradient(135deg, hsl(270 80% 55%), hsl(315 85% 60%)); box-shadow: 0 10px 40px -10px hsl(270 80% 55% / 0.5); }
+          33% { background: linear-gradient(135deg, hsl(35 90% 50%), hsl(0 75% 50%)); box-shadow: 0 10px 40px -10px hsl(35 90% 50% / 0.5); }
+          66% { background: linear-gradient(135deg, hsl(45 100% 50%), hsl(210 80% 55%)); box-shadow: 0 10px 40px -10px hsl(45 100% 50% / 0.5); }
+        }
+        .tcg-btn-animate { animation: tcg-btn-cycle 9s ease-in-out infinite; }
+        @keyframes tcg-border-cycle {
+          0%, 100% { border-color: hsl(270 80% 55% / 0.4); color: hsl(270 80% 65%); }
+          33% { border-color: hsl(35 90% 50% / 0.4); color: hsl(35 90% 55%); }
+          66% { border-color: hsl(45 100% 50% / 0.4); color: hsl(45 100% 55%); }
+        }
+        .tcg-border-animate { animation: tcg-border-cycle 9s ease-in-out infinite; }
       `}</style>
       <div className="fixed inset-0 pointer-events-none z-0" style={{ animation: 'tcg-color-cycle 9s ease-in-out infinite' }} />
       {/* Navbar simples */}
@@ -97,14 +109,14 @@ const Landing = () => {
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Link to="/auth">
-                <Button size="lg" className="btn-mystic text-primary-foreground text-lg px-10 py-6 rounded-xl shadow-lg">
+                <Button size="lg" className="tcg-btn-animate text-primary-foreground text-lg px-10 py-6 rounded-xl">
                   <Zap className="mr-2 h-5 w-5" />
                   Comece Agora — É Grátis
                 </Button>
               </Link>
               {videoUrl &&
               <a href="#video">
-                  <Button size="lg" variant="outline" className="text-lg px-8 py-6 rounded-xl border-border">
+                  <Button size="lg" variant="outline" className="tcg-border-animate text-lg px-8 py-6 rounded-xl">
                     <Play className="mr-2 h-5 w-5" />
                     Ver Vídeo
                   </Button>
@@ -253,7 +265,7 @@ const Landing = () => {
                 Eleve sua experiência ao próximo nível.
               </p>
               <Link to="/auth">
-                <Button size="lg" className="bg-secondary text-secondary-foreground hover:bg-secondary/90 text-lg px-10 py-6 rounded-xl">
+                <Button size="lg" className="tcg-btn-animate text-primary-foreground text-lg px-10 py-6 rounded-xl">
                   <Crown className="mr-2 h-5 w-5" />
                   Saiba Mais
                 </Button>
@@ -273,7 +285,7 @@ const Landing = () => {
             Junte-se a milhares de duelistas e comece sua jornada agora mesmo
           </p>
           <Link to="/auth">
-            <Button size="lg" className="btn-mystic text-primary-foreground text-xl px-14 py-7 rounded-xl shadow-xl">
+            <Button size="lg" className="tcg-btn-animate text-primary-foreground text-xl px-14 py-7 rounded-xl">
               <Swords className="mr-2 h-6 w-6" />
               Criar Conta Grátis
             </Button>
