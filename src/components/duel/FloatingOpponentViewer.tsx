@@ -606,10 +606,18 @@ export const FloatingOpponentViewer = ({
         onClose={() => setModalOpen(false)}
         card={selectedCard ? {
           name: selectedCard.name,
-          type: '',
-          desc: '',
+          type: selectedCard.type_line || '',
+          desc: selectedCard.oracle_text || '',
           race: '',
-          card_images: [{ image_url_small: selectedCard.image }]
+          card_images: [{ image_url_small: selectedCard.image }],
+          power: selectedCard.power,
+          toughness: selectedCard.toughness,
+          mana_cost: selectedCard.mana_cost,
+          oracle_text: selectedCard.oracle_text,
+          type_line: selectedCard.type_line,
+          hp: selectedCard.hp,
+          types: selectedCard.types,
+          supertype: selectedCard.supertype,
         } : null}
       />
     </div>
