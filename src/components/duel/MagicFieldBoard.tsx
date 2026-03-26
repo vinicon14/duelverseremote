@@ -7,7 +7,7 @@ import { useState, type CSSProperties, type DragEvent, type ReactNode } from 're
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Flame, Skull, Ban, Layers, Zap, ZoomIn, ZoomOut, ChevronUp, ChevronDown, Droplets } from 'lucide-react';
+import { Flame, Skull, Ban, Layers, Zap, ZoomIn, ZoomOut, ChevronUp, ChevronDown, Droplets, Swords, Shield } from 'lucide-react';
 import { getMagicCardImage, MTG_CARD_BACK } from './mtgCardImage';
 
 export interface MagicCard {
@@ -152,6 +152,19 @@ const CardSlot = ({
         <Badge className="absolute right-1 top-1 h-5 min-w-5 justify-center px-1 text-[10px]">
           {card.counters}
         </Badge>
+      )}
+
+      {/* Power/Toughness display for creatures */}
+      {card.power !== undefined && card.toughness !== undefined && !card.isFaceDown && (
+        <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 z-20">
+          <div className="bg-background/90 border border-border text-[6px] sm:text-[7px] font-bold px-1 py-0.5 rounded flex items-center gap-0.5 whitespace-nowrap">
+            <Swords className="h-2 w-2 text-destructive" />
+            <span className="text-destructive">{card.power}</span>
+            <span className="text-muted-foreground">/</span>
+            <Shield className="h-2 w-2 text-primary" />
+            <span className="text-primary">{card.toughness}</span>
+          </div>
+        </div>
       )}
 
       {zone === 'lands' && card.isTapped && (
