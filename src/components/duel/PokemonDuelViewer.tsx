@@ -369,8 +369,11 @@ export const PokemonDuelViewer = ({ duelId, currentUserId }: PokemonDuelViewerPr
     );
   }
 
+  const activePlaymatUrl = typeof window !== 'undefined' ? localStorage.getItem('activePlaymatUrl') : null;
+  const activeSleeveUrl = typeof window !== 'undefined' ? localStorage.getItem('activeSleeveUrl') : null;
+
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 bg-background/95 border-t border-border">
+    <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border">
       {/* Phase Indicator */}
       <div className="flex items-center justify-center gap-2 py-1.5 border-b border-border/50 bg-muted/30">
         {(['draw', 'main', 'attack', 'end'] as const).map(p => (
@@ -385,8 +388,20 @@ export const PokemonDuelViewer = ({ duelId, currentUserId }: PokemonDuelViewerPr
         ))}
       </div>
 
-      {/* Field Layout */}
-      <div className="p-3 space-y-2">
+      {/* Field Layout with playmat */}
+      <div
+        className="p-3 space-y-2 relative overflow-hidden"
+        style={{
+          backgroundImage: activePlaymatUrl ? `url("${activePlaymatUrl}")` : undefined,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundColor: activePlaymatUrl ? undefined : 'hsl(var(--background) / 0.95)',
+        }}
+      >
+        {activePlaymatUrl && (
+          <div className="absolute inset-0 bg-black/40 pointer-events-none z-0" />
+        )}
+        <div className="relative z-10">
         {/* Top row: Prize | Active | Deck + Stadium */}
         <div className="flex items-center gap-3 justify-center">
           {/* Prize Cards */}
