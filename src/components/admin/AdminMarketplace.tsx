@@ -395,7 +395,7 @@ export const AdminMarketplace = () => {
 
   return (
     <div className="space-y-6">
-      <Tabs defaultValue="products" className="w-full">
+      <Tabs defaultValue="approvals" className="w-full">
         <TabsList className="mb-4">
           <TabsTrigger value="approvals" className="flex items-center gap-2">
             <PackageCheck className="w-4 h-4" />
