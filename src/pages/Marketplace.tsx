@@ -715,6 +715,17 @@ export default function Marketplace() {
           </div>
         </div>
 
+        {/* Search Bar */}
+        <div className="relative mb-6">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar produto por nome..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 max-w-md"
+          />
+        </div>
+
         {/* Tabs for Marketplace */}
         <Tabs defaultValue="official" className="w-full">
           <TabsList className="mb-6">
