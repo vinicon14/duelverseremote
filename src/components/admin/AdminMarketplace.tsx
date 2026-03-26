@@ -29,8 +29,12 @@ interface Product {
   category: string;
   product_type: string;
   is_active: boolean;
+  is_approved: boolean;
+  is_third_party_seller: boolean;
+  seller_id: string | null;
   stock: number | null;
   created_at: string;
+  seller_username?: string;
 }
 
 interface Purchase {
