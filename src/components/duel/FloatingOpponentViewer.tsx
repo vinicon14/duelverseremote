@@ -341,6 +341,16 @@ export const FloatingOpponentViewer = ({
                     <EyeOff className="h-2 w-2 text-red-500" />
                   </div>
                 )}
+                {/* P/T for MTG creatures */}
+                {card.power && card.toughness && !card.isFaceDown && (
+                  <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 z-10">
+                    <div className="bg-background/90 border border-border text-[5px] font-bold px-0.5 py-0 rounded flex items-center gap-0.5 whitespace-nowrap">
+                      <span className="text-destructive">{card.power}</span>
+                      <span className="text-muted-foreground">/</span>
+                      <span className="text-primary">{card.toughness}</span>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
