@@ -86,7 +86,58 @@ export const AdminMarketplace = () => {
   useEffect(() => {
     fetchProducts();
     fetchPurchases();
+    fetchPendingProducts();
   }, []);
+
+  const fetchPendingProducts = async () => {
+    const { data, error } = await supabase
+      .from('marketplace_products')
+      .select('*')
+      .eq('is_third_party_seller', true)
+      .eq('is_approved', false)
+      .order('created_at', { ascending: false });
+
+    if (!error && data) {
+      const sellerIds = [...new Set(data.map((p: any) => p.seller_id).filter(Boolean))] as string[];
+      let sellerMap = new Map<string, string>();
+      if (sellerIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, username')
+          .in('user_id', sellerIds);
+        sellerMap = new Map(profiles?.map(p => [p.user_id, p.username]) || []);
+      }
+      setPendingProducts(data.map((p: any) => ({ ...p, seller_username: sellerMap.get(p.seller_id) || '—' })));
+    }
+  };
+
+  const handleApprove = async (productId: string) => {
+    const { error } = await supabase
+      .from('marketplace_products')
+      .update({ is_approved: true })
+      .eq('id', productId);
+    if (error) {
+      toast({ title: 'Erro ao aprovar', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Produto aprovado ✅' });
+      fetchPendingProducts();
+      fetchProducts();
+    }
+  };
+
+  const handleReject = async (productId: string) => {
+    if (!confirm('Rejeitar e excluir este produto?')) return;
+    const { error } = await supabase
+      .from('marketplace_products')
+      .delete()
+      .eq('id', productId);
+    if (error) {
+      toast({ title: 'Erro ao rejeitar', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Produto rejeitado e excluído' });
+      fetchPendingProducts();
+    }
+  };
 
   const fetchPurchases = async () => {
     const { data, error } = await supabase
