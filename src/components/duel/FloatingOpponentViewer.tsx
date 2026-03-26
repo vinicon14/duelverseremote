@@ -93,6 +93,7 @@ interface OpponentState {
   bench?: OpponentCard[];
   prizeCardsCount?: number;
   discardCount?: number;
+  pkmDiscard?: OpponentCard[];
   stadium?: OpponentCard | null;
   // Equipment
   playmatUrl?: string | null;
@@ -187,6 +188,7 @@ export const FloatingOpponentViewer = ({
               } : null,
               prizeCardsCount: payload.prizeCardsCount || 0,
               discardCount: payload.discardCount || 0,
+              pkmDiscard: (payload.discardCards || []).map((c: any) => ({ id: c.id || 0, name: c.name, image: c.image })),
               playmatUrl: payload.playmatUrl || null,
               sleeveUrl: payload.sleeveUrl || null,
             });
@@ -523,11 +525,15 @@ export const FloatingOpponentViewer = ({
                     ))}
                   </div>
 
-                  {/* Discard count */}
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                    <Trash2 className="h-3 w-3" />
-                    <span>Descarte: {opponentState.discardCount || 0}</span>
-                  </div>
+                  {/* Discard pile */}
+                  {(opponentState.pkmDiscard && opponentState.pkmDiscard.length > 0) ? (
+                    <ZoneDisplay title="Descarte" cards={opponentState.pkmDiscard} icon={Trash2} color="text-destructive" />
+                  ) : (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                      <Trash2 className="h-3 w-3" />
+                      <span>Descarte: {opponentState.discardCount || 0}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
