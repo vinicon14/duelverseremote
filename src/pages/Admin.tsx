@@ -71,7 +71,7 @@ export default function Admin() {
             <TabsTrigger value="packages">Pacotes</TabsTrigger>
             <TabsTrigger value="judges">Juízes</TabsTrigger>
             <TabsTrigger value="plans">Planos</TabsTrigger>
-            <TabsTrigger value="marketplace">Market</TabsTrigger>
+            <TabsTrigger value="marketplace">Aprovações</TabsTrigger>
             <TabsTrigger value="settings">Config</TabsTrigger>
           </TabsList>
           
