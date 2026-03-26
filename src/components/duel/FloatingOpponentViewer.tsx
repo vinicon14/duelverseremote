@@ -93,6 +93,7 @@ interface OpponentState {
   bench?: OpponentCard[];
   prizeCardsCount?: number;
   discardCount?: number;
+  pkmDiscard?: OpponentCard[];
   stadium?: OpponentCard | null;
   // Equipment
   playmatUrl?: string | null;
@@ -187,6 +188,7 @@ export const FloatingOpponentViewer = ({
               } : null,
               prizeCardsCount: payload.prizeCardsCount || 0,
               discardCount: payload.discardCount || 0,
+              pkmDiscard: (payload.discardCards || []).map((c: any) => ({ id: c.id || 0, name: c.name, image: c.image })),
               playmatUrl: payload.playmatUrl || null,
               sleeveUrl: payload.sleeveUrl || null,
             });
