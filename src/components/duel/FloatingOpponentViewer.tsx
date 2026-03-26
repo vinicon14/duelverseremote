@@ -525,11 +525,15 @@ export const FloatingOpponentViewer = ({
                     ))}
                   </div>
 
-                  {/* Discard count */}
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                    <Trash2 className="h-3 w-3" />
-                    <span>Descarte: {opponentState.discardCount || 0}</span>
-                  </div>
+                  {/* Discard pile */}
+                  {(opponentState.pkmDiscard && opponentState.pkmDiscard.length > 0) ? (
+                    <ZoneDisplay title="Descarte" cards={opponentState.pkmDiscard} icon={Trash2} color="text-destructive" />
+                  ) : (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                      <Trash2 className="h-3 w-3" />
+                      <span>Descarte: {opponentState.discardCount || 0}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
