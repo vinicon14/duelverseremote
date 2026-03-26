@@ -19,6 +19,16 @@ interface CardEffectModalProps {
     card_images?: {
       image_url_small: string;
     }[];
+    // MTG fields
+    power?: string;
+    toughness?: string;
+    mana_cost?: string;
+    oracle_text?: string;
+    type_line?: string;
+    // PKM fields
+    hp?: string;
+    types?: string[];
+    supertype?: string;
   } | null;
   onPlaceCard?: () => void;
   showPlaceButton?: boolean;
@@ -30,8 +40,8 @@ export const CardEffectModal = ({ open, onClose, card, onPlaceCard, showPlaceBut
   
   if (!card) return null;
 
-  const isMonster = card.atk !== undefined;
-  const effectText = card.desc;
+  const isMonster = card.atk !== undefined || card.power !== undefined;
+  const effectText = card.desc || card.oracle_text || '';
   const isLong = effectText && effectText.length > 150;
 
   return (
@@ -62,14 +72,36 @@ export const CardEffectModal = ({ open, onClose, card, onPlaceCard, showPlaceBut
             <div className="flex-1 space-y-2">
               <div className="flex flex-wrap gap-1">
                 <Badge variant="outline" className="text-xs">
-                  {card.type}
+                  {card.type_line || card.type}
                 </Badge>
-                <Badge variant="secondary" className="text-xs">
-                  {card.race}
-                </Badge>
+                {card.race && (
+                  <Badge variant="secondary" className="text-xs">
+                    {card.race}
+                  </Badge>
+                )}
                 {card.attribute && (
                   <Badge className="text-xs bg-primary/20 text-primary border-0">
                     {card.attribute}
+                  </Badge>
+                )}
+                {card.mana_cost && (
+                  <Badge variant="outline" className="text-xs">
+                    {card.mana_cost}
+                  </Badge>
+                )}
+                {card.hp && (
+                  <Badge variant="outline" className="text-xs">
+                    HP {card.hp}
+                  </Badge>
+                )}
+                {card.supertype && (
+                  <Badge variant="secondary" className="text-xs">
+                    {card.supertype}
+                  </Badge>
+                )}
+                {card.types && card.types.length > 0 && (
+                  <Badge className="text-xs bg-accent/20 text-accent border-0">
+                    {card.types.join('/')}
                   </Badge>
                 )}
               </div>
@@ -82,14 +114,30 @@ export const CardEffectModal = ({ open, onClose, card, onPlaceCard, showPlaceBut
                       Nível {card.level}
                     </Badge>
                   )}
-                  <Badge className="bg-destructive/20 text-destructive border-0 text-xs">
-                    <Swords className="h-3 w-3 mr-1" />
-                    ATK {card.atk}
-                  </Badge>
-                  <Badge className="bg-primary/20 text-primary border-0 text-xs">
-                    <Shield className="h-3 w-3 mr-1" />
-                    DEF {card.def ?? '?'}
-                  </Badge>
+                  {card.atk !== undefined && (
+                    <Badge className="bg-destructive/20 text-destructive border-0 text-xs">
+                      <Swords className="h-3 w-3 mr-1" />
+                      ATK {card.atk}
+                    </Badge>
+                  )}
+                  {card.def !== undefined && (
+                    <Badge className="bg-primary/20 text-primary border-0 text-xs">
+                      <Shield className="h-3 w-3 mr-1" />
+                      DEF {card.def ?? '?'}
+                    </Badge>
+                  )}
+                  {card.power && (
+                    <Badge className="bg-destructive/20 text-destructive border-0 text-xs">
+                      <Swords className="h-3 w-3 mr-1" />
+                      {card.power}
+                    </Badge>
+                  )}
+                  {card.toughness && (
+                    <Badge className="bg-primary/20 text-primary border-0 text-xs">
+                      <Shield className="h-3 w-3 mr-1" />
+                      {card.toughness}
+                    </Badge>
+                  )}
                 </div>
               )}
             </div>

@@ -320,12 +320,7 @@ export default function Marketplace() {
 
       // Transfer DuelCoins to third-party seller
       if (product.is_third_party_seller && product.seller_id) {
-        await supabase
-          .from('profiles')
-          .update({ duelcoins_balance: balance }) // will be recalculated
-          .eq('user_id', product.seller_id);
-        
-        // Actually increment seller balance
+        // Fetch seller's current balance and increment
         const { data: sellerData } = await supabase
           .from('profiles')
           .select('duelcoins_balance')

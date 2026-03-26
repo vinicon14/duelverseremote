@@ -304,6 +304,11 @@ export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId }: Magi
       isFaceDown: c.isFaceDown || false,
       isTapped: c.isTapped || false,
       counters: c.counters || 0,
+      power: c.power || undefined,
+      toughness: c.toughness || undefined,
+      oracle_text: c.oracle_text || undefined,
+      type_line: c.type_line || undefined,
+      mana_cost: c.mana_cost || undefined,
     });
 
     // Only broadcast after subscription is ready
@@ -409,7 +414,7 @@ export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId }: Magi
       </Sheet>
 
       <Dialog open={cardDetailOpen} onOpenChange={setCardDetailOpen}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-sm truncate">{selectedCard?.name}</DialogTitle>
           </DialogHeader>
@@ -428,6 +433,30 @@ export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId }: Magi
                 <p className="text-xs text-muted-foreground text-center">
                   {[selectedCard.mana_cost, selectedCard.type_line].filter(Boolean).join(' — ')}
                 </p>
+              )}
+
+              {/* Power/Toughness */}
+              {(selectedCard.power || selectedCard.toughness) && (
+                <div className="flex items-center justify-center gap-2">
+                  {selectedCard.power && (
+                    <Badge className="bg-destructive/20 text-destructive border-0 text-xs">
+                      ⚔ Poder {selectedCard.power}
+                    </Badge>
+                  )}
+                  {selectedCard.toughness && (
+                    <Badge className="bg-primary/20 text-primary border-0 text-xs">
+                      🛡 Resistência {selectedCard.toughness}
+                    </Badge>
+                  )}
+                </div>
+              )}
+
+              {/* Oracle text / effect */}
+              {selectedCard.oracle_text && (
+                <div className="border-t pt-2">
+                  <p className="text-xs font-semibold text-muted-foreground mb-1">EFEITO</p>
+                  <p className="text-xs leading-relaxed whitespace-pre-wrap">{selectedCard.oracle_text}</p>
+                </div>
               )}
 
               <div className="space-y-2">
