@@ -652,6 +652,7 @@ export type Database = {
           id: string
           image_url: string | null
           is_active: boolean
+          is_approved: boolean
           is_third_party_seller: boolean
           metadata: Json | null
           name: string
@@ -668,6 +669,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean
+          is_approved?: boolean
           is_third_party_seller?: boolean
           metadata?: Json | null
           name: string
@@ -684,6 +686,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean
+          is_approved?: boolean
           is_third_party_seller?: boolean
           metadata?: Json | null
           name?: string

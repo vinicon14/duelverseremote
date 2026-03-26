@@ -39,6 +39,12 @@ const Landing = () => {
           33% { background: linear-gradient(135deg, hsl(45 95% 60% / 0.15) 0%, hsl(15 90% 50% / 0.1) 50%, transparent 100%); }
           66% { background: linear-gradient(135deg, hsl(50 100% 50% / 0.15) 0%, hsl(210 90% 50% / 0.1) 50%, transparent 100%); }
         }
+        @keyframes tcg-text-cycle {
+          0%, 100% { color: hsl(270 80% 65%); text-shadow: 0 0 20px hsl(270 80% 55% / 0.5); }
+          33% { color: hsl(35 90% 55%); text-shadow: 0 0 20px hsl(35 90% 50% / 0.5); }
+          66% { color: hsl(45 100% 55%); text-shadow: 0 0 20px hsl(45 100% 50% / 0.5); }
+        }
+        .tcg-text-animate { animation: tcg-text-cycle 9s ease-in-out infinite; }
       `}</style>
       <div className="fixed inset-0 pointer-events-none z-0" style={{ animation: 'tcg-color-cycle 9s ease-in-out infinite' }} />
       {/* Navbar simples */}
@@ -48,7 +54,7 @@ const Landing = () => {
             <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
               <Swords className="w-5 h-5 text-primary" />
             </div>
-            <span className="text-xl font-bold text-gradient-mystic">DUELVERSE</span>
+            <span className="text-xl font-bold tcg-text-animate">DUELVERSE</span>
           </div>
           <div className="flex items-center gap-3">
             <Link to="/auth">
@@ -79,7 +85,7 @@ const Landing = () => {
             </div>
             
             <h1 className="text-5xl md:text-7xl font-extrabold leading-tight">
-              <span className="text-gradient-mystic">Duele Online</span>
+              <span className="tcg-text-animate">Duele Online</span>
               <br />
               <span className="text-foreground">Como Nunca Antes</span>
             </h1>

@@ -19,7 +19,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { useToast } from "@/hooks/use-toast";
 import { useAccountType } from "@/hooks/useAccountType";
 import { supabase } from "@/integrations/supabase/client";
-import { ShoppingCart, Coins, Package, Sparkles, Zap, Minus, Plus, X, Loader2, ShoppingBag, Check, Store as StoreIcon, PlusCircle, Tag, Crown, Upload, Image } from "lucide-react";
+import { ShoppingCart, Coins, Package, Sparkles, Zap, Minus, Plus, X, Loader2, ShoppingBag, Check, Store as StoreIcon, PlusCircle, Tag, Crown, Upload, Image, Search, Edit, Trash2, ToggleLeft, ToggleRight } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -37,6 +37,8 @@ interface MarketplaceProduct {
   is_active: boolean;
   seller_id: string | null;
   is_third_party_seller: boolean;
+  is_approved: boolean;
+  metadata: any;
 }
 
 interface CartItem {
@@ -62,9 +64,12 @@ export default function Marketplace() {
   const [user, setUser] = useState<any>(null);
   const [purchaseSuccess, setPurchaseSuccess] = useState(false);
   const [filter, setFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
   const { isPro } = useAccountType();
   const [createProductDialogOpen, setCreateProductDialogOpen] = useState(false);
+  const [editProductDialogOpen, setEditProductDialogOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<MarketplaceProduct | null>(null);
   const [creatingProduct, setCreatingProduct] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -139,6 +144,7 @@ export default function Marketplace() {
     product_type: "one_time",
     stock: null as number | null,
     image_url: "",
+    item_type: "" as string,
   });
 
   useEffect(() => {
@@ -310,6 +316,39 @@ export default function Marketplace() {
       if (purchaseError) {
         console.error('Purchase error:', purchaseError);
         throw new Error(`Erro ao registrar compra: ${purchaseError.message}`);
+      }
+
+      // Transfer DuelCoins to third-party seller
+      if (product.is_third_party_seller && product.seller_id) {
+        await supabase
+          .from('profiles')
+          .update({ duelcoins_balance: balance }) // will be recalculated
+          .eq('user_id', product.seller_id);
+        
+        // Actually increment seller balance
+        const { data: sellerData } = await supabase
+          .from('profiles')
+          .select('duelcoins_balance')
+          .eq('user_id', product.seller_id)
+          .single();
+        
+        if (sellerData) {
+          await supabase
+            .from('profiles')
+            .update({ duelcoins_balance: sellerData.duelcoins_balance + product.price_duelcoins })
+            .eq('user_id', product.seller_id);
+        }
+
+        // Record transfer transaction
+        await supabase
+          .from('duelcoins_transactions')
+          .insert({
+            sender_id: user.id,
+            receiver_id: product.seller_id,
+            amount: product.price_duelcoins,
+            transaction_type: 'marketplace_purchase',
+            description: `Compra terceiro: ${product.name}`
+          });
       }
 
       // Get buyer username
@@ -507,7 +546,12 @@ export default function Marketplace() {
 
     setCreatingProduct(true);
     try {
-      // Insert product directly
+      const metadata: any = {};
+      if (newProduct.category === 'digital_item' && newProduct.item_type) {
+        metadata.item_type = newProduct.item_type;
+      }
+
+      // Third-party products need admin approval
       const { data, error } = await supabase
         .from('marketplace_products')
         .insert({
@@ -520,7 +564,9 @@ export default function Marketplace() {
           image_url: newProduct.image_url || null,
           seller_id: user?.id,
           is_third_party_seller: true,
-          is_active: true,
+          is_active: false,
+          is_approved: false,
+          metadata,
         })
         .select()
         .single();
@@ -528,7 +574,7 @@ export default function Marketplace() {
       if (error) throw error;
 
       if (data) {
-        toast({ title: "Sucesso! ✅", description: "Produto criado com sucesso!" });
+        toast({ title: "Produto enviado! ✅", description: "Aguardando aprovação do administrador." });
         setCreateProductDialogOpen(false);
         setNewProduct({
           name: "",
@@ -538,6 +584,7 @@ export default function Marketplace() {
           product_type: "one_time",
           stock: null,
           image_url: "",
+          item_type: "",
         });
         setImagePreview(null);
         fetchMyProducts();
@@ -550,19 +597,59 @@ export default function Marketplace() {
     }
   };
 
+  const handleToggleMyProduct = async (product: MarketplaceProduct) => {
+    const { error } = await supabase.from('marketplace_products').update({ is_active: !product.is_active }).eq('id', product.id);
+    if (error) toast({ title: 'Erro', description: error.message, variant: 'destructive' });
+    else { toast({ title: product.is_active ? 'Produto desativado' : 'Produto ativado' }); fetchMyProducts(); }
+  };
+
+  const handleDeleteMyProduct = async (product: MarketplaceProduct) => {
+    if (!confirm('Deseja excluir este produto?')) return;
+    const { error } = await supabase.from('marketplace_products').delete().eq('id', product.id);
+    if (error) toast({ title: 'Erro', description: error.message, variant: 'destructive' });
+    else { toast({ title: 'Produto excluído' }); fetchMyProducts(); fetchProducts(); }
+  };
+
+  const openEditProduct = (product: MarketplaceProduct) => {
+    setEditingProduct(product);
+    setNewProduct({ name: product.name, description: product.description || '', price_duelcoins: product.price_duelcoins, category: product.category, product_type: product.product_type, stock: product.stock, image_url: product.image_url || '', item_type: (product.metadata as any)?.item_type || '' });
+    setImagePreview(product.image_url || null);
+    setEditProductDialogOpen(true);
+  };
+
+  const handleEditProduct = async () => {
+    if (!editingProduct) return;
+    setCreatingProduct(true);
+    try {
+      const metadata: any = {};
+      if (newProduct.category === 'digital_item' && newProduct.item_type) metadata.item_type = newProduct.item_type;
+      const { error } = await supabase.from('marketplace_products').update({ name: newProduct.name, description: newProduct.description, price_duelcoins: newProduct.price_duelcoins, category: newProduct.category, product_type: newProduct.product_type, stock: newProduct.stock, image_url: newProduct.image_url || null, metadata }).eq('id', editingProduct.id);
+      if (error) throw error;
+      toast({ title: 'Produto atualizado! ✅' });
+      setEditProductDialogOpen(false);
+      setEditingProduct(null);
+      fetchMyProducts(); fetchProducts();
+    } catch (err: any) { toast({ title: 'Erro', description: err.message, variant: 'destructive' }); }
+    finally { setCreatingProduct(false); }
+  };
+
   useEffect(() => {
     if (isPro && user) {
       fetchMyProducts();
     }
   }, [isPro, user]);
 
-  const filteredProducts = filter === "all" 
-    ? products 
-    : products.filter(p => p.category === filter);
+  const filteredProducts = products.filter(p => {
+    const matchesFilter = filter === "all" || p.category === filter;
+    const matchesSearch = !searchQuery.trim() || p.name.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesFilter && matchesSearch;
+  });
 
-  const filteredThirdParty = filter === "all"
-    ? thirdPartyProducts
-    : thirdPartyProducts.filter(p => p.category === filter);
+  const filteredThirdParty = thirdPartyProducts.filter(p => {
+    const matchesFilter = filter === "all" || p.category === filter;
+    const matchesSearch = !searchQuery.trim() || p.name.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesFilter && matchesSearch && p.is_approved;
+  });
 
   const categories = ["all", ...Array.from(new Set(products.map(p => p.category)))];
 
@@ -589,7 +676,7 @@ export default function Marketplace() {
         </div>
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-4">
           <div>
             <div className="flex items-center gap-3 mb-2">
               <ShoppingBag className="w-8 h-8 text-primary" />
@@ -695,6 +782,17 @@ export default function Marketplace() {
               </SheetContent>
             </Sheet>
           </div>
+        </div>
+
+        {/* Search Bar */}
+        <div className="relative mb-6">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar produto por nome..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 max-w-md"
+          />
         </div>
 
         {/* Tabs for Marketplace */}
@@ -909,20 +1007,33 @@ export default function Marketplace() {
                           <Badge className={`absolute top-3 right-3 ${product.is_active ? 'bg-green-500/90' : 'bg-red-500/90'} text-white border-0`}>
                             {product.is_active ? 'Ativo' : 'Inativo'}
                           </Badge>
+                          {!(product as any).is_approved && (
+                            <Badge className="absolute bottom-3 left-3 bg-yellow-600 text-white border-0">
+                              Aguardando aprovação
+                            </Badge>
+                          )}
                         </div>
 
                         <CardHeader className="pb-2">
                           <CardTitle className="text-lg line-clamp-1">{product.name}</CardTitle>
                         </CardHeader>
 
-                        <CardFooter className="flex items-center justify-between pt-0">
-                          <div className="flex items-center gap-1 text-secondary font-bold text-lg">
-                            <Coins className="w-5 h-5" />
+                        <CardFooter className="flex items-center justify-between pt-0 gap-1 flex-wrap">
+                          <div className="flex items-center gap-1 text-secondary font-bold">
+                            <Coins className="w-4 h-4" />
                             {product.price_duelcoins.toLocaleString()}
                           </div>
-                          {product.stock !== null && (
-                            <Badge variant="outline">Estoque: {product.stock}</Badge>
-                          )}
+                          <div className="flex gap-1">
+                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEditProduct(product)}>
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleToggleMyProduct(product)}>
+                              {product.is_active ? <ToggleRight className="w-4 h-4 text-green-500" /> : <ToggleLeft className="w-4 h-4" />}
+                            </Button>
+                            <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => handleDeleteMyProduct(product)}>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </CardFooter>
                       </Card>
                     );
@@ -990,7 +1101,7 @@ export default function Marketplace() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Categoria</Label>
-                  <Select value={newProduct.category} onValueChange={(value) => setNewProduct({ ...newProduct, category: value })}>
+                  <Select value={newProduct.category} onValueChange={(value) => setNewProduct({ ...newProduct, category: value, item_type: '' })}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -1015,6 +1126,22 @@ export default function Marketplace() {
                   </Select>
                 </div>
               </div>
+
+              {newProduct.category === 'digital_item' && (
+                <div className="space-y-2">
+                  <Label>Tipo de Item Digital</Label>
+                  <Select value={newProduct.item_type} onValueChange={(value) => setNewProduct({ ...newProduct, item_type: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="playmat">Playmat</SelectItem>
+                      <SelectItem value="sleeve">Sleeve</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
 
               <div className="space-y-2">
                 <Label>Imagem do Produto</Label>
@@ -1079,6 +1206,58 @@ export default function Marketplace() {
               <Button className="btn-mystic" onClick={handleCreateProduct} disabled={creatingProduct}>
                 {creatingProduct ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <PlusCircle className="w-4 h-4 mr-2" />}
                 Criar Produto
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Product Dialog */}
+        <Dialog open={editProductDialogOpen} onOpenChange={(open) => { setEditProductDialogOpen(open); if (!open) setEditingProduct(null); }}>
+          <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Editar Produto</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Nome *</Label>
+                <Input value={newProduct.name} onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>Descrição</Label>
+                <Textarea value={newProduct.description} onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Preço (DuelCoins) *</Label>
+                  <Input type="number" min="1" value={newProduct.price_duelcoins || ""} onChange={(e) => setNewProduct({ ...newProduct, price_duelcoins: parseInt(e.target.value) || 0 })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Estoque</Label>
+                  <Input type="number" min="1" placeholder="Ilimitado" value={newProduct.stock || ""} onChange={(e) => setNewProduct({ ...newProduct, stock: e.target.value ? parseInt(e.target.value) : null })} />
+                </div>
+              </div>
+              {newProduct.category === 'digital_item' && (
+                <div className="space-y-2">
+                  <Label>Tipo de Item Digital</Label>
+                  <Select value={newProduct.item_type} onValueChange={(value) => setNewProduct({ ...newProduct, item_type: value })}>
+                    <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="playmat">Playmat</SelectItem>
+                      <SelectItem value="sleeve">Sleeve</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              <div className="space-y-2">
+                <Label>URL da Imagem</Label>
+                <Input value={newProduct.image_url} onChange={(e) => setNewProduct({ ...newProduct, image_url: e.target.value })} placeholder="https://..." />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditProductDialogOpen(false)}>Cancelar</Button>
+              <Button className="btn-mystic" onClick={handleEditProduct} disabled={creatingProduct}>
+                {creatingProduct ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Edit className="w-4 h-4 mr-2" />}
+                Salvar
               </Button>
             </DialogFooter>
           </DialogContent>

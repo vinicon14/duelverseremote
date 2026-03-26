@@ -18,10 +18,10 @@ import { useToast } from "@/hooks/use-toast";
 import { Swords, Sparkles, Zap } from "lucide-react";
 import { TcgType } from "@/contexts/TcgContext";
 
-const TCG_OPTIONS: { value: TcgType; label: string; icon: React.ReactNode; color: string }[] = [
-  { value: 'yugioh', label: 'Yu-Gi-Oh!', icon: <Swords className="w-5 h-5" />, color: 'border-purple-500 bg-purple-500/10' },
-  { value: 'magic', label: 'Magic: The Gathering', icon: <Sparkles className="w-5 h-5" />, color: 'border-amber-500 bg-amber-500/10' },
-  { value: 'pokemon', label: 'Pokémon TCG', icon: <Zap className="w-5 h-5" />, color: 'border-yellow-500 bg-yellow-500/10' },
+const TCG_OPTIONS: { value: TcgType; label: string; icon: React.ReactNode; color: string; bgGradient: string }[] = [
+  { value: 'yugioh', label: 'Yu-Gi-Oh!', icon: <Swords className="w-5 h-5" />, color: 'border-purple-500 bg-purple-500/10', bgGradient: 'from-purple-500/20 via-background to-pink-500/10' },
+  { value: 'magic', label: 'Magic: The Gathering', icon: <Sparkles className="w-5 h-5" />, color: 'border-amber-500 bg-amber-500/10', bgGradient: 'from-amber-500/20 via-background to-red-700/10' },
+  { value: 'pokemon', label: 'Pokémon TCG', icon: <Zap className="w-5 h-5" />, color: 'border-yellow-500 bg-yellow-500/10', bgGradient: 'from-yellow-500/20 via-background to-blue-500/10' },
 ];
 
 const Auth = () => {
@@ -227,8 +227,8 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-accent/10" />
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden transition-all duration-700">
+      <div className={`absolute inset-0 bg-gradient-to-br ${TCG_OPTIONS.find(o => o.value === selectedTcg)?.bgGradient || 'from-primary/10 via-background to-accent/10'} transition-all duration-700`} />
       <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMzLjMxNCAwIDYgMi42ODYgNiA2cy0yLjY4NiA2LTYgNi02LTIuNjg2LTYtNiAyLjY4Ni02IDYtNnoiIHN0cm9rZT0iIzgwNTBhMCIgc3Ryb2tlLXdpZHRoPSIuNSIgb3BhY2l0eT0iLjEiLz48L2c+PC9zdmc+')] opacity-20" />
       
       <Card className="w-full max-w-md card-mystic animate-slide-up relative z-10">
