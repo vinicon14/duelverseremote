@@ -32,6 +32,9 @@ interface PokemonFieldCard {
   energyAttached: number;
   damageCounters: number;
   isFaceDown?: boolean;
+  attacks?: { name: string; damage: string; text: string; cost: string[] }[];
+  abilities?: { name: string; text: string; type: string }[];
+  rules?: string[];
 }
 
 interface PokemonFieldState {
@@ -119,6 +122,9 @@ export const PokemonDuelViewer = ({ duelId, currentUserId }: PokemonDuelViewerPr
         energyAttached: 0,
         damageCounters: 0,
         isFaceDown: false,
+        attacks: card.attacks || [],
+        abilities: card.abilities || [],
+        rules: card.rules || [],
       }));
     });
 
