@@ -33,6 +33,8 @@ interface PokemonCard {
   evolvesFrom?: string;
   evolvesTo?: string[];
   rules?: string[];
+  attacks?: { name: string; damage: string; text: string; cost: string[] }[];
+  abilities?: { name: string; text: string; type: string }[];
   regulationMark?: string;
   rarity?: string;
   images: {
