@@ -597,6 +597,42 @@ export default function Marketplace() {
     }
   };
 
+  const handleToggleMyProduct = async (product: MarketplaceProduct) => {
+    const { error } = await supabase.from('marketplace_products').update({ is_active: !product.is_active }).eq('id', product.id);
+    if (error) toast({ title: 'Erro', description: error.message, variant: 'destructive' });
+    else { toast({ title: product.is_active ? 'Produto desativado' : 'Produto ativado' }); fetchMyProducts(); }
+  };
+
+  const handleDeleteMyProduct = async (product: MarketplaceProduct) => {
+    if (!confirm('Deseja excluir este produto?')) return;
+    const { error } = await supabase.from('marketplace_products').delete().eq('id', product.id);
+    if (error) toast({ title: 'Erro', description: error.message, variant: 'destructive' });
+    else { toast({ title: 'Produto excluído' }); fetchMyProducts(); fetchProducts(); }
+  };
+
+  const openEditProduct = (product: MarketplaceProduct) => {
+    setEditingProduct(product);
+    setNewProduct({ name: product.name, description: product.description || '', price_duelcoins: product.price_duelcoins, category: product.category, product_type: product.product_type, stock: product.stock, image_url: product.image_url || '', item_type: (product.metadata as any)?.item_type || '' });
+    setImagePreview(product.image_url || null);
+    setEditProductDialogOpen(true);
+  };
+
+  const handleEditProduct = async () => {
+    if (!editingProduct) return;
+    setCreatingProduct(true);
+    try {
+      const metadata: any = {};
+      if (newProduct.category === 'digital_item' && newProduct.item_type) metadata.item_type = newProduct.item_type;
+      const { error } = await supabase.from('marketplace_products').update({ name: newProduct.name, description: newProduct.description, price_duelcoins: newProduct.price_duelcoins, category: newProduct.category, product_type: newProduct.product_type, stock: newProduct.stock, image_url: newProduct.image_url || null, metadata }).eq('id', editingProduct.id);
+      if (error) throw error;
+      toast({ title: 'Produto atualizado! ✅' });
+      setEditProductDialogOpen(false);
+      setEditingProduct(null);
+      fetchMyProducts(); fetchProducts();
+    } catch (err: any) { toast({ title: 'Erro', description: err.message, variant: 'destructive' }); }
+    finally { setCreatingProduct(false); }
+  };
+
   useEffect(() => {
     if (isPro && user) {
       fetchMyProducts();
