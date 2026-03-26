@@ -72,6 +72,7 @@ const emptyForm = {
 export const AdminMarketplace = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [loading, setLoading] = useState(true);
   const [pendingProducts, setPendingProducts] = useState<Product[]>([]);
   const [saving, setSaving] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
