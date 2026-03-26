@@ -1101,7 +1101,7 @@ export default function Marketplace() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Categoria</Label>
-                  <Select value={newProduct.category} onValueChange={(value) => setNewProduct({ ...newProduct, category: value })}>
+                  <Select value={newProduct.category} onValueChange={(value) => setNewProduct({ ...newProduct, category: value, item_type: '' })}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -1125,6 +1125,22 @@ export default function Marketplace() {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+
+              {newProduct.category === 'digital_item' && (
+                <div className="space-y-2">
+                  <Label>Tipo de Item Digital</Label>
+                  <Select value={newProduct.item_type} onValueChange={(value) => setNewProduct({ ...newProduct, item_type: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="playmat">Playmat</SelectItem>
+                      <SelectItem value="sleeve">Sleeve</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               </div>
 
               <div className="space-y-2">
