@@ -1141,7 +1141,7 @@ export default function Marketplace() {
                   </Select>
                 </div>
               )}
-              </div>
+            </div>
 
               <div className="space-y-2">
                 <Label>Imagem do Produto</Label>
@@ -1206,6 +1206,58 @@ export default function Marketplace() {
               <Button className="btn-mystic" onClick={handleCreateProduct} disabled={creatingProduct}>
                 {creatingProduct ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <PlusCircle className="w-4 h-4 mr-2" />}
                 Criar Produto
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Product Dialog */}
+        <Dialog open={editProductDialogOpen} onOpenChange={(open) => { setEditProductDialogOpen(open); if (!open) setEditingProduct(null); }}>
+          <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Editar Produto</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Nome *</Label>
+                <Input value={newProduct.name} onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>Descrição</Label>
+                <Textarea value={newProduct.description} onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Preço (DuelCoins) *</Label>
+                  <Input type="number" min="1" value={newProduct.price_duelcoins || ""} onChange={(e) => setNewProduct({ ...newProduct, price_duelcoins: parseInt(e.target.value) || 0 })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Estoque</Label>
+                  <Input type="number" min="1" placeholder="Ilimitado" value={newProduct.stock || ""} onChange={(e) => setNewProduct({ ...newProduct, stock: e.target.value ? parseInt(e.target.value) : null })} />
+                </div>
+              </div>
+              {newProduct.category === 'digital_item' && (
+                <div className="space-y-2">
+                  <Label>Tipo de Item Digital</Label>
+                  <Select value={newProduct.item_type} onValueChange={(value) => setNewProduct({ ...newProduct, item_type: value })}>
+                    <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="playmat">Playmat</SelectItem>
+                      <SelectItem value="sleeve">Sleeve</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              <div className="space-y-2">
+                <Label>URL da Imagem</Label>
+                <Input value={newProduct.image_url} onChange={(e) => setNewProduct({ ...newProduct, image_url: e.target.value })} placeholder="https://..." />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditProductDialogOpen(false)}>Cancelar</Button>
+              <Button className="btn-mystic" onClick={handleEditProduct} disabled={creatingProduct}>
+                {creatingProduct ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Edit className="w-4 h-4 mr-2" />}
+                Salvar
               </Button>
             </DialogFooter>
           </DialogContent>
