@@ -289,6 +289,8 @@ export const DuelDeckViewer = ({
         })),
         deckCount: fieldState.deck.length,
         extraCount: fieldState.extraDeck.length,
+        playmatUrl: localStorage.getItem('activePlaymatUrl') || null,
+        sleeveUrl: localStorage.getItem('activeSleeveUrl') || null,
       }
     });
   }, [broadcastChannel, currentUserId, fieldState]);

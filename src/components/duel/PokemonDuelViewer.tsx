@@ -94,6 +94,8 @@ export const PokemonDuelViewer = ({ duelId, currentUserId }: PokemonDuelViewerPr
           discardCount: fieldState.discard.length,
           handCount: fieldState.hand.length,
           deckCount: fieldState.deck.length,
+          playmatUrl: localStorage.getItem('activePlaymatUrl') || null,
+          sleeveUrl: localStorage.getItem('activeSleeveUrl') || null,
         },
       });
     };

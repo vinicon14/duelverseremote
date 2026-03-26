@@ -327,6 +327,8 @@ export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId }: Magi
               exile: fieldState.exile.map(serializeCard),
               stack: fieldState.stack.map(serializeCard),
               commandZone: fieldState.commandZone?.map(serializeCard) || [],
+              playmatUrl: localStorage.getItem('activePlaymatUrl') || null,
+              sleeveUrl: localStorage.getItem('activeSleeveUrl') || null,
             },
           });
         }
