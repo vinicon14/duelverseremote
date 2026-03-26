@@ -70,12 +70,12 @@ const Landing = () => {
           </div>
           <div className="flex items-center gap-3">
             <Link to="/auth">
-              <Button variant="ghost" className="text-muted-foreground hover:text-foreground">
+              <Button variant="ghost" className="tcg-border-animate hover:text-foreground">
                 Entrar
               </Button>
             </Link>
             <Link to="/auth">
-              <Button className="btn-mystic text-primary-foreground">
+              <Button className="tcg-btn-animate text-primary-foreground">
                 Criar Conta
               </Button>
             </Link>
