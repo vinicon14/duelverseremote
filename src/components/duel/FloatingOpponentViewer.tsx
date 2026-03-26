@@ -493,8 +493,16 @@ export const FloatingOpponentViewer = ({
                   {/* Active */}
                   <div className="flex justify-center">
                     {opponentState.active ? (
-                      <div className="w-14 h-20 rounded-lg overflow-hidden border-2 border-primary relative">
+                      <div 
+                        className="w-14 h-20 rounded-lg overflow-hidden border-2 border-primary relative cursor-pointer hover:opacity-80"
+                        onClick={() => { setSelectedCard(opponentState.active!); setModalOpen(true); }}
+                      >
                         <img src={opponentState.active.image} alt={opponentState.active.name} className="w-full h-full object-cover" />
+                        {opponentState.active.hp && (
+                          <Badge className="absolute top-0 left-0 text-[6px] h-3 px-0.5 bg-primary/80">
+                            {opponentState.active.hp}HP
+                          </Badge>
+                        )}
                         {(opponentState.active.damageCounters || 0) > 0 && (
                           <Badge className="absolute -top-1 -right-1 text-[7px] h-3 px-0.5 bg-destructive">
                             {(opponentState.active.damageCounters || 0) * 10}
