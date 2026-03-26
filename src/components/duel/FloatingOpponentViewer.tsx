@@ -17,11 +17,13 @@ import {
   Move,
   Sparkles,
   Star,
-  Trash2
+  Trash2,
+  Zap
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useDraggable } from '@/hooks/useDraggable';
+import { MTG_CARD_BACK } from './mtgCardImage';
 
 interface OpponentCard {
   id: number;
@@ -30,6 +32,10 @@ interface OpponentCard {
   isFaceDown?: boolean;
   materials?: number;
   position?: string;
+  isTapped?: boolean;
+  counters?: number;
+  energyAttached?: number;
+  damageCounters?: number;
 }
 
 interface ZoneCards {
@@ -64,8 +70,8 @@ interface OpponentState {
   banished: OpponentCard[];
   deckCount: number;
   extraCount: number;
-  // MTG-specific
   tcgType?: string;
+  // MTG-specific
   battlefield?: OpponentCard[];
   lands?: OpponentCard[];
   exile?: OpponentCard[];
@@ -77,6 +83,10 @@ interface OpponentState {
   bench?: OpponentCard[];
   prizeCardsCount?: number;
   discardCount?: number;
+  stadium?: OpponentCard | null;
+  // Equipment
+  playmatUrl?: string | null;
+  sleeveUrl?: string | null;
 }
 
 interface FloatingOpponentViewerProps {
@@ -85,7 +95,15 @@ interface FloatingOpponentViewerProps {
   opponentUsername?: string;
 }
 
-const CARD_BACK_URL = 'https://images.ygoprodeck.com/images/cards/back_high.jpg';
+const YGO_CARD_BACK_URL = 'https://images.ygoprodeck.com/images/cards/back_high.jpg';
+const PKM_CARD_BACK_URL = 'https://images.pokemontcg.io/back.png';
+
+const getCardBack = (tcgType?: string, sleeveUrl?: string | null) => {
+  if (sleeveUrl) return sleeveUrl;
+  if (tcgType === 'magic') return MTG_CARD_BACK;
+  if (tcgType === 'pokemon') return PKM_CARD_BACK_URL;
+  return YGO_CARD_BACK_URL;
+};
 
 export const FloatingOpponentViewer = ({ 
   duelId, 
@@ -110,11 +128,8 @@ export const FloatingOpponentViewer = ({
     
     channel
       .on('broadcast', { event: 'deck-state' }, ({ payload }) => {
-        console.log('[FloatingOpponentViewer] Received broadcast:', payload);
-        // Only update if this is the opponent's state (not our own)
         if (payload.userId && payload.userId !== currentUserId) {
           if (payload.tcgType === 'magic') {
-            // MTG state
             setOpponentState({
               hand: payload.hand || 0,
               field: [],
@@ -129,9 +144,10 @@ export const FloatingOpponentViewer = ({
               stack: payload.stack || [],
               commandZone: payload.commandZone || [],
               phase: payload.phase,
+              playmatUrl: payload.playmatUrl || null,
+              sleeveUrl: payload.sleeveUrl || null,
             });
           } else if (payload.tcgType === 'pokemon') {
-            // PKM state
             setOpponentState({
               hand: payload.handCount || 0,
               field: [],
@@ -140,17 +156,31 @@ export const FloatingOpponentViewer = ({
               deckCount: payload.deckCount || 0,
               extraCount: 0,
               tcgType: 'pokemon',
-              active: payload.active ? { id: 0, name: payload.active.name, image: payload.active.images?.small || '' } : null,
-              bench: (payload.bench || []).map((c: any, i: number) => ({ id: i, name: c.name, image: c.images?.small || '' })),
+              active: payload.active ? {
+                id: 0,
+                name: payload.active.name,
+                image: payload.active.images?.small || '',
+                energyAttached: payload.active.energyAttached || 0,
+                damageCounters: payload.active.damageCounters || 0,
+              } : null,
+              bench: (payload.bench || []).map((c: any, i: number) => ({
+                id: i,
+                name: c.name,
+                image: c.images?.small || '',
+                energyAttached: c.energyAttached || 0,
+                damageCounters: c.damageCounters || 0,
+              })),
+              stadium: payload.stadium ? {
+                id: 0,
+                name: payload.stadium.name,
+                image: payload.stadium.images?.small || '',
+              } : null,
               prizeCardsCount: payload.prizeCardsCount || 0,
               discardCount: payload.discardCount || 0,
+              playmatUrl: payload.playmatUrl || null,
+              sleeveUrl: payload.sleeveUrl || null,
             });
           } else {
-            // YGO state
-            console.log('[FloatingOpponentViewer] Updating opponent state with zones:', {
-              monsterZones: payload.monsterZones,
-              spellZones: payload.spellZones,
-            });
             setOpponentState({
               hand: payload.hand || 0,
               field: payload.field || [],
@@ -162,13 +192,13 @@ export const FloatingOpponentViewer = ({
               banished: payload.banished || [],
               deckCount: payload.deckCount || 0,
               extraCount: payload.extraCount || 0,
+              playmatUrl: payload.playmatUrl || null,
+              sleeveUrl: payload.sleeveUrl || null,
             });
           }
         }
       })
-      .subscribe((status) => {
-        console.log('[FloatingOpponentViewer] Channel subscription status:', status);
-      });
+      .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
@@ -207,6 +237,8 @@ export const FloatingOpponentViewer = ({
     );
   }
 
+  const cardBack = getCardBack(opponentState?.tcgType, opponentState?.sleeveUrl);
+
   const ZoneSlotDisplay = ({ card, label }: { card: OpponentCard | null; label: string }) => (
     <div className={cn(
       "w-8 h-12 border border-dashed border-muted-foreground/30 rounded flex items-center justify-center",
@@ -218,12 +250,10 @@ export const FloatingOpponentViewer = ({
           card.position?.toString().toLowerCase().startsWith('def') && "rotate-90"
         )}>
           <img
-            src={card.image || CARD_BACK_URL}
-            alt={card.name}
+            src={card.isFaceDown ? cardBack : (card.image || cardBack)}
+            alt={card.isFaceDown ? 'Carta virada' : card.name}
             title={card.isFaceDown ? 'Carta virada' : card.name}
-            className={cn(
-              "w-full h-full object-cover rounded"
-            )}
+            className="w-full h-full object-cover rounded"
           />
           {card.isFaceDown && (
             <div className="absolute top-0 right-0">
@@ -267,28 +297,31 @@ export const FloatingOpponentViewer = ({
         <ScrollArea className="max-h-20">
           <div className="flex gap-1 flex-wrap">
             {cards.map((card, idx) => (
-                <div 
+              <div 
                 key={`${card.id}-${idx}`} 
-                className={cn(
-                  "relative cursor-pointer hover:opacity-80 transition-opacity",
-                  card.position?.toString().toLowerCase().startsWith('def') && "transform origin-center"
-                )}
+                className="relative cursor-pointer hover:opacity-80 transition-opacity"
                 onClick={() => {
                   setSelectedCard(card);
                   setModalOpen(true);
                 }}
               >
                 <img
-                  src={card.isFaceDown ? CARD_BACK_URL : card.image}
+                  src={card.isFaceDown ? cardBack : card.image}
                   alt={card.isFaceDown ? 'Face-down card' : card.name}
                   title={card.isFaceDown ? 'Carta virada' : card.name}
                   className={cn(
-                    "w-10 h-auto rounded-sm shadow-sm hover:scale-110 transition-transform"
+                    "w-10 h-auto rounded-sm shadow-sm hover:scale-110 transition-transform",
+                    card.isTapped && "rotate-90"
                   )}
                 />
                 {card.materials && card.materials > 0 && (
                   <Badge className="absolute -bottom-1 -right-1 text-[8px] h-3 px-1 bg-yellow-600">
                     {card.materials}
+                  </Badge>
+                )}
+                {card.counters && card.counters > 0 && (
+                  <Badge className="absolute -top-1 -left-1 text-[8px] h-3 px-1 bg-accent">
+                    {card.counters}
                   </Badge>
                 )}
                 {card.isFaceDown && (
@@ -324,20 +357,10 @@ export const FloatingOpponentViewer = ({
           <span className="text-sm font-semibold">Deck de {opponentUsername}</span>
         </div>
         <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            onClick={() => setIsMinimized(true)}
-          >
+          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIsMinimized(true)}>
             <Minimize2 className="h-3 w-3" />
           </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            onClick={() => setIsVisible(false)}
-          >
+          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIsVisible(false)}>
             <X className="h-3 w-3" />
           </Button>
         </div>
@@ -378,182 +401,174 @@ export const FloatingOpponentViewer = ({
               {opponentState.tcgType === 'magic' && opponentState.phase && (
                 <Badge variant="outline" className="text-[10px] h-4 px-1">{opponentState.phase}</Badge>
               )}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-5 w-5"
-                onClick={() => setIsCollapsed(!isCollapsed)}
-              >
+              <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => setIsCollapsed(!isCollapsed)}>
                 {isCollapsed ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3" />}
               </Button>
             </div>
 
             {!isCollapsed && opponentState.tcgType === 'magic' && (
               <>
-                {/* MTG Battlefield */}
                 {opponentState.battlefield && opponentState.battlefield.length > 0 && (
-                  <ZoneDisplay 
-                    title="Campo de Batalha" 
-                    cards={opponentState.battlefield} 
-                    icon={Layers} 
-                    color="text-primary" 
-                  />
+                  <ZoneDisplay title="Campo de Batalha" cards={opponentState.battlefield} icon={Layers} color="text-primary" />
                 )}
-
-                {/* MTG Lands */}
                 {opponentState.lands && opponentState.lands.length > 0 && (
-                  <ZoneDisplay 
-                    title="Terrenos" 
-                    cards={opponentState.lands} 
-                    icon={Layers} 
-                    color="text-primary" 
-                  />
+                  <ZoneDisplay title="Terrenos" cards={opponentState.lands} icon={Layers} color="text-primary" />
                 )}
-
-                {/* MTG Stack */}
                 {opponentState.stack && opponentState.stack.length > 0 && (
-                  <ZoneDisplay 
-                    title="Pilha" 
-                    cards={opponentState.stack} 
-                    icon={Sparkles} 
-                    color="text-accent" 
-                  />
+                  <ZoneDisplay title="Pilha" cards={opponentState.stack} icon={Sparkles} color="text-accent" />
                 )}
-
-                {/* MTG Graveyard & Exile */}
                 <div className="grid grid-cols-2 gap-2">
-                  <ZoneDisplay 
-                    title="Cemitério" 
-                    cards={opponentState.graveyard} 
-                    icon={Flame} 
-                    color="text-destructive"
-                    compact 
-                  />
-                  <ZoneDisplay 
-                    title="Exílio" 
-                    cards={opponentState.exile || []} 
-                    icon={Ban} 
-                    color="text-muted-foreground"
-                    compact 
-                  />
+                  <ZoneDisplay title="Cemitério" cards={opponentState.graveyard} icon={Flame} color="text-destructive" compact />
+                  <ZoneDisplay title="Exílio" cards={opponentState.exile || []} icon={Ban} color="text-muted-foreground" compact />
                 </div>
-
-                {/* MTG Command Zone */}
                 {opponentState.commandZone && opponentState.commandZone.length > 0 && (
-                  <ZoneDisplay 
-                    title="Zona de Comando" 
-                    cards={opponentState.commandZone} 
-                    icon={Sparkles} 
-                    color="text-accent" 
-                    compact
-                  />
+                  <ZoneDisplay title="Zona de Comando" cards={opponentState.commandZone} icon={Sparkles} color="text-accent" compact />
                 )}
               </>
             )}
 
             {/* PKM Field */}
             {!isCollapsed && opponentState.tcgType === 'pokemon' && (
-              <div className="space-y-2 p-2 bg-muted/20 rounded-lg">
-                <span className="text-[10px] font-medium text-muted-foreground">Campo Pokémon do Oponente</span>
-                
-                {/* Active */}
-                <div className="flex justify-center">
-                  {opponentState.active ? (
-                    <div className="w-14 h-20 rounded-lg overflow-hidden border-2 border-primary">
-                      <img src={opponentState.active.image} alt={opponentState.active.name} className="w-full h-full object-cover" />
-                    </div>
-                  ) : (
-                    <div className="w-14 h-20 rounded-lg border-2 border-dashed border-muted-foreground/30 flex items-center justify-center">
-                      <span className="text-[8px] text-muted-foreground">Ativo</span>
+              <div
+                className="space-y-2 p-2 rounded-lg relative overflow-hidden"
+                style={{
+                  backgroundImage: opponentState.playmatUrl ? `url("${opponentState.playmatUrl}")` : undefined,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  backgroundColor: opponentState.playmatUrl ? undefined : 'hsl(var(--muted) / 0.2)',
+                }}
+              >
+                {opponentState.playmatUrl && (
+                  <div className="absolute inset-0 bg-black/40 rounded-lg pointer-events-none z-0" />
+                )}
+                <div className="relative z-10">
+                  <span className="text-[10px] font-medium text-muted-foreground">Campo Pokémon do Oponente</span>
+                  
+                  {/* Stadium */}
+                  {opponentState.stadium && (
+                    <div className="flex items-center gap-1 mb-1">
+                      <div className="w-8 h-12 rounded overflow-hidden border border-accent">
+                        <img src={opponentState.stadium.image} alt={opponentState.stadium.name} className="w-full h-full object-cover" />
+                      </div>
+                      <span className="text-[8px] text-muted-foreground">{opponentState.stadium.name}</span>
                     </div>
                   )}
-                </div>
+                  
+                  {/* Active */}
+                  <div className="flex justify-center">
+                    {opponentState.active ? (
+                      <div className="w-14 h-20 rounded-lg overflow-hidden border-2 border-primary relative">
+                        <img src={opponentState.active.image} alt={opponentState.active.name} className="w-full h-full object-cover" />
+                        {(opponentState.active.damageCounters || 0) > 0 && (
+                          <Badge className="absolute -top-1 -right-1 text-[7px] h-3 px-0.5 bg-destructive">
+                            {(opponentState.active.damageCounters || 0) * 10}
+                          </Badge>
+                        )}
+                        {(opponentState.active.energyAttached || 0) > 0 && (
+                          <Badge className="absolute -bottom-1 -right-1 text-[7px] h-3 px-0.5 bg-primary">
+                            {opponentState.active.energyAttached}⚡
+                          </Badge>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="w-14 h-20 rounded-lg border-2 border-dashed border-muted-foreground/30 flex items-center justify-center">
+                        <span className="text-[8px] text-muted-foreground">Ativo</span>
+                      </div>
+                    )}
+                  </div>
 
-                {/* Bench */}
-                <div className="flex justify-center gap-1">
-                  {(opponentState.bench || []).map((card, i) => (
-                    <div key={i} className="w-10 h-14 rounded overflow-hidden border border-border">
-                      <img src={card.image} alt={card.name} className="w-full h-full object-cover" />
-                    </div>
-                  ))}
-                  {Array.from({ length: Math.max(0, 5 - (opponentState.bench?.length || 0)) }).map((_, i) => (
-                    <div key={`empty-${i}`} className="w-10 h-14 rounded border border-dashed border-border/30" />
-                  ))}
-                </div>
+                  {/* Bench */}
+                  <div className="flex justify-center gap-1 mt-1">
+                    {(opponentState.bench || []).map((card, i) => (
+                      <div key={i} className="w-10 h-14 rounded overflow-hidden border border-border relative">
+                        <img src={card.image} alt={card.name} className="w-full h-full object-cover" />
+                        {(card.damageCounters || 0) > 0 && (
+                          <Badge className="absolute -top-0.5 -right-0.5 text-[6px] h-2.5 px-0.5 bg-destructive">
+                            {(card.damageCounters || 0) * 10}
+                          </Badge>
+                        )}
+                        {(card.energyAttached || 0) > 0 && (
+                          <Badge className="absolute -bottom-0.5 -right-0.5 text-[6px] h-2.5 px-0.5 bg-primary">
+                            {card.energyAttached}⚡
+                          </Badge>
+                        )}
+                      </div>
+                    ))}
+                    {Array.from({ length: Math.max(0, 5 - (opponentState.bench?.length || 0)) }).map((_, i) => (
+                      <div key={`empty-${i}`} className="w-10 h-14 rounded border border-dashed border-border/30" />
+                    ))}
+                  </div>
 
-                {/* Discard count */}
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Trash2 className="h-3 w-3" />
-                  <span>Descarte: {opponentState.discardCount || 0}</span>
+                  {/* Discard count */}
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                    <Trash2 className="h-3 w-3" />
+                    <span>Descarte: {opponentState.discardCount || 0}</span>
+                  </div>
                 </div>
               </div>
             )}
 
             {!isCollapsed && opponentState.tcgType !== 'magic' && opponentState.tcgType !== 'pokemon' && (
               <>
-                {/* YGO Field Zones Layout */}
+                {/* YGO Field with opponent playmat */}
                 {opponentState.monsterZones && (
-                  <div className="space-y-2 p-2 bg-muted/20 rounded-lg">
-                    <span className="text-[10px] font-medium text-muted-foreground">Zonas de Campo do Oponente</span>
-                    
-                    {opponentState.extraMonsterZones && (
-                      <div className="flex justify-center gap-8">
-                        <ZoneSlotDisplay card={opponentState.extraMonsterZones.extraMonster1} label="EM1" />
-                        <ZoneSlotDisplay card={opponentState.extraMonsterZones.extraMonster2} label="EM2" />
-                      </div>
+                  <div
+                    className="space-y-2 p-2 rounded-lg relative overflow-hidden"
+                    style={{
+                      backgroundImage: opponentState.playmatUrl ? `url("${opponentState.playmatUrl}")` : undefined,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                      backgroundColor: opponentState.playmatUrl ? undefined : 'hsl(var(--muted) / 0.2)',
+                    }}
+                  >
+                    {opponentState.playmatUrl && (
+                      <div className="absolute inset-0 bg-black/40 rounded-lg pointer-events-none z-0" />
                     )}
+                    <div className="relative z-10">
+                      <span className="text-[10px] font-medium text-muted-foreground">Zonas de Campo do Oponente</span>
+                      
+                      {opponentState.extraMonsterZones && (
+                        <div className="flex justify-center gap-8">
+                          <ZoneSlotDisplay card={opponentState.extraMonsterZones.extraMonster1} label="EM1" />
+                          <ZoneSlotDisplay card={opponentState.extraMonsterZones.extraMonster2} label="EM2" />
+                        </div>
+                      )}
 
-                    <div className="flex justify-center gap-1">
-                      <ZoneSlotDisplay card={opponentState.monsterZones.monster1} label="M1" />
-                      <ZoneSlotDisplay card={opponentState.monsterZones.monster2} label="M2" />
-                      <ZoneSlotDisplay card={opponentState.monsterZones.monster3} label="M3" />
-                      <ZoneSlotDisplay card={opponentState.monsterZones.monster4} label="M4" />
-                      <ZoneSlotDisplay card={opponentState.monsterZones.monster5} label="M5" />
-                    </div>
-
-                    {opponentState.spellZones && (
                       <div className="flex justify-center gap-1">
-                        <ZoneSlotDisplay card={opponentState.spellZones.spell1} label="S1" />
-                        <ZoneSlotDisplay card={opponentState.spellZones.spell2} label="S2" />
-                        <ZoneSlotDisplay card={opponentState.spellZones.spell3} label="S3" />
-                        <ZoneSlotDisplay card={opponentState.spellZones.spell4} label="S4" />
-                        <ZoneSlotDisplay card={opponentState.spellZones.spell5} label="S5" />
+                        <ZoneSlotDisplay card={opponentState.monsterZones.monster1} label="M1" />
+                        <ZoneSlotDisplay card={opponentState.monsterZones.monster2} label="M2" />
+                        <ZoneSlotDisplay card={opponentState.monsterZones.monster3} label="M3" />
+                        <ZoneSlotDisplay card={opponentState.monsterZones.monster4} label="M4" />
+                        <ZoneSlotDisplay card={opponentState.monsterZones.monster5} label="M5" />
                       </div>
-                    )}
 
-                    {opponentState.fieldSpell && (
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-muted-foreground">Campo:</span>
-                        <ZoneSlotDisplay card={opponentState.fieldSpell} label="FS" />
-                      </div>
-                    )}
+                      {opponentState.spellZones && (
+                        <div className="flex justify-center gap-1">
+                          <ZoneSlotDisplay card={opponentState.spellZones.spell1} label="S1" />
+                          <ZoneSlotDisplay card={opponentState.spellZones.spell2} label="S2" />
+                          <ZoneSlotDisplay card={opponentState.spellZones.spell3} label="S3" />
+                          <ZoneSlotDisplay card={opponentState.spellZones.spell4} label="S4" />
+                          <ZoneSlotDisplay card={opponentState.spellZones.spell5} label="S5" />
+                        </div>
+                      )}
+
+                      {opponentState.fieldSpell && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-muted-foreground">Campo:</span>
+                          <ZoneSlotDisplay card={opponentState.fieldSpell} label="FS" />
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 
                 {!opponentState.monsterZones && opponentState.field.length > 0 && (
-                  <ZoneDisplay 
-                    title="Campo" 
-                    cards={opponentState.field} 
-                    icon={Layers} 
-                    color="text-primary" 
-                  />
+                  <ZoneDisplay title="Campo" cards={opponentState.field} icon={Layers} color="text-primary" />
                 )}
 
                 <div className="grid grid-cols-2 gap-2">
-                  <ZoneDisplay 
-                    title="Cemitério" 
-                    cards={opponentState.graveyard} 
-                    icon={Flame} 
-                    color="text-destructive"
-                    compact 
-                  />
-                  <ZoneDisplay 
-                    title="Banido" 
-                    cards={opponentState.banished} 
-                    icon={Ban} 
-                    color="text-muted-foreground"
-                    compact 
-                  />
+                  <ZoneDisplay title="Cemitério" cards={opponentState.graveyard} icon={Flame} color="text-destructive" compact />
+                  <ZoneDisplay title="Banido" cards={opponentState.banished} icon={Ban} color="text-muted-foreground" compact />
                 </div>
               </>
             )}
