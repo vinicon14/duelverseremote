@@ -1007,20 +1007,33 @@ export default function Marketplace() {
                           <Badge className={`absolute top-3 right-3 ${product.is_active ? 'bg-green-500/90' : 'bg-red-500/90'} text-white border-0`}>
                             {product.is_active ? 'Ativo' : 'Inativo'}
                           </Badge>
+                          {!(product as any).is_approved && (
+                            <Badge className="absolute bottom-3 left-3 bg-yellow-600 text-white border-0">
+                              Aguardando aprovação
+                            </Badge>
+                          )}
                         </div>
 
                         <CardHeader className="pb-2">
                           <CardTitle className="text-lg line-clamp-1">{product.name}</CardTitle>
                         </CardHeader>
 
-                        <CardFooter className="flex items-center justify-between pt-0">
-                          <div className="flex items-center gap-1 text-secondary font-bold text-lg">
-                            <Coins className="w-5 h-5" />
+                        <CardFooter className="flex items-center justify-between pt-0 gap-1 flex-wrap">
+                          <div className="flex items-center gap-1 text-secondary font-bold">
+                            <Coins className="w-4 h-4" />
                             {product.price_duelcoins.toLocaleString()}
                           </div>
-                          {product.stock !== null && (
-                            <Badge variant="outline">Estoque: {product.stock}</Badge>
-                          )}
+                          <div className="flex gap-1">
+                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEditProduct(product)}>
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleToggleMyProduct(product)}>
+                              {product.is_active ? <ToggleRight className="w-4 h-4 text-green-500" /> : <ToggleLeft className="w-4 h-4" />}
+                            </Button>
+                            <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => handleDeleteMyProduct(product)}>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </CardFooter>
                       </Card>
                     );
