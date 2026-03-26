@@ -304,6 +304,11 @@ export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId }: Magi
       isFaceDown: c.isFaceDown || false,
       isTapped: c.isTapped || false,
       counters: c.counters || 0,
+      power: c.power || undefined,
+      toughness: c.toughness || undefined,
+      oracle_text: c.oracle_text || undefined,
+      type_line: c.type_line || undefined,
+      mana_cost: c.mana_cost || undefined,
     });
 
     // Only broadcast after subscription is ready
