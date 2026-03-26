@@ -318,6 +318,39 @@ export default function Marketplace() {
         throw new Error(`Erro ao registrar compra: ${purchaseError.message}`);
       }
 
+      // Transfer DuelCoins to third-party seller
+      if (product.is_third_party_seller && product.seller_id) {
+        await supabase
+          .from('profiles')
+          .update({ duelcoins_balance: balance }) // will be recalculated
+          .eq('user_id', product.seller_id);
+        
+        // Actually increment seller balance
+        const { data: sellerData } = await supabase
+          .from('profiles')
+          .select('duelcoins_balance')
+          .eq('user_id', product.seller_id)
+          .single();
+        
+        if (sellerData) {
+          await supabase
+            .from('profiles')
+            .update({ duelcoins_balance: sellerData.duelcoins_balance + product.price_duelcoins })
+            .eq('user_id', product.seller_id);
+        }
+
+        // Record transfer transaction
+        await supabase
+          .from('duelcoins_transactions')
+          .insert({
+            sender_id: user.id,
+            receiver_id: product.seller_id,
+            amount: product.price_duelcoins,
+            transaction_type: 'marketplace_purchase',
+            description: `Compra terceiro: ${product.name}`
+          });
+      }
+
       // Get buyer username
       const { data: buyerData } = await supabase
         .from('profiles')
