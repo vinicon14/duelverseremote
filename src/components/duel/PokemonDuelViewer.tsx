@@ -521,6 +521,7 @@ export const PokemonDuelViewer = ({ duelId, currentUserId }: PokemonDuelViewerPr
             Embaralhar
           </Button>
         </div>
+        </div>
       </div>
 
       {/* Hand Modal */}
