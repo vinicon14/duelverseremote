@@ -32,6 +32,15 @@ const Landing = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      {/* Animated TCG color overlay */}
+      <style>{`
+        @keyframes tcg-color-cycle {
+          0%, 100% { background: linear-gradient(135deg, hsl(270 80% 55% / 0.15) 0%, hsl(315 85% 60% / 0.1) 50%, transparent 100%); }
+          33% { background: linear-gradient(135deg, hsl(45 95% 60% / 0.15) 0%, hsl(15 90% 50% / 0.1) 50%, transparent 100%); }
+          66% { background: linear-gradient(135deg, hsl(50 100% 50% / 0.15) 0%, hsl(210 90% 50% / 0.1) 50%, transparent 100%); }
+        }
+      `}</style>
+      <div className="fixed inset-0 pointer-events-none z-0" style={{ animation: 'tcg-color-cycle 9s ease-in-out infinite' }} />
       {/* Navbar simples */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
