@@ -407,24 +407,38 @@ export const FloatingOpponentViewer = ({
             </div>
 
             {!isCollapsed && opponentState.tcgType === 'magic' && (
-              <>
-                {opponentState.battlefield && opponentState.battlefield.length > 0 && (
-                  <ZoneDisplay title="Campo de Batalha" cards={opponentState.battlefield} icon={Layers} color="text-primary" />
+              <div
+                className="space-y-2 p-2 rounded-lg relative overflow-hidden"
+                style={{
+                  backgroundImage: opponentState.playmatUrl ? `url("${opponentState.playmatUrl}")` : undefined,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  backgroundColor: opponentState.playmatUrl ? undefined : 'hsl(var(--muted) / 0.2)',
+                }}
+              >
+                {opponentState.playmatUrl && (
+                  <div className="absolute inset-0 bg-black/40 rounded-lg pointer-events-none z-0" />
                 )}
-                {opponentState.lands && opponentState.lands.length > 0 && (
-                  <ZoneDisplay title="Terrenos" cards={opponentState.lands} icon={Layers} color="text-primary" />
-                )}
-                {opponentState.stack && opponentState.stack.length > 0 && (
-                  <ZoneDisplay title="Pilha" cards={opponentState.stack} icon={Sparkles} color="text-accent" />
-                )}
-                <div className="grid grid-cols-2 gap-2">
-                  <ZoneDisplay title="Cemitério" cards={opponentState.graveyard} icon={Flame} color="text-destructive" compact />
-                  <ZoneDisplay title="Exílio" cards={opponentState.exile || []} icon={Ban} color="text-muted-foreground" compact />
+                <div className="relative z-10">
+                  <span className="text-[10px] font-medium text-muted-foreground">Campo MTG do Oponente</span>
+                  {opponentState.battlefield && opponentState.battlefield.length > 0 && (
+                    <ZoneDisplay title="Campo de Batalha" cards={opponentState.battlefield} icon={Layers} color="text-primary" />
+                  )}
+                  {opponentState.lands && opponentState.lands.length > 0 && (
+                    <ZoneDisplay title="Terrenos" cards={opponentState.lands} icon={Layers} color="text-primary" />
+                  )}
+                  {opponentState.stack && opponentState.stack.length > 0 && (
+                    <ZoneDisplay title="Pilha" cards={opponentState.stack} icon={Sparkles} color="text-accent" />
+                  )}
+                  <div className="grid grid-cols-2 gap-2">
+                    <ZoneDisplay title="Cemitério" cards={opponentState.graveyard} icon={Flame} color="text-destructive" compact />
+                    <ZoneDisplay title="Exílio" cards={opponentState.exile || []} icon={Ban} color="text-muted-foreground" compact />
+                  </div>
+                  {opponentState.commandZone && opponentState.commandZone.length > 0 && (
+                    <ZoneDisplay title="Zona de Comando" cards={opponentState.commandZone} icon={Sparkles} color="text-accent" compact />
+                  )}
                 </div>
-                {opponentState.commandZone && opponentState.commandZone.length > 0 && (
-                  <ZoneDisplay title="Zona de Comando" cards={opponentState.commandZone} icon={Sparkles} color="text-accent" compact />
-                )}
-              </>
+              </div>
             )}
 
             {/* PKM Field */}

@@ -459,11 +459,17 @@ export const PokemonDuelViewer = ({ duelId, currentUserId }: PokemonDuelViewerPr
           {/* Deck */}
           <div className="flex flex-col items-center gap-1">
             <div
-              className="w-14 h-20 rounded border-2 border-accent/30 bg-accent/5 flex flex-col items-center justify-center cursor-pointer hover:bg-accent/10 transition-colors"
+              className="w-14 h-20 rounded border-2 border-accent/30 overflow-hidden cursor-pointer hover:opacity-90 transition-opacity relative"
               onClick={drawCard}
             >
-              <span className="text-sm font-bold">{fieldState.deck.length}</span>
-              <span className="text-[8px] text-muted-foreground">Deck</span>
+              <img
+                src={activeSleeveUrl || 'https://images.pokemontcg.io/back.png'}
+                alt="Deck"
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40">
+                <span className="text-sm font-bold text-white">{fieldState.deck.length}</span>
+              </div>
             </div>
           </div>
 
