@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { MagicFieldBoard, MagicFieldState, MagicZoneType, MagicCard, MagicPhase } from './MagicFieldBoard';
 import { getMagicCardImage, MTG_CARD_BACK } from './mtgCardImage';
-import { Shuffle, Hand, ArrowDown, RotateCcw, Eye, Undo2, Search } from 'lucide-react';
+import { Shuffle, Hand, ArrowDown, RotateCcw, Eye, Undo2, Search, BookOpen, ChevronDown as ChevronDownIcon, Swords, Shield } from 'lucide-react';
 
 const createInitialFieldState = (): MagicFieldState => ({
   battlefield: [],
@@ -413,51 +413,18 @@ export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId }: Magi
         </SheetContent>
       </Sheet>
 
-      <Dialog open={cardDetailOpen} onOpenChange={setCardDetailOpen}>
-        <DialogContent className="max-w-sm max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-sm truncate">{selectedCard?.name}</DialogTitle>
-          </DialogHeader>
-          {selectedCard && (
-            <div className="space-y-3">
-              <div className="flex justify-center">
-                <img
-                  src={getMagicCardImage(selectedCard, 'normal')}
-                  alt={selectedCard.name}
-                  className="w-48 rounded-lg shadow-md"
-                  onError={(e) => { (e.target as HTMLImageElement).src = MTG_CARD_BACK; }}
-                />
-              </div>
-
-              {selectedCard.type_line && (
-                <p className="text-xs text-muted-foreground text-center">
-                  {[selectedCard.mana_cost, selectedCard.type_line].filter(Boolean).join(' — ')}
-                </p>
-              )}
-
-              {/* Power/Toughness */}
-              {(selectedCard.power || selectedCard.toughness) && (
-                <div className="flex items-center justify-center gap-2">
-                  {selectedCard.power && (
-                    <Badge className="bg-destructive/20 text-destructive border-0 text-xs">
-                      ⚔ Poder {selectedCard.power}
-                    </Badge>
-                  )}
-                  {selectedCard.toughness && (
-                    <Badge className="bg-primary/20 text-primary border-0 text-xs">
-                      🛡 Resistência {selectedCard.toughness}
-                    </Badge>
-                  )}
-                </div>
-              )}
-
-              {/* Oracle text / effect */}
-              {selectedCard.oracle_text && (
-                <div className="border-t pt-2">
-                  <p className="text-xs font-semibold text-muted-foreground mb-1">EFEITO</p>
-                  <p className="text-xs leading-relaxed whitespace-pre-wrap">{selectedCard.oracle_text}</p>
-                </div>
-              )}
+      <MtgCardDetailDialog
+        open={cardDetailOpen}
+        onOpenChange={setCardDetailOpen}
+        card={selectedCard}
+        cardZone={selectedCardZone}
+        moveTargets={moveTargets}
+        zoneLabels={ZONE_LABELS}
+        onMoveCardTo={moveCardTo}
+        onToggleFaceDown={toggleFaceDown}
+        onTapCard={(c) => { handleTapCard(c); setCardDetailOpen(false); }}
+        onModifyCounters={(c, d) => { modifyCounters(c, d); setCardDetailOpen(false); }}
+      />
 
               <div className="space-y-2">
                 <p className="text-xs font-semibold text-muted-foreground">Mover para:</p>
