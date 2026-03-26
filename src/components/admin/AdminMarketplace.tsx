@@ -341,6 +341,10 @@ export const AdminMarketplace = () => {
     <div className="space-y-6">
       <Tabs defaultValue="products" className="w-full">
         <TabsList className="mb-4">
+          <TabsTrigger value="approvals" className="flex items-center gap-2">
+            <PackageCheck className="w-4 h-4" />
+            Aprovações ({pendingProducts.length})
+          </TabsTrigger>
           <TabsTrigger value="products" className="flex items-center gap-2">
             <Package className="w-4 h-4" />
             Produtos
@@ -350,6 +354,85 @@ export const AdminMarketplace = () => {
             Pedidos ({purchases.length})
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="approvals">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <PackageCheck className="w-5 h-5" />
+                Itens Terceiros Pendentes de Aprovação
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Produto</TableHead>
+                    <TableHead>Vendedor</TableHead>
+                    <TableHead>Categoria</TableHead>
+                    <TableHead>Preço</TableHead>
+                    <TableHead>Data</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pendingProducts.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                        Nenhum item pendente de aprovação
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    pendingProducts.map(product => (
+                      <TableRow key={product.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            {product.image_url ? (
+                              <img src={product.image_url} alt="" className="w-10 h-10 rounded object-cover" />
+                            ) : (
+                              <div className="w-10 h-10 rounded bg-muted flex items-center justify-center">
+                                <Package className="w-5 h-5 text-muted-foreground" />
+                              </div>
+                            )}
+                            <div>
+                              <p className="font-medium">{product.name}</p>
+                              {product.description && (
+                                <p className="text-xs text-muted-foreground truncate max-w-[200px]">{product.description}</p>
+                              )}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>{product.seller_username || '—'}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{product.category}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <span className="flex items-center gap-1 text-secondary font-medium">
+                            <Coins className="w-4 h-4" />
+                            {product.price_duelcoins}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {new Date(product.created_at).toLocaleDateString('pt-BR')}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button size="sm" onClick={() => handleApprove(product.id)} className="bg-green-600 hover:bg-green-700 text-white">
+                              <CheckCircle className="w-4 h-4 mr-1" /> Aprovar
+                            </Button>
+                            <Button size="sm" variant="destructive" onClick={() => handleReject(product.id)}>
+                              <X className="w-4 h-4 mr-1" /> Rejeitar
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="products">
           <div className="flex items-center justify-between">
