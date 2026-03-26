@@ -144,6 +144,7 @@ export default function Marketplace() {
     product_type: "one_time",
     stock: null as number | null,
     image_url: "",
+    item_type: "" as string,
   });
 
   useEffect(() => {
