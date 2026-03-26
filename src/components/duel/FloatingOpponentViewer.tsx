@@ -36,6 +36,16 @@ interface OpponentCard {
   counters?: number;
   energyAttached?: number;
   damageCounters?: number;
+  // MTG
+  power?: string;
+  toughness?: string;
+  oracle_text?: string;
+  type_line?: string;
+  mana_cost?: string;
+  // PKM
+  hp?: string;
+  types?: string[];
+  supertype?: string;
 }
 
 interface ZoneCards {
