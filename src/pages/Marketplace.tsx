@@ -513,7 +513,12 @@ export default function Marketplace() {
 
     setCreatingProduct(true);
     try {
-      // Insert product directly
+      const metadata: any = {};
+      if (newProduct.category === 'digital_item' && newProduct.item_type) {
+        metadata.item_type = newProduct.item_type;
+      }
+
+      // Third-party products need admin approval
       const { data, error } = await supabase
         .from('marketplace_products')
         .insert({
@@ -526,7 +531,9 @@ export default function Marketplace() {
           image_url: newProduct.image_url || null,
           seller_id: user?.id,
           is_third_party_seller: true,
-          is_active: true,
+          is_active: false,
+          is_approved: false,
+          metadata,
         })
         .select()
         .single();
@@ -534,7 +541,7 @@ export default function Marketplace() {
       if (error) throw error;
 
       if (data) {
-        toast({ title: "Sucesso! ✅", description: "Produto criado com sucesso!" });
+        toast({ title: "Produto enviado! ✅", description: "Aguardando aprovação do administrador." });
         setCreateProductDialogOpen(false);
         setNewProduct({
           name: "",
@@ -544,6 +551,7 @@ export default function Marketplace() {
           product_type: "one_time",
           stock: null,
           image_url: "",
+          item_type: "",
         });
         setImagePreview(null);
         fetchMyProducts();
