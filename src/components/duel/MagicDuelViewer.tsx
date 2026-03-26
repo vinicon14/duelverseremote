@@ -16,6 +16,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { MagicFieldBoard, MagicFieldState, MagicZoneType, MagicCard, MagicPhase } from './MagicFieldBoard';
 import { getMagicCardImage, MTG_CARD_BACK } from './mtgCardImage';
 import { Shuffle, Hand, ArrowDown, RotateCcw, Eye, Undo2, Search, BookOpen, ChevronDown as ChevronDownIcon, Swords, Shield } from 'lucide-react';
+import { MtgCardDetailDialog } from './MtgCardDetailDialog';
 
 const createInitialFieldState = (): MagicFieldState => ({
   battlefield: [],

@@ -19,6 +19,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Zap, RotateCcw, Eye, EyeOff, Shuffle, Star, Trash2, Search, ArrowUp, Minus, Plus, Undo2, BookOpen, ChevronDown } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useSavedDecks } from '@/hooks/useSavedDecks';
+import { PkmCardActionModal } from './PkmCardActionModal';
 
 interface PokemonFieldCard {
   id: string;
