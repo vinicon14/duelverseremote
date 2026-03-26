@@ -37,6 +37,8 @@ interface MarketplaceProduct {
   is_active: boolean;
   seller_id: string | null;
   is_third_party_seller: boolean;
+  is_approved: boolean;
+  metadata: any;
 }
 
 interface CartItem {
@@ -62,9 +64,12 @@ export default function Marketplace() {
   const [user, setUser] = useState<any>(null);
   const [purchaseSuccess, setPurchaseSuccess] = useState(false);
   const [filter, setFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
   const { isPro } = useAccountType();
   const [createProductDialogOpen, setCreateProductDialogOpen] = useState(false);
+  const [editProductDialogOpen, setEditProductDialogOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<MarketplaceProduct | null>(null);
   const [creatingProduct, setCreatingProduct] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
