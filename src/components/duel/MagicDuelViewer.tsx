@@ -426,59 +426,6 @@ export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId }: Magi
         onModifyCounters={(c, d) => { modifyCounters(c, d); setCardDetailOpen(false); }}
       />
 
-              <div className="space-y-2">
-                <p className="text-xs font-semibold text-muted-foreground">Mover para:</p>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {moveTargets
-                    .filter((z) => z !== selectedCardZone)
-                    .map((zone) => (
-                      <Button
-                        key={zone}
-                        size="sm"
-                        variant="outline"
-                        className="text-xs h-8"
-                        onClick={() => moveCardTo(zone)}
-                      >
-                        {ZONE_LABELS[zone]}
-                      </Button>
-                    ))}
-                </div>
-
-                {(selectedCardZone === 'battlefield' || selectedCardZone === 'lands' || selectedCardZone === 'hand' || selectedCardZone === 'stack') && (
-                  <div className="flex gap-1.5 pt-1 flex-wrap">
-                    <Button size="sm" variant="outline" className="text-xs h-7 flex-1" onClick={() => toggleFaceDown(selectedCard)}>
-                      {selectedCard.isFaceDown ? '🔄 Virar (Face Up)' : '🔄 Virar (Face Down)'}
-                    </Button>
-                    {(selectedCardZone === 'battlefield' || selectedCardZone === 'lands') && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-xs h-7"
-                        onClick={() => { handleTapCard(selectedCard); setCardDetailOpen(false); }}
-                      >
-                        {selectedCardZone === 'lands'
-                          ? (selectedCard.isTapped ? '↺ Desvirar terreno' : '💧 Gerar mana')
-                          : (selectedCard.isTapped ? '↺ Desvirar' : '↩ Virar')}
-                      </Button>
-                    )}
-                    {(selectedCardZone === 'battlefield' || selectedCardZone === 'lands') && (
-                      <>
-                        <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => { modifyCounters(selectedCard, 1); setCardDetailOpen(false); }}>
-                          +1 Counter
-                        </Button>
-                        <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => { modifyCounters(selectedCard, -1); setCardDetailOpen(false); }}>
-                          -1 Counter
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
       <Dialog open={zoneViewerOpen} onOpenChange={setZoneViewerOpen}>
         <DialogContent className="max-w-md max-h-[70vh]">
           <DialogHeader>

@@ -693,6 +693,7 @@ export const PokemonDuelViewer = ({ duelId, currentUserId }: PokemonDuelViewerPr
         <PkmCardActionModal
           card={selectedCard}
           zone={selectedCardZone}
+          fieldState={fieldState}
           onClose={() => { setSelectedCard(null); setSelectedCardZone(null); }}
           onAttachEnergy={attachEnergy}
           onDetachEnergy={detachEnergy}
@@ -710,89 +711,6 @@ export const PokemonDuelViewer = ({ duelId, currentUserId }: PokemonDuelViewerPr
             });
           }}
         />
-            {/* Energy & Damage for active/bench */}
-            {(selectedCardZone === 'active' || selectedCardZone === 'bench') && (
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1">
-                  <p className="text-[11px] text-muted-foreground text-center">Energia: {selectedCard.energyAttached}</p>
-                  <div className="flex gap-1 justify-center">
-                    <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => { attachEnergy(selectedCard, selectedCardZone as 'active' | 'bench'); setSelectedCard(null); setSelectedCardZone(null); }}>
-                      <Plus className="w-3 h-3 mr-0.5" />⚡
-                    </Button>
-                    <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => { detachEnergy(selectedCard, selectedCardZone as 'active' | 'bench'); setSelectedCard(null); setSelectedCardZone(null); }}>
-                      <Minus className="w-3 h-3 mr-0.5" />⚡
-                    </Button>
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[11px] text-muted-foreground text-center">Dano: {selectedCard.damageCounters * 10}</p>
-                  <div className="flex gap-1 justify-center">
-                    <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => addDamage(selectedCard, selectedCardZone as 'active' | 'bench', 1)}>
-                      <Plus className="w-3 h-3" />10
-                    </Button>
-                    <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => addDamage(selectedCard, selectedCardZone as 'active' | 'bench', -1)}>
-                      <Minus className="w-3 h-3" />10
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="flex gap-2 flex-wrap justify-center">
-              {selectedCardZone === 'active' && (
-                <>
-                  <Button size="sm" variant="destructive" onClick={() => { discardCard(selectedCard, 'active'); setSelectedCard(null); setSelectedCardZone(null); }}>
-                    Descartar
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => { returnToDeck(selectedCard, 'active', 'shuffle'); setSelectedCard(null); setSelectedCardZone(null); }}>
-                    <Undo2 className="w-3 h-3 mr-1" />Devolver
-                  </Button>
-                </>
-              )}
-              {selectedCardZone === 'bench' && (
-                <>
-                  <Button size="sm" onClick={() => {
-                    setFieldState(prev => {
-                      const newBench = prev.bench.filter(c => c.instanceId !== selectedCard.instanceId);
-                      const oldActive = prev.active;
-                      return { ...prev, active: selectedCard, bench: oldActive ? [...newBench, oldActive] : newBench };
-                    });
-                    setSelectedCard(null); setSelectedCardZone(null);
-                  }}>
-                    Promover a Ativo
-                  </Button>
-                  <Button size="sm" variant="destructive" onClick={() => { discardCard(selectedCard, 'bench'); setSelectedCard(null); setSelectedCardZone(null); }}>
-                    Descartar
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => { returnToDeck(selectedCard, 'bench', 'shuffle'); setSelectedCard(null); setSelectedCardZone(null); }}>
-                    <Undo2 className="w-3 h-3 mr-1" />Devolver
-                  </Button>
-                </>
-              )}
-              {selectedCardZone === 'hand' && (
-                <>
-                  {selectedCard.supertype === 'Pokémon' && (
-                    <>
-                      <Button size="sm" onClick={() => { playToActive(selectedCard); setSelectedCard(null); setSelectedCardZone(null); }}>Ativo</Button>
-                      <Button size="sm" variant="outline" onClick={() => { playToBench(selectedCard); setSelectedCard(null); setSelectedCardZone(null); }}>Banco</Button>
-                    </>
-                  )}
-                  {selectedCard.supertype === 'Trainer' && (
-                    <Button size="sm" onClick={() => { activateTrainer(selectedCard); setSelectedCard(null); setSelectedCardZone(null); }}>
-                      Ativar Treinador
-                    </Button>
-                  )}
-                  <Button size="sm" variant="destructive" onClick={() => { discardCard(selectedCard, 'hand'); setSelectedCard(null); setSelectedCardZone(null); }}>
-                    Descartar
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => { returnToDeck(selectedCard, 'hand', 'shuffle'); setSelectedCard(null); setSelectedCardZone(null); }}>
-                    <Undo2 className="w-3 h-3 mr-1" />Devolver
-                  </Button>
-                </>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
       )}
     </div>
   );
