@@ -570,13 +570,17 @@ export default function Marketplace() {
     }
   }, [isPro, user]);
 
-  const filteredProducts = filter === "all" 
-    ? products 
-    : products.filter(p => p.category === filter);
+  const filteredProducts = products.filter(p => {
+    const matchesFilter = filter === "all" || p.category === filter;
+    const matchesSearch = !searchQuery.trim() || p.name.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesFilter && matchesSearch;
+  });
 
-  const filteredThirdParty = filter === "all"
-    ? thirdPartyProducts
-    : thirdPartyProducts.filter(p => p.category === filter);
+  const filteredThirdParty = thirdPartyProducts.filter(p => {
+    const matchesFilter = filter === "all" || p.category === filter;
+    const matchesSearch = !searchQuery.trim() || p.name.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesFilter && matchesSearch && p.is_approved;
+  });
 
   const categories = ["all", ...Array.from(new Set(products.map(p => p.category)))];
 
