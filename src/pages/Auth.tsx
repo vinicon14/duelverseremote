@@ -226,17 +226,38 @@ const Auth = () => {
     }
   };
 
+  const tcgColors = {
+    yugioh: { primary: '270 80% 55%', accent: '315 85% 60%', glow: '270 80% 65%' },
+    magic: { primary: '35 90% 50%', accent: '0 75% 50%', glow: '35 90% 55%' },
+    pokemon: { primary: '45 100% 50%', accent: '210 80% 55%', glow: '45 100% 55%' },
+  };
+  const currentColors = tcgColors[selectedTcg];
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden transition-all duration-700">
+      <style>{`
+        .auth-btn-animate {
+          background: linear-gradient(135deg, hsl(${currentColors.primary}), hsl(${currentColors.accent}));
+          box-shadow: 0 10px 40px -10px hsl(${currentColors.primary} / 0.5);
+          transition: all 0.7s ease;
+        }
+        .auth-title-animate {
+          background-image: linear-gradient(135deg, hsl(${currentColors.primary}), hsl(${currentColors.accent}));
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          transition: all 0.7s ease;
+        }
+      `}</style>
       <div className={`absolute inset-0 bg-gradient-to-br ${TCG_OPTIONS.find(o => o.value === selectedTcg)?.bgGradient || 'from-primary/10 via-background to-accent/10'} transition-all duration-700`} />
       <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMzLjMxNCAwIDYgMi42ODYgNiA2cy0yLjY4NiA2LTYgNi02LTIuNjg2LTYtNiAyLjY4Ni02IDYtNnoiIHN0cm9rZT0iIzgwNTBhMCIgc3Ryb2tlLXdpZHRoPSIuNSIgb3BhY2l0eT0iLjEiLz48L2c+PC9zdmc+')] opacity-20" />
       
       <Card className="w-full max-w-md card-mystic animate-slide-up relative z-10">
         <CardHeader className="text-center space-y-2">
-          <div className="mx-auto w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center animate-glow-pulse">
-            <Swords className="w-8 h-8 text-primary" />
+          <div className="mx-auto w-16 h-16 rounded-full flex items-center justify-center" style={{ background: `hsl(${currentColors.primary} / 0.2)`, transition: 'all 0.7s ease' }}>
+            <Swords className="w-8 h-8" style={{ color: `hsl(${currentColors.glow})`, transition: 'color 0.7s ease' }} />
           </div>
-          <CardTitle className="text-3xl font-bold text-gradient-mystic">DUELVERSE</CardTitle>
+          <CardTitle className="text-3xl font-bold auth-title-animate">DUELVERSE</CardTitle>
           <CardDescription className="text-muted-foreground">Entre no mundo dos duelos TCG</CardDescription>
         </CardHeader>
 
@@ -257,7 +278,7 @@ const Auth = () => {
                   <Label htmlFor="signin-password">Senha</Label>
                   <Input id="signin-password" name="signin-password" type="password" placeholder="••••••••" required className="bg-background/50" />
                 </div>
-                <Button type="submit" className="w-full btn-mystic text-white" disabled={loading}>
+                <Button type="submit" className="w-full auth-btn-animate text-white" disabled={loading}>
                   {loading ? "Entrando..." : "Entrar"}
                 </Button>
               </form>
@@ -323,7 +344,7 @@ const Auth = () => {
                   </div>
                 </div>
 
-                <Button type="submit" className="w-full btn-mystic text-white" disabled={loading}>
+                <Button type="submit" className="w-full auth-btn-animate text-white" disabled={loading}>
                   {loading ? "Cadastrando..." : "Criar Conta"}
                 </Button>
               </form>
