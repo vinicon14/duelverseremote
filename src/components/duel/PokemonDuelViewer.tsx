@@ -92,6 +92,7 @@ export const PokemonDuelViewer = ({ duelId, currentUserId }: PokemonDuelViewerPr
           stadium: fieldState.stadium ? { name: fieldState.stadium.name, images: fieldState.stadium.images } : null,
           prizeCardsCount: fieldState.prizeCards.length,
           discardCount: fieldState.discard.length,
+          discardCards: fieldState.discard.map(c => ({ name: c.name, image: c.images?.small || c.images?.large || '', id: parseInt(c.id) || 0 })),
           handCount: fieldState.hand.length,
           deckCount: fieldState.deck.length,
           playmatUrl: localStorage.getItem('activePlaymatUrl') || null,
