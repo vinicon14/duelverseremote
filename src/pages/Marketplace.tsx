@@ -1141,7 +1141,6 @@ export default function Marketplace() {
                   </Select>
                 </div>
               )}
-            </div>
 
               <div className="space-y-2">
                 <Label>Imagem do Produto</Label>
