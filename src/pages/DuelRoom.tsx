@@ -302,6 +302,8 @@ const DuelRoom = () => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const getDailyRoomUrl = (duelId: string) => `https://duelverse.daily.co/duelverse-${duelId}`;
+
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -441,26 +443,37 @@ const DuelRoom = () => {
       isTimerPausedRef.current = isPaused;
 
       // Criar sala Daily.co
+      const fallbackRoomUrl = id ? getDailyRoomUrl(id) : '';
+      if (fallbackRoomUrl) {
+        setRoomUrl(fallbackRoomUrl);
+      }
+
       try {
         const { data: roomData, error: roomError } = await supabase.functions.invoke('create-daily-room', {
           body: { roomName: `duelverse-${id}` }
         });
 
-        if (roomError || !roomData?.url) {
-          toast({
-            title: "Erro ao iniciar videochamada",
-            description: "Não foi possível criar a sala de vídeo.",
-            variant: "destructive",
-          });
+        if (roomError) {
+          throw roomError;
+        }
+
+        const resolvedRoomUrl = roomData?.url || (roomData?.name ? `https://duelverse.daily.co/${roomData.name}` : fallbackRoomUrl);
+
+        if (resolvedRoomUrl) {
+          setRoomUrl(resolvedRoomUrl);
         } else {
-          setRoomUrl(roomData.url);
+          throw new Error('Resposta da sala sem URL');
         }
       } catch (error) {
-        toast({
-          title: "Erro ao iniciar videochamada",
-          description: "Erro ao conectar com o servidor de vídeo.",
-          variant: "destructive",
-        });
+        console.error('[DuelRoom] Erro ao iniciar videochamada:', error);
+
+        if (!fallbackRoomUrl) {
+          toast({
+            title: "Erro ao iniciar videochamada",
+            description: "Erro ao conectar com o servidor de vídeo.",
+            variant: "destructive",
+          });
+        }
       }
 
       // Garantir que started_at existe SEMPRE (timer inicia na criação)
