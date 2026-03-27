@@ -36,6 +36,12 @@ interface OpponentCard {
   counters?: number;
   energyAttached?: number;
   damageCounters?: number;
+  // YGO
+  atk?: number;
+  def?: number;
+  desc?: string;
+  type?: string;
+  race?: string;
   // MTG
   power?: string;
   toughness?: string;
