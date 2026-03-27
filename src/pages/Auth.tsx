@@ -241,23 +241,42 @@ const Auth = () => {
           box-shadow: 0 10px 40px -10px hsl(${currentColors.primary} / 0.5);
           transition: all 0.7s ease;
         }
-        .auth-title-animate {
+      .auth-title-animate {
           background-image: linear-gradient(135deg, hsl(${currentColors.primary}), hsl(${currentColors.accent}));
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
           background-clip: text;
           transition: all 0.7s ease;
         }
+        @keyframes auth-bg-cycle {
+          0%, 100% { background: linear-gradient(135deg, hsl(270 80% 55% / 0.15) 0%, hsl(315 85% 60% / 0.1) 50%, transparent 100%); }
+          33% { background: linear-gradient(135deg, hsl(45 95% 60% / 0.15) 0%, hsl(15 90% 50% / 0.1) 50%, transparent 100%); }
+          66% { background: linear-gradient(135deg, hsl(50 100% 50% / 0.15) 0%, hsl(210 90% 50% / 0.1) 50%, transparent 100%); }
+        }
+        @keyframes auth-text-cycle {
+          0%, 100% { color: hsl(270 80% 65%); text-shadow: 0 0 20px hsl(270 80% 55% / 0.5); }
+          33% { color: hsl(35 90% 55%); text-shadow: 0 0 20px hsl(35 90% 50% / 0.5); }
+          66% { color: hsl(45 100% 55%); text-shadow: 0 0 20px hsl(45 100% 50% / 0.5); }
+        }
+        @keyframes auth-btn-cycle {
+          0%, 100% { background: linear-gradient(135deg, hsl(270 80% 55%), hsl(315 85% 60%)); box-shadow: 0 10px 40px -10px hsl(270 80% 55% / 0.5); }
+          33% { background: linear-gradient(135deg, hsl(35 90% 50%), hsl(0 75% 50%)); box-shadow: 0 10px 40px -10px hsl(35 90% 50% / 0.5); }
+          66% { background: linear-gradient(135deg, hsl(45 100% 50%), hsl(210 80% 55%)); box-shadow: 0 10px 40px -10px hsl(45 100% 50% / 0.5); }
+        }
+        .auth-cycle-bg { animation: auth-bg-cycle 9s ease-in-out infinite; }
+        .auth-cycle-text { animation: auth-text-cycle 9s ease-in-out infinite; }
+        .auth-cycle-btn { animation: auth-btn-cycle 9s ease-in-out infinite; }
       `}</style>
+      <div className="fixed inset-0 pointer-events-none z-0 auth-cycle-bg" />
       <div className={`absolute inset-0 bg-gradient-to-br ${TCG_OPTIONS.find(o => o.value === selectedTcg)?.bgGradient || 'from-primary/10 via-background to-accent/10'} transition-all duration-700`} />
       <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMzLjMxNCAwIDYgMi42ODYgNiA2cy0yLjY4NiA2LTYgNi02LTIuNjg2LTYtNiAyLjY4Ni02IDYtNnoiIHN0cm9rZT0iIzgwNTBhMCIgc3Ryb2tlLXdpZHRoPSIuNSIgb3BhY2l0eT0iLjEiLz48L2c+PC9zdmc+')] opacity-20" />
       
       <Card className="w-full max-w-md card-mystic animate-slide-up relative z-10">
         <CardHeader className="text-center space-y-2">
-          <div className="mx-auto w-16 h-16 rounded-full flex items-center justify-center" style={{ background: `hsl(${currentColors.primary} / 0.2)`, transition: 'all 0.7s ease' }}>
-            <Swords className="w-8 h-8" style={{ color: `hsl(${currentColors.glow})`, transition: 'color 0.7s ease' }} />
+          <div className="mx-auto w-16 h-16 rounded-full flex items-center justify-center auth-cycle-bg">
+            <Swords className="w-8 h-8 auth-cycle-text" />
           </div>
-          <CardTitle className="text-3xl font-bold auth-title-animate">DUELVERSE</CardTitle>
+          <CardTitle className="text-3xl font-bold auth-cycle-text">DUELVERSE</CardTitle>
           <CardDescription className="text-muted-foreground">Entre no mundo dos duelos TCG</CardDescription>
         </CardHeader>
 
@@ -278,7 +297,7 @@ const Auth = () => {
                   <Label htmlFor="signin-password">Senha</Label>
                   <Input id="signin-password" name="signin-password" type="password" placeholder="••••••••" required className="bg-background/50" />
                 </div>
-                <Button type="submit" className="w-full auth-btn-animate text-white" disabled={loading}>
+                <Button type="submit" className="w-full auth-cycle-btn text-white" disabled={loading}>
                   {loading ? "Entrando..." : "Entrar"}
                 </Button>
               </form>
@@ -344,7 +363,7 @@ const Auth = () => {
                   </div>
                 </div>
 
-                <Button type="submit" className="w-full auth-btn-animate text-white" disabled={loading}>
+                <Button type="submit" className="w-full auth-cycle-btn text-white" disabled={loading}>
                   {loading ? "Cadastrando..." : "Criar Conta"}
                 </Button>
               </form>
