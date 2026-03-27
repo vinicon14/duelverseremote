@@ -363,7 +363,7 @@ const Auth = () => {
                   </div>
                 </div>
 
-                <Button type="submit" className="w-full auth-btn-animate text-white" disabled={loading}>
+                <Button type="submit" className="w-full auth-cycle-btn text-white" disabled={loading}>
                   {loading ? "Cadastrando..." : "Criar Conta"}
                 </Button>
               </form>
