@@ -25,7 +25,7 @@ export const ConditionalMonetagLoader = (): null => {
     applyPopupBlocking();
 
     // PRO users: No Monetag
-    if (location.pathname.startsWith('/pro/') || location.pathname === '/auth' || location.pathname === '/landing') {
+    if (location.pathname.startsWith('/pro/') || location.pathname === '/auth' || location.pathname === '/landing' || location.pathname === '/') {
       console.log('Monetag BLOQUEADO - rota PRO/auth/landing:', location.pathname);
       return;
     }
