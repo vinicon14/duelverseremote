@@ -263,18 +263,27 @@ export const PokemonDuelViewer = ({ duelId, currentUserId }: PokemonDuelViewerPr
       const newState = { ...prev };
       newState.hand = prev.hand.filter(c => c.instanceId !== card.instanceId);
       if (isStadium) {
-        // Replace existing stadium
         if (prev.stadium) {
           newState.discard = [...prev.discard, prev.stadium];
         }
         newState.stadium = card;
       } else {
-        // Items/Supporters go to discard after use
-        newState.discard = [...prev.discard, card];
+        // Show in activeTrainer zone (previous one goes to discard)
+        if (prev.activeTrainer) {
+          newState.discard = [...prev.discard, prev.activeTrainer];
+        }
+        newState.activeTrainer = card;
       }
       return newState;
     });
-    toast({ title: isStadium ? `Stadium "${card.name}" ativado!` : `"${card.name}" ativado!` });
+    toast({ title: isStadium ? `Stadium "${card.name}" ativado!` : `"${card.name}" em jogo!` });
+  };
+
+  const discardActiveTrainer = () => {
+    setFieldState(prev => {
+      if (!prev.activeTrainer) return prev;
+      return { ...prev, discard: [...prev.discard, prev.activeTrainer], activeTrainer: null };
+    });
   };
 
   const searchDeck = (card: PokemonFieldCard) => {
