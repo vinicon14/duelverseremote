@@ -467,7 +467,7 @@ export const PokemonDuelViewer = ({ duelId, currentUserId }: PokemonDuelViewerPr
           {fieldState.activeTrainer ? (
             <div className="relative">
               <div
-                className="w-14 h-20 rounded overflow-hidden border-2 border-yellow-500 cursor-pointer shadow-md"
+                className="w-14 h-20 rounded overflow-hidden border-2 border-primary cursor-pointer shadow-md"
                 onClick={discardActiveTrainer}
                 title="Clique para enviar ao descarte"
               >
@@ -476,8 +476,8 @@ export const PokemonDuelViewer = ({ duelId, currentUserId }: PokemonDuelViewerPr
               <span className="text-[8px] text-muted-foreground block text-center">Em Jogo</span>
             </div>
           ) : (
-            <div className="w-14 h-20 rounded border-2 border-dashed border-yellow-500/30 flex flex-col items-center justify-center">
-              <Zap className="w-3 h-3 text-yellow-500/40" />
+            <div className="w-14 h-20 rounded border-2 border-dashed border-primary/30 flex flex-col items-center justify-center">
+              <Zap className="w-3 h-3 text-primary/40" />
               <span className="text-[8px] text-muted-foreground">Ativar</span>
             </div>
           )}
