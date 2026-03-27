@@ -46,6 +46,9 @@ interface OpponentCard {
   hp?: string;
   types?: string[];
   supertype?: string;
+  attacks?: { name: string; damage: string; text: string; cost: string[] }[];
+  abilities?: { name: string; text: string; type: string }[];
+  rules?: string[];
 }
 
 interface ZoneCards {
@@ -105,6 +108,24 @@ interface FloatingOpponentViewerProps {
   currentUserId: string;
   opponentUsername?: string;
 }
+
+const buildPkmEffectText = (card: OpponentCard): string => {
+  const parts: string[] = [];
+  if (card.abilities && card.abilities.length > 0) {
+    card.abilities.forEach(a => parts.push(`[${a.type}] ${a.name}: ${a.text}`));
+  }
+  if (card.attacks && card.attacks.length > 0) {
+    card.attacks.forEach(a => {
+      const cost = a.cost?.length ? `[${a.cost.join(',')}] ` : '';
+      const dmg = a.damage ? ` — ${a.damage}` : '';
+      parts.push(`${cost}${a.name}${dmg}: ${a.text || ''}`);
+    });
+  }
+  if (card.rules && card.rules.length > 0) {
+    card.rules.forEach(r => parts.push(r));
+  }
+  return parts.join('\n\n');
+};
 
 const YGO_CARD_BACK_URL = 'https://images.ygoprodeck.com/images/cards/back_high.jpg';
 const PKM_CARD_BACK_URL = 'https://images.pokemontcg.io/back.png';
@@ -173,6 +194,12 @@ export const FloatingOpponentViewer = ({
                 image: payload.active.images?.small || '',
                 energyAttached: payload.active.energyAttached || 0,
                 damageCounters: payload.active.damageCounters || 0,
+                hp: payload.active.hp,
+                types: payload.active.types,
+                supertype: payload.active.supertype,
+                attacks: payload.active.attacks,
+                abilities: payload.active.abilities,
+                rules: payload.active.rules,
               } : null,
               bench: (payload.bench || []).map((c: any, i: number) => ({
                 id: i,
@@ -180,6 +207,12 @@ export const FloatingOpponentViewer = ({
                 image: c.images?.small || '',
                 energyAttached: c.energyAttached || 0,
                 damageCounters: c.damageCounters || 0,
+                hp: c.hp,
+                types: c.types,
+                supertype: c.supertype,
+                attacks: c.attacks,
+                abilities: c.abilities,
+                rules: c.rules,
               })),
               stadium: payload.stadium ? {
                 id: 0,
@@ -524,7 +557,7 @@ export const FloatingOpponentViewer = ({
                   {/* Bench */}
                   <div className="flex justify-center gap-1 mt-1">
                     {(opponentState.bench || []).map((card, i) => (
-                      <div key={i} className="w-10 h-14 rounded overflow-hidden border border-border relative">
+                      <div key={i} className="w-10 h-14 rounded overflow-hidden border border-border relative cursor-pointer hover:opacity-80" onClick={() => { setSelectedCard(card); setModalOpen(true); }}>
                         <img src={card.image} alt={card.name} className="w-full h-full object-cover" />
                         {(card.damageCounters || 0) > 0 && (
                           <Badge className="absolute -top-0.5 -right-0.5 text-[6px] h-2.5 px-0.5 bg-destructive">
@@ -630,8 +663,8 @@ export const FloatingOpponentViewer = ({
         onClose={() => setModalOpen(false)}
         card={selectedCard ? {
           name: selectedCard.name,
-          type: selectedCard.type_line || '',
-          desc: selectedCard.oracle_text || '',
+          type: selectedCard.type_line || (selectedCard.supertype || '') + (selectedCard.types ? ' — ' + selectedCard.types.join('/') : ''),
+          desc: selectedCard.oracle_text || buildPkmEffectText(selectedCard),
           race: '',
           card_images: [{ image_url_small: selectedCard.image }],
           power: selectedCard.power,

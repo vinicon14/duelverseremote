@@ -91,8 +91,8 @@ export const PokemonDuelViewer = ({ duelId, currentUserId }: PokemonDuelViewerPr
         payload: {
           userId: currentUserId,
           tcgType: 'pokemon',
-          active: fieldState.active ? { name: fieldState.active.name, images: fieldState.active.images, hp: fieldState.active.hp, types: fieldState.active.types, energyAttached: fieldState.active.energyAttached, damageCounters: fieldState.active.damageCounters } : null,
-          bench: fieldState.bench.map(c => ({ name: c.name, images: c.images, hp: c.hp, types: c.types, energyAttached: c.energyAttached, damageCounters: c.damageCounters })),
+          active: fieldState.active ? { name: fieldState.active.name, images: fieldState.active.images, hp: fieldState.active.hp, types: fieldState.active.types, supertype: fieldState.active.supertype, energyAttached: fieldState.active.energyAttached, damageCounters: fieldState.active.damageCounters, attacks: fieldState.active.attacks, abilities: fieldState.active.abilities, rules: fieldState.active.rules } : null,
+          bench: fieldState.bench.map(c => ({ name: c.name, images: c.images, hp: c.hp, types: c.types, supertype: c.supertype, energyAttached: c.energyAttached, damageCounters: c.damageCounters, attacks: c.attacks, abilities: c.abilities, rules: c.rules })),
           stadium: fieldState.stadium ? { name: fieldState.stadium.name, images: fieldState.stadium.images } : null,
           prizeCardsCount: fieldState.prizeCards.length,
           discardCount: fieldState.discard.length,
