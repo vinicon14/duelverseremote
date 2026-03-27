@@ -273,10 +273,10 @@ const Auth = () => {
       
       <Card className="w-full max-w-md card-mystic animate-slide-up relative z-10">
         <CardHeader className="text-center space-y-2">
-          <div className="mx-auto w-16 h-16 rounded-full flex items-center justify-center" style={{ background: `hsl(${currentColors.primary} / 0.2)`, transition: 'all 0.7s ease' }}>
-            <Swords className="w-8 h-8" style={{ color: `hsl(${currentColors.glow})`, transition: 'color 0.7s ease' }} />
+          <div className="mx-auto w-16 h-16 rounded-full flex items-center justify-center auth-cycle-bg">
+            <Swords className="w-8 h-8 auth-cycle-text" />
           </div>
-          <CardTitle className="text-3xl font-bold auth-title-animate">DUELVERSE</CardTitle>
+          <CardTitle className="text-3xl font-bold auth-cycle-text">DUELVERSE</CardTitle>
           <CardDescription className="text-muted-foreground">Entre no mundo dos duelos TCG</CardDescription>
         </CardHeader>
 
@@ -297,7 +297,7 @@ const Auth = () => {
                   <Label htmlFor="signin-password">Senha</Label>
                   <Input id="signin-password" name="signin-password" type="password" placeholder="••••••••" required className="bg-background/50" />
                 </div>
-                <Button type="submit" className="w-full auth-btn-animate text-white" disabled={loading}>
+                <Button type="submit" className="w-full auth-cycle-btn text-white" disabled={loading}>
                   {loading ? "Entrando..." : "Entrar"}
                 </Button>
               </form>
