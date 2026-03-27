@@ -126,15 +126,15 @@ const Landing = () => {
 
             <div className="grid grid-cols-3 gap-8 max-w-xl mx-auto mt-16">
               <div className="text-center">
-                <div className="text-3xl md:text-4xl font-bold text-gradient-mystic mb-1">1000+</div>
+                <div className="text-3xl md:text-4xl font-bold tcg-text-animate mb-1">1000+</div>
                 <div className="text-sm text-muted-foreground">Duelistas Ativos</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl md:text-4xl font-bold text-gradient-gold mb-1">500+</div>
+                <div className="text-3xl md:text-4xl font-bold tcg-text-animate mb-1">500+</div>
                 <div className="text-sm text-muted-foreground">Duelos Diários</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl md:text-4xl font-bold text-gradient-mystic mb-1">50+</div>
+                <div className="text-3xl md:text-4xl font-bold tcg-text-animate mb-1">50+</div>
                 <div className="text-sm text-muted-foreground">Torneios</div>
               </div>
             </div>
@@ -154,7 +154,7 @@ const Landing = () => {
           <div className="container mx-auto max-w-4xl">
             <div className="text-center mb-10">
               <h2 className="text-3xl md:text-4xl font-bold mb-4">
-                <span className="text-gradient-mystic">Conheça o DuelVerse</span>
+                <span className="tcg-text-animate">Conheça o DuelVerse</span>
               </h2>
               <p className="text-muted-foreground text-lg">
                 Veja como funciona a plataforma em ação
@@ -190,7 +190,7 @@ const Landing = () => {
         <div className="container mx-auto">
           <div className="text-center mb-14">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              <span className="text-gradient-mystic">Por Que Escolher o DuelVerse?</span>
+              <span className="tcg-text-animate">Por Que Escolher o DuelVerse?</span>
             </h2>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
               Recursos desenvolvidos por duelistas, para duelistas
@@ -227,7 +227,7 @@ const Landing = () => {
         <div className="container mx-auto max-w-4xl">
           <div className="text-center mb-14">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              <span className="text-gradient-gold">Como Funciona</span>
+              <span className="tcg-text-animate">Como Funciona</span>
             </h2>
           </div>
 
@@ -258,7 +258,7 @@ const Landing = () => {
             <div className="relative z-10 text-center space-y-6">
               <Crown className="w-12 h-12 text-secondary mx-auto" />
               <h2 className="text-3xl md:text-4xl font-bold">
-                <span className="text-gradient-gold">DuelVerse PRO</span>
+                <span className="tcg-text-animate">DuelVerse PRO</span>
               </h2>
               <p className="text-muted-foreground text-lg max-w-xl mx-auto">
                 Sem anúncios, acesso a torneios exclusivos, badge especial e muito mais. 
@@ -279,7 +279,7 @@ const Landing = () => {
       <section className="py-24 px-4">
         <div className="container mx-auto text-center space-y-8">
           <h2 className="text-4xl md:text-5xl font-extrabold">
-            <span className="text-gradient-mystic">Pronto para Duelar?</span>
+            <span className="tcg-text-animate">Pronto para Duelar?</span>
           </h2>
           <p className="text-muted-foreground text-lg max-w-xl mx-auto">
             Junte-se a milhares de duelistas e comece sua jornada agora mesmo
@@ -298,7 +298,7 @@ const Landing = () => {
         <div className="container mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-2">
             <Swords className="w-5 h-5 text-primary" />
-            <span className="font-bold text-gradient-mystic">DUELVERSE</span>
+            <span className="font-bold tcg-text-animate">DUELVERSE</span>
           </div>
           <p className="text-sm text-muted-foreground">
             © {new Date().getFullYear()} DuelVerse. Todos os direitos reservados. Desenvolvido por Vinícius.
