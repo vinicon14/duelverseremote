@@ -75,8 +75,8 @@ export const MtgCardDetailDialog = ({
             </div>
           )}
 
-          {/* Read Effect toggle like YGO */}
-          {card.oracle_text && (
+          {/* Read Effect toggle like YGO - always show if card has any text info */}
+          {(card.oracle_text || card.type_line || card.mana_cost) && (
             <>
               {!showEffect ? (
                 <Button onClick={() => setShowEffect(true)} variant="default" className="w-full" size="sm">
@@ -85,9 +85,19 @@ export const MtgCardDetailDialog = ({
                 </Button>
               ) : (
                 <>
-                  <div className="border-t pt-2">
-                    <p className="text-xs font-semibold text-muted-foreground mb-1">EFEITO</p>
-                    <p className="text-xs leading-relaxed whitespace-pre-wrap">{card.oracle_text}</p>
+                  <div className="border-t pt-2 space-y-1">
+                    {card.type_line && (
+                      <p className="text-xs"><span className="font-semibold text-muted-foreground">TIPO: </span>{card.type_line}</p>
+                    )}
+                    {card.mana_cost && (
+                      <p className="text-xs"><span className="font-semibold text-muted-foreground">CUSTO: </span>{card.mana_cost}</p>
+                    )}
+                    {card.oracle_text && (
+                      <>
+                        <p className="text-xs font-semibold text-muted-foreground mt-2">EFEITO</p>
+                        <p className="text-xs leading-relaxed whitespace-pre-wrap">{card.oracle_text}</p>
+                      </>
+                    )}
                   </div>
                   <Button onClick={() => setShowEffect(false)} variant="outline" className="w-full" size="sm">
                     <ChevronDown className="h-4 w-4 mr-2" />
