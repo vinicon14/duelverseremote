@@ -557,7 +557,7 @@ export const FloatingOpponentViewer = ({
                   {/* Bench */}
                   <div className="flex justify-center gap-1 mt-1">
                     {(opponentState.bench || []).map((card, i) => (
-                      <div key={i} className="w-10 h-14 rounded overflow-hidden border border-border relative">
+                      <div key={i} className="w-10 h-14 rounded overflow-hidden border border-border relative cursor-pointer hover:opacity-80" onClick={() => { setSelectedCard(card); setModalOpen(true); }}>
                         <img src={card.image} alt={card.name} className="w-full h-full object-cover" />
                         {(card.damageCounters || 0) > 0 && (
                           <Badge className="absolute -top-0.5 -right-0.5 text-[6px] h-2.5 px-0.5 bg-destructive">
