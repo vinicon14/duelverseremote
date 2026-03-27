@@ -296,10 +296,18 @@ export const FloatingOpponentViewer = ({
       card && "border-solid border-primary/30"
     )}>
       {card ? (
-        <div className={cn(
-          "relative w-full h-full",
-          card.position?.toString().toLowerCase().startsWith('def') && "rotate-90"
-        )}>
+        <div 
+          className={cn(
+            "relative w-full h-full cursor-pointer hover:opacity-80 transition-opacity",
+            card.position?.toString().toLowerCase().startsWith('def') && "rotate-90"
+          )}
+          onClick={() => {
+            if (!card.isFaceDown) {
+              setSelectedCard(card);
+              setModalOpen(true);
+            }
+          }}
+        >
           <img
             src={card.isFaceDown ? cardBack : (card.image || cardBack)}
             alt={card.isFaceDown ? 'Carta virada' : card.name}
@@ -308,13 +316,23 @@ export const FloatingOpponentViewer = ({
           />
           {card.isFaceDown && (
             <div className="absolute top-0 right-0">
-              <EyeOff className="h-2 w-2 text-red-500" />
+              <EyeOff className="h-2 w-2 text-destructive" />
             </div>
           )}
           {card.materials && card.materials > 0 && (
             <Badge className="absolute -bottom-1 -right-1 text-[6px] h-3 px-0.5 bg-yellow-600">
               {card.materials}
             </Badge>
+          )}
+          {/* ATK/DEF for YGO monsters */}
+          {!card.isFaceDown && card.atk !== undefined && (
+            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 z-10">
+              <div className="bg-background/90 border border-border text-[5px] font-bold px-0.5 rounded flex items-center gap-0.5 whitespace-nowrap">
+                <span className="text-destructive">{card.atk}</span>
+                <span className="text-muted-foreground">/</span>
+                <span className="text-primary">{card.def ?? '?'}</span>
+              </div>
+            </div>
           )}
         </div>
       ) : (
