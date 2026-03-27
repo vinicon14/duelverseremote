@@ -375,7 +375,7 @@ export default function Matchmaking() {
                     <Loader2 className="h-12 w-12 sm:h-16 sm:w-16 mx-auto mb-4 text-primary animate-spin" />
                     <h3 className="text-lg sm:text-xl font-semibold mb-2">Aguardando no Lobby...</h3>
                     <p className="text-sm text-muted-foreground mb-4">
-                      {playerCount === 4 ? 'Esperando 3 jogadores entrarem na fila' : 'Esperando outro jogador entrar na fila'}
+                      {playerCount === 4 ? 'Esperando mais 3 jogadores para iniciar a partida 4P' : 'Esperando outro jogador entrar na fila'}
                     </p>
                     <div className="flex items-center justify-center gap-2 text-sm sm:text-base text-muted-foreground">
                       <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
