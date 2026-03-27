@@ -109,6 +109,24 @@ interface FloatingOpponentViewerProps {
   opponentUsername?: string;
 }
 
+const buildPkmEffectText = (card: OpponentCard): string => {
+  const parts: string[] = [];
+  if (card.abilities && card.abilities.length > 0) {
+    card.abilities.forEach(a => parts.push(`[${a.type}] ${a.name}: ${a.text}`));
+  }
+  if (card.attacks && card.attacks.length > 0) {
+    card.attacks.forEach(a => {
+      const cost = a.cost?.length ? `[${a.cost.join(',')}] ` : '';
+      const dmg = a.damage ? ` — ${a.damage}` : '';
+      parts.push(`${cost}${a.name}${dmg}: ${a.text || ''}`);
+    });
+  }
+  if (card.rules && card.rules.length > 0) {
+    card.rules.forEach(r => parts.push(r));
+  }
+  return parts.join('\n\n');
+};
+
 const YGO_CARD_BACK_URL = 'https://images.ygoprodeck.com/images/cards/back_high.jpg';
 const PKM_CARD_BACK_URL = 'https://images.pokemontcg.io/back.png';
 
