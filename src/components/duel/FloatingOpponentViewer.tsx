@@ -46,6 +46,9 @@ interface OpponentCard {
   hp?: string;
   types?: string[];
   supertype?: string;
+  attacks?: { name: string; damage: string; text: string; cost: string[] }[];
+  abilities?: { name: string; text: string; type: string }[];
+  rules?: string[];
 }
 
 interface ZoneCards {
@@ -173,6 +176,12 @@ export const FloatingOpponentViewer = ({
                 image: payload.active.images?.small || '',
                 energyAttached: payload.active.energyAttached || 0,
                 damageCounters: payload.active.damageCounters || 0,
+                hp: payload.active.hp,
+                types: payload.active.types,
+                supertype: payload.active.supertype,
+                attacks: payload.active.attacks,
+                abilities: payload.active.abilities,
+                rules: payload.active.rules,
               } : null,
               bench: (payload.bench || []).map((c: any, i: number) => ({
                 id: i,
@@ -180,6 +189,12 @@ export const FloatingOpponentViewer = ({
                 image: c.images?.small || '',
                 energyAttached: c.energyAttached || 0,
                 damageCounters: c.damageCounters || 0,
+                hp: c.hp,
+                types: c.types,
+                supertype: c.supertype,
+                attacks: c.attacks,
+                abilities: c.abilities,
+                rules: c.rules,
               })),
               stadium: payload.stadium ? {
                 id: 0,
