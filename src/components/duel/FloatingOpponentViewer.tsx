@@ -645,8 +645,8 @@ export const FloatingOpponentViewer = ({
         onClose={() => setModalOpen(false)}
         card={selectedCard ? {
           name: selectedCard.name,
-          type: selectedCard.type_line || '',
-          desc: selectedCard.oracle_text || '',
+          type: selectedCard.type_line || (selectedCard.supertype || '') + (selectedCard.types ? ' — ' + selectedCard.types.join('/') : ''),
+          desc: selectedCard.oracle_text || buildPkmEffectText(selectedCard),
           race: '',
           card_images: [{ image_url_small: selectedCard.image }],
           power: selectedCard.power,
