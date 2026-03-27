@@ -1931,6 +1931,18 @@ export type Database = {
               player_role: string
             }[]
           }
+        | {
+            Args: {
+              p_match_type: string
+              p_max_players?: number
+              p_tcg_type?: string
+              p_user_id: string
+            }
+            Returns: {
+              duel_id: string
+              player_role: string
+            }[]
+          }
       purchase_marketplace_items: { Args: { p_items: Json }; Returns: Json }
       record_match_result: {
         Args: {
