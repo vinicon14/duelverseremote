@@ -46,6 +46,7 @@ interface PokemonFieldState {
   hand: PokemonFieldCard[];
   deck: PokemonFieldCard[];
   stadium: PokemonFieldCard | null;
+  activeTrainer: PokemonFieldCard | null;
 }
 
 interface PokemonDuelViewerProps {
