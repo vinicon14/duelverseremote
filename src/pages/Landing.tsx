@@ -63,8 +63,8 @@ const Landing = () => {
       <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-              <Swords className="w-5 h-5 text-primary" />
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ animation: 'tcg-color-cycle 9s ease-in-out infinite' }}>
+              <Swords className="w-5 h-5 tcg-text-animate" />
             </div>
             <span className="text-xl font-bold tcg-text-animate">DUELVERSE</span>
           </div>
