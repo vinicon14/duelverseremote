@@ -35,8 +35,6 @@ export const MtgCardDetailDialog = ({
   const [resolvedDetails, setResolvedDetails] = useState<Partial<Pick<MagicCard, 'type_line' | 'oracle_text' | 'mana_cost' | 'power' | 'toughness'>> | null>(null);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
 
-  if (!card) return null;
-
   useEffect(() => {
     let cancelled = false;
 
@@ -106,6 +104,8 @@ export const MtgCardDetailDialog = ({
   const canShowEffect = Boolean(
     displayOracleText || displayTypeLine || displayManaCost || displayPower || displayToughness || card.name
   );
+
+  if (!card) return null;
 
   return (
     <Dialog open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) setShowEffect(false); }}>
