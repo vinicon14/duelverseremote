@@ -46,6 +46,7 @@ interface PokemonFieldState {
   hand: PokemonFieldCard[];
   deck: PokemonFieldCard[];
   stadium: PokemonFieldCard | null;
+  activeTrainer: PokemonFieldCard | null;
 }
 
 interface PokemonDuelViewerProps {
@@ -65,6 +66,7 @@ export const PokemonDuelViewer = ({ duelId, currentUserId }: PokemonDuelViewerPr
     hand: [],
     deck: [],
     stadium: null,
+    activeTrainer: null,
   });
 
   const [showDeckPicker, setShowDeckPicker] = useState(true);
@@ -94,6 +96,7 @@ export const PokemonDuelViewer = ({ duelId, currentUserId }: PokemonDuelViewerPr
           active: fieldState.active ? { name: fieldState.active.name, images: fieldState.active.images, hp: fieldState.active.hp, types: fieldState.active.types, supertype: fieldState.active.supertype, energyAttached: fieldState.active.energyAttached, damageCounters: fieldState.active.damageCounters, attacks: fieldState.active.attacks, abilities: fieldState.active.abilities, rules: fieldState.active.rules } : null,
           bench: fieldState.bench.map(c => ({ name: c.name, images: c.images, hp: c.hp, types: c.types, supertype: c.supertype, energyAttached: c.energyAttached, damageCounters: c.damageCounters, attacks: c.attacks, abilities: c.abilities, rules: c.rules })),
           stadium: fieldState.stadium ? { name: fieldState.stadium.name, images: fieldState.stadium.images } : null,
+          activeTrainer: fieldState.activeTrainer ? { name: fieldState.activeTrainer.name, images: fieldState.activeTrainer.images } : null,
           prizeCardsCount: fieldState.prizeCards.length,
           discardCount: fieldState.discard.length,
           discardCards: fieldState.discard.map(c => ({ name: c.name, image: c.images?.small || c.images?.large || '', id: parseInt(c.id) || 0 })),
@@ -139,7 +142,7 @@ export const PokemonDuelViewer = ({ duelId, currentUserId }: PokemonDuelViewerPr
     const prize = allCards.slice(7, 13);
     const deck = allCards.slice(13);
 
-    setFieldState({ active: null, bench: [], prizeCards: prize, discard: [], hand, deck, stadium: null });
+    setFieldState({ active: null, bench: [], prizeCards: prize, discard: [], hand, deck, stadium: null, activeTrainer: null });
     setShowDeckPicker(false);
     setPhase('setup');
     toast({ title: `Deck "${savedDeck.name}" carregado!`, description: '7 cartas na mão, 6 prêmios' });
@@ -261,18 +264,27 @@ export const PokemonDuelViewer = ({ duelId, currentUserId }: PokemonDuelViewerPr
       const newState = { ...prev };
       newState.hand = prev.hand.filter(c => c.instanceId !== card.instanceId);
       if (isStadium) {
-        // Replace existing stadium
         if (prev.stadium) {
           newState.discard = [...prev.discard, prev.stadium];
         }
         newState.stadium = card;
       } else {
-        // Items/Supporters go to discard after use
-        newState.discard = [...prev.discard, card];
+        // Show in activeTrainer zone (previous one goes to discard)
+        if (prev.activeTrainer) {
+          newState.discard = [...prev.discard, prev.activeTrainer];
+        }
+        newState.activeTrainer = card;
       }
       return newState;
     });
-    toast({ title: isStadium ? `Stadium "${card.name}" ativado!` : `"${card.name}" ativado!` });
+    toast({ title: isStadium ? `Stadium "${card.name}" ativado!` : `"${card.name}" em jogo!` });
+  };
+
+  const discardActiveTrainer = () => {
+    setFieldState(prev => {
+      if (!prev.activeTrainer) return prev;
+      return { ...prev, discard: [...prev.discard, prev.activeTrainer], activeTrainer: null };
+    });
   };
 
   const searchDeck = (card: PokemonFieldCard) => {
@@ -450,6 +462,25 @@ export const PokemonDuelViewer = ({ duelId, currentUserId }: PokemonDuelViewerPr
               </div>
             )}
           </div>
+
+          {/* Active Trainer Zone */}
+          {fieldState.activeTrainer ? (
+            <div className="relative">
+              <div
+                className="w-14 h-20 rounded overflow-hidden border-2 border-primary cursor-pointer shadow-md"
+                onClick={discardActiveTrainer}
+                title="Clique para enviar ao descarte"
+              >
+                <img src={fieldState.activeTrainer.images.small} alt={fieldState.activeTrainer.name} className="w-full h-full object-cover" />
+              </div>
+              <span className="text-[8px] text-muted-foreground block text-center">Em Jogo</span>
+            </div>
+          ) : (
+            <div className="w-14 h-20 rounded border-2 border-dashed border-primary/30 flex flex-col items-center justify-center">
+              <Zap className="w-3 h-3 text-primary/40" />
+              <span className="text-[8px] text-muted-foreground">Ativar</span>
+            </div>
+          )}
 
           {/* Stadium */}
           {fieldState.stadium && (
