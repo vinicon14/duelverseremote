@@ -66,6 +66,7 @@ export const PokemonDuelViewer = ({ duelId, currentUserId }: PokemonDuelViewerPr
     hand: [],
     deck: [],
     stadium: null,
+    activeTrainer: null,
   });
 
   const [showDeckPicker, setShowDeckPicker] = useState(true);
@@ -140,7 +141,7 @@ export const PokemonDuelViewer = ({ duelId, currentUserId }: PokemonDuelViewerPr
     const prize = allCards.slice(7, 13);
     const deck = allCards.slice(13);
 
-    setFieldState({ active: null, bench: [], prizeCards: prize, discard: [], hand, deck, stadium: null });
+    setFieldState({ active: null, bench: [], prizeCards: prize, discard: [], hand, deck, stadium: null, activeTrainer: null });
     setShowDeckPicker(false);
     setPhase('setup');
     toast({ title: `Deck "${savedDeck.name}" carregado!`, description: '7 cartas na mão, 6 prêmios' });
