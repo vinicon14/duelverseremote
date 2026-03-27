@@ -549,6 +549,11 @@ export const DuelDeckViewer = ({
           'extraMonster1', 'extraMonster2', 'fieldSpell'] as const;
 
         if (singleCardZones.includes(sourceZone as any)) {
+          // When moving from a field zone, detach XYZ materials to graveyard
+          const fieldCard = newState[sourceZone] as GameCard | null;
+          if (fieldCard?.attachedCards && fieldCard.attachedCards.length > 0) {
+            newState.graveyard = [...newState.graveyard, ...fieldCard.attachedCards];
+          }
           newState[sourceZone] = null;
         } else if (['graveyard', 'banished', 'deck', 'extraDeck', 'sideDeck'].includes(sourceZone)) {
           const sourceArray = [...(newState[sourceZone as keyof FieldState] as GameCard[])];
