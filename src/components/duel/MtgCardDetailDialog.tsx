@@ -96,6 +96,8 @@ export const MtgCardDetailDialog = ({
     };
   }, [open, card]);
 
+  if (!card) return null;
+
   const displayTypeLine = card.type_line || resolvedDetails?.type_line;
   const displayManaCost = card.mana_cost || resolvedDetails?.mana_cost;
   const displayOracleText = card.oracle_text || resolvedDetails?.oracle_text;
@@ -104,8 +106,6 @@ export const MtgCardDetailDialog = ({
   const canShowEffect = Boolean(
     displayOracleText || displayTypeLine || displayManaCost || displayPower || displayToughness || card.name
   );
-
-  if (!card) return null;
 
   return (
     <Dialog open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) setShowEffect(false); }}>
