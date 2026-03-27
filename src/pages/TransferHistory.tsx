@@ -108,8 +108,12 @@ export default function TransferHistory() {
     if (type === 'tournament_entry' || type === 'tournament_prize' || type === 'tournament_win') {
       return 'Torneios';
     }
-    if (type === 'admin_add' || type === 'admin_remove' || type === 'system' || type === 'daily_reward' || type === 'purchase' || type === 'redeem') {
+    if (type === 'admin_add' || type === 'admin_remove' || type === 'system' || type === 'daily_reward' || type === 'purchase' || type === 'redeem' || type === 'subscription') {
       return 'Sistema';
+    }
+    if (type === 'marketplace_purchase') {
+      const received = tx.receiver_id === currentUserId;
+      return received ? 'Marketplace (Venda)' : 'Marketplace';
     }
     if (type === 'transfer') {
       const received = tx.receiver_id === currentUserId;
@@ -143,6 +147,10 @@ export default function TransferHistory() {
         return 'Recompensa Diária';
       case 'purchase':
         return 'Compra';
+      case 'marketplace_purchase':
+        return 'Compra no Marketplace';
+      case 'subscription':
+        return 'Assinatura PRO';
       case 'redeem':
         return 'Resgate';
       default:
