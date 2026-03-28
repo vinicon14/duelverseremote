@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { BookOpen, ChevronDown, Plus, Minus, Trash2, Undo2 } from 'lucide-react';
+import { BookOpen, ChevronDown, Plus, Minus, Trash2, Undo2, Hand } from 'lucide-react';
 
 interface PokemonFieldCard {
   id: string;
@@ -31,6 +31,7 @@ interface PkmCardActionModalProps {
   onAddDamage: (card: PokemonFieldCard, zone: 'active' | 'bench', amount: number) => void;
   onDiscard: (card: PokemonFieldCard, from: 'hand' | 'active' | 'bench') => void;
   onReturnToDeck: (card: PokemonFieldCard, from: 'hand' | 'active' | 'bench' | 'discard', position: 'top' | 'bottom' | 'shuffle') => void;
+  onReturnToHand: (card: PokemonFieldCard, from: 'active' | 'bench' | 'discard') => void;
   onPlayToActive: (card: PokemonFieldCard) => void;
   onPlayToBench: (card: PokemonFieldCard) => void;
   onActivateTrainer: (card: PokemonFieldCard) => void;
@@ -47,6 +48,7 @@ export const PkmCardActionModal = ({
   onAddDamage,
   onDiscard,
   onReturnToDeck,
+  onReturnToHand,
   onPlayToActive,
   onPlayToBench,
   onActivateTrainer,
@@ -172,6 +174,9 @@ export const PkmCardActionModal = ({
         <div className="flex gap-2 flex-wrap justify-center">
           {zone === 'active' && (
             <>
+              <Button size="sm" variant="secondary" onClick={() => { onReturnToHand(card, 'active'); onClose(); }}>
+                <Hand className="w-3 h-3 mr-1" />Mão
+              </Button>
               <Button size="sm" variant="destructive" onClick={() => { onDiscard(card, 'active'); onClose(); }}>
                 <Trash2 className="w-3 h-3 mr-1" />Descartar
               </Button>
@@ -184,6 +189,9 @@ export const PkmCardActionModal = ({
             <>
               <Button size="sm" onClick={() => { onPromoteToActive(card); onClose(); }}>
                 Promover a Ativo
+              </Button>
+              <Button size="sm" variant="secondary" onClick={() => { onReturnToHand(card, 'bench'); onClose(); }}>
+                <Hand className="w-3 h-3 mr-1" />Mão
               </Button>
               <Button size="sm" variant="destructive" onClick={() => { onDiscard(card, 'bench'); onClose(); }}>
                 <Trash2 className="w-3 h-3 mr-1" />Descartar
