@@ -179,6 +179,25 @@ export default function MyItems() {
       const result = data as { success: boolean; message: string };
       if (result.success) {
         toast({ title: "Sucesso! ✅", description: result.message });
+
+        // Send notification to recipient
+        const { data: senderProfile } = await supabase
+          .from('profiles')
+          .select('username')
+          .eq('user_id', user?.id)
+          .single();
+        
+        const senderName = senderProfile?.username || 'Alguém';
+        const itemName = selectedItem.product?.name || 'um item';
+        
+        await supabase.from('notifications').insert({
+          user_id: recipientData.user_id,
+          type: 'item_transfer',
+          title: '🎁 Item Recebido!',
+          message: `${senderName} enviou "${itemName}" para você!`,
+          data: { type: 'item_transfer', url: '/my-items', item_name: itemName, sender: senderName },
+        });
+
         setTransferDialogOpen(false);
         setSelectedItem(null);
         setRecipientUsername("");
