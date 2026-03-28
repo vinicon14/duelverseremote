@@ -335,6 +335,18 @@ export const PokemonDuelViewer = ({ duelId, currentUserId }: PokemonDuelViewerPr
     toast({ title: `${card.name} recuperado do descarte!` });
   };
 
+  const returnToHand = (card: PokemonFieldCard, from: 'active' | 'bench' | 'discard') => {
+    setFieldState(prev => {
+      const newState = { ...prev };
+      if (from === 'active') newState.active = null;
+      else if (from === 'bench') newState.bench = prev.bench.filter(c => c.instanceId !== card.instanceId);
+      else if (from === 'discard') newState.discard = prev.discard.filter(c => c.instanceId !== card.instanceId);
+      newState.hand = [...prev.hand, { ...card, energyAttached: 0, damageCounters: 0 }];
+      return newState;
+    });
+    toast({ title: `${card.name} devolvido à mão!` });
+  };
+
   const filteredDeckCards = deckSearchQuery.trim()
     ? fieldState.deck.filter(c => c.name.toLowerCase().includes(deckSearchQuery.toLowerCase()))
     : fieldState.deck;
@@ -732,6 +744,7 @@ export const PokemonDuelViewer = ({ duelId, currentUserId }: PokemonDuelViewerPr
           onAddDamage={addDamage}
           onDiscard={discardCard}
           onReturnToDeck={returnToDeck}
+          onReturnToHand={returnToHand}
           onPlayToActive={playToActive}
           onPlayToBench={playToBench}
           onActivateTrainer={activateTrainer}
