@@ -31,6 +31,7 @@ interface PkmCardActionModalProps {
   onAddDamage: (card: PokemonFieldCard, zone: 'active' | 'bench', amount: number) => void;
   onDiscard: (card: PokemonFieldCard, from: 'hand' | 'active' | 'bench') => void;
   onReturnToDeck: (card: PokemonFieldCard, from: 'hand' | 'active' | 'bench' | 'discard', position: 'top' | 'bottom' | 'shuffle') => void;
+  onReturnToHand: (card: PokemonFieldCard, from: 'active' | 'bench' | 'discard') => void;
   onPlayToActive: (card: PokemonFieldCard) => void;
   onPlayToBench: (card: PokemonFieldCard) => void;
   onActivateTrainer: (card: PokemonFieldCard) => void;
@@ -47,6 +48,7 @@ export const PkmCardActionModal = ({
   onAddDamage,
   onDiscard,
   onReturnToDeck,
+  onReturnToHand,
   onPlayToActive,
   onPlayToBench,
   onActivateTrainer,
