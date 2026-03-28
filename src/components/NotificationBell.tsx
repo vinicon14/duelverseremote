@@ -139,8 +139,10 @@ export const NotificationBell = ({ userId }: { userId: string }) => {
     setUnreadCount(prev => Math.max(0, prev - 1));
   };
 
-  const handleDismissAll = async () => {
-    // Mark all DB notifications as read
+  const handleDismissAll = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
     const dbIds = notifications
       .filter(n => !n.id.startsWith('fr_'))
       .map(n => n.id);
@@ -152,11 +154,9 @@ export const NotificationBell = ({ userId }: { userId: string }) => {
         .in('id', dbIds);
     }
 
-    setNotifications(prev => prev.filter(n => n.id.startsWith('fr_')));
-    setUnreadCount(prev => {
-      const friendCount = notifications.filter(n => n.id.startsWith('fr_')).length;
-      return friendCount;
-    });
+    const friendNotifs = notifications.filter(n => n.id.startsWith('fr_'));
+    setNotifications(friendNotifs);
+    setUnreadCount(friendNotifs.length);
   };
 
   const formatTime = (dateStr: string) => {
