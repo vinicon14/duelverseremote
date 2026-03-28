@@ -190,12 +190,12 @@ export default function MyItems() {
         const senderName = senderProfile?.username || 'Alguém';
         const itemName = selectedItem.product?.name || 'um item';
         
-        await supabase.from('notifications').insert({
-          user_id: recipientData.user_id,
-          type: 'item_transfer',
-          title: '🎁 Item Recebido!',
-          message: `${senderName} enviou "${itemName}" para você!`,
-          data: { type: 'item_transfer', url: '/my-items', item_name: itemName, sender: senderName },
+        await supabase.rpc('create_notification', {
+          p_user_id: recipientData.user_id,
+          p_type: 'item_transfer',
+          p_title: '🎁 Item Recebido!',
+          p_message: `${senderName} enviou "${itemName}" para você!`,
+          p_data: { type: 'item_transfer', url: '/my-items', item_name: itemName, sender: senderName },
         });
 
         setTransferDialogOpen(false);
