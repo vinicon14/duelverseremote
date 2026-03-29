@@ -12,7 +12,8 @@ import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Swords, Trophy, Users, Video, Zap, Shield,
-  Play, Star, TrendingUp, Gamepad2, Crown, ChevronDown } from
+  Play, Star, TrendingUp, Gamepad2, Crown, ChevronDown,
+  Download, Monitor, Smartphone, Bell } from
 "lucide-react";
 
 const Landing = () => {
