@@ -294,15 +294,42 @@ const Landing = () => {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-border py-8 px-4">
-        <div className="container mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="flex items-center gap-2">
-            <Swords className="w-5 h-5 text-primary" />
-            <span className="font-bold tcg-text-animate">DUELVERSE</span>
+      <footer className="border-t border-border py-10 px-4">
+        <div className="container mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Swords className="w-5 h-5 tcg-text-animate" />
+                <span className="font-bold tcg-text-animate">DUELVERSE</span>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                A plataforma definitiva de duelos de TCG online.
+              </p>
+            </div>
+            <div className="space-y-3">
+              <h4 className="font-semibold text-foreground">Baixe o App</h4>
+              <div className="space-y-2">
+                <a href="https://github.com/seu-usuario/duelverse/releases/latest/download/Duelverse-Windows-x64.zip" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors">
+                  <Monitor className="w-4 h-4" /> Windows
+                </a>
+                <a href="https://github.com/seu-usuario/duelverse/releases/latest/download/Duelverse.apk" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors">
+                  <Smartphone className="w-4 h-4" /> Android APK
+                </a>
+              </div>
+            </div>
+            <div className="space-y-3">
+              <h4 className="font-semibold text-foreground">Links</h4>
+              <div className="space-y-2">
+                <Link to="/auth" className="block text-sm text-muted-foreground hover:text-primary transition-colors">Entrar / Cadastrar</Link>
+                <Link to="/install-app" className="block text-sm text-muted-foreground hover:text-primary transition-colors">Instalar PWA</Link>
+              </div>
+            </div>
           </div>
-          <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} DuelVerse. Todos os direitos reservados. Desenvolvido por Vinícius.
-          </p>
+          <div className="border-t border-border pt-6 text-center">
+            <p className="text-sm text-muted-foreground">
+              © {new Date().getFullYear()} DuelVerse. Todos os direitos reservados. Desenvolvido por Vinícius.
+            </p>
+          </div>
         </div>
       </footer>
     </div>);
