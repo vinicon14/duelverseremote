@@ -38,9 +38,6 @@ const TCG_CONFIG: Record<TcgType, { name: string; icon: React.ReactNode; color: 
 export default function ProfileSelect() {
   const navigate = useNavigate();
   const { profiles, switchProfile, createProfile, isLoading } = useTcg();
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [selectedTcg, setSelectedTcg] = useState<TcgType>('yugioh');
-  const [newUsername, setNewUsername] = useState('');
   const [creating, setCreating] = useState(false);
 
   const handleSelectProfile = (profileId: string) => {
