@@ -195,9 +195,9 @@ export const useBrowserNotifications = () => {
     }
   };
 
-  // Auto-subscribe if permission already granted
+  // Auto-subscribe if permission already granted (not for native app)
   useEffect(() => {
-    if (hasPermission && !loading) {
+    if (hasPermission && !loading && !isNativeApp()) {
       subscribeToPush();
     }
   }, [hasPermission, loading, subscribeToPush]);
@@ -206,6 +206,15 @@ export const useBrowserNotifications = () => {
     if (!isSupported || !hasPermission) return;
     
     try {
+      // Native app: use bridge for native Android notifications
+      if (isNativeApp()) {
+        const bridge = getNativeBridge();
+        if (bridge?.showNotification) {
+          bridge.showNotification(title, options?.body || '');
+        }
+        return;
+      }
+
       if ('serviceWorker' in navigator) {
         const registration = await navigator.serviceWorker.ready;
         await registration.showNotification(title, {
@@ -220,6 +229,7 @@ export const useBrowserNotifications = () => {
         icon: '/favicon.png',
         badge: '/favicon.png',
         ...options,
+      });
       });
     } catch (error) {
       console.error('❌ Error showing notification:', error);
