@@ -67,21 +67,9 @@ const Auth = () => {
   const handleGoogleSignIn = async () => {
     try {
       setLoading(true);
-      
-      // No APK (WebView), abrir OAuth no navegador externo
-      const isNativeApp = navigator.userAgent.includes('DuelVerseApp');
-      if (isNativeApp) {
-        // Construir URL de OAuth manualmente e abrir no navegador externo
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-        const redirectTo = 'https://duelverse.site/auth';
-        const oauthUrl = `${supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectTo)}&prompt=select_account`;
-        window.open(oauthUrl, '_system');
-        setLoading(false);
-        return;
-      }
 
       const result = await lovable.auth.signInWithOAuth('google', {
-        redirect_uri: `${window.location.origin}/duels`,
+        redirect_uri: `${window.location.origin}/auth`,
         extraParams: {
           prompt: 'select_account',
         }
