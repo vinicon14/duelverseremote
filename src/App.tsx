@@ -42,6 +42,7 @@ import FriendChat from "./pages/FriendChat";
 import MatchGallery from "./pages/MatchGallery";
 import VideoShare from "./pages/VideoShare";
 import News from "./pages/News";
+import InstallApp from "./pages/InstallApp";
 import NotFound from "./pages/NotFound";
 
 import DeckBuilder from "./pages/DeckBuilder";
@@ -112,6 +113,7 @@ const RouterContent = ({ user }: { user: User | null }) => {
       <Route path="/marketplace" element={<Marketplace />} />
       <Route path="/my-items" element={<MyItems />} />
       <Route path="/buy-duelcoins" element={<BuyDuelCoins />} />
+      <Route path="/install-app" element={<InstallApp />} />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
     </Routes>
