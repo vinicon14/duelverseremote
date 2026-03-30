@@ -1,5 +1,8 @@
 const { app, BrowserWindow, Tray, Menu, Notification, ipcMain, shell } = require('electron');
+const fs = require('fs');
 const path = require('path');
+
+app.setAppUserModelId('com.duelverse.desktop');
 
 const REMOTE_URL = 'https://duelverse.site';
 let mainWindow;
@@ -18,6 +21,7 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
+      nativeWindowOpen: true,
     },
     autoHideMenuBar: true,
     title: 'Duelverse',
@@ -25,13 +29,18 @@ function createWindow() {
 
   mainWindow.loadURL(REMOTE_URL);
 
-  // Open external links in default browser
-  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    if (!url.startsWith(REMOTE_URL)) {
-      shell.openExternal(url);
-      return { action: 'deny' };
+  // Open external links in the default browser, but allow OAuth popups and in-app remote pages
+  mainWindow.webContents.setWindowOpenHandler(({ url, disposition }) => {
+    if (url.startsWith(REMOTE_URL)) {
+      return { action: 'allow' };
     }
-    return { action: 'allow' };
+
+    if (disposition === 'new-window') {
+      return { action: 'allow' };
+    }
+
+    shell.openExternal(url);
+    return { action: 'deny' };
   });
 
   mainWindow.on('close', (e) => {
@@ -67,6 +76,38 @@ function createTray() {
   tray.on('click', () => { mainWindow.show(); mainWindow.focus(); });
 }
 
+function setAutoLaunch() {
+  if (process.platform !== 'win32' || !app.isPackaged) return;
+  app.setLoginItemSettings({
+    openAtLogin: true,
+    path: process.execPath,
+    args: [],
+  });
+}
+
+function createShortcuts() {
+  if (process.platform !== 'win32' || !app.isPackaged) return;
+
+  const shortcutOptions = {
+    target: process.execPath,
+    args: '',
+    description: 'Duelverse',
+    icon: process.execPath,
+    iconIndex: 0,
+  };
+
+  const desktopShortcut = path.join(app.getPath('desktop'), 'Duelverse.lnk');
+  if (!fs.existsSync(desktopShortcut)) {
+    shell.writeShortcutLink(desktopShortcut, shortcutOptions);
+  }
+
+  const startMenuShortcut = path.join(app.getPath('startMenu'), 'Programs', 'Duelverse.lnk');
+  fs.mkdirSync(path.dirname(startMenuShortcut), { recursive: true });
+  if (!fs.existsSync(startMenuShortcut)) {
+    shell.writeShortcutLink(startMenuShortcut, shortcutOptions);
+  }
+}
+
 ipcMain.on('show-notification', (_, { title, body }) => {
   if (Notification.isSupported()) {
     const notif = new Notification({ title, body, icon: path.join(__dirname, 'icon.png') });
@@ -82,8 +123,14 @@ ipcMain.on('sync-auth', (_, { token, userId }) => {
 });
 
 app.whenReady().then(() => {
+  setAutoLaunch();
   createWindow();
   createTray();
+  createShortcuts();
+});
+
+app.on('before-quit', () => {
+  app.isQuitting = true;
 });
 
 app.on('window-all-closed', () => {

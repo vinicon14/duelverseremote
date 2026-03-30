@@ -1,14 +1,20 @@
 {
-  "name": "vite_react_shadcn_ts",
+  "name": "duelverse-desktop",
   "private": true,
   "version": "0.0.0",
+  "description": "Duelverse desktop app wrapper with background tray and notifications",
+  "author": "Duelverse",
+  "license": "UNLICENSED",
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "package:win": "electron-packager . Duelverse --platform=win32 --arch=x64 --out=release-builds --overwrite --icon=electron/icon.ico --app-bundle-id=com.duelverse.desktop --win32metadata.ProductName=Duelverse --win32metadata.FileDescription=Duelverse",
+    "installer:win": "electron-builder --win nsis --x64",
+    "installer:win-squirrel": "node electron/installer.cjs"
   },
   "dependencies": {
     "@capacitor/cli": "^8.2.0",
@@ -77,6 +83,8 @@
     "@vitejs/plugin-react-swc": "^3.11.0",
     "autoprefixer": "^10.4.21",
     "electron": "^41.1.0",
+    "electron-builder": "^24.5.0",
+    "electron-winstaller": "^5.4.0",
     "eslint": "^9.32.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
@@ -88,5 +96,34 @@
     "typescript-eslint": "^8.38.0",
     "vite": "^5.4.19"
   },
-  "main": "electron/main.cjs"
+  "main": "electron/main.cjs",
+  "build": {
+    "appId": "com.duelverse.desktop",
+    "productName": "Duelverse",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!release-builds/**",
+      "!dist/**"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "msi"
+      ],
+      "icon": "electron/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "runAfterFinish": false,
+      "uninstallDisplayName": "Duelverse"
+    }
+  }
 }
