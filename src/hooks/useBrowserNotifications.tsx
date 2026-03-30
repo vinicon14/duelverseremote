@@ -203,17 +203,16 @@ export const useBrowserNotifications = () => {
   }, [hasPermission, loading, subscribeToPush]);
 
   const showNotification = useCallback(async (title: string, options?: NotificationOptions) => {
-    if (!isSupported || !hasPermission) return;
-    
-    try {
-      // Native app: use bridge for native Android notifications
-      if (isNativeApp()) {
-        const bridge = getNativeBridge();
-        if (bridge?.showNotification) {
-          bridge.showNotification(title, options?.body || '');
-        }
-        return;
+    // Native app: always try to show via bridge, regardless of permission state
+    if (isNativeApp()) {
+      const bridge = getNativeBridge();
+      if (bridge?.showNotification) {
+        bridge.showNotification(title, options?.body || '');
       }
+      return;
+    }
+
+    if (!isSupported || !hasPermission) return;
 
       if ('serviceWorker' in navigator) {
         const registration = await navigator.serviceWorker.ready;
