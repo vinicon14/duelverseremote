@@ -97,10 +97,6 @@ export const ConditionalMonetagLoader = (): null => {
     };
   }, [location.pathname, isPro, loading]);
 
-  useEffect(() => {
-    applyPopupBlocking();
-  }, []);
-
   return null;
 };
 
