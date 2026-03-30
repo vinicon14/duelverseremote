@@ -75,6 +75,12 @@ ipcMain.on('show-notification', (_, { title, body }) => {
   }
 });
 
+ipcMain.on('sync-auth', (_, { token, userId }) => {
+  authToken = token;
+  authUserId = userId;
+  console.log('[Electron] Auth synced for user:', userId);
+});
+
 app.whenReady().then(() => {
   createWindow();
   createTray();
