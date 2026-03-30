@@ -1,14 +1,18 @@
 package com.duelverse.app;
 
 import android.annotation.SuppressLint;
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.webkit.CookieManager;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.webkit.WebResourceRequest;
 import android.webkit.PermissionRequest;
 import android.webkit.JavascriptInterface;
 import androidx.appcompat.app.AppCompatActivity;
@@ -22,6 +26,7 @@ import android.Manifest;
 
 public class MainActivity extends AppCompatActivity {
 
+    private static final String DEFAULT_URL = "https://duelverse.site";
     private WebView webView;
     private static final int NOTIFICATION_PERMISSION_CODE = 1001;
 
@@ -43,9 +48,15 @@ public class MainActivity extends AppCompatActivity {
         settings.setAllowContentAccess(true);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
-        settings.setUserAgentString(settings.getUserAgentString() + " DuelVerseApp/1.0");
+        settings.setJavaScriptCanOpenWindowsAutomatically(true);
+        settings.setSupportMultipleWindows(false);
+        settings.setUserAgentString(settings.getUserAgentString() + " DuelVerseApp/1.0 LovableApp/1.0");
 
-        webView.setWebViewClient(new WebViewClient());
+        CookieManager cookieManager = CookieManager.getInstance();
+        cookieManager.setAcceptCookie(true);
+        cookieManager.setAcceptThirdPartyCookies(webView, true);
+
+        webView.setWebViewClient(new OAuthAwareWebViewClient());
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onPermissionRequest(final PermissionRequest request) {
@@ -56,7 +67,7 @@ public class MainActivity extends AppCompatActivity {
         // Add JavaScript bridge for native notifications
         webView.addJavascriptInterface(new DuelVerseNativeBridge(), "DuelVerseNative");
 
-        webView.loadUrl("https://duelverse.site");
+        webView.loadUrl(resolveLaunchUrl(getIntent()));
 
         // Create notification channel
         createNotificationChannel();
@@ -66,6 +77,37 @@ public class MainActivity extends AppCompatActivity {
 
         // Start background notification service
         startNotificationService();
+    }
+
+    private String resolveLaunchUrl(Intent intent) {
+        Uri data = intent != null ? intent.getData() : null;
+        return data != null ? data.toString() : DEFAULT_URL;
+    }
+
+    private boolean isAppUrl(Uri uri) {
+        if (uri == null) return false;
+
+        String scheme = uri.getScheme();
+        String host = uri.getHost();
+
+        if (scheme == null || host == null) return false;
+
+        return "https".equalsIgnoreCase(scheme)
+            && (
+                "duelverse.site".equalsIgnoreCase(host)
+                || "duelverseremote.lovable.app".equalsIgnoreCase(host)
+                || host.endsWith(".lovable.app")
+                || host.endsWith(".lovableproject.com")
+            );
+    }
+
+    private void openExternalUrl(Uri uri) {
+        try {
+            Intent intent = new Intent(Intent.ACTION_VIEW, uri);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
+        } catch (ActivityNotFoundException ignored) {
+        }
     }
 
     private void createNotificationChannel() {
@@ -119,6 +161,47 @@ public class MainActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         // Service continues running in background
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+
+        String launchUrl = resolveLaunchUrl(intent);
+        if (webView != null) {
+            webView.loadUrl(launchUrl);
+        }
+    }
+
+    private class OAuthAwareWebViewClient extends WebViewClient {
+        @Override
+        public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+            Uri uri = request != null ? request.getUrl() : null;
+
+            if (uri == null) {
+                return false;
+            }
+
+            if (isAppUrl(uri)) {
+                return false;
+            }
+
+            openExternalUrl(uri);
+            return true;
+        }
+
+        @Override
+        public boolean shouldOverrideUrlLoading(WebView view, String url) {
+            Uri uri = url != null ? Uri.parse(url) : null;
+
+            if (uri == null || isAppUrl(uri)) {
+                return false;
+            }
+
+            openExternalUrl(uri);
+            return true;
+        }
     }
 
     // JavaScript bridge class
