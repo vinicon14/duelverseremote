@@ -139,13 +139,15 @@ export const NotificationBell = ({ userId }: { userId: string }) => {
     setUnreadCount(prev => Math.max(0, prev - 1));
   };
 
-  const handleDismissAll = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
+  const handleDismissAll = async () => {
     const dbIds = notifications
       .filter(n => !n.id.startsWith('fr_'))
       .map(n => n.id);
+
+    // Update local state immediately
+    const friendNotifs = notifications.filter(n => n.id.startsWith('fr_'));
+    setNotifications(friendNotifs);
+    setUnreadCount(friendNotifs.length);
 
     if (dbIds.length > 0) {
       await supabase
@@ -153,10 +155,6 @@ export const NotificationBell = ({ userId }: { userId: string }) => {
         .update({ read: true })
         .in('id', dbIds);
     }
-
-    const friendNotifs = notifications.filter(n => n.id.startsWith('fr_'));
-    setNotifications(friendNotifs);
-    setUnreadCount(friendNotifs.length);
   };
 
   const formatTime = (dateStr: string) => {
