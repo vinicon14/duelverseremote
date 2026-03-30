@@ -214,6 +214,7 @@ export const useBrowserNotifications = () => {
 
     if (!isSupported || !hasPermission) return;
 
+    try {
       if ('serviceWorker' in navigator) {
         const registration = await navigator.serviceWorker.ready;
         await registration.showNotification(title, {
