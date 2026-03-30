@@ -30,6 +30,14 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [selectedTcg, setSelectedTcg] = useState<TcgType>('yugioh');
 
+  const getRedirectOrigin = () => {
+    const origin = window.location.origin;
+    if (!origin || origin === 'null' || origin === 'undefined' || origin.startsWith('file:') || origin.startsWith('app:') || origin.startsWith('electron:')) {
+      return 'https://duelverse.site';
+    }
+    return origin;
+  };
+
   // Verificar se usuário já está logado e redirecionar
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -69,7 +77,7 @@ const Auth = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/duels`
+          redirectTo: `${getRedirectOrigin()}/duels`
         }
       });
 
@@ -188,7 +196,7 @@ const Auth = () => {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/duels`,
+          emailRedirectTo: `${getRedirectOrigin()}/duels`,
           data: { username: username.trim() }
         }
       });
