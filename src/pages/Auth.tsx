@@ -172,6 +172,37 @@ const Auth = () => {
     }
 
     try {
+      // Bloquear domínios de email descartáveis/falsos
+      const disposableDomains = [
+        'tempmail.com', 'throwaway.email', 'guerrillamail.com', 'mailinator.com',
+        'yopmail.com', 'sharklasers.com', 'guerrillamailblock.com', 'grr.la',
+        'dispostable.com', 'trashmail.com', 'fakeinbox.com', 'temp-mail.org',
+        'tempail.com', 'tmpmail.net', 'tmpmail.org', 'boun.cr', 'discard.email',
+        'discardmail.com', 'discardmail.de', 'emailondeck.com', 'getairmail.com',
+        'harakirimail.com', 'mailcatch.com', 'mailnesia.com', 'maildrop.cc',
+        'mintemail.com', 'mohmal.com', 'mytemp.email', 'spamgourmet.com',
+        'trash-mail.com', '10minutemail.com', 'guerrillamail.info', 'crazymailing.com',
+        'tempinbox.com', 'mailforspam.com', 'tempr.email', 'burnermail.io',
+        'mailnator.com', 'trashmail.me', 'getnada.com', 'emailfake.com',
+        'emailable.rocks', 'mailsac.com', 'inboxkitten.com', 'throwawaymail.com',
+      ];
+
+      const emailDomain = email.split('@')[1]?.toLowerCase();
+      if (!emailDomain || disposableDomains.includes(emailDomain)) {
+        toast({ title: "Email inválido", description: "Emails temporários ou descartáveis não são permitidos. Use um email real.", variant: "destructive" });
+        setLoading(false);
+        return;
+      }
+
+      // Verificar formato de email mais rigoroso
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      if (!emailRegex.test(email)) {
+        toast({ title: "Email inválido", description: "Por favor, insira um endereço de email válido.", variant: "destructive" });
+        setLoading(false);
+        return;
+      }
+
+      // Verificar se o nickname já existe
       const { data: existingUser } = await supabase
         .from('profiles')
         .select('username')
@@ -184,40 +215,33 @@ const Auth = () => {
         return;
       }
 
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/duels`,
-          data: { username: username.trim() }
+          emailRedirectTo: `${window.location.origin}/auth`,
+          data: { username: username.trim(), selected_tcg: selectedTcg }
         }
       });
 
       if (error) throw error;
 
-      toast({ title: "Cadastro realizado!", description: "Bem-vindo ao Duelverse! Escolha seu TCG." });
-
-      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-      if (signInError) throw signInError;
-
-      // Create the first TCG profile with user's chosen TCG
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await supabase.from('tcg_profiles').insert({
-          user_id: user.id,
-          tcg_type: selectedTcg,
-          username: username.trim(),
-          avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`,
-        });
-        
-        // Set active TCG in localStorage
-        localStorage.setItem('activeTcg', selectedTcg);
+      // Se o usuário já existe (email já cadastrado), o Supabase retorna user mas sem session
+      if (data.user && data.user.identities && data.user.identities.length === 0) {
+        toast({ title: "Email já cadastrado", description: "Este email já está registrado na plataforma. Tente fazer login.", variant: "destructive" });
+        setLoading(false);
+        return;
       }
 
-      navigate('/duels');
+      // Não fazer login automático - aguardar confirmação de email
+      toast({ 
+        title: "📧 Verifique seu email!", 
+        description: "Enviamos um link de confirmação para " + email + ". Clique no link para ativar sua conta.",
+      });
+
     } catch (error: any) {
       const errorMessage = error.message?.toLowerCase().includes('email not confirmed')
-        ? "Confirme seu email para continuar"
+        ? "Confirme seu email antes de fazer login."
         : error.message;
 
       toast({ title: "Erro ao criar conta", description: errorMessage, variant: "destructive" });
