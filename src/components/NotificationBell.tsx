@@ -13,10 +13,6 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
 
-// Detect native Android app and get bridge
-const isNativeApp = () => navigator.userAgent.includes('DuelVerseApp');
-const getNativeBridge = () => (window as any).DuelVerseNative;
-
 interface DBNotification {
   id: string;
   user_id: string;
@@ -53,14 +49,6 @@ export const NotificationBell = ({ userId }: { userId: string }) => {
           const newNotif = payload.new as DBNotification;
           setNotifications(prev => [newNotif, ...prev]);
           setUnreadCount(prev => prev + 1);
-
-          // Trigger native Android notification
-          if (isNativeApp()) {
-            const bridge = getNativeBridge();
-            if (bridge?.showNotification) {
-              bridge.showNotification(newNotif.title, newNotif.message);
-            }
-          }
         }
       )
       .on(
