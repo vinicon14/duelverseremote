@@ -53,16 +53,20 @@ export const useAccountType = () => {
       checkAccountType();
     });
 
-    const channel = supabase
-      .channel('account_type_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'profiles',
-          filter: `user_id=eq.${supabase.auth.getSession().then(({ data }) => data.session?.user?.id)}`
-        },
+    let channel: any = null;
+    const setupRealtime = async () => {
+      const { data: { session: s } } = await supabase.auth.getSession();
+      if (!s?.user) return;
+      channel = supabase
+        .channel('account_type_changes')
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'profiles',
+            filter: `user_id=eq.${s.user.id}`
+          },
         () => {
           checkAccountType();
         }
