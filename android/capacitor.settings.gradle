@@ -1,4 +1,1 @@
-// This file is required by settings.gradle
-// Capacitor modules are included here
-include ':capacitor-android'
-project(':capacitor-android').projectDir = new File('../node_modules/@capacitor/android/capacitor')
+// Empty - no Capacitor native module needed for WebView-only app
