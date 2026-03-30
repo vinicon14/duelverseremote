@@ -322,7 +322,7 @@ const Landing = () => {
               <h4 className="font-semibold text-foreground">Links</h4>
               <div className="space-y-2">
                 <Link to="/auth" className="block text-sm text-muted-foreground hover:text-primary transition-colors">Entrar / Cadastrar</Link>
-                <Link to="/install-app" className="block text-sm text-muted-foreground hover:text-primary transition-colors">Instalar PWA</Link>
+                <Link to="/install-app" className="block text-sm text-muted-foreground hover:text-primary transition-colors">Baixar App</Link>
               </div>
             </div>
           </div>
