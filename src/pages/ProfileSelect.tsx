@@ -50,23 +50,12 @@ export default function ProfileSelect() {
     navigate('/');
   };
 
-  const handleOpenCreate = (tcg: TcgType) => {
-    setSelectedTcg(tcg);
-    setNewUsername('');
-    setCreateDialogOpen(true);
-  };
-
-  const handleCreate = async () => {
-    if (!newUsername.trim()) {
-      toast.error('Digite um nome de usuário');
-      return;
-    }
+  const handleCreateDirect = async (tcg: TcgType) => {
     setCreating(true);
-    const success = await createProfile(selectedTcg, newUsername.trim());
+    const success = await createProfile(tcg);
     setCreating(false);
     if (success) {
-      toast.success(`Perfil ${TCG_CONFIG[selectedTcg].name} criado!`);
-      setCreateDialogOpen(false);
+      toast.success(`Perfil ${TCG_CONFIG[tcg].name} criado!`);
       navigate('/');
     } else {
       toast.error('Erro ao criar perfil. Talvez já exista um para esse TCG.');
