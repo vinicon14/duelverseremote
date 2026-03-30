@@ -4,6 +4,8 @@ const path = require('path');
 const REMOTE_URL = 'https://duelverse.site';
 let mainWindow;
 let tray;
+let authToken = null;
+let authUserId = null;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -71,6 +73,12 @@ ipcMain.on('show-notification', (_, { title, body }) => {
     notif.on('click', () => { mainWindow.show(); mainWindow.focus(); });
     notif.show();
   }
+});
+
+ipcMain.on('sync-auth', (_, { token, userId }) => {
+  authToken = token;
+  authUserId = userId;
+  console.log('[Electron] Auth synced for user:', userId);
 });
 
 app.whenReady().then(() => {
