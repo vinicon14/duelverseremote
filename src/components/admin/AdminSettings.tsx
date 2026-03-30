@@ -99,15 +99,14 @@ export const AdminSettings = () => {
     setUploading(true);
 
     try {
-      const safeFileName = file.name.replace(/\s+/g, '_');
       const targetPath = platform === 'windows'
-        ? `windows/${safeFileName}`
-        : `android/${safeFileName}`;
+        ? `windows/latest.${extension}`
+        : 'android/latest.apk';
 
       const contentType = platform === 'android'
         ? 'application/vnd.android.package-archive'
         : extension === 'exe'
-          ? 'application/octet-stream'
+          ? 'application/vnd.microsoft.portable-executable'
           : 'application/zip';
 
       const { error: uploadError } = await supabase.storage
