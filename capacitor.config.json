@@ -1,9 +1,9 @@
 {
-  "appId": "app.lovable.9b99631410364226ac978a0c84c78eac",
+  "appId": "com.duelverse.app",
   "appName": "Duelverse",
   "webDir": "dist",
   "server": {
-    "url": "https://9b996314-1036-4226-ac97-8a0c84c78eac.lovableproject.com?forceHideBadge=true",
+    "url": "https://duelverse.site",
     "cleartext": true
   }
 }
