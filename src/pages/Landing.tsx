@@ -310,12 +310,12 @@ const Landing = () => {
             <div className="space-y-3">
               <h4 className="font-semibold text-foreground">Baixe o App</h4>
               <div className="space-y-2">
-                <a href="https://github.com/seu-usuario/duelverse/releases/latest/download/Duelverse-Windows-x64.zip" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors">
-                  <Monitor className="w-4 h-4" /> Windows
-                </a>
-                <a href="https://github.com/seu-usuario/duelverse/releases/latest/download/Duelverse.apk" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors">
-                  <Smartphone className="w-4 h-4" /> Android APK
-                </a>
+                <Link to="/install-app" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors">
+                  <Monitor className="w-4 h-4" /> Windows / Desktop
+                </Link>
+                <Link to="/install-app" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors">
+                  <Smartphone className="w-4 h-4" /> Android / iOS
+                </Link>
               </div>
             </div>
             <div className="space-y-3">
