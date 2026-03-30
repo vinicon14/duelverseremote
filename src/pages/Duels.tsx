@@ -14,13 +14,14 @@ import { Label } from "@/components/ui/label";
 import { Navbar } from "@/components/Navbar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { Swords, Plus, Users, Clock } from "lucide-react";
+import { Swords, Plus, Users, Clock, Download, Monitor, Smartphone, Share2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useBanCheck } from "@/hooks/useBanCheck";
 import { AdPopup } from "@/components/AdPopup";
 import { GlobalChat } from "@/components/GlobalChat";
 import { cleanupAllEmptyDuels } from "@/hooks/useDuelPresence";
 import { useTcg } from "@/contexts/TcgContext";
+import { detectPlatform } from "@/utils/platformDetection";
 
 const Duels = () => {
   useBanCheck();
@@ -36,11 +37,28 @@ const Duels = () => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showAdPopup, setShowAdPopup] = useState(false);
   const [pendingAction, setPendingAction] = useState<{ type: 'create' | 'join', duelId?: string } | null>(null);
+  const [showDownloadDialog, setShowDownloadDialog] = useState(false);
+  const [windowsDownloadUrl, setWindowsDownloadUrl] = useState("");
+  const [androidDownloadUrl, setAndroidDownloadUrl] = useState("");
+  const platform = detectPlatform();
+  const isWebBrowser = !platform.isStandalone && !(window as any).electronAPI?.isElectron;
 
   useEffect(() => {
     checkAuth();
     fetchDuels();
     
+    const fetchDownloadLinks = async () => {
+      const { data } = await supabase
+        .from('system_settings')
+        .select('key, value')
+        .in('key', ['windows_download_url', 'android_download_url']);
+      if (data) {
+        setWindowsDownloadUrl(data.find(i => i.key === 'windows_download_url')?.value || '');
+        setAndroidDownloadUrl(data.find(i => i.key === 'android_download_url')?.value || '');
+      }
+    };
+    fetchDownloadLinks();
+
     const cleanupEmptyRooms = async () => {
       try {
         await cleanupAllEmptyDuels();
@@ -332,6 +350,59 @@ const Duels = () => {
               </div>
 
               <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                {isWebBrowser && (
+                  <Dialog open={showDownloadDialog} onOpenChange={setShowDownloadDialog}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" className="w-full sm:w-auto">
+                        <Download className="mr-2 h-4 w-4" />
+                        Download
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="card-mystic">
+                      <DialogHeader>
+                        <DialogTitle className="text-gradient-mystic">Baixar Duelverse</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-3">
+                        {windowsDownloadUrl && (
+                          <a href={windowsDownloadUrl} target="_blank" rel="noopener noreferrer">
+                            <Button variant="outline" className="w-full justify-start gap-3">
+                              <Monitor className="h-5 w-5 text-blue-400" />
+                              <div className="text-left">
+                                <p className="font-semibold">Windows</p>
+                                <p className="text-xs text-muted-foreground">Aplicativo desktop (.zip)</p>
+                              </div>
+                            </Button>
+                          </a>
+                        )}
+                        {androidDownloadUrl && (
+                          <a href={androidDownloadUrl} target="_blank" rel="noopener noreferrer" className="block mt-2">
+                            <Button variant="outline" className="w-full justify-start gap-3">
+                              <Smartphone className="h-5 w-5 text-green-400" />
+                              <div className="text-left">
+                                <p className="font-semibold">Android</p>
+                                <p className="text-xs text-muted-foreground">Aplicativo móvel (.apk)</p>
+                              </div>
+                            </Button>
+                          </a>
+                        )}
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start gap-3 mt-2"
+                          onClick={() => {
+                            setShowDownloadDialog(false);
+                            window.location.href = '/install-app';
+                          }}
+                        >
+                          <Share2 className="h-5 w-5 text-purple-400" />
+                          <div className="text-left">
+                            <p className="font-semibold">PWA (Instalar do navegador)</p>
+                            <p className="text-xs text-muted-foreground">Adicionar à tela inicial</p>
+                          </div>
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                )}
                 <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
                 <DialogTrigger asChild>
                   <Button className="btn-mystic text-white w-full sm:w-auto">
