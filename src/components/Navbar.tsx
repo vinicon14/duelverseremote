@@ -40,6 +40,10 @@ export const Navbar = () => {
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchProfile(session.user.id);
+        // Send userId to native app bridge for background notifications
+        if (navigator.userAgent.includes('DuelVerseApp') && (window as any).DuelVerseNative?.setUserId) {
+          (window as any).DuelVerseNative.setUserId(session.user.id);
+        }
       }
     });
 
@@ -47,6 +51,9 @@ export const Navbar = () => {
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchProfile(session.user.id);
+        if (navigator.userAgent.includes('DuelVerseApp') && (window as any).DuelVerseNative?.setUserId) {
+          (window as any).DuelVerseNative.setUserId(session.user.id);
+        }
       } else {
         setProfile(null);
       }
