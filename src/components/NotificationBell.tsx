@@ -28,7 +28,8 @@ export const NotificationBell = ({ userId }: { userId: string }) => {
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState<DBNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const clearAllLockRef = useRef(false);
+  const [open, setOpen] = useState(false);
+  const [isClearingAll, setIsClearingAll] = useState(false);
 
   const getDismissedFriendRequestIds = useCallback(() => {
     if (!userId) return [] as string[];
@@ -178,41 +179,68 @@ export const NotificationBell = ({ userId }: { userId: string }) => {
     setUnreadCount(prev => Math.max(0, prev - 1));
   };
 
+  const markAllNotificationsAsRead = useCallback(async () => {
+    while (true) {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('id')
+        .eq('user_id', userId)
+        .or('read.eq.false,read.is.null')
+        .limit(500);
+
+      if (error) throw error;
+
+      const ids = (data || []).map(notification => notification.id);
+
+      if (ids.length === 0) {
+        break;
+      }
+
+      const { error: updateError } = await supabase
+        .from('notifications')
+        .update({ read: true })
+        .in('id', ids);
+
+      if (updateError) throw updateError;
+
+      if (ids.length < 500) {
+        break;
+      }
+    }
+  }, [userId]);
+
   const handleDismissAll = async () => {
+    if (isClearingAll) return;
+
+    const previousNotifications = notifications;
+    const previousUnreadCount = unreadCount;
     const friendRequestIds = notifications
       .filter(n => n.id.startsWith('fr_'))
       .map(n => n.id.replace('fr_', ''));
 
-    dismissFriendRequestNotifications(friendRequestIds);
-    setNotifications([]);
-    setUnreadCount(0);
+    setIsClearingAll(true);
 
-    const { error } = await supabase
-      .from('notifications')
-      .update({ read: true })
-      .eq('user_id', userId)
-      .or('read.eq.false,read.is.null');
+    try {
+      dismissFriendRequestNotifications(friendRequestIds);
+      setNotifications([]);
+      setUnreadCount(0);
 
-    if (error) {
+      await markAllNotificationsAsRead();
+      setOpen(false);
+    } catch (error) {
       console.error('Erro ao limpar notificações:', error);
+      setNotifications(previousNotifications);
+      setUnreadCount(previousUnreadCount);
       fetchNotifications();
+    } finally {
+      setIsClearingAll(false);
     }
   };
 
-  const handleDismissAllInteraction = async (e: React.SyntheticEvent) => {
+  const handleDismissAllInteraction = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     e.stopPropagation();
-
-    if (clearAllLockRef.current) return;
-    clearAllLockRef.current = true;
-
-    try {
-      await handleDismissAll();
-    } finally {
-      window.setTimeout(() => {
-        clearAllLockRef.current = false;
-      }, 150);
-    }
+    await handleDismissAll();
   };
 
   const formatTime = (dateStr: string) => {
@@ -224,7 +252,7 @@ export const NotificationBell = ({ userId }: { userId: string }) => {
   };
 
   return (
-    <DropdownMenu>
+    <DropdownMenu open={open} onOpenChange={(nextOpen) => !isClearingAll && setOpen(nextOpen)}>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5" />
@@ -238,18 +266,21 @@ export const NotificationBell = ({ userId }: { userId: string }) => {
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-80 p-0">
+      <DropdownMenuContent align="end" className="w-80 p-0" onCloseAutoFocus={(e) => e.preventDefault()}>
         {notifications.length > 0 && (
           <div className="flex items-center justify-between px-4 py-2 border-b border-border">
             <span className="text-xs font-semibold text-muted-foreground">Notificações</span>
             <button
               type="button"
+              disabled={isClearingAll}
               className="text-xs h-6 px-2 text-muted-foreground hover:text-foreground rounded-md hover:bg-accent"
               onClick={handleDismissAllInteraction}
-              onPointerDown={handleDismissAllInteraction}
-              onTouchEnd={handleDismissAllInteraction}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
             >
-              Limpar tudo
+              {isClearingAll ? 'Limpando...' : 'Limpar tudo'}
             </button>
           </div>
         )}
