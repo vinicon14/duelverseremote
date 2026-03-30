@@ -138,7 +138,27 @@ public class MainActivity extends AppCompatActivity {
                     new String[]{Manifest.permission.POST_NOTIFICATIONS},
                     NOTIFICATION_PERMISSION_CODE);
             }
+    }
+
+    private void requestCameraAndMicPermissions() {
+        String[] permissions = {
+            Manifest.permission.CAMERA,
+            Manifest.permission.RECORD_AUDIO,
+            Manifest.permission.MODIFY_AUDIO_SETTINGS
+        };
+
+        boolean needRequest = false;
+        for (String perm : permissions) {
+            if (ContextCompat.checkSelfPermission(this, perm) != PackageManager.PERMISSION_GRANTED) {
+                needRequest = true;
+                break;
+            }
         }
+
+        if (needRequest) {
+            ActivityCompat.requestPermissions(this, permissions, CAMERA_MIC_PERMISSION_CODE);
+        }
+    }
     }
 
     private void startNotificationService() {
