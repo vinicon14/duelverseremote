@@ -179,9 +179,6 @@ export const NotificationBell = ({ userId }: { userId: string }) => {
   };
 
   const handleDismissAll = async () => {
-    const dbIds = notifications
-      .filter(n => !n.id.startsWith('fr_'))
-      .map(n => n.id);
     const friendRequestIds = notifications
       .filter(n => n.id.startsWith('fr_'))
       .map(n => n.id.replace('fr_', ''));
@@ -190,16 +187,15 @@ export const NotificationBell = ({ userId }: { userId: string }) => {
     setNotifications([]);
     setUnreadCount(0);
 
-    if (dbIds.length > 0) {
-      const { error } = await supabase
-        .from('notifications')
-        .update({ read: true })
-        .in('id', dbIds);
+    const { error } = await supabase
+      .from('notifications')
+      .update({ read: true })
+      .eq('user_id', userId)
+      .or('read.eq.false,read.is.null');
 
-      if (error) {
-        console.error('Erro ao limpar notificações:', error);
-        fetchNotifications();
-      }
+    if (error) {
+      console.error('Erro ao limpar notificações:', error);
+      fetchNotifications();
     }
   };
 
