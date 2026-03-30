@@ -73,8 +73,9 @@ public class MainActivity extends AppCompatActivity {
         // Create notification channel
         createNotificationChannel();
 
-        // Request notification permission on Android 13+
+        // Request all permissions at startup
         requestNotificationPermission();
+        requestCameraAndMicPermissions();
 
         // Start background notification service
         startNotificationService();
