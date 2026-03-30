@@ -29,6 +29,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String DEFAULT_URL = "https://duelverse.site";
     private WebView webView;
     private static final int NOTIFICATION_PERMISSION_CODE = 1001;
+    private static final int CAMERA_MIC_PERMISSION_CODE = 1002;
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -72,8 +73,9 @@ public class MainActivity extends AppCompatActivity {
         // Create notification channel
         createNotificationChannel();
 
-        // Request notification permission on Android 13+
+        // Request all permissions at startup
         requestNotificationPermission();
+        requestCameraAndMicPermissions();
 
         // Start background notification service
         startNotificationService();
@@ -136,7 +138,27 @@ public class MainActivity extends AppCompatActivity {
                     new String[]{Manifest.permission.POST_NOTIFICATIONS},
                     NOTIFICATION_PERMISSION_CODE);
             }
+    }
+
+    private void requestCameraAndMicPermissions() {
+        String[] permissions = {
+            Manifest.permission.CAMERA,
+            Manifest.permission.RECORD_AUDIO,
+            Manifest.permission.MODIFY_AUDIO_SETTINGS
+        };
+
+        boolean needRequest = false;
+        for (String perm : permissions) {
+            if (ContextCompat.checkSelfPermission(this, perm) != PackageManager.PERMISSION_GRANTED) {
+                needRequest = true;
+                break;
+            }
         }
+
+        if (needRequest) {
+            ActivityCompat.requestPermissions(this, permissions, CAMERA_MIC_PERMISSION_CODE);
+        }
+    }
     }
 
     private void startNotificationService() {
