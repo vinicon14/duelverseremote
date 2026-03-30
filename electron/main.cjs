@@ -1,6 +1,7 @@
-const { app, BrowserWindow, Tray, Menu, Notification, ipcMain } = require('electron');
+const { app, BrowserWindow, Tray, Menu, Notification, ipcMain, shell } = require('electron');
 const path = require('path');
 
+const REMOTE_URL = 'https://duelverse.site';
 let mainWindow;
 let tray;
 
@@ -8,7 +9,9 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
-    icon: path.join(__dirname, '..', 'dist', 'favicon.ico'),
+    minWidth: 800,
+    minHeight: 600,
+    icon: path.join(__dirname, 'icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
@@ -18,7 +21,16 @@ function createWindow() {
     title: 'Duelverse',
   });
 
-  mainWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
+  mainWindow.loadURL(REMOTE_URL);
+
+  // Open external links in default browser
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (!url.startsWith(REMOTE_URL)) {
+      shell.openExternal(url);
+      return { action: 'deny' };
+    }
+    return { action: 'allow' };
+  });
 
   mainWindow.on('close', (e) => {
     if (!app.isQuitting) {
@@ -36,7 +48,7 @@ function createWindow() {
 
 function createTray() {
   try {
-    tray = new Tray(path.join(__dirname, '..', 'dist', 'favicon.ico'));
+    tray = new Tray(path.join(__dirname, 'icon.png'));
   } catch {
     tray = null;
     return;
@@ -55,7 +67,7 @@ function createTray() {
 
 ipcMain.on('show-notification', (_, { title, body }) => {
   if (Notification.isSupported()) {
-    const notif = new Notification({ title, body });
+    const notif = new Notification({ title, body, icon: path.join(__dirname, 'icon.png') });
     notif.on('click', () => { mainWindow.show(); mainWindow.focus(); });
     notif.show();
   }
