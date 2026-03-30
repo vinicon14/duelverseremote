@@ -124,30 +124,6 @@ export default function ProfileSelect() {
         }
       </div>
 
-      {/* Create profile dialog */}
-      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <span className={TCG_CONFIG[selectedTcg].color}>{TCG_CONFIG[selectedTcg].icon}</span>
-              Criar perfil {TCG_CONFIG[selectedTcg].name}
-            </DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">{TCG_CONFIG[selectedTcg].description}</p>
-          <Input
-            placeholder="Nome de usuário para este TCG"
-            value={newUsername}
-            onChange={e => setNewUsername(e.target.value)}
-            maxLength={20}
-          />
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleCreate} disabled={creating}>
-              {creating ? 'Criando...' : 'Criar Perfil'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
