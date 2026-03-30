@@ -8,8 +8,6 @@ import { useNavigate } from 'react-router-dom';
 import { useTcg, TcgType } from '@/contexts/TcgContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Swords, Sparkles, Zap, Plus, Crown, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -40,9 +38,6 @@ const TCG_CONFIG: Record<TcgType, { name: string; icon: React.ReactNode; color: 
 export default function ProfileSelect() {
   const navigate = useNavigate();
   const { profiles, switchProfile, createProfile, isLoading } = useTcg();
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [selectedTcg, setSelectedTcg] = useState<TcgType>('yugioh');
-  const [newUsername, setNewUsername] = useState('');
   const [creating, setCreating] = useState(false);
 
   const handleSelectProfile = (profileId: string) => {
@@ -50,23 +45,12 @@ export default function ProfileSelect() {
     navigate('/');
   };
 
-  const handleOpenCreate = (tcg: TcgType) => {
-    setSelectedTcg(tcg);
-    setNewUsername('');
-    setCreateDialogOpen(true);
-  };
-
-  const handleCreate = async () => {
-    if (!newUsername.trim()) {
-      toast.error('Digite um nome de usuário');
-      return;
-    }
+  const handleCreateDirect = async (tcg: TcgType) => {
     setCreating(true);
-    const success = await createProfile(selectedTcg, newUsername.trim());
+    const success = await createProfile(tcg);
     setCreating(false);
     if (success) {
-      toast.success(`Perfil ${TCG_CONFIG[selectedTcg].name} criado!`);
-      setCreateDialogOpen(false);
+      toast.success(`Perfil ${TCG_CONFIG[tcg].name} criado!`);
       navigate('/');
     } else {
       toast.error('Erro ao criar perfil. Talvez já exista um para esse TCG.');
@@ -129,40 +113,17 @@ export default function ProfileSelect() {
             <Button
               key={tcg}
               variant="outline"
-              onClick={() => handleOpenCreate(tcg)}
+              onClick={() => handleCreateDirect(tcg)}
               className="gap-2"
+              disabled={creating}
             >
               <Plus className="w-4 h-4" />
-              Criar perfil {TCG_CONFIG[tcg].name}
+              {creating ? 'Criando...' : `Criar perfil ${TCG_CONFIG[tcg].name}`}
             </Button>
           ))
         }
       </div>
 
-      {/* Create profile dialog */}
-      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <span className={TCG_CONFIG[selectedTcg].color}>{TCG_CONFIG[selectedTcg].icon}</span>
-              Criar perfil {TCG_CONFIG[selectedTcg].name}
-            </DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">{TCG_CONFIG[selectedTcg].description}</p>
-          <Input
-            placeholder="Nome de usuário para este TCG"
-            value={newUsername}
-            onChange={e => setNewUsername(e.target.value)}
-            maxLength={20}
-          />
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleCreate} disabled={creating}>
-              {creating ? 'Criando...' : 'Criar Perfil'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

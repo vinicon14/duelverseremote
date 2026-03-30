@@ -27,7 +27,7 @@ interface TcgContextType {
   profiles: TcgProfile[];
   setActiveTcg: (tcg: TcgType) => void;
   switchProfile: (profileId: string) => void;
-  createProfile: (tcg: TcgType, username: string) => Promise<boolean>;
+  createProfile: (tcg: TcgType, username?: string) => Promise<boolean>;
   refreshProfiles: () => Promise<void>;
   isLoading: boolean;
 }
@@ -107,16 +107,27 @@ export const TcgProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const createProfile = async (tcg: TcgType, username: string): Promise<boolean> => {
+  const createProfile = async (tcg: TcgType, username?: string): Promise<boolean> => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return false;
+
+    // Se não receber username, buscar do perfil principal
+    let finalUsername = username?.trim();
+    if (!finalUsername) {
+      const { data: mainProfile } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      finalUsername = mainProfile?.username || user.email?.split('@')[0] || 'Duelista';
+    }
 
     const { error } = await supabase
       .from('tcg_profiles')
       .insert({
         user_id: user.id,
         tcg_type: tcg,
-        username,
+        username: finalUsername,
       });
 
     if (error) {
