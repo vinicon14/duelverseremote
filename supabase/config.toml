@@ -1,34 +1,27 @@
 project_id = "xxttwzewtqxvpgefggah"
 
-[functions.admin-delete-user]
-verify_jwt = true
-
-[functions.admin-toggle-pro]
-verify_jwt = true
-
-[functions.create-daily-room]
-verify_jwt = true
-
-[functions.cleanup-orphaned-users]
-verify_jwt = true
-
-[functions.create-live-stream]
-verify_jwt = true
-
-[functions.get-stream-token]
-verify_jwt = true
-
-[functions.end-live-stream]
-verify_jwt = true
-
-[functions.stripe-create-checkout]
-verify_jwt = false
-
-[functions.stripe-webhook]
-verify_jwt = false
-
-[functions.mercadopago-create-pix]
-verify_jwt = false
-
-[functions.mercadopago-webhook]
-verify_jwt = false
+[functions]
+  [functions.admin-delete-user]
+    verify_jwt = true
+  [functions.admin-toggle-pro]
+    verify_jwt = true
+  [functions.auth-email-hook]
+    verify_jwt = false
+  [functions.cleanup-orphaned-users]
+    verify_jwt = true
+  [functions.create-daily-room]
+    verify_jwt = true
+  [functions.create-live-stream]
+    verify_jwt = true
+  [functions.end-live-stream]
+    verify_jwt = true
+  [functions.get-stream-token]
+    verify_jwt = true
+  [functions.mercadopago-create-pix]
+    verify_jwt = false
+  [functions.mercadopago-webhook]
+    verify_jwt = false
+  [functions.stripe-create-checkout]
+    verify_jwt = false
+  [functions.stripe-webhook]
+    verify_jwt = false
