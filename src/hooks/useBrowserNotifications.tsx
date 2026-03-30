@@ -148,6 +148,23 @@ export const useBrowserNotifications = () => {
     }
 
     try {
+      // Native app: use bridge
+      if (isNativeApp()) {
+        const bridge = getNativeBridge();
+        if (bridge?.requestNotificationPermission) {
+          bridge.requestNotificationPermission();
+          // Wait a bit for the permission dialog, then check
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          const granted = bridge.hasNotificationPermission?.() ?? false;
+          setHasPermission(granted);
+          if (granted) {
+            toast({ title: "Notificações ativadas!" });
+          }
+          return granted;
+        }
+        return false;
+      }
+
       const permission = await Notification.requestPermission();
       const granted = permission === 'granted';
       setHasPermission(granted);
@@ -157,7 +174,6 @@ export const useBrowserNotifications = () => {
           title: "Notificações ativadas!",
           description: "Você receberá notificações mesmo com o app fechado",
         });
-        // Subscribe to web push after permission granted
         await subscribeToPush();
       } else {
         toast({
