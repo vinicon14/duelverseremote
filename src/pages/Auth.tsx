@@ -240,11 +240,13 @@ const Auth = () => {
       });
 
     } catch (error: any) {
-      const errorMessage = error.message?.toLowerCase().includes('email not confirmed')
-        ? "Confirme seu email antes de fazer login."
-        : error.message;
-
-      toast({ title: "Erro ao criar conta", description: errorMessage, variant: "destructive" });
+      const isEmailNotConfirmed = error.message?.toLowerCase().includes('email not confirmed');
+      
+      if (isEmailNotConfirmed) {
+        toast({ title: "📧 Confirme seu email", description: "Verifique sua caixa de entrada e clique no link de confirmação para ativar sua conta." });
+      } else {
+        toast({ title: "Erro ao criar conta", description: error.message, variant: "destructive" });
+      }
     } finally {
       setLoading(false);
     }
