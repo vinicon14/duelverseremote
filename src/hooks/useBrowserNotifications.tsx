@@ -230,7 +230,6 @@ export const useBrowserNotifications = () => {
         badge: '/favicon.png',
         ...options,
       });
-      });
     } catch (error) {
       console.error('❌ Error showing notification:', error);
     }
