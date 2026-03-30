@@ -150,6 +150,10 @@ const AppContent = () => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
+
+      if ((window as any).electronAPI?.syncAuth && session?.access_token && session?.user?.id) {
+        (window as any).electronAPI.syncAuth(session.access_token, session.user.id);
+      }
     });
 
     return () => {
