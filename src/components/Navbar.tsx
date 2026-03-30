@@ -35,28 +35,44 @@ export const Navbar = () => {
   const { isPro } = useAccountType();
   const { activeTcg } = useTcg();
 
+  const syncNativeSession = (session: any) => {
+    const bridge = (window as any).DuelVerseNative;
+    const isNativeApp = navigator.userAgent.includes('DuelVerseApp');
+
+    if (!isNativeApp || !bridge) return;
+
+    if (session?.user?.id && session?.access_token && session?.refresh_token && bridge.setAuthSession) {
+      bridge.setAuthSession(session.user.id, session.access_token, session.refresh_token);
+      return;
+    }
+
+    if (session?.user?.id && bridge.setUserId) {
+      bridge.setUserId(session.user.id);
+      return;
+    }
+
+    if (!session && bridge.clearAuthSession) {
+      bridge.clearAuthSession();
+    }
+  };
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchProfile(session.user.id);
-        // Send userId to native app bridge for background notifications
-        if (navigator.userAgent.includes('DuelVerseApp') && (window as any).DuelVerseNative?.setUserId) {
-          (window as any).DuelVerseNative.setUserId(session.user.id);
-        }
       }
+      syncNativeSession(session);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchProfile(session.user.id);
-        if (navigator.userAgent.includes('DuelVerseApp') && (window as any).DuelVerseNative?.setUserId) {
-          (window as any).DuelVerseNative.setUserId(session.user.id);
-        }
       } else {
         setProfile(null);
       }
+      syncNativeSession(session);
     });
 
     return () => subscription.unsubscribe();

@@ -129,11 +129,46 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @JavascriptInterface
+        public boolean hasNotificationPermission() {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+                return true;
+            }
+
+            return ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.POST_NOTIFICATIONS)
+                == PackageManager.PERMISSION_GRANTED;
+        }
+
+        @JavascriptInterface
+        public void requestNotificationPermission() {
+            runOnUiThread(() -> MainActivity.this.requestNotificationPermission());
+        }
+
+        @JavascriptInterface
         public void setUserId(String userId) {
-            // Save user ID for background polling
             getSharedPreferences("duelverse", MODE_PRIVATE)
                 .edit()
                 .putString("user_id", userId)
+                .apply();
+        }
+
+        @JavascriptInterface
+        public void setAuthSession(String userId, String accessToken, String refreshToken) {
+            getSharedPreferences("duelverse", MODE_PRIVATE)
+                .edit()
+                .putString("user_id", userId)
+                .putString("access_token", accessToken)
+                .putString("refresh_token", refreshToken)
+                .apply();
+        }
+
+        @JavascriptInterface
+        public void clearAuthSession() {
+            getSharedPreferences("duelverse", MODE_PRIVATE)
+                .edit()
+                .remove("user_id")
+                .remove("access_token")
+                .remove("refresh_token")
+                .remove("last_notified_notification_id")
                 .apply();
         }
     }
