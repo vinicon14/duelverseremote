@@ -29,6 +29,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String DEFAULT_URL = "https://duelverse.site";
     private WebView webView;
     private static final int NOTIFICATION_PERMISSION_CODE = 1001;
+    private static final int CAMERA_MIC_PERMISSION_CODE = 1002;
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
