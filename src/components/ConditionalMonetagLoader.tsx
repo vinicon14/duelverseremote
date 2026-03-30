@@ -17,12 +17,18 @@ export const ConditionalMonetagLoader = (): null => {
   const location = useLocation();
   const { isPro, loading } = useAccountType();
 
+  // Always apply popup blocking immediately
   useEffect(() => {
-    // Don't run while loading
-    if (loading) return;
-
-    // Apply popup blocking
     applyPopupBlocking();
+  }, []);
+
+  // Aggressively remove monetag while still loading (prevent flash of ads)
+  useEffect(() => {
+    if (loading) {
+      // While loading, proactively remove any existing monetag scripts
+      removeAllMonetagScripts();
+      return;
+    }
 
     // Block completely on native APK
     const isNativeApp = navigator.userAgent.includes('DuelVerseApp');
@@ -32,11 +38,13 @@ export const ConditionalMonetagLoader = (): null => {
       return;
     }
 
-    // PRO users: No Monetag - remove everything
+    // PRO users: No Monetag - remove everything + keep cleaning
     if (isPro) {
       console.log('Monetag BLOQUEADO - usuário PRO');
       removeAllMonetagScripts();
-      return;
+      // Keep cleaning every 2s for PRO users to catch late-injected scripts
+      const interval = setInterval(removeAllMonetagScripts, 2000);
+      return () => clearInterval(interval);
     }
 
     // Block on specific routes
@@ -63,18 +71,22 @@ export const ConditionalMonetagLoader = (): null => {
     console.log('Carregando notification ads:', location.pathname);
     
     // Notification script 1 (zone 10601960)
-    const notificationScript1 = document.createElement('script');
-    notificationScript1.src = 'https://3nbf4.com/act/files/tag.min.js?z=10601960';
-    notificationScript1.setAttribute('data-cfasync', 'false');
-    notificationScript1.async = true;
-    notificationScript1.id = 'monetag-notification-1';
-    document.head.appendChild(notificationScript1);
+    if (!document.getElementById('monetag-notification-1')) {
+      const notificationScript1 = document.createElement('script');
+      notificationScript1.src = 'https://3nbf4.com/act/files/tag.min.js?z=10601960';
+      notificationScript1.setAttribute('data-cfasync', 'false');
+      notificationScript1.async = true;
+      notificationScript1.id = 'monetag-notification-1';
+      document.head.appendChild(notificationScript1);
+    }
 
     // Notification script 2 (zone 10601962)
-    const notificationScript2 = document.createElement('script');
-    notificationScript2.innerHTML = `(function(s){s.dataset.zone='10601962',s.src='https://nap5k.com/tag.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))`;
-    notificationScript2.id = 'monetag-notification-2';
-    document.head.appendChild(notificationScript2);
+    if (!document.getElementById('monetag-notification-2')) {
+      const notificationScript2 = document.createElement('script');
+      notificationScript2.innerHTML = `(function(s){s.dataset.zone='10601962',s.src='https://nap5k.com/tag.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))`;
+      notificationScript2.id = 'monetag-notification-2';
+      document.head.appendChild(notificationScript2);
+    }
 
     return () => {
       const scripts = ['monetag-notification-1', 'monetag-notification-2'];
