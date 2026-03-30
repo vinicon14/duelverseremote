@@ -4,6 +4,8 @@ const path = require('path');
 const REMOTE_URL = 'https://duelverse.site';
 let mainWindow;
 let tray;
+let authToken = null;
+let authUserId = null;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
