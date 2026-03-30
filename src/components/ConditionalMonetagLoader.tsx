@@ -56,6 +56,7 @@ export const ConditionalMonetagLoader = (): null => {
     const isExcluded = excludedPages.some(page => location.pathname.includes(page));
     if (isExcluded) {
       console.log('Monetag BLOQUEADO - página restrita:', location.pathname);
+      removeAllMonetagScripts();
       return;
     }
 
