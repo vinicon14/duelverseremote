@@ -134,9 +134,16 @@ const AppContent = () => {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      async (_event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
+
+        // Sync auth state with Electron desktop app
+        if ((window as any).electronAPI?.syncAuth) {
+          if (session?.access_token && session?.user?.id) {
+            (window as any).electronAPI.syncAuth(session.access_token, session.user.id);
+          }
+        }
       }
     );
 
