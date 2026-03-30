@@ -237,7 +237,7 @@ public class MainActivity extends AppCompatActivity {
 
         @JavascriptInterface
         public void requestNotificationPermission() {
-            runOnUiThread(() -> MainActivity.this.requestNotificationPermission());
+            runOnUiThread(() -> MainActivity.this.requestAllPermissions());
         }
 
         @JavascriptInterface
