@@ -27,7 +27,7 @@ interface TcgContextType {
   profiles: TcgProfile[];
   setActiveTcg: (tcg: TcgType) => void;
   switchProfile: (profileId: string) => void;
-  createProfile: (tcg: TcgType, username: string) => Promise<boolean>;
+  createProfile: (tcg: TcgType, username?: string) => Promise<boolean>;
   refreshProfiles: () => Promise<void>;
   isLoading: boolean;
 }
