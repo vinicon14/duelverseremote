@@ -63,17 +63,18 @@ async function fetchUnreadNotifications({ primeOnly = false } = {}) {
     const notifications = await response.json();
     if (!Array.isArray(notifications)) return;
 
-    for (const notification of notifications) {
-      if (notification?.id) {
-        knownNotificationIds.add(notification.id);
-      }
-    }
-
     if (primeOnly) {
+      // Na primeira chamada, apenas registra IDs existentes para não notificar sobre eles
+      for (const notification of notifications) {
+        if (notification?.id) {
+          knownNotificationIds.add(notification.id);
+        }
+      }
       trimKnownNotificationIds();
       return;
     }
 
+    // Nas chamadas subsequentes, mostra apenas notificações novas
     const freshNotifications = notifications
       .filter((notification) => notification?.id && !knownNotificationIds.has(notification.id))
       .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
