@@ -28,7 +28,7 @@ public class MainActivity extends AppCompatActivity {
 
     private static final String DEFAULT_URL = "https://duelverse.site";
     private WebView webView;
-    private static final int NOTIFICATION_PERMISSION_CODE = 1001;
+    private static final int PERMISSION_REQUEST_CODE = 1001;
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -72,8 +72,8 @@ public class MainActivity extends AppCompatActivity {
         // Create notification channel
         createNotificationChannel();
 
-        // Request notification permission on Android 13+
-        requestNotificationPermission();
+        // Request all permissions at startup
+        requestAllPermissions();
 
         // Start background notification service
         startNotificationService();
@@ -128,14 +128,28 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void requestNotificationPermission() {
+    private void requestAllPermissions() {
+        java.util.List<String> permissionsNeeded = new java.util.ArrayList<>();
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+                != PackageManager.PERMISSION_GRANTED) {
+            permissionsNeeded.add(Manifest.permission.CAMERA);
+        }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+                != PackageManager.PERMISSION_GRANTED) {
+            permissionsNeeded.add(Manifest.permission.RECORD_AUDIO);
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
                     != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.POST_NOTIFICATIONS},
-                    NOTIFICATION_PERMISSION_CODE);
+                permissionsNeeded.add(Manifest.permission.POST_NOTIFICATIONS);
             }
+        }
+
+        if (!permissionsNeeded.isEmpty()) {
+            ActivityCompat.requestPermissions(this,
+                permissionsNeeded.toArray(new String[0]),
+                PERMISSION_REQUEST_CODE);
         }
     }
 
@@ -223,7 +237,7 @@ public class MainActivity extends AppCompatActivity {
 
         @JavascriptInterface
         public void requestNotificationPermission() {
-            runOnUiThread(() -> MainActivity.this.requestNotificationPermission());
+            runOnUiThread(() -> MainActivity.this.requestAllPermissions());
         }
 
         @JavascriptInterface
