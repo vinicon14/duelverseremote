@@ -113,11 +113,12 @@ export default function ProfileSelect() {
             <Button
               key={tcg}
               variant="outline"
-              onClick={() => handleOpenCreate(tcg)}
+              onClick={() => handleCreateDirect(tcg)}
               className="gap-2"
+              disabled={creating}
             >
               <Plus className="w-4 h-4" />
-              Criar perfil {TCG_CONFIG[tcg].name}
+              {creating ? 'Criando...' : `Criar perfil ${TCG_CONFIG[tcg].name}`}
             </Button>
           ))
         }
