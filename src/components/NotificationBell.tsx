@@ -139,13 +139,15 @@ export const NotificationBell = ({ userId }: { userId: string }) => {
     setUnreadCount(prev => Math.max(0, prev - 1));
   };
 
-  const handleDismissAll = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
+  const handleDismissAll = async () => {
     const dbIds = notifications
       .filter(n => !n.id.startsWith('fr_'))
       .map(n => n.id);
+
+    // Update local state immediately
+    const friendNotifs = notifications.filter(n => n.id.startsWith('fr_'));
+    setNotifications(friendNotifs);
+    setUnreadCount(friendNotifs.length);
 
     if (dbIds.length > 0) {
       await supabase
@@ -153,10 +155,6 @@ export const NotificationBell = ({ userId }: { userId: string }) => {
         .update({ read: true })
         .in('id', dbIds);
     }
-
-    const friendNotifs = notifications.filter(n => n.id.startsWith('fr_'));
-    setNotifications(friendNotifs);
-    setUnreadCount(friendNotifs.length);
   };
 
   const formatTime = (dateStr: string) => {
@@ -186,23 +184,17 @@ export const NotificationBell = ({ userId }: { userId: string }) => {
         {notifications.length > 0 && (
           <div className="flex items-center justify-between px-4 py-2 border-b border-border">
             <span className="text-xs font-semibold text-muted-foreground">Notificações</span>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-xs h-6 px-2 text-muted-foreground hover:text-foreground"
+            <button
+              type="button"
+              className="text-xs h-6 px-2 text-muted-foreground hover:text-foreground rounded-md hover:bg-accent"
               onPointerDown={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-              }}
-              onClick={handleDismissAll}
-              onTouchEnd={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleDismissAll(e as any);
+                handleDismissAll();
               }}
             >
               Limpar tudo
-            </Button>
+            </button>
           </div>
         )}
         <ScrollArea className="h-[320px]">
