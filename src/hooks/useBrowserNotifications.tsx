@@ -19,6 +19,10 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return outputArray;
 }
 
+// Detect native Android app
+const isNativeApp = () => navigator.userAgent.includes('DuelVerseApp');
+const getNativeBridge = () => (window as any).DuelVerseNative;
+
 export const useBrowserNotifications = () => {
   const [isSupported, setIsSupported] = useState(false);
   const [hasPermission, setHasPermission] = useState(false);
@@ -28,6 +32,15 @@ export const useBrowserNotifications = () => {
 
   useEffect(() => {
     const checkSupport = () => {
+      if (isNativeApp()) {
+        // Native app always supports notifications
+        setIsSupported(true);
+        const bridge = getNativeBridge();
+        setHasPermission(bridge?.hasNotificationPermission?.() ?? false);
+        setLoading(false);
+        return;
+      }
+
       const supported = 'Notification' in window;
       setIsSupported(supported);
       
