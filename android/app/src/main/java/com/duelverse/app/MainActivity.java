@@ -72,9 +72,8 @@ public class MainActivity extends AppCompatActivity {
         // Create notification channel
         createNotificationChannel();
 
-        // Request all permissions at startup
-        requestNotificationPermission();
-        requestCameraAndMicPermissions();
+        // Request initial runtime permissions before login
+        requestInitialPermissions();
 
         // Start background notification service
         startNotificationService();
