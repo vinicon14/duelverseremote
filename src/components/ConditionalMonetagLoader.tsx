@@ -28,17 +28,21 @@ export const ConditionalMonetagLoader = (): null => {
     const isNativeApp = navigator.userAgent.includes('DuelVerseApp');
     if (isNativeApp) {
       console.log('Monetag BLOQUEADO - versão APK nativa');
+      removeAllMonetagScripts();
       return;
     }
 
-    // PRO users: No Monetag
-    if (location.pathname.startsWith('/pro/') || location.pathname === '/auth' || location.pathname === '/landing' || location.pathname === '/') {
-      console.log('Monetag BLOQUEADO - rota PRO/auth/landing:', location.pathname);
-      return;
-    }
-
+    // PRO users: No Monetag - remove everything
     if (isPro) {
       console.log('Monetag BLOQUEADO - usuário PRO');
+      removeAllMonetagScripts();
+      return;
+    }
+
+    // Block on specific routes
+    if (location.pathname.startsWith('/pro/') || location.pathname === '/auth' || location.pathname === '/landing' || location.pathname === '/') {
+      console.log('Monetag BLOQUEADO - rota PRO/auth/landing:', location.pathname);
+      removeAllMonetagScripts();
       return;
     }
 
