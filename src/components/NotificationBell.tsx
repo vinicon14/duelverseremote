@@ -190,7 +190,16 @@ export const NotificationBell = ({ userId }: { userId: string }) => {
               variant="ghost"
               size="sm"
               className="text-xs h-6 px-2 text-muted-foreground hover:text-foreground"
+              onPointerDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
               onClick={handleDismissAll}
+              onTouchEnd={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleDismissAll(e as any);
+              }}
             >
               Limpar tudo
             </Button>
