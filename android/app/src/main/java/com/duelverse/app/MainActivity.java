@@ -1,6 +1,9 @@
 package com.duelverse.app;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -8,27 +11,27 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.webkit.CookieManager;
+import android.webkit.JavascriptInterface;
+import android.webkit.PermissionRequest;
 import android.webkit.WebChromeClient;
+import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.webkit.WebResourceRequest;
-import android.webkit.PermissionRequest;
-import android.webkit.JavascriptInterface;
+
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.splashscreen.SplashScreen;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
-import android.widget.Toast;
-import android.Manifest;
+
+import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
 
     private static final String DEFAULT_URL = "https://duelverse.site";
-    private WebView webView;
     private static final int INITIAL_PERMISSIONS_REQUEST_CODE = 1001;
+
+    private WebView webView;
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -64,18 +67,11 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // Add JavaScript bridge for native notifications
         webView.addJavascriptInterface(new DuelVerseNativeBridge(), "DuelVerseNative");
 
-        webView.loadUrl(resolveLaunchUrl(getIntent()));
-
-        // Create notification channel
         createNotificationChannel();
-
-        // Request initial runtime permissions before login
         requestInitialPermissions();
-
-        // Start background notification service
+        webView.loadUrl(resolveLaunchUrl(getIntent()));
         startNotificationService();
     }
 
@@ -101,9 +97,44 @@ public class MainActivity extends AppCompatActivity {
             );
     }
 
+    private boolean shouldOpenExternally(Uri uri) {
+        if (uri == null) return false;
+
+        String path = uri.getPath();
+        if (path != null && path.startsWith("/~oauth")) {
+            return true;
+        }
+
+        return !isAppUrl(uri);
+    }
+
     private void openExternalUrl(Uri uri) {
+        String[] browserPackages = new String[] {
+            "com.android.chrome",
+            "org.mozilla.firefox",
+            "com.microsoft.emmx",
+            "com.opera.browser",
+            "com.sec.android.app.sbrowser"
+        };
+
+        for (String browserPackage : browserPackages) {
+            try {
+                Intent intent = new Intent(Intent.ACTION_VIEW, uri);
+                intent.addCategory(Intent.CATEGORY_BROWSABLE);
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                intent.setPackage(browserPackage);
+
+                if (intent.resolveActivity(getPackageManager()) != null) {
+                    startActivity(intent);
+                    return;
+                }
+            } catch (ActivityNotFoundException ignored) {
+            }
+        }
+
         try {
             Intent intent = new Intent(Intent.ACTION_VIEW, uri);
+            intent.addCategory(Intent.CATEGORY_BROWSABLE);
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(intent);
         } catch (ActivityNotFoundException ignored) {
@@ -128,35 +159,44 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private void requestInitialPermissions() {
+        ArrayList<String> permissions = new ArrayList<>();
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+                != PackageManager.PERMISSION_GRANTED) {
+            permissions.add(Manifest.permission.CAMERA);
+        }
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+                != PackageManager.PERMISSION_GRANTED) {
+            permissions.add(Manifest.permission.RECORD_AUDIO);
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                && ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED) {
+            permissions.add(Manifest.permission.POST_NOTIFICATIONS);
+        }
+
+        if (!permissions.isEmpty()) {
+            ActivityCompat.requestPermissions(
+                this,
+                permissions.toArray(new String[0]),
+                INITIAL_PERMISSIONS_REQUEST_CODE
+            );
+        }
+    }
+
     private void requestNotificationPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
-                    != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.POST_NOTIFICATIONS},
-                    NOTIFICATION_PERMISSION_CODE);
-            }
-    }
-
-    private void requestCameraAndMicPermissions() {
-        String[] permissions = {
-            Manifest.permission.CAMERA,
-            Manifest.permission.RECORD_AUDIO,
-            Manifest.permission.MODIFY_AUDIO_SETTINGS
-        };
-
-        boolean needRequest = false;
-        for (String perm : permissions) {
-            if (ContextCompat.checkSelfPermission(this, perm) != PackageManager.PERMISSION_GRANTED) {
-                needRequest = true;
-                break;
-            }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                && ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(
+                this,
+                new String[]{Manifest.permission.POST_NOTIFICATIONS},
+                INITIAL_PERMISSIONS_REQUEST_CODE
+            );
         }
-
-        if (needRequest) {
-            ActivityCompat.requestPermissions(this, permissions, CAMERA_MIC_PERMISSION_CODE);
-        }
-    }
     }
 
     private void startNotificationService() {
@@ -180,7 +220,6 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        // Service continues running in background
     }
 
     @Override
@@ -203,28 +242,31 @@ public class MainActivity extends AppCompatActivity {
                 return false;
             }
 
-            if (isAppUrl(uri)) {
-                return false;
+            if (shouldOpenExternally(uri)) {
+                openExternalUrl(uri);
+                return true;
             }
 
-            openExternalUrl(uri);
-            return true;
+            return false;
         }
 
         @Override
         public boolean shouldOverrideUrlLoading(WebView view, String url) {
             Uri uri = url != null ? Uri.parse(url) : null;
 
-            if (uri == null || isAppUrl(uri)) {
+            if (uri == null) {
                 return false;
             }
 
-            openExternalUrl(uri);
-            return true;
+            if (shouldOpenExternally(uri)) {
+                openExternalUrl(uri);
+                return true;
+            }
+
+            return false;
         }
     }
 
-    // JavaScript bridge class
     private class DuelVerseNativeBridge {
         @JavascriptInterface
         public void showNotification(String title, String body) {
