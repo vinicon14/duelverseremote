@@ -94,10 +94,12 @@ export const useAccountType = () => {
         }
       )
       .subscribe();
+    };
+    setupRealtime();
 
     return () => {
       authSubscription.unsubscribe();
-      supabase.removeChannel(channel);
+      if (channel) supabase.removeChannel(channel);
     };
   }, []);
 
