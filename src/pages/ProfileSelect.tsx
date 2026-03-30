@@ -8,8 +8,6 @@ import { useNavigate } from 'react-router-dom';
 import { useTcg, TcgType } from '@/contexts/TcgContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Swords, Sparkles, Zap, Plus, Crown, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 
