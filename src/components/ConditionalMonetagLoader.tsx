@@ -24,6 +24,13 @@ export const ConditionalMonetagLoader = (): null => {
     // Apply popup blocking
     applyPopupBlocking();
 
+    // Block completely on native APK
+    const isNativeApp = navigator.userAgent.includes('DuelVerseApp');
+    if (isNativeApp) {
+      console.log('Monetag BLOQUEADO - versão APK nativa');
+      return;
+    }
+
     // PRO users: No Monetag
     if (location.pathname.startsWith('/pro/') || location.pathname === '/auth' || location.pathname === '/landing' || location.pathname === '/') {
       console.log('Monetag BLOQUEADO - rota PRO/auth/landing:', location.pathname);
