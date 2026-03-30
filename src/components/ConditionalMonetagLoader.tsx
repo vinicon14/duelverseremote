@@ -28,17 +28,21 @@ export const ConditionalMonetagLoader = (): null => {
     const isNativeApp = navigator.userAgent.includes('DuelVerseApp');
     if (isNativeApp) {
       console.log('Monetag BLOQUEADO - versão APK nativa');
+      removeAllMonetagScripts();
       return;
     }
 
-    // PRO users: No Monetag
-    if (location.pathname.startsWith('/pro/') || location.pathname === '/auth' || location.pathname === '/landing' || location.pathname === '/') {
-      console.log('Monetag BLOQUEADO - rota PRO/auth/landing:', location.pathname);
-      return;
-    }
-
+    // PRO users: No Monetag - remove everything
     if (isPro) {
       console.log('Monetag BLOQUEADO - usuário PRO');
+      removeAllMonetagScripts();
+      return;
+    }
+
+    // Block on specific routes
+    if (location.pathname.startsWith('/pro/') || location.pathname === '/auth' || location.pathname === '/landing' || location.pathname === '/') {
+      console.log('Monetag BLOQUEADO - rota PRO/auth/landing:', location.pathname);
+      removeAllMonetagScripts();
       return;
     }
 
@@ -85,6 +89,38 @@ export const ConditionalMonetagLoader = (): null => {
   }, []);
 
   return null;
+};
+
+// Remove ALL monetag scripts and injected elements
+const removeAllMonetagScripts = () => {
+  // Remove known script tags
+  ['monetag-notification-1', 'monetag-notification-2'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.remove();
+  });
+
+  // Remove any script with monetag-related URLs
+  const allScripts = document.querySelectorAll('script');
+  allScripts.forEach(script => {
+    const src = script.src || script.innerHTML || '';
+    if (src.includes('3nbf4.com') || src.includes('nap5k.com') || src.includes('monetag') || src.includes('tag.min.js') || src.includes('quge5') || src.includes('al5sm')) {
+      script.remove();
+    }
+  });
+
+  // Remove injected iframes from monetag
+  const iframes = document.querySelectorAll('iframe');
+  iframes.forEach(iframe => {
+    const src = iframe.src || '';
+    if (src.includes('monetag') || src.includes('3nbf4') || src.includes('nap5k') || src.includes('quge5') || src.includes('al5sm')) {
+      iframe.remove();
+    }
+  });
+
+  // Remove overlay/fixed divs injected by ad scripts
+  document.querySelectorAll('div[id^="container-"]').forEach(el => el.remove());
+  
+  console.log('🧹 Todos os scripts Monetag removidos');
 };
 
 // Blocking function - blocks popunder and popup/click ads but allows notification
