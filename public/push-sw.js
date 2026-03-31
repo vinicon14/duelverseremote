@@ -60,9 +60,29 @@ self.addEventListener('push', (event) => {
     options.requireInteraction = true;
   }
 
-  const promiseChain = self.registration.showNotification(notificationData.title, options);
-
-  event.waitUntil(promiseChain);
+  // For duel invites, also try to focus/open the app immediately
+  if (isDuelInvite) {
+    event.waitUntil(
+      Promise.all([
+        self.registration.showNotification(notificationData.title, options),
+        // Try to focus existing window to show the in-app overlay
+        self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+          .then((windowClients) => {
+            for (const client of windowClients) {
+              if ('focus' in client) {
+                return client.focus();
+              }
+            }
+            // No existing window - open one
+            if (self.clients.openWindow) {
+              return self.clients.openWindow('/');
+            }
+          })
+      ])
+    );
+  } else {
+    event.waitUntil(self.registration.showNotification(notificationData.title, options));
+  }
 });
 
 // Handle notification clicks
@@ -78,16 +98,13 @@ self.addEventListener('notificationclick', (event) => {
     event.waitUntil(
       self.clients.matchAll({ type: 'window', includeUncontrolled: true })
         .then((windowClients) => {
-          // Try to focus an existing window and navigate to duel
-          for (let i = 0; i < windowClients.length; i++) {
-            const client = windowClients[i];
+          for (const client of windowClients) {
             if ('focus' in client) {
               client.focus();
               client.postMessage({ type: 'ACCEPT_DUEL', duelId: data.duelId, inviteId: data.inviteId });
               return;
             }
           }
-          // Open new window to duel room
           if (self.clients.openWindow) {
             return self.clients.openWindow('/duel/' + data.duelId);
           }
@@ -101,14 +118,33 @@ self.addEventListener('notificationclick', (event) => {
     return;
   }
 
+  // For duel invite clicks (no specific action button), open the app
+  if (data.type === 'duel_invite' && data.duelId) {
+    event.waitUntil(
+      self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+        .then((windowClients) => {
+          for (const client of windowClients) {
+            if ('focus' in client) {
+              client.focus();
+              // The in-app overlay will handle showing accept/reject
+              return;
+            }
+          }
+          if (self.clients.openWindow) {
+            return self.clients.openWindow('/');
+          }
+        })
+    );
+    return;
+  }
+
   const urlToOpen = data.url || '/';
   console.log('🔗 Abrindo URL:', urlToOpen);
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then((windowClients) => {
-        for (let i = 0; i < windowClients.length; i++) {
-          const client = windowClients[i];
+        for (const client of windowClients) {
           if (client.url.includes(urlToOpen) && 'focus' in client) {
             return client.focus();
           }

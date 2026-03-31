@@ -3,7 +3,7 @@
  * Desenvolvido por Vinícius
  * 
  * Overlay de tela cheia estilo chamada com áudio por TCG.
- * Usa Web Audio API para tocar o ringtone (funciona sem interação prévia).
+ * Toca o áudio configurado no admin (MP3/WAV) ou fallback com Web Audio API.
  */
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
@@ -37,20 +37,44 @@ const TCG_FULL: Record<string, string> = {
   pokemon: 'Pokémon TCG',
 };
 
-// Frequencies for different TCG ringtones
+const TCG_SETTINGS_KEY: Record<string, string> = {
+  yugioh: 'ringtone_ygo',
+  magic: 'ringtone_mtg',
+  pokemon: 'ringtone_pkm',
+};
+
+// Fallback frequencies for different TCG ringtones
 const TCG_TONES: Record<string, number[]> = {
-  yugioh: [523, 659, 784, 659, 523, 784],   // C5 E5 G5 heroic
-  magic: [440, 523, 660, 523, 440, 660],     // A4 C5 E5 mystical
-  pokemon: [587, 740, 880, 740, 587, 880],   // D5 F#5 A5 energetic
+  yugioh: [523, 659, 784, 659, 523, 784],
+  magic: [440, 523, 660, 523, 440, 660],
+  pokemon: [587, 740, 880, 740, 587, 880],
 };
 
 export const DuelCallNotification = ({ currentUserId }: { currentUserId?: string }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [invite, setInvite] = useState<DuelCallInvite | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [pulsing, setPulsing] = useState(true);
+  const [ringtoneUrls, setRingtoneUrls] = useState<Record<string, string>>({});
+
+  // Fetch ringtone URLs from system_settings once
+  useEffect(() => {
+    const fetchRingtones = async () => {
+      const { data } = await supabase
+        .from('system_settings')
+        .select('key, value')
+        .in('key', ['ringtone_ygo', 'ringtone_mtg', 'ringtone_pkm']);
+      if (data) {
+        const urls: Record<string, string> = {};
+        data.forEach(s => { if (s.value) urls[s.key] = s.value; });
+        setRingtoneUrls(urls);
+      }
+    };
+    fetchRingtones();
+  }, []);
 
   useEffect(() => {
     if (!invite) return;
@@ -59,6 +83,11 @@ export const DuelCallNotification = ({ currentUserId }: { currentUserId?: string
   }, [invite]);
 
   const stopAudio = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current = null;
+    }
     if (audioIntervalRef.current) {
       clearInterval(audioIntervalRef.current);
       audioIntervalRef.current = null;
@@ -83,19 +112,14 @@ export const DuelCallNotification = ({ currentUserId }: { currentUserId?: string
     osc.stop(startTime + duration);
   }, []);
 
-  const playRingtone = useCallback((tcgType: string) => {
-    stopAudio();
-    
+  const playFallbackTones = useCallback((tcgType: string) => {
     const tones = TCG_TONES[tcgType] || TCG_TONES.yugioh;
-    
     const playSequence = () => {
       try {
         const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
         audioContextRef.current = ctx;
-        
         const noteDuration = 0.25;
         const gap = 0.1;
-        
         tones.forEach((freq, i) => {
           playTone(ctx, freq, ctx.currentTime + i * (noteDuration + gap), noteDuration);
         });
@@ -103,11 +127,35 @@ export const DuelCallNotification = ({ currentUserId }: { currentUserId?: string
         console.error('Audio playback error:', e);
       }
     };
-    
-    // Play immediately and repeat every 2.5 seconds
     playSequence();
     audioIntervalRef.current = setInterval(playSequence, 2500);
-  }, [stopAudio, playTone]);
+  }, [playTone]);
+
+  const playRingtone = useCallback((tcgType: string) => {
+    stopAudio();
+    
+    const settingsKey = TCG_SETTINGS_KEY[tcgType] || 'ringtone_ygo';
+    const audioUrl = ringtoneUrls[settingsKey];
+
+    if (audioUrl) {
+      try {
+        const audio = new Audio(audioUrl);
+        audio.loop = true;
+        audio.volume = 0.8;
+        audioRef.current = audio;
+        audio.play().catch((err) => {
+          console.warn('Failed to play audio URL, falling back to tones:', err);
+          playFallbackTones(tcgType);
+        });
+        return;
+      } catch (e) {
+        console.warn('Error creating Audio element:', e);
+      }
+    }
+
+    // Fallback to synthesized tones
+    playFallbackTones(tcgType);
+  }, [stopAudio, ringtoneUrls, playFallbackTones]);
 
   useEffect(() => {
     if (!currentUserId) return;
@@ -122,13 +170,11 @@ export const DuelCallNotification = ({ currentUserId }: { currentUserId?: string
         console.error('Error fetching invite:', error);
         return null;
       }
-      // Fetch sender profile separately (no FK exists)
       const { data: senderProfile } = await supabase
         .from('profiles')
         .select('username, avatar_url')
         .eq('user_id', inviteData.sender_id)
         .maybeSingle();
-      // Fetch duel tcg_type
       const { data: duelData } = await supabase
         .from('live_duels')
         .select('tcg_type')
@@ -169,6 +215,16 @@ export const DuelCallNotification = ({ currentUserId }: { currentUserId?: string
       }
     };
     checkPending();
+
+    // Listen for service worker messages (accept duel from push notification)
+    const handleSWMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'ACCEPT_DUEL' && event.data.duelId) {
+        stopAudio();
+        setInvite(null);
+        navigate(`/duel/${event.data.duelId}`);
+      }
+    };
+    navigator.serviceWorker?.addEventListener('message', handleSWMessage);
 
     const channel = supabase
       .channel(`duel-call-${currentUserId}`)
@@ -216,9 +272,10 @@ export const DuelCallNotification = ({ currentUserId }: { currentUserId?: string
 
     return () => { 
       supabase.removeChannel(channel);
+      navigator.serviceWorker?.removeEventListener('message', handleSWMessage);
       stopAudio();
     };
-  }, [currentUserId, playRingtone, stopAudio]);
+  }, [currentUserId, playRingtone, stopAudio, navigate]);
 
   // Auto-dismiss after 60 seconds
   useEffect(() => {

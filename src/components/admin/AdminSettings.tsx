@@ -256,7 +256,7 @@ export const AdminSettings = () => {
         <CardHeader>
           <CardTitle>🔔 Toques de Convite de Duelo</CardTitle>
           <CardDescription>
-            Configure o áudio (YouTube) que toca para cada TCG quando alguém recebe um convite de duelo
+            Configure o áudio (URL direta MP3/WAV/OGG) que toca para cada TCG quando alguém recebe um convite de duelo. Use links diretos para arquivos de áudio (não YouTube).
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -265,7 +265,7 @@ export const AdminSettings = () => {
             <Input
               id="ringtone-ygo"
               type="url"
-              placeholder="https://www.youtube.com/watch?v=..."
+              placeholder="https://exemplo.com/ringtone-ygo.mp3"
               value={ringtoneYgo}
               onChange={(e) => setRingtoneYgo(e.target.value)}
             />
@@ -275,7 +275,7 @@ export const AdminSettings = () => {
             <Input
               id="ringtone-mtg"
               type="url"
-              placeholder="https://www.youtube.com/watch?v=..."
+              placeholder="https://exemplo.com/ringtone-mtg.mp3"
               value={ringtoneMtg}
               onChange={(e) => setRingtoneMtg(e.target.value)}
             />
@@ -285,7 +285,7 @@ export const AdminSettings = () => {
             <Input
               id="ringtone-pkm"
               type="url"
-              placeholder="https://www.youtube.com/watch?v=..."
+              placeholder="https://exemplo.com/ringtone-pkm.mp3"
               value={ringtonePkm}
               onChange={(e) => setRingtonePkm(e.target.value)}
             />
