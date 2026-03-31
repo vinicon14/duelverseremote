@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Swords, Sparkles, Zap } from "lucide-react";
+import { detectPlatform } from "@/utils/platformDetection";
 import { TcgType } from "@/contexts/TcgContext";
 
 const TCG_OPTIONS: { value: TcgType; label: string; icon: React.ReactNode; color: string; bgGradient: string }[] = [
