@@ -159,6 +159,45 @@ export const AdminSettings = () => {
     }
   };
 
+  const uploadRingtone = async (tcg: 'ygo' | 'mtg' | 'pkm') => {
+    const fileMap = { ygo: ringtoneFileYgo, mtg: ringtoneFileMtg, pkm: ringtoneFilePkm };
+    const setFileMap = { ygo: setRingtoneFileYgo, mtg: setRingtoneFileMtg, pkm: setRingtoneFilePkm };
+    const setUrlMap = { ygo: setRingtoneYgo, mtg: setRingtoneMtg, pkm: setRingtonePkm };
+    const settingKey = `ringtone_${tcg}`;
+    const file = fileMap[tcg];
+
+    if (!file) {
+      toast({ title: 'Selecione um arquivo de áudio', variant: 'destructive' });
+      return;
+    }
+
+    setUploadingRingtone(tcg);
+    try {
+      const ext = file.name.split('.').pop()?.toLowerCase() || 'mp3';
+      const targetPath = `${tcg}/ringtone.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('ringtones')
+        .upload(targetPath, file, { upsert: true, cacheControl: '3600' });
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage.from('ringtones').getPublicUrl(targetPath);
+      const publicUrl = `${data.publicUrl}?t=${Date.now()}`;
+
+      await upsertSetting(settingKey, publicUrl);
+      setUrlMap[tcg](publicUrl);
+      setFileMap[tcg](null);
+
+      toast({ title: 'Toque enviado!', description: `Ringtone de ${tcg.toUpperCase()} atualizado.` });
+    } catch (error: any) {
+      console.error('Error uploading ringtone:', error);
+      toast({ title: 'Erro no upload', description: error.message, variant: 'destructive' });
+    } finally {
+      setUploadingRingtone(null);
+    }
+  };
+
   const saveSettings = async () => {
     setLoading(true);
     try {
@@ -166,9 +205,6 @@ export const AdminSettings = () => {
         { key: 'support_email', value: supportEmail },
         { key: 'pix_key', value: pixKey },
         { key: 'landing_video_url', value: landingVideoUrl },
-        { key: 'ringtone_ygo', value: ringtoneYgo },
-        { key: 'ringtone_mtg', value: ringtoneMtg },
-        { key: 'ringtone_pkm', value: ringtonePkm },
       ];
 
       for (const setting of settings) {
