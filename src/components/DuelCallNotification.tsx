@@ -181,17 +181,16 @@ export const DuelCallNotification = ({ currentUserId }: { currentUserId?: string
         console.log('📞 New duel invite received:', payload.new);
         const data = await fetchInviteWithDuel(payload.new.id);
         if (data && data.sender) {
-          const senderData = Array.isArray(data.sender) ? data.sender[0] : data.sender;
-          const tcg = Array.isArray(data.duel) ? data.duel[0]?.tcg_type : data.duel?.tcg_type;
+          const tcg = data.duel?.tcg_type || 'yugioh';
           
           setInvite({
             id: data.id,
             sender_id: data.sender_id,
             duel_id: data.duel_id,
-            sender: senderData,
-            duel: { tcg_type: tcg || 'yugioh' },
+            sender: data.sender,
+            duel: { tcg_type: tcg },
           });
-          playRingtone(tcg || 'yugioh');
+          playRingtone(tcg);
 
           // Native notification bridge
           try {
