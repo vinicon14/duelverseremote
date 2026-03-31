@@ -205,7 +205,7 @@ export const DuelCallNotification = ({ currentUserId }: { currentUserId?: string
 
           if ('Notification' in window && Notification.permission === 'granted') {
             new Notification('⚔️ Desafio de Duelo!', {
-              body: `${senderData?.username || 'Alguém'} te desafiou para um duelo!`,
+              body: `${data.sender?.username || 'Alguém'} te desafiou para um duelo!`,
               icon: '/favicon.ico',
               requireInteraction: true,
             });
