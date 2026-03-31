@@ -1,10 +1,10 @@
 import { useEffect, useRef } from "react";
 import { useAccountType } from "@/hooks/useAccountType";
 
-// Declaração de tipo para Google AdSense
 declare global {
   interface Window {
     adsbygoogle: any[];
+    _adsenseLoaded?: boolean;
   }
 }
 
@@ -15,6 +15,17 @@ interface GoogleAdProps {
   className?: string;
 }
 
+const loadAdSenseScript = () => {
+  if (window._adsenseLoaded) return;
+  window._adsenseLoaded = true;
+
+  const script = document.createElement('script');
+  script.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5741796577623184';
+  script.async = true;
+  script.crossOrigin = 'anonymous';
+  document.head.appendChild(script);
+};
+
 export const GoogleAd = ({ 
   slot, 
   format = "auto", 
@@ -23,21 +34,28 @@ export const GoogleAd = ({
 }: GoogleAdProps) => {
   const { isPro } = useAccountType();
   const adRef = useRef<HTMLDivElement>(null);
+  const pushed = useRef(false);
 
   useEffect(() => {
-    // Não exibir anúncios para usuários PRO
     if (isPro) return;
 
-    try {
-      if (window.adsbygoogle && adRef.current) {
-        (window.adsbygoogle = window.adsbygoogle || []).push({});
+    // Load AdSense script dynamically (only for FREE users)
+    loadAdSenseScript();
+
+    const timer = setTimeout(() => {
+      try {
+        if (!pushed.current && adRef.current) {
+          (window.adsbygoogle = window.adsbygoogle || []).push({});
+          pushed.current = true;
+        }
+      } catch (error) {
+        console.error("Error loading Google Ad:", error);
       }
-    } catch (error) {
-      console.error("Error loading Google Ad:", error);
-    }
+    }, 500);
+
+    return () => clearTimeout(timer);
   }, [isPro]);
 
-  // Não renderizar nada para usuários PRO
   if (isPro) return null;
 
   return (
