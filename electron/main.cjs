@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Tray, Menu, Notification, ipcMain, shell } = require('electron');
+const { app, BrowserWindow, Tray, Menu, Notification, ipcMain, shell, nativeImage } = require('electron');
 const fs = require('fs');
 const path = require('path');
 
@@ -29,6 +29,17 @@ function getAppIconPath() {
   }
 
   return path.join(__dirname, iconFileName);
+}
+
+function getAppIcon() {
+  const iconPath = getAppIconPath();
+  try {
+    const icon = nativeImage.createFromPath(iconPath);
+    if (!icon.isEmpty()) return icon;
+  } catch (e) {
+    console.warn('[Electron] Failed to load icon from', iconPath, e);
+  }
+  return undefined;
 }
 
 function recreateShortcut(shortcutPath, shortcutOptions) {
@@ -238,7 +249,7 @@ function createWindow() {
     height: 800,
     minWidth: 800,
     minHeight: 600,
-    icon: getAppIconPath(),
+    icon: getAppIcon(),
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
@@ -251,6 +262,13 @@ function createWindow() {
 
   mainWindow.loadURL(REMOTE_URL);
   setupZoomShortcuts();
+
+  // Force taskbar icon on Windows
+  const appIcon = getAppIcon();
+  if (appIcon && process.platform === 'win32') {
+    mainWindow.setIcon(appIcon);
+    mainWindow.setOverlayIcon(null, '');
+  }
 
   // Open external links in the default browser, but allow OAuth popups and in-app remote pages
   mainWindow.webContents.setWindowOpenHandler(({ url, disposition }) => {
@@ -282,7 +300,7 @@ function createWindow() {
 
 function createTray() {
   try {
-    tray = new Tray(getAppIconPath());
+    tray = new Tray(getAppIcon() || getAppIconPath());
   } catch {
     tray = null;
     return;
