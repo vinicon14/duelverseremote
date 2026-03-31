@@ -82,15 +82,6 @@ export const DuelCallNotification = ({ currentUserId }: { currentUserId?: string
     return () => clearInterval(interval);
   }, [invite]);
 
-  useEffect(() => {
-    if (!invite) return;
-    const tcg = invite.duel?.tcg_type || 'yugioh';
-    const settingsKey = TCG_SETTINGS_KEY[tcg] || 'ringtone_ygo';
-    if (ringtoneUrls[settingsKey]) {
-      playRingtone(tcg);
-    }
-  }, [invite, ringtoneUrls, playRingtone]);
-
   const stopAudio = useCallback(() => {
     if (audioRef.current) {
       audioRef.current.pause();
@@ -156,17 +147,10 @@ export const DuelCallNotification = ({ currentUserId }: { currentUserId?: string
         audio.crossOrigin = 'anonymous';
         audioRef.current = audio;
 
-        const startPlayback = async () => {
-          try {
-            await audio.load();
-            await audio.play();
-          } catch (err) {
-            console.warn('Failed to play uploaded ringtone, falling back to tones:', err);
-            playFallbackTones(tcgType);
-          }
-        };
-
-        void startPlayback();
+        audio.play().catch((err) => {
+          console.warn('Failed to play uploaded ringtone, falling back to tones:', err);
+          playFallbackTones(tcgType);
+        });
         return;
       } catch (e) {
         console.warn('Error creating Audio element:', e);
@@ -175,6 +159,15 @@ export const DuelCallNotification = ({ currentUserId }: { currentUserId?: string
 
     playFallbackTones(tcgType);
   }, [stopAudio, ringtoneUrls, playFallbackTones]);
+
+  useEffect(() => {
+    if (!invite) return;
+    const tcg = invite.duel?.tcg_type || 'yugioh';
+    const settingsKey = TCG_SETTINGS_KEY[tcg] || 'ringtone_ygo';
+    if (ringtoneUrls[settingsKey]) {
+      playRingtone(tcg);
+    }
+  }, [invite, ringtoneUrls, playRingtone]);
 
   useEffect(() => {
     if (!currentUserId) return;
