@@ -113,13 +113,28 @@ export const DuelCallNotification = ({ currentUserId }: { currentUserId?: string
     if (!currentUserId) return;
 
     const fetchInviteWithDuel = async (inviteId: string) => {
-      const { data, error } = await supabase
+      const { data: inviteData, error } = await supabase
         .from('duel_invites')
-        .select(`*, sender:profiles!duel_invites_sender_id_fkey(username, avatar_url), duel:live_duels!duel_invites_duel_id_fkey(tcg_type)`)
+        .select('*')
         .eq('id', inviteId)
         .maybeSingle();
-      if (error) console.error('Error fetching invite:', error);
-      return data;
+      if (error || !inviteData) {
+        console.error('Error fetching invite:', error);
+        return null;
+      }
+      // Fetch sender profile separately (no FK exists)
+      const { data: senderProfile } = await supabase
+        .from('profiles')
+        .select('username, avatar_url')
+        .eq('user_id', inviteData.sender_id)
+        .maybeSingle();
+      // Fetch duel tcg_type
+      const { data: duelData } = await supabase
+        .from('live_duels')
+        .select('tcg_type')
+        .eq('id', inviteData.duel_id)
+        .maybeSingle();
+      return { ...inviteData, sender: senderProfile, duel: duelData };
     };
 
     const checkPending = async () => {
