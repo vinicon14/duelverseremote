@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Save, Upload, ExternalLink, Monitor, Smartphone } from "lucide-react";
+import { Save, Upload, ExternalLink, Monitor, Smartphone, Music, Trash2 } from "lucide-react";
 
 export const AdminSettings = () => {
   const [supportEmail, setSupportEmail] = useState("");
@@ -18,6 +18,10 @@ export const AdminSettings = () => {
   const [androidDownloadUrl, setAndroidDownloadUrl] = useState("");
   const [windowsFile, setWindowsFile] = useState<File | null>(null);
   const [androidFile, setAndroidFile] = useState<File | null>(null);
+  const [ringtoneFileYgo, setRingtoneFileYgo] = useState<File | null>(null);
+  const [ringtoneFileMtg, setRingtoneFileMtg] = useState<File | null>(null);
+  const [ringtoneFilePkm, setRingtoneFilePkm] = useState<File | null>(null);
+  const [uploadingRingtone, setUploadingRingtone] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [uploadingWindows, setUploadingWindows] = useState(false);
   const [uploadingAndroid, setUploadingAndroid] = useState(false);
