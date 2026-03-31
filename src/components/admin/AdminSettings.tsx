@@ -50,14 +50,18 @@ export const AdminSettings = () => {
         const emailSetting = data.find((s) => s.key === 'support_email');
         const pixSetting = data.find((s) => s.key === 'pix_key');
         const videoSetting = data.find((s) => s.key === 'landing_video_url');
-        const ringtoneSetting = data.find((s) => s.key === 'duel_ringtone_url');
+        const ringYgo = data.find((s) => s.key === 'ringtone_ygo');
+        const ringMtg = data.find((s) => s.key === 'ringtone_mtg');
+        const ringPkm = data.find((s) => s.key === 'ringtone_pkm');
         const windowsSetting = data.find((s) => s.key === 'windows_download_url');
         const androidSetting = data.find((s) => s.key === 'android_download_url');
 
         if (emailSetting) setSupportEmail(emailSetting.value || '');
         if (pixSetting) setPixKey(pixSetting.value || '');
         if (videoSetting) setLandingVideoUrl(videoSetting.value || '');
-        if (ringtoneSetting) setDuelRingtoneUrl(ringtoneSetting.value || '');
+        if (ringYgo) setRingtoneYgo(ringYgo.value || '');
+        if (ringMtg) setRingtoneMtg(ringMtg.value || '');
+        if (ringPkm) setRingtonePkm(ringPkm.value || '');
         if (windowsSetting) setWindowsDownloadUrl(windowsSetting.value || '');
         if (androidSetting) setAndroidDownloadUrl(androidSetting.value || '');
       }
