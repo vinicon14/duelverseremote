@@ -116,3 +116,14 @@ All colors MUST be HSL.
   }
   
 }
+
+/* Block AdSense vignette/overlay ads from covering the page */
+div[data-google-query-id],
+.google-auto-placed,
+div[id^="google_ads_iframe"] {
+  position: static !important;
+  z-index: auto !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+}
