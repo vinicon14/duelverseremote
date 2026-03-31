@@ -26,13 +26,13 @@ export const useDuelInviteResponse = (userId: string | undefined) => {
         
         if (newStatus === 'rejected') {
           // Fetch opponent name
-          const { data: invite } = await supabase
-            .from('duel_invites')
-            .select(`receiver:profiles!duel_invites_receiver_id_fkey(username)`)
-            .eq('id', payload.new.id)
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('username')
+            .eq('user_id', payload.new.receiver_id)
             .maybeSingle();
 
-          const opponentName = (invite as any)?.receiver?.username || 'Seu oponente';
+          const opponentName = profile?.username || 'Seu oponente';
 
           toast({
             title: "❌ Desafio Recusado",
