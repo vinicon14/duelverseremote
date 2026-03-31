@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Save, Upload, ExternalLink, Monitor, Smartphone } from "lucide-react";
+import { Save, Upload, ExternalLink, Monitor, Smartphone, Music, Trash2 } from "lucide-react";
 
 export const AdminSettings = () => {
   const [supportEmail, setSupportEmail] = useState("");
@@ -18,6 +18,10 @@ export const AdminSettings = () => {
   const [androidDownloadUrl, setAndroidDownloadUrl] = useState("");
   const [windowsFile, setWindowsFile] = useState<File | null>(null);
   const [androidFile, setAndroidFile] = useState<File | null>(null);
+  const [ringtoneFileYgo, setRingtoneFileYgo] = useState<File | null>(null);
+  const [ringtoneFileMtg, setRingtoneFileMtg] = useState<File | null>(null);
+  const [ringtoneFilePkm, setRingtoneFilePkm] = useState<File | null>(null);
+  const [uploadingRingtone, setUploadingRingtone] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [uploadingWindows, setUploadingWindows] = useState(false);
   const [uploadingAndroid, setUploadingAndroid] = useState(false);
@@ -155,6 +159,45 @@ export const AdminSettings = () => {
     }
   };
 
+  const uploadRingtone = async (tcg: 'ygo' | 'mtg' | 'pkm') => {
+    const fileMap = { ygo: ringtoneFileYgo, mtg: ringtoneFileMtg, pkm: ringtoneFilePkm };
+    const setFileMap = { ygo: setRingtoneFileYgo, mtg: setRingtoneFileMtg, pkm: setRingtoneFilePkm };
+    const setUrlMap = { ygo: setRingtoneYgo, mtg: setRingtoneMtg, pkm: setRingtonePkm };
+    const settingKey = `ringtone_${tcg}`;
+    const file = fileMap[tcg];
+
+    if (!file) {
+      toast({ title: 'Selecione um arquivo de áudio', variant: 'destructive' });
+      return;
+    }
+
+    setUploadingRingtone(tcg);
+    try {
+      const ext = file.name.split('.').pop()?.toLowerCase() || 'mp3';
+      const targetPath = `${tcg}/ringtone.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('ringtones')
+        .upload(targetPath, file, { upsert: true, cacheControl: '3600' });
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage.from('ringtones').getPublicUrl(targetPath);
+      const publicUrl = `${data.publicUrl}?t=${Date.now()}`;
+
+      await upsertSetting(settingKey, publicUrl);
+      setUrlMap[tcg](publicUrl);
+      setFileMap[tcg](null);
+
+      toast({ title: 'Toque enviado!', description: `Ringtone de ${tcg.toUpperCase()} atualizado.` });
+    } catch (error: any) {
+      console.error('Error uploading ringtone:', error);
+      toast({ title: 'Erro no upload', description: error.message, variant: 'destructive' });
+    } finally {
+      setUploadingRingtone(null);
+    }
+  };
+
   const saveSettings = async () => {
     setLoading(true);
     try {
@@ -162,9 +205,6 @@ export const AdminSettings = () => {
         { key: 'support_email', value: supportEmail },
         { key: 'pix_key', value: pixKey },
         { key: 'landing_video_url', value: landingVideoUrl },
-        { key: 'ringtone_ygo', value: ringtoneYgo },
-        { key: 'ringtone_mtg', value: ringtoneMtg },
-        { key: 'ringtone_pkm', value: ringtonePkm },
       ];
 
       for (const setting of settings) {
@@ -256,43 +296,51 @@ export const AdminSettings = () => {
         <CardHeader>
           <CardTitle>🔔 Toques de Convite de Duelo</CardTitle>
           <CardDescription>
-            Configure o áudio (URL direta MP3/WAV/OGG) que toca para cada TCG quando alguém recebe um convite de duelo. Use links diretos para arquivos de áudio (não YouTube).
+            Envie arquivos de áudio (MP3, WAV, OGG, MP4) para cada TCG. O áudio tocará quando alguém receber um convite de duelo.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="ringtone-ygo">🎴 YGO (Yu-Gi-Oh!)</Label>
-            <Input
-              id="ringtone-ygo"
-              type="url"
-              placeholder="https://exemplo.com/ringtone-ygo.mp3"
-              value={ringtoneYgo}
-              onChange={(e) => setRingtoneYgo(e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="ringtone-mtg">🧙 MTG (Magic: The Gathering)</Label>
-            <Input
-              id="ringtone-mtg"
-              type="url"
-              placeholder="https://exemplo.com/ringtone-mtg.mp3"
-              value={ringtoneMtg}
-              onChange={(e) => setRingtoneMtg(e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="ringtone-pkm">⚡ PKM (Pokémon TCG)</Label>
-            <Input
-              id="ringtone-pkm"
-              type="url"
-              placeholder="https://exemplo.com/ringtone-pkm.mp3"
-              value={ringtonePkm}
-              onChange={(e) => setRingtonePkm(e.target.value)}
-            />
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Cole URLs de vídeos do YouTube. O áudio será tocado como toque de chamada ao receber um convite do TCG correspondente.
-          </p>
+        <CardContent className="space-y-6">
+          {([
+            { key: 'ygo' as const, label: '🎴 YGO (Yu-Gi-Oh!)', url: ringtoneYgo, file: ringtoneFileYgo, setFile: setRingtoneFileYgo },
+            { key: 'mtg' as const, label: '🧙 MTG (Magic: The Gathering)', url: ringtoneMtg, file: ringtoneFileMtg, setFile: setRingtoneFileMtg },
+            { key: 'pkm' as const, label: '⚡ PKM (Pokémon TCG)', url: ringtonePkm, file: ringtoneFilePkm, setFile: setRingtoneFilePkm },
+          ]).map((tcg) => (
+            <div key={tcg.key} className="rounded-lg border border-border p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <Music className="w-4 h-4 text-primary" />
+                <Label className="font-semibold">{tcg.label}</Label>
+              </div>
+              
+              <Input
+                type="file"
+                accept="audio/*,video/mp4,.mp3,.wav,.ogg,.mp4,.m4a"
+                onChange={(e) => tcg.setFile(e.target.files?.[0] || null)}
+              />
+
+              {tcg.file && (
+                <p className="text-sm text-muted-foreground truncate">
+                  Selecionado: {tcg.file.name}
+                </p>
+              )}
+
+              {tcg.url && (
+                <div className="flex items-center gap-2">
+                  <audio controls src={tcg.url} className="h-8 flex-1" preload="none" />
+                </div>
+              )}
+
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => uploadRingtone(tcg.key)}
+                disabled={uploadingRingtone === tcg.key || !tcg.file}
+                className="w-full"
+              >
+                <Upload className={`w-4 h-4 mr-2 ${uploadingRingtone === tcg.key ? 'animate-spin' : ''}`} />
+                {uploadingRingtone === tcg.key ? 'Enviando...' : 'Enviar Toque'}
+              </Button>
+            </div>
+          ))}
         </CardContent>
       </Card>
 
