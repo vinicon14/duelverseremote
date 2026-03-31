@@ -27,8 +27,7 @@ export const ConditionalMonetagLoader = (): null => {
     if (loading) {
       // While loading, proactively remove any existing monetag scripts
       removeAllMonetagScripts();
-      const loadingInterval = setInterval(removeAllMonetagScripts, 500);
-      return () => clearInterval(loadingInterval);
+      return;
     }
 
     // Block completely on native APK

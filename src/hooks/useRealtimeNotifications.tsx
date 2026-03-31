@@ -22,20 +22,16 @@ interface NotificationData {
 export const useRealtimeNotifications = (userId: string | undefined) => {
   const { hasPermission, showNotification } = useBrowserNotifications();
 
-  // On native app, always set up listener regardless of permission state
-  const isNativeApp = navigator.userAgent.includes('DuelVerseApp');
-  const shouldListen = isNativeApp || hasPermission;
-
   useEffect(() => {
-    console.log('🔍 useRealtimeNotifications:', { userId, hasPermission, isNativeApp, shouldListen });
+    console.log('🔍 useRealtimeNotifications:', { userId, hasPermission });
     
     if (!userId) {
       console.log('⚠️ No userId, skipping notification setup');
       return;
     }
     
-    if (!shouldListen) {
-      console.log('⚠️ No notification permission and not native, skipping setup');
+    if (!hasPermission) {
+      console.log('⚠️ No notification permission, skipping setup');
       return;
     }
 
@@ -102,5 +98,5 @@ export const useRealtimeNotifications = (userId: string | undefined) => {
       supabase.removeChannel(channel);
       supabase.removeChannel(globalChatChannel);
     };
-  }, [userId, shouldListen, showNotification]);
+  }, [userId, hasPermission, showNotification]);
 };
