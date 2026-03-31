@@ -18,6 +18,8 @@ import { User, Session } from '@supabase/supabase-js';
 import { DuelInviteNotification } from "@/components/DuelInviteNotification";
 import { NotificationPrompt } from "@/components/NotificationPrompt";
 import { DynamicTheme } from "@/components/DynamicTheme";
+import { ProAdCleaner } from "@/components/ProAdCleaner";
+import { NativePermissionPrompt } from "@/components/NativePermissionPrompt";
 import { useRealtimeNotifications } from "@/hooks/useRealtimeNotifications";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useSubscriptionExpirationCheck } from "@/hooks/useSubscriptionExpirationCheck";
@@ -166,8 +168,10 @@ const AppContent = () => {
       <DynamicTheme />
       <UniversalNewTabBlocker />
       <ConditionalMonetagLoader />
+      <ProAdCleaner />
       <DuelInviteNotification currentUserId={user?.id} />
       <NotificationPrompt />
+      <NativePermissionPrompt userId={user?.id} />
       <RouterContent user={user} />
     </BrowserRouter>
   );

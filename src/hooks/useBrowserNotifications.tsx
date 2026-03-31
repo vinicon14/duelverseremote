@@ -174,6 +174,27 @@ export const useBrowserNotifications = () => {
   }, [hasPermission, loading, subscribeToPush]);
 
   const showNotification = useCallback(async (title: string, options?: NotificationOptions) => {
+    // Priority 1: Native Android bridge
+    if ((window as any).DuelVerseNative?.showNotification) {
+      try {
+        (window as any).DuelVerseNative.showNotification(title, options?.body || '');
+        return;
+      } catch (e) {
+        console.error('Native notification bridge error:', e);
+      }
+    }
+
+    // Priority 2: Electron bridge
+    if ((window as any).electronAPI?.showNotification) {
+      try {
+        (window as any).electronAPI.showNotification(title, options?.body || '');
+        return;
+      } catch (e) {
+        console.error('Electron notification error:', e);
+      }
+    }
+
+    // Priority 3: Web Notification API
     if (!isSupported || !hasPermission) return;
     
     try {
