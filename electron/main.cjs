@@ -43,7 +43,7 @@ async function fetchUnreadNotifications({ primeOnly = false } = {}) {
 
   try {
     const url = new URL(`${BACKEND_URL}/rest/v1/notifications`);
-    url.searchParams.set('select', 'id,title,message,created_at,read');
+    url.searchParams.set('select', 'id,title,message,created_at,read,type,data');
     url.searchParams.set('user_id', `eq.${authUserId}`);
     url.searchParams.set('read', 'eq.false');
     url.searchParams.set('order', 'created_at.desc');
@@ -64,7 +64,6 @@ async function fetchUnreadNotifications({ primeOnly = false } = {}) {
     if (!Array.isArray(notifications)) return;
 
     if (primeOnly) {
-      // Na primeira chamada, apenas registra IDs existentes para não notificar sobre eles
       for (const notification of notifications) {
         if (notification?.id) {
           knownNotificationIds.add(notification.id);
@@ -74,27 +73,88 @@ async function fetchUnreadNotifications({ primeOnly = false } = {}) {
       return;
     }
 
-    // Nas chamadas subsequentes, mostra apenas notificações novas
     const freshNotifications = notifications
       .filter((notification) => notification?.id && !knownNotificationIds.has(notification.id))
       .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
     for (const notification of freshNotifications) {
       knownNotificationIds.add(notification.id);
+      
+      const isDuelInvite = notification.type === 'duel_invite';
+      
       if (Notification.isSupported()) {
         const notif = new Notification({
           title: notification.title || 'Duelverse',
           body: notification.message || 'Você recebeu uma nova notificação.',
           icon: path.join(__dirname, 'icon.png'),
+          urgency: isDuelInvite ? 'critical' : 'normal',
         });
-        notif.on('click', () => showMainWindow());
+        notif.on('click', () => {
+          showMainWindow();
+          if (isDuelInvite && notification.data?.duel_id) {
+            mainWindow.webContents.executeJavaScript(
+              `window.location.hash = ''; window.location.href = '/duel/${notification.data.duel_id}';`
+            );
+          }
+        });
         notif.show();
+      }
+
+      // For duel invites, force-show the window so the in-app overlay with audio triggers
+      if (isDuelInvite) {
+        showMainWindow();
       }
     }
 
     trimKnownNotificationIds();
   } catch (error) {
     console.error('[Electron] Failed to poll notifications:', error);
+  }
+}
+
+// Also poll duel_invites directly for faster response
+async function pollDuelInvites() {
+  if (!authToken || !authUserId) return;
+
+  try {
+    const url = new URL(`${BACKEND_URL}/rest/v1/duel_invites`);
+    url.searchParams.set('select', 'id,sender_id,duel_id,created_at');
+    url.searchParams.set('receiver_id', `eq.${authUserId}`);
+    url.searchParams.set('status', 'eq.pending');
+    url.searchParams.set('order', 'created_at.desc');
+    url.searchParams.set('limit', '1');
+
+    const response = await fetch(url, {
+      headers: {
+        apikey: BACKEND_ANON_KEY,
+        Authorization: `Bearer ${authToken}`,
+      },
+    });
+
+    if (!response.ok) return;
+    const invites = await response.json();
+    if (!Array.isArray(invites) || invites.length === 0) return;
+
+    const invite = invites[0];
+    const inviteKey = `invite_${invite.id}`;
+    if (knownNotificationIds.has(inviteKey)) return;
+    knownNotificationIds.add(inviteKey);
+
+    // Force show window so the web DuelCallNotification overlay activates with audio
+    showMainWindow();
+    
+    if (Notification.isSupported()) {
+      const notif = new Notification({
+        title: '⚔️ Desafio de Duelo!',
+        body: 'Você recebeu um convite para duelar!',
+        icon: path.join(__dirname, 'icon.png'),
+        urgency: 'critical',
+      });
+      notif.on('click', () => showMainWindow());
+      notif.show();
+    }
+  } catch (error) {
+    // Silent fail for invite polling
   }
 }
 
@@ -113,6 +173,7 @@ async function startNotificationPolling({ resetKnown = false } = {}) {
   stopNotificationPolling();
   notificationPollInterval = setInterval(() => {
     void fetchUnreadNotifications();
+    void pollDuelInvites();
   }, NOTIFICATION_POLL_INTERVAL_MS);
 }
 
