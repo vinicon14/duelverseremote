@@ -10,6 +10,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.media.AudioAttributes;
+import android.media.RingtoneManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
@@ -42,16 +45,21 @@ public class NotificationService extends Service {
     private static final String PREF_REFRESH_TOKEN = "refresh_token";
     private static final String PREF_USER_ID = "user_id";
     private static final String PREF_SEEN_IDS = "seen_notification_ids";
+    private static final String PREF_SEEN_INVITE_IDS = "seen_invite_ids";
     private static final String PREF_BASELINE_READY = "notification_baseline_ready";
+    private static final String PREF_INVITE_BASELINE_READY = "invite_baseline_ready";
     private static final String ACTION_START = "com.duelverse.app.action.START_NOTIFICATIONS";
     private static final String ACTION_STOP = "com.duelverse.app.action.STOP_NOTIFICATIONS";
     private static final String ACTION_RESTART = "com.duelverse.app.action.RESTART_NOTIFICATIONS";
+    private static final String ACTION_ACCEPT_DUEL = "com.duelverse.app.action.ACCEPT_DUEL";
+    private static final String ACTION_REJECT_DUEL = "com.duelverse.app.action.REJECT_DUEL";
     private static final String API_BASE_URL = "https://xxttwzewtqxvpgefggah.supabase.co";
     private static final String API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4dHR3emV3dHF4dnBnZWZnZ2FoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk4NjY5NzQsImV4cCI6MjA3NTQ0Mjk3NH0.jhVKEu8tyid1gMnAxXZJdfrYt0a55eNpJT17hSdqtPQ";
     private static final String USER_CHANNEL_ID = "duelverse_notifications";
+    private static final String DUEL_CHANNEL_ID = "duelverse_duel_invites";
     private static final String SERVICE_CHANNEL_ID = "duelverse_background_service";
     private static final int FOREGROUND_NOTIFICATION_ID = 9001;
-    private static final long POLL_INTERVAL_MS = 30000L;
+    private static final long POLL_INTERVAL_MS = 15000L; // 15 seconds for faster duel invite detection
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -65,8 +73,9 @@ public class NotificationService extends Service {
             executor.execute(() -> {
                 try {
                     pollNotifications(false);
+                    pollDuelInvites();
                 } catch (Exception e) {
-                    Log.e(TAG, "Failed to poll notifications", e);
+                    Log.e(TAG, "Failed to poll", e);
                 } finally {
                     handler.postDelayed(this, POLL_INTERVAL_MS);
                 }
@@ -109,6 +118,24 @@ public class NotificationService extends Service {
             return START_NOT_STICKY;
         }
 
+        if (ACTION_ACCEPT_DUEL.equals(action)) {
+            String inviteId = intent.getStringExtra("invite_id");
+            String duelId = intent.getStringExtra("duel_id");
+            if (inviteId != null) {
+                executor.execute(() -> handleDuelAction(inviteId, duelId, "accepted"));
+            }
+            return START_STICKY;
+        }
+
+        if (ACTION_REJECT_DUEL.equals(action)) {
+            String inviteId = intent.getStringExtra("invite_id");
+            String duelId = intent.getStringExtra("duel_id");
+            if (inviteId != null) {
+                executor.execute(() -> handleDuelAction(inviteId, duelId, "rejected"));
+            }
+            return START_STICKY;
+        }
+
         serviceStoppedByUser = false;
         startForeground(FOREGROUND_NOTIFICATION_ID, buildForegroundNotification());
         startPolling();
@@ -117,8 +144,9 @@ public class NotificationService extends Service {
             executor.execute(() -> {
                 try {
                     pollNotifications(true);
+                    pollDuelInvites();
                 } catch (Exception e) {
-                    Log.e(TAG, "Failed to refresh notifications after restart", e);
+                    Log.e(TAG, "Failed to refresh after restart", e);
                 }
             });
         }
@@ -129,6 +157,193 @@ public class NotificationService extends Service {
     private void startPolling() {
         handler.removeCallbacks(pollRunnable);
         handler.post(pollRunnable);
+    }
+
+    private void handleDuelAction(String inviteId, String duelId, String newStatus) {
+        try {
+            String accessToken = preferences.getString(PREF_ACCESS_TOKEN, null);
+            if (accessToken == null) return;
+
+            // Update invite status
+            URL url = new URL(API_BASE_URL + "/rest/v1/duel_invites?id=eq." + inviteId);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("PATCH");
+            conn.setRequestProperty("apikey", API_KEY);
+            conn.setRequestProperty("Authorization", "Bearer " + accessToken);
+            conn.setRequestProperty("Content-Type", "application/json");
+            conn.setRequestProperty("Prefer", "return=minimal");
+            conn.setDoOutput(true);
+
+            JSONObject body = new JSONObject();
+            body.put("status", newStatus);
+            try (OutputStream os = conn.getOutputStream()) {
+                os.write(body.toString().getBytes(StandardCharsets.UTF_8));
+            }
+            conn.getResponseCode();
+            conn.disconnect();
+
+            // Cancel the notification
+            notificationManager.cancel(inviteId.hashCode());
+
+            // If accepted, open the app to the duel room
+            if ("accepted".equals(newStatus) && duelId != null) {
+                Intent openApp = new Intent(this, MainActivity.class);
+                openApp.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                openApp.putExtra("navigate_to", "/duel/" + duelId);
+                startActivity(openApp);
+            }
+
+            // If rejected, also delete the waiting duel
+            if ("rejected".equals(newStatus) && duelId != null) {
+                URL duelUrl = new URL(API_BASE_URL + "/rest/v1/live_duels?id=eq." + duelId + "&status=eq.waiting");
+                HttpURLConnection duelConn = (HttpURLConnection) duelUrl.openConnection();
+                duelConn.setRequestMethod("DELETE");
+                duelConn.setRequestProperty("apikey", API_KEY);
+                duelConn.setRequestProperty("Authorization", "Bearer " + accessToken);
+                duelConn.getResponseCode();
+                duelConn.disconnect();
+            }
+
+            Log.d(TAG, "Duel invite " + inviteId + " -> " + newStatus);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to handle duel action", e);
+        }
+    }
+
+    private void pollDuelInvites() {
+        try {
+            String userId = preferences.getString(PREF_USER_ID, null);
+            String accessToken = preferences.getString(PREF_ACCESS_TOKEN, null);
+            if (userId == null || accessToken == null) return;
+
+            URL url = new URL(API_BASE_URL + "/rest/v1/duel_invites?select=id,sender_id,duel_id,status,created_at&receiver_id=eq." + userId + "&status=eq.pending&order=created_at.desc&limit=5");
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setRequestProperty("apikey", API_KEY);
+            conn.setRequestProperty("Authorization", "Bearer " + accessToken);
+            conn.setRequestProperty("Accept", "application/json");
+            conn.setConnectTimeout(10000);
+            conn.setReadTimeout(10000);
+
+            int status = conn.getResponseCode();
+            if (status == 401 || status == 403) {
+                if (refreshSession()) {
+                    pollDuelInvites();
+                }
+                conn.disconnect();
+                return;
+            }
+
+            if (status < 200 || status >= 300) {
+                conn.disconnect();
+                return;
+            }
+
+            JSONArray invites = new JSONArray(readStream(conn.getInputStream()));
+            conn.disconnect();
+
+            Set<String> seenInviteIds = new HashSet<>(preferences.getStringSet(PREF_SEEN_INVITE_IDS, new HashSet<>()));
+            boolean baselineReady = preferences.getBoolean(PREF_INVITE_BASELINE_READY, false);
+
+            for (int i = 0; i < invites.length(); i++) {
+                JSONObject invite = invites.getJSONObject(i);
+                String inviteId = invite.optString("id");
+                String duelId = invite.optString("duel_id");
+                String senderId = invite.optString("sender_id");
+
+                if (inviteId.isEmpty() || seenInviteIds.contains(inviteId)) continue;
+                seenInviteIds.add(inviteId);
+
+                if (baselineReady) {
+                    // Fetch sender username
+                    String senderName = fetchUsername(senderId, accessToken);
+                    showDuelInviteNotification(inviteId, duelId, senderName);
+                }
+            }
+
+            preferences.edit()
+                .putStringSet(PREF_SEEN_INVITE_IDS, seenInviteIds)
+                .putBoolean(PREF_INVITE_BASELINE_READY, true)
+                .apply();
+
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to poll duel invites", e);
+        }
+    }
+
+    private String fetchUsername(String userId, String accessToken) {
+        try {
+            URL url = new URL(API_BASE_URL + "/rest/v1/profiles?select=username&user_id=eq." + userId + "&limit=1");
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setRequestProperty("apikey", API_KEY);
+            conn.setRequestProperty("Authorization", "Bearer " + accessToken);
+            conn.setRequestProperty("Accept", "application/json");
+            conn.setConnectTimeout(5000);
+            conn.setReadTimeout(5000);
+
+            if (conn.getResponseCode() == 200) {
+                JSONArray arr = new JSONArray(readStream(conn.getInputStream()));
+                if (arr.length() > 0) {
+                    return arr.getJSONObject(0).optString("username", "Duelista");
+                }
+            }
+            conn.disconnect();
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to fetch username", e);
+        }
+        return "Duelista";
+    }
+
+    private void showDuelInviteNotification(String inviteId, String duelId, String senderName) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ActivityCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+
+        // Accept action
+        Intent acceptIntent = new Intent(this, NotificationService.class);
+        acceptIntent.setAction(ACTION_ACCEPT_DUEL);
+        acceptIntent.putExtra("invite_id", inviteId);
+        acceptIntent.putExtra("duel_id", duelId);
+        PendingIntent acceptPending = PendingIntent.getService(this, inviteId.hashCode() + 1, acceptIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        // Reject action
+        Intent rejectIntent = new Intent(this, NotificationService.class);
+        rejectIntent.setAction(ACTION_REJECT_DUEL);
+        rejectIntent.putExtra("invite_id", inviteId);
+        rejectIntent.putExtra("duel_id", duelId);
+        PendingIntent rejectPending = PendingIntent.getService(this, inviteId.hashCode() + 2, rejectIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        // Open app intent
+        Intent openAppIntent = new Intent(this, MainActivity.class);
+        openAppIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        PendingIntent openPending = PendingIntent.getActivity(this, inviteId.hashCode(),
+            openAppIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        Uri ringtoneUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
+
+        Notification notification = new NotificationCompat.Builder(this, DUEL_CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setContentTitle("⚔️ Desafio de Duelo!")
+            .setContentText(senderName + " te desafiou para um duelo!")
+            .setStyle(new NotificationCompat.BigTextStyle()
+                .bigText(senderName + " te desafiou para um duelo! Toque para aceitar ou recusar."))
+            .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setCategory(NotificationCompat.CATEGORY_CALL)
+            .setAutoCancel(false)
+            .setOngoing(true)
+            .setContentIntent(openPending)
+            .setSound(ringtoneUri)
+            .setVibrate(new long[]{0, 500, 200, 500, 200, 500})
+            .addAction(android.R.drawable.ic_menu_call, "✅ Aceitar", acceptPending)
+            .addAction(android.R.drawable.ic_menu_close_clear_cancel, "❌ Recusar", rejectPending)
+            .setTimeoutAfter(60000) // Auto dismiss after 60s
+            .build();
+
+        notificationManager.notify(inviteId.hashCode(), notification);
     }
 
     private void pollNotifications(boolean notifyImmediately) throws Exception {
@@ -334,6 +549,23 @@ public class NotificationService extends Service {
         userChannel.setDescription("Convites, mensagens e alertas importantes");
         userChannel.enableVibration(true);
 
+        // Duel invite channel - max importance with ringtone
+        NotificationChannel duelChannel = new NotificationChannel(
+            DUEL_CHANNEL_ID,
+            "Convites de Duelo",
+            NotificationManager.IMPORTANCE_HIGH
+        );
+        duelChannel.setDescription("Notificações de convite para duelo com som de chamada");
+        duelChannel.enableVibration(true);
+        duelChannel.setVibrationPattern(new long[]{0, 500, 200, 500, 200, 500});
+        duelChannel.setSound(
+            RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE),
+            new AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
+        );
+
         NotificationChannel serviceChannel = new NotificationChannel(
             SERVICE_CHANNEL_ID,
             "DuelVerse em segundo plano",
@@ -342,6 +574,7 @@ public class NotificationService extends Service {
         serviceChannel.setDescription("Mantém o monitoramento de notificações com o app fechado");
 
         manager.createNotificationChannel(userChannel);
+        manager.createNotificationChannel(duelChannel);
         manager.createNotificationChannel(serviceChannel);
     }
 
