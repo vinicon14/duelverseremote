@@ -16,6 +16,7 @@ import { useAccountType } from '@/hooks/useAccountType';
 export const ConditionalMonetagLoader = (): null => {
   const location = useLocation();
   const { isPro, loading } = useAccountType();
+  const isNativeApp = /DuelVerseApp/i.test(navigator.userAgent);
 
   useEffect(() => {
     // Don't run while loading
@@ -23,6 +24,12 @@ export const ConditionalMonetagLoader = (): null => {
 
     // Apply popup blocking
     applyPopupBlocking();
+
+    if (isNativeApp) {
+      console.log('Monetag BLOQUEADO - APK nativo');
+      removeExistingMonetagAssets();
+      return;
+    }
 
     // PRO users: No Monetag
     if (location.pathname.startsWith('/pro/') || location.pathname === '/auth' || location.pathname === '/landing' || location.pathname === '/') {
@@ -71,7 +78,7 @@ export const ConditionalMonetagLoader = (): null => {
         if (script) script.remove();
       });
     };
-  }, [location.pathname, isPro, loading]);
+  }, [location.pathname, isPro, loading, isNativeApp]);
 
   useEffect(() => {
     applyPopupBlocking();
@@ -131,4 +138,40 @@ const applyPopupBlocking = () => {
     
     return window._originalOpen?.apply(window, args);
   };
+};
+
+const removeExistingMonetagAssets = () => {
+  document.querySelectorAll('script').forEach(script => {
+    const src = script.getAttribute('src') || '';
+    const text = script.textContent || '';
+
+    if (
+      src.includes('monetag') ||
+      src.includes('3nbf4.com') ||
+      src.includes('nap5k.com') ||
+      src.includes('quge5') ||
+      src.includes('onclicka') ||
+      text.includes('10601960') ||
+      text.includes('10601962') ||
+      text.includes('monetag')
+    ) {
+      script.remove();
+    }
+  });
+
+  document.querySelectorAll('div[id^="container-"], iframe').forEach(el => {
+    const src = el.getAttribute('src') || '';
+    const id = el.getAttribute('id') || '';
+
+    if (
+      id.startsWith('container-') ||
+      src.includes('monetag') ||
+      src.includes('quge5') ||
+      src.includes('onclicka') ||
+      src.includes('3nbf4.com') ||
+      src.includes('nap5k.com')
+    ) {
+      el.remove();
+    }
+  });
 };
