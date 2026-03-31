@@ -209,7 +209,8 @@ const Friends = () => {
     }
   };
 
-  const challengeFriend = async (friendUserId: string) => {
+  const challengeFriend = async (friendUserId: string, tcgType: string) => {
+    setChallengeTarget(null);
     try {
       // Verificar se o usuário já está em algum duelo ativo
       const { data: existingDuels } = await supabase
@@ -228,13 +229,14 @@ const Friends = () => {
         return;
       }
 
-      // Criar duelo casual
+      // Criar duelo casual com tcg_type
       const { data: duelData, error: duelError } = await supabase
         .from('live_duels')
         .insert({
           creator_id: currentUser.id,
           status: 'waiting',
           is_ranked: false,
+          tcg_type: tcgType,
         })
         .select()
         .single();
