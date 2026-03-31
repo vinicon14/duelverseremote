@@ -220,29 +220,13 @@ const Friends = () => {
         return;
       }
 
-      // Verificar se o amigo já está em algum duelo ativo
-      const { data: friendDuels } = await supabase
-        .from('live_duels')
-        .select('id, status')
-        .or(`creator_id.eq.${friendUserId},opponent_id.eq.${friendUserId}`)
-        .in('status', ['waiting', 'in_progress']);
-
-      if (friendDuels && friendDuels.length > 0) {
-        toast({
-          title: "Amigo ocupado",
-          description: "Seu amigo já está em um duelo ativo.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Partidas entre amigos são sempre casuais
+      // Criar duelo casual
       const { data: duelData, error: duelError } = await supabase
         .from('live_duels')
         .insert({
           creator_id: currentUser.id,
           status: 'waiting',
-          is_ranked: false, // Sempre casual entre amigos
+          is_ranked: false,
         })
         .select()
         .single();
@@ -263,9 +247,38 @@ const Friends = () => {
         console.error('Erro ao criar convite:', inviteError);
       }
 
+      // Enviar push notification para oponente offline
+      try {
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+        // Buscar username do desafiante
+        const { data: myProfile } = await supabase
+          .from('profiles')
+          .select('username')
+          .eq('user_id', currentUser.id)
+          .single();
+
+        await fetch(`${supabaseUrl}/functions/v1/send-push-notification`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${anonKey}`,
+          },
+          body: JSON.stringify({
+            userId: friendUserId,
+            title: '⚔️ Desafio de Duelo!',
+            body: `${myProfile?.username || 'Alguém'} te desafiou para um duelo!`,
+            data: { type: 'duel_invite', duelId: duelData.id },
+          }),
+        });
+      } catch (pushErr) {
+        console.error('Erro ao enviar push:', pushErr);
+      }
+
       toast({
         title: "Desafio enviado!",
-        description: "Convite casual enviado para seu amigo.",
+        description: "Aguardando resposta do seu oponente...",
       });
 
       navigate(`/duel/${duelData.id}`);
