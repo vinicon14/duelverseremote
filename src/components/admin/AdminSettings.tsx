@@ -246,6 +246,30 @@ export const AdminSettings = () => {
 
       <Card>
         <CardHeader>
+          <CardTitle>🔔 Toque de Convite de Duelo</CardTitle>
+          <CardDescription>
+            Configure o áudio que toca quando alguém recebe um convite de duelo (estilo chamada)
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="duel-ringtone">URL do Vídeo/Áudio do YouTube</Label>
+            <Input
+              id="duel-ringtone"
+              type="url"
+              placeholder="https://www.youtube.com/watch?v=..."
+              value={duelRingtoneUrl}
+              onChange={(e) => setDuelRingtoneUrl(e.target.value)}
+            />
+            <p className="text-sm text-muted-foreground">
+              Cole a URL de um vídeo do YouTube. O áudio será extraído e tocado como toque de chamada quando um jogador receber um convite de duelo.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>Downloads do app nativo</CardTitle>
           <CardDescription>
             Envie aqui a versão do Duelverse para Windows e o APK do Android.
