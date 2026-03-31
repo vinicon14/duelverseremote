@@ -21,17 +21,23 @@ interface NotificationData {
 
 export const useRealtimeNotifications = (userId: string | undefined) => {
   const { hasPermission, showNotification } = useBrowserNotifications();
+  const isNativeApp = /DuelVerseApp/i.test(navigator.userAgent);
+  const isElectron = !!(window as any).electronAPI?.isElectron;
+  const hasNativeBridge = isNativeApp || isElectron;
+
+  // Allow notifications if browser permission granted OR native bridge available
+  const canNotify = hasPermission || hasNativeBridge;
 
   useEffect(() => {
-    console.log('🔍 useRealtimeNotifications:', { userId, hasPermission });
+    console.log('🔍 useRealtimeNotifications:', { userId, hasPermission, hasNativeBridge, canNotify });
     
     if (!userId) {
       console.log('⚠️ No userId, skipping notification setup');
       return;
     }
     
-    if (!hasPermission) {
-      console.log('⚠️ No notification permission, skipping setup');
+    if (!canNotify) {
+      console.log('⚠️ No notification permission and no native bridge, skipping setup');
       return;
     }
 
