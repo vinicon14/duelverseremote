@@ -28,11 +28,16 @@ export const useBrowserNotifications = () => {
 
   useEffect(() => {
     const checkSupport = () => {
-      const supported = 'Notification' in window;
+      const isNative = /DuelVerseApp/i.test(navigator.userAgent);
+      const isElectronApp = !!(window as any).electronAPI?.isElectron;
+      const supported = 'Notification' in window || isNative || isElectronApp;
       setIsSupported(supported);
       
-      if (supported) {
+      if ('Notification' in window) {
         setHasPermission(Notification.permission === 'granted');
+      } else if (isNative || isElectronApp) {
+        // Native apps handle permissions natively
+        setHasPermission(true);
       }
       
       setLoading(false);
