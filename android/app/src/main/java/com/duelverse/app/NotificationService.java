@@ -707,6 +707,7 @@ public class NotificationService extends Service {
         );
         userChannel.setDescription("Convites, mensagens e alertas importantes");
         userChannel.enableVibration(true);
+        userChannel.setSound(null, null);
 
         NotificationChannel duelChannel = new NotificationChannel(
             DUEL_CHANNEL_ID,
