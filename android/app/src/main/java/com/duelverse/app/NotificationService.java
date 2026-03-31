@@ -11,6 +11,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.media.AudioAttributes;
+import android.media.MediaPlayer;
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
@@ -27,6 +28,8 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -66,6 +69,8 @@ public class NotificationService extends Service {
     private SharedPreferences preferences;
     private NotificationManagerCompat notificationManager;
     private boolean serviceStoppedByUser = false;
+    private MediaPlayer mediaPlayer;
+    private final Object mediaPlayerLock = new Object();
 
     private final Runnable pollRunnable = new Runnable() {
         @Override
@@ -161,6 +166,7 @@ public class NotificationService extends Service {
 
     private void handleDuelAction(String inviteId, String duelId, String newStatus) {
         try {
+            stopCustomRingtone();
             String accessToken = preferences.getString(PREF_ACCESS_TOKEN, null);
             if (accessToken == null) return;
 
@@ -255,9 +261,9 @@ public class NotificationService extends Service {
                 seenInviteIds.add(inviteId);
 
                 if (baselineReady) {
-                    // Fetch sender username
                     String senderName = fetchUsername(senderId, accessToken);
-                    showDuelInviteNotification(inviteId, duelId, senderName);
+                    String tcgType = fetchDuelTcgType(duelId, accessToken);
+                    showDuelInviteNotification(inviteId, duelId, senderName, tcgType);
                 }
             }
 
@@ -295,7 +301,101 @@ public class NotificationService extends Service {
         return "Duelista";
     }
 
-    private void showDuelInviteNotification(String inviteId, String duelId, String senderName) {
+    private String fetchDuelTcgType(String duelId, String accessToken) {
+        try {
+            URL url = new URL(API_BASE_URL + "/rest/v1/live_duels?select=tcg_type&id=eq." + duelId + "&limit=1");
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setRequestProperty("apikey", API_KEY);
+            conn.setRequestProperty("Authorization", "Bearer " + accessToken);
+            conn.setRequestProperty("Accept", "application/json");
+            conn.setConnectTimeout(5000);
+            conn.setReadTimeout(5000);
+            if (conn.getResponseCode() == 200) {
+                JSONArray arr = new JSONArray(readStream(conn.getInputStream()));
+                if (arr.length() > 0) {
+                    return arr.getJSONObject(0).optString("tcg_type", "yugioh");
+                }
+            }
+            conn.disconnect();
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to fetch duel tcg_type", e);
+        }
+        return "yugioh";
+    }
+
+    private String fetchRingtoneUrl(String tcgType, String accessToken) {
+        String settingKey;
+        switch (tcgType) {
+            case "magic": settingKey = "ringtone_mtg"; break;
+            case "pokemon": settingKey = "ringtone_pkm"; break;
+            default: settingKey = "ringtone_ygo"; break;
+        }
+        try {
+            URL url = new URL(API_BASE_URL + "/rest/v1/system_settings?select=value&key=eq." + settingKey + "&limit=1");
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setRequestProperty("apikey", API_KEY);
+            conn.setRequestProperty("Authorization", "Bearer " + accessToken);
+            conn.setRequestProperty("Accept", "application/json");
+            conn.setConnectTimeout(5000);
+            conn.setReadTimeout(5000);
+            if (conn.getResponseCode() == 200) {
+                JSONArray arr = new JSONArray(readStream(conn.getInputStream()));
+                if (arr.length() > 0) {
+                    String val = arr.getJSONObject(0).optString("value", "");
+                    if (!val.isEmpty()) {
+                        int qIdx = val.indexOf("?t=");
+                        return qIdx > 0 ? val.substring(0, qIdx) : val;
+                    }
+                }
+            }
+            conn.disconnect();
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to fetch ringtone URL for " + tcgType, e);
+        }
+        return null;
+    }
+
+    private void playCustomRingtone(String audioUrl) {
+        stopCustomRingtone();
+        synchronized (mediaPlayerLock) {
+            try {
+                mediaPlayer = new MediaPlayer();
+                mediaPlayer.setAudioAttributes(new AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                    .build());
+                mediaPlayer.setDataSource(audioUrl);
+                mediaPlayer.setLooping(true);
+                mediaPlayer.prepareAsync();
+                mediaPlayer.setOnPreparedListener(mp -> mp.start());
+                mediaPlayer.setOnErrorListener((mp, what, extra) -> {
+                    Log.e(TAG, "MediaPlayer error: " + what + "/" + extra);
+                    return false;
+                });
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to play custom ringtone", e);
+                mediaPlayer = null;
+            }
+        }
+    }
+
+    private void stopCustomRingtone() {
+        synchronized (mediaPlayerLock) {
+            if (mediaPlayer != null) {
+                try {
+                    if (mediaPlayer.isPlaying()) mediaPlayer.stop();
+                    mediaPlayer.release();
+                } catch (Exception e) {
+                    Log.w(TAG, "Error stopping MediaPlayer", e);
+                }
+                mediaPlayer = null;
+            }
+        }
+    }
+
+    private void showDuelInviteNotification(String inviteId, String duelId, String senderName, String tcgType) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ActivityCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             return;
@@ -323,20 +423,28 @@ public class NotificationService extends Service {
         PendingIntent openPending = PendingIntent.getActivity(this, inviteId.hashCode(),
             openAppIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
-        Uri ringtoneUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
+        String accessToken = preferences.getString(PREF_ACCESS_TOKEN, null);
+        String ringtoneUrl = accessToken != null ? fetchRingtoneUrl(tcgType, accessToken) : null;
+
+        String tcgLabel;
+        switch (tcgType) {
+            case "magic": tcgLabel = "MTG"; break;
+            case "pokemon": tcgLabel = "PKM"; break;
+            default: tcgLabel = "YGO"; break;
+        }
 
         Notification notification = new NotificationCompat.Builder(this, DUEL_CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
-            .setContentTitle("⚔️ Desafio de Duelo!")
-            .setContentText(senderName + " te desafiou para um duelo!")
+            .setContentTitle("⚔️ Desafio de Duelo! [" + tcgLabel + "]")
+            .setContentText(senderName + " te desafiou para um duelo de " + tcgLabel + "!")
             .setStyle(new NotificationCompat.BigTextStyle()
-                .bigText(senderName + " te desafiou para um duelo! Toque para aceitar ou recusar."))
+                .bigText(senderName + " te desafiou para um duelo de " + tcgLabel + "! Toque para aceitar ou recusar."))
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_CALL)
             .setAutoCancel(false)
             .setOngoing(true)
             .setContentIntent(openPending)
-            .setSound(ringtoneUri)
+            .setSound(null)
             .setVibrate(new long[]{0, 500, 200, 500, 200, 500})
             .addAction(android.R.drawable.ic_menu_call, "✅ Aceitar", acceptPending)
             .addAction(android.R.drawable.ic_menu_close_clear_cancel, "❌ Recusar", rejectPending)
@@ -344,6 +452,11 @@ public class NotificationService extends Service {
             .build();
 
         notificationManager.notify(inviteId.hashCode(), notification);
+
+        if (ringtoneUrl != null && !ringtoneUrl.isEmpty()) {
+            playCustomRingtone(ringtoneUrl);
+            handler.postDelayed(this::stopCustomRingtone, 60000);
+        }
     }
 
     private void pollNotifications(boolean notifyImmediately) throws Exception {
@@ -549,7 +662,6 @@ public class NotificationService extends Service {
         userChannel.setDescription("Convites, mensagens e alertas importantes");
         userChannel.enableVibration(true);
 
-        // Duel invite channel - max importance with ringtone
         NotificationChannel duelChannel = new NotificationChannel(
             DUEL_CHANNEL_ID,
             "Convites de Duelo",
@@ -558,13 +670,7 @@ public class NotificationService extends Service {
         duelChannel.setDescription("Notificações de convite para duelo com som de chamada");
         duelChannel.enableVibration(true);
         duelChannel.setVibrationPattern(new long[]{0, 500, 200, 500, 200, 500});
-        duelChannel.setSound(
-            RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE),
-            new AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
-                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                .build()
-        );
+        duelChannel.setSound(null, null);
 
         NotificationChannel serviceChannel = new NotificationChannel(
             SERVICE_CHANNEL_ID,
@@ -600,6 +706,7 @@ public class NotificationService extends Service {
     @Override
     public void onDestroy() {
         handler.removeCallbacks(pollRunnable);
+        stopCustomRingtone();
         if (!serviceStoppedByUser && hasStoredSession()) {
             scheduleRestart();
         }
