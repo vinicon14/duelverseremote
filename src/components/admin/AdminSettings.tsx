@@ -162,7 +162,9 @@ export const AdminSettings = () => {
         { key: 'support_email', value: supportEmail },
         { key: 'pix_key', value: pixKey },
         { key: 'landing_video_url', value: landingVideoUrl },
-        { key: 'duel_ringtone_url', value: duelRingtoneUrl },
+        { key: 'ringtone_ygo', value: ringtoneYgo },
+        { key: 'ringtone_mtg', value: ringtoneMtg },
+        { key: 'ringtone_pkm', value: ringtonePkm },
       ];
 
       for (const setting of settings) {
