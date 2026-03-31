@@ -72,12 +72,15 @@ export const ProAdCleaner = () => {
     // Aggressive cleanup every 2s
     const interval = setInterval(cleanAllAds, 2000);
 
-    // MutationObserver for instant blocking
+    // MutationObserver - only block nodes added OUTSIDE React root
     const observer = new MutationObserver(mutations => {
       for (const mutation of mutations) {
         for (const node of mutation.addedNodes) {
           if (node.nodeType !== 1) continue;
           const el = node as Element;
+          // Never touch nodes inside React root
+          if (rootEl?.contains(el)) continue;
+          
           const tag = el.tagName;
           
           if (tag === 'SCRIPT') {
@@ -104,7 +107,6 @@ export const ProAdCleaner = () => {
           }
 
           if (tag === 'AMP-AUTO-ADS') el.remove();
-          if (tag === 'INS' && el.classList.contains('adsbygoogle')) el.remove();
           if (tag === 'DIV' && el.id.startsWith('container-')) el.remove();
         }
       }

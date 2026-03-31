@@ -39,17 +39,19 @@ export const GoogleAd = ({
   useEffect(() => {
     if (isPro) return;
 
-    // Load AdSense script dynamically (only for FREE users)
     loadAdSenseScript();
 
     const timer = setTimeout(() => {
       try {
         if (!pushed.current && adRef.current) {
-          (window.adsbygoogle = window.adsbygoogle || []).push({});
-          pushed.current = true;
+          const ins = adRef.current.querySelector('ins.adsbygoogle');
+          if (ins && !ins.getAttribute('data-ad-status')) {
+            (window.adsbygoogle = window.adsbygoogle || []).push({});
+            pushed.current = true;
+          }
         }
       } catch (error) {
-        console.error("Error loading Google Ad:", error);
+        // Silently ignore ad errors to prevent crashes
       }
     }, 500);
 
