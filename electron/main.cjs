@@ -34,6 +34,10 @@ function getAppIconPath() {
 function getAppIcon() {
   const iconPath = getAppIconPath();
   try {
+    if (process.platform === 'win32') {
+      return iconPath;
+    }
+
     const icon = nativeImage.createFromPath(iconPath);
     if (!icon.isEmpty()) return icon;
   } catch (e) {
