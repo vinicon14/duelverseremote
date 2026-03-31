@@ -12,74 +12,57 @@ export const ProAdCleaner = () => {
   useEffect(() => {
     if (loading || !isPro) return;
 
+    const rootEl = document.getElementById('root');
+    
+    const isInsideReact = (el: Element) => rootEl?.contains(el);
+
     const cleanAllAds = () => {
-      // Remove AdSense scripts
-      document.querySelectorAll('script').forEach(script => {
+      // Remove ad scripts from <head> only (never touch React tree)
+      document.querySelectorAll('head script, body > script').forEach(script => {
+        if (isInsideReact(script)) return;
         const src = script.getAttribute('src') || '';
         const text = script.textContent || '';
         if (
-          src.includes('adsbygoogle') ||
-          src.includes('pagead2.googlesyndication') ||
-          src.includes('amp-auto-ads') ||
-          src.includes('ampproject.org') ||
-          src.includes('monetag') ||
-          src.includes('quge5') ||
-          src.includes('3nbf4.com') ||
-          src.includes('nap5k.com') ||
-          src.includes('onclicka') ||
-          src.includes('adsterra') ||
-          src.includes('popunder') ||
-          src.includes('vignette') ||
-          text.includes('adsbygoogle') ||
-          text.includes('monetag') ||
-          text.includes('quge5') ||
-          text.includes('10601960') ||
-          text.includes('10601962')
+          src.includes('adsbygoogle') || src.includes('pagead2.googlesyndication') ||
+          src.includes('ampproject.org') || src.includes('monetag') ||
+          src.includes('quge5') || src.includes('3nbf4.com') ||
+          src.includes('nap5k.com') || src.includes('onclicka') ||
+          src.includes('adsterra') || src.includes('popunder') ||
+          text.includes('adsbygoogle') || text.includes('monetag') ||
+          text.includes('quge5') || text.includes('10601960') || text.includes('10601962')
         ) {
           script.remove();
         }
       });
 
-      // Remove AMP auto ads element
-      document.querySelectorAll('amp-auto-ads').forEach(el => el.remove());
-
-      // Remove AdSense ins elements
-      document.querySelectorAll('ins.adsbygoogle').forEach(el => {
-        const parent = el.parentElement;
-        if (parent?.classList.contains('google-ad-container')) {
-          parent.remove();
-        } else {
-          el.remove();
-        }
+      // Remove AMP auto ads
+      document.querySelectorAll('amp-auto-ads').forEach(el => {
+        if (!isInsideReact(el)) el.remove();
       });
 
-      // Remove container-* divs (Monetag injected)
-      document.querySelectorAll('div[id^="container-"]').forEach(el => el.remove());
+      // Remove Monetag container-* divs OUTSIDE React
+      document.querySelectorAll('div[id^="container-"]').forEach(el => {
+        if (!isInsideReact(el)) el.remove();
+      });
 
-      // Remove Monetag iframes (but allow Daily.co)
-      document.querySelectorAll('iframe').forEach(iframe => {
+      // Remove ad iframes OUTSIDE React (preserve Daily.co)
+      document.querySelectorAll('body > iframe, div:not(#root) iframe').forEach(iframe => {
+        if (isInsideReact(iframe)) return;
         const src = iframe.getAttribute('src') || '';
         if (src.includes('daily.co') || src.includes('duelverse')) return;
-        if (
-          src.includes('monetag') || src.includes('quge5') ||
-          src.includes('onclicka') || src.includes('adsterra') ||
-          src.includes('vignette')
-        ) {
-          iframe.remove();
-        }
+        iframe.remove();
       });
 
-      // Remove high z-index overlay elements (ad popups only - be specific)
-      document.querySelectorAll('div').forEach(el => {
-        const id = el.id || '';
-        if (id.includes('monetag') || id.includes('quge5')) {
-          el.remove();
-        }
-      });
-
-      // Remove AdSense vignette overlays (full-screen ad overlays)
+      // Remove ad overlays OUTSIDE React
       document.querySelectorAll('div[id^="google_ads_"], div.google-auto-placed, div[data-google-query-id]').forEach(el => {
-        el.remove();
+        if (!isInsideReact(el)) el.remove();
+      });
+
+      // Remove monetag/quge5 divs OUTSIDE React
+      document.querySelectorAll('body > div').forEach(el => {
+        if (isInsideReact(el)) return;
+        const id = el.id || '';
+        if (id.includes('monetag') || id.includes('quge5')) el.remove();
       });
     };
 
