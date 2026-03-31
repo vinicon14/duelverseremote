@@ -12,7 +12,7 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
-    "package:win": "electron-packager . Duelverse --platform=win32 --arch=x64 --out=release-builds --overwrite --icon=electron/icon.ico --extra-resource=electron/icon.ico --extra-resource=electron/icon.png --app-bundle-id=com.duelverse.desktop --win32metadata.ProductName=Duelverse --win32metadata.FileDescription=Duelverse",
+    "package:win": "electron-packager . Duelverse --platform=win32 --arch=x64 --out=release-builds --overwrite --icon=electron/icon --extra-resource=electron/icon.ico --extra-resource=electron/icon.png --app-bundle-id=com.duelverse.desktop --win32metadata.CompanyName=Duelverse --win32metadata.ProductName=Duelverse --win32metadata.FileDescription=Duelverse --win32metadata.InternalName=Duelverse --win32metadata.OriginalFilename=Duelverse.exe",
     "installer:win": "electron-builder --win nsis --x64",
     "installer:win-squirrel": "node electron/installer.cjs"
   },
