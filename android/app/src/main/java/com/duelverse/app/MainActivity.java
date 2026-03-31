@@ -1,6 +1,7 @@
 package com.duelverse.app;
 
 import android.annotation.SuppressLint;
+import android.app.KeyguardManager;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.content.Intent;
@@ -8,6 +9,7 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.view.WindowManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
@@ -70,7 +72,46 @@ public class MainActivity extends AppCompatActivity {
             NotificationService.startService(this);
         }
 
+        // Check if launched from a duel invite notification
+        handleDuelInviteIntent(getIntent());
+
         webView.loadUrl("https://duelverse.site");
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleDuelInviteIntent(intent);
+    }
+
+    private void handleDuelInviteIntent(Intent intent) {
+        if (intent == null) return;
+
+        // Handle duel invite auto-open
+        if (intent.getBooleanExtra("duel_invite", false)) {
+            // Keep screen on and dismiss keyguard for the call screen
+            getWindow().addFlags(
+                WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON |
+                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED |
+                WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
+            );
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                setShowWhenLocked(true);
+                setTurnScreenOn(true);
+                KeyguardManager km = (KeyguardManager) getSystemService(KEYGUARD_SERVICE);
+                if (km != null) {
+                    km.requestDismissKeyguard(this, null);
+                }
+            }
+        }
+
+        // Handle navigate_to (when user accepts from notification action)
+        String navigateTo = intent.getStringExtra("navigate_to");
+        if (navigateTo != null && webView != null) {
+            webView.loadUrl("https://duelverse.site" + navigateTo);
+        }
     }
 
     private void requestAppPermissions() {
