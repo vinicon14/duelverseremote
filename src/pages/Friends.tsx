@@ -17,6 +17,13 @@ import { useToast } from "@/components/ui/use-toast";
 import { Users, UserPlus, Check, X, Search, Swords } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useFriendsOnlineStatus } from "@/hooks/useFriendsOnlineStatus";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+} from "@/components/ui/alert-dialog";
 
 const Friends = () => {
   const navigate = useNavigate();
