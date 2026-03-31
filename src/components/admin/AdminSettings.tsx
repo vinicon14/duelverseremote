@@ -256,7 +256,7 @@ export const AdminSettings = () => {
         <CardHeader>
           <CardTitle>🔔 Toques de Convite de Duelo</CardTitle>
           <CardDescription>
-            Configure o áudio (YouTube) que toca para cada TCG quando alguém recebe um convite de duelo
+            Configure o áudio (URL direta MP3/WAV/OGG) que toca para cada TCG quando alguém recebe um convite de duelo. Use links diretos para arquivos de áudio (não YouTube).
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
