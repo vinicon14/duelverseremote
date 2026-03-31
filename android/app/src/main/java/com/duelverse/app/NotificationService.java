@@ -683,7 +683,8 @@ public class NotificationService extends Service {
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
-            .setDefaults(NotificationCompat.DEFAULT_ALL)
+            .setSound(null)
+            .setDefaults(NotificationCompat.DEFAULT_VIBRATE)
             .build();
 
         notificationManager.notify(id.hashCode(), notification);
@@ -706,6 +707,7 @@ public class NotificationService extends Service {
         );
         userChannel.setDescription("Convites, mensagens e alertas importantes");
         userChannel.enableVibration(true);
+        userChannel.setSound(null, null);
 
         NotificationChannel duelChannel = new NotificationChannel(
             DUEL_CHANNEL_ID,

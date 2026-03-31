@@ -145,6 +145,7 @@ public class MainActivity extends AppCompatActivity {
             );
             channel.setDescription("Notificações de duelos, torneios e mensagens");
             channel.enableVibration(true);
+            channel.setSound(null, null);
             NotificationManager manager = getSystemService(NotificationManager.class);
             if (manager != null) {
                 manager.createNotificationChannel(channel);
