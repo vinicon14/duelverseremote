@@ -3,6 +3,7 @@
  * Desenvolvido por Vinícius
  * 
  * Overlay de tela cheia estilo chamada com áudio por TCG.
+ * Usa Web Audio API para tocar o ringtone (funciona sem interação prévia).
  */
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
@@ -36,38 +37,20 @@ const TCG_FULL: Record<string, string> = {
   pokemon: 'Pokémon TCG',
 };
 
-const getYouTubeVideoId = (url: string): string | null => {
-  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([^&?#]+)/);
-  return match ? match[1] : null;
+// Frequencies for different TCG ringtones
+const TCG_TONES: Record<string, number[]> = {
+  yugioh: [523, 659, 784, 659, 523, 784],   // C5 E5 G5 heroic
+  magic: [440, 523, 660, 523, 440, 660],     // A4 C5 E5 mystical
+  pokemon: [587, 740, 880, 740, 587, 880],   // D5 F#5 A5 energetic
 };
 
 export const DuelCallNotification = ({ currentUserId }: { currentUserId?: string }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [invite, setInvite] = useState<DuelCallInvite | null>(null);
-  const audioRef = useRef<HTMLIFrameElement | null>(null);
-  const [ringtones, setRingtones] = useState<Record<string, string>>({});
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const audioIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [pulsing, setPulsing] = useState(true);
-
-  // Fetch per-TCG ringtone URLs
-  useEffect(() => {
-    const fetchRingtones = async () => {
-      const { data } = await supabase
-        .from('system_settings')
-        .select('key, value')
-        .in('key', ['ringtone_ygo', 'ringtone_mtg', 'ringtone_pkm']);
-      if (data) {
-        const map: Record<string, string> = {};
-        for (const row of data) {
-          if (row.key === 'ringtone_ygo' && row.value) map.yugioh = row.value;
-          if (row.key === 'ringtone_mtg' && row.value) map.magic = row.value;
-          if (row.key === 'ringtone_pkm' && row.value) map.pokemon = row.value;
-        }
-        setRingtones(map);
-      }
-    };
-    fetchRingtones();
-  }, []);
 
   useEffect(() => {
     if (!invite) return;
@@ -76,53 +59,95 @@ export const DuelCallNotification = ({ currentUserId }: { currentUserId?: string
   }, [invite]);
 
   const stopAudio = useCallback(() => {
-    const existing = document.getElementById('duel-ringtone-iframe');
-    if (existing) existing.remove();
-    audioRef.current = null;
+    if (audioIntervalRef.current) {
+      clearInterval(audioIntervalRef.current);
+      audioIntervalRef.current = null;
+    }
+    if (audioContextRef.current) {
+      try { audioContextRef.current.close(); } catch {}
+      audioContextRef.current = null;
+    }
+  }, []);
+
+  const playTone = useCallback((ctx: AudioContext, frequency: number, startTime: number, duration: number) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = frequency;
+    gain.gain.setValueAtTime(0, startTime);
+    gain.gain.linearRampToValueAtTime(0.3, startTime + 0.05);
+    gain.gain.linearRampToValueAtTime(0, startTime + duration - 0.05);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(startTime);
+    osc.stop(startTime + duration);
   }, []);
 
   const playRingtone = useCallback((tcgType: string) => {
-    const url = ringtones[tcgType];
-    if (!url) return;
-    const videoId = getYouTubeVideoId(url);
-    if (!videoId) return;
-
     stopAudio();
-
-    const iframe = document.createElement('iframe');
-    iframe.id = 'duel-ringtone-iframe';
-    iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&loop=1&playlist=${videoId}&controls=0`;
-    iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;';
-    iframe.allow = 'autoplay';
-    document.body.appendChild(iframe);
-    audioRef.current = iframe;
-  }, [ringtones, stopAudio]);
+    
+    const tones = TCG_TONES[tcgType] || TCG_TONES.yugioh;
+    
+    const playSequence = () => {
+      try {
+        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        audioContextRef.current = ctx;
+        
+        const noteDuration = 0.25;
+        const gap = 0.1;
+        
+        tones.forEach((freq, i) => {
+          playTone(ctx, freq, ctx.currentTime + i * (noteDuration + gap), noteDuration);
+        });
+      } catch (e) {
+        console.error('Audio playback error:', e);
+      }
+    };
+    
+    // Play immediately and repeat every 2.5 seconds
+    playSequence();
+    audioIntervalRef.current = setInterval(playSequence, 2500);
+  }, [stopAudio, playTone]);
 
   useEffect(() => {
     if (!currentUserId) return;
 
     const fetchInviteWithDuel = async (inviteId: string) => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('duel_invites')
-        .select(`*, sender:profiles!duel_invites_sender_id_fkey(username, avatar_url), duel:live_duels(tcg_type)`)
+        .select(`*, sender:profiles!duel_invites_sender_id_fkey(username, avatar_url), duel:live_duels!duel_invites_duel_id_fkey(tcg_type)`)
         .eq('id', inviteId)
         .maybeSingle();
+      if (error) console.error('Error fetching invite:', error);
       return data;
     };
 
     const checkPending = async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('duel_invites')
-        .select(`*, sender:profiles!duel_invites_sender_id_fkey(username, avatar_url), duel:live_duels(tcg_type)`)
+        .select(`*, sender:profiles!duel_invites_sender_id_fkey(username, avatar_url), duel:live_duels!duel_invites_duel_id_fkey(tcg_type)`)
         .eq('receiver_id', currentUserId)
         .eq('status', 'pending')
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
 
-      if (data) {
-        setInvite(data as any);
-        playRingtone((data as any).duel?.tcg_type || 'yugioh');
+      if (error) {
+        console.error('Error checking pending invites:', error);
+        return;
+      }
+
+      if (data && data.sender) {
+        console.log('📞 Pending duel invite found:', data);
+        const tcg = Array.isArray(data.duel) ? data.duel[0]?.tcg_type : data.duel?.tcg_type;
+        setInvite({
+          id: data.id,
+          sender_id: data.sender_id,
+          duel_id: data.duel_id,
+          sender: Array.isArray(data.sender) ? data.sender[0] : data.sender,
+          duel: { tcg_type: tcg || 'yugioh' },
+        });
+        playRingtone(tcg || 'yugioh');
       }
     };
     checkPending();
@@ -135,24 +160,35 @@ export const DuelCallNotification = ({ currentUserId }: { currentUserId?: string
         table: 'duel_invites',
         filter: `receiver_id=eq.${currentUserId}`,
       }, async (payload) => {
+        console.log('📞 New duel invite received:', payload.new);
         const data = await fetchInviteWithDuel(payload.new.id);
-        if (data) {
-          setInvite(data as any);
-          playRingtone((data as any).duel?.tcg_type || 'yugioh');
+        if (data && data.sender) {
+          const senderData = Array.isArray(data.sender) ? data.sender[0] : data.sender;
+          const tcg = Array.isArray(data.duel) ? data.duel[0]?.tcg_type : data.duel?.tcg_type;
+          
+          setInvite({
+            id: data.id,
+            sender_id: data.sender_id,
+            duel_id: data.duel_id,
+            sender: senderData,
+            duel: { tcg_type: tcg || 'yugioh' },
+          });
+          playRingtone(tcg || 'yugioh');
 
+          // Native notification bridge
           try {
             const nativeBridge = (window as any).DuelVerseNative;
             if (nativeBridge?.showNotification) {
               nativeBridge.showNotification(
                 '⚔️ Desafio de Duelo!',
-                `${(data as any).sender?.username || 'Alguém'} te desafiou para um duelo!`
+                `${senderData?.username || 'Alguém'} te desafiou para um duelo!`
               );
             }
           } catch (e) {}
 
           if ('Notification' in window && Notification.permission === 'granted') {
             new Notification('⚔️ Desafio de Duelo!', {
-              body: `${(data as any).sender?.username || 'Alguém'} te desafiou para um duelo!`,
+              body: `${senderData?.username || 'Alguém'} te desafiou para um duelo!`,
               icon: '/favicon.ico',
               requireInteraction: true,
             });
@@ -161,8 +197,21 @@ export const DuelCallNotification = ({ currentUserId }: { currentUserId?: string
       })
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
-  }, [currentUserId, playRingtone]);
+    return () => { 
+      supabase.removeChannel(channel);
+      stopAudio();
+    };
+  }, [currentUserId, playRingtone, stopAudio]);
+
+  // Auto-dismiss after 60 seconds
+  useEffect(() => {
+    if (!invite) return;
+    const timeout = setTimeout(() => {
+      stopAudio();
+      setInvite(null);
+    }, 60000);
+    return () => clearTimeout(timeout);
+  }, [invite, stopAudio]);
 
   const handleAccept = async () => {
     if (!invite) return;
@@ -219,7 +268,7 @@ export const DuelCallNotification = ({ currentUserId }: { currentUserId?: string
         </div>
 
         <div>
-          <h2 className="text-3xl font-bold text-foreground">{invite.sender.username}</h2>
+          <h2 className="text-3xl font-bold text-white">{invite.sender.username}</h2>
           <p className="text-primary text-lg mt-1 flex items-center justify-center gap-2">
             <Swords className="w-5 h-5" />
             Duelo de {TCG_FULL[tcgType] || tcgType}
