@@ -298,6 +298,9 @@ const TournamentDetail = () => {
           creator_id: currentUser.id,
           status: 'waiting',
           is_ranked: false,
+          tcg_type: tournament.tcg_type || 'yugioh',
+          player1_lp: tournament.tcg_type === 'magic' ? 40 : tournament.tcg_type === 'pokemon' ? 6 : 8000,
+          player2_lp: tournament.tcg_type === 'magic' ? 40 : tournament.tcg_type === 'pokemon' ? 6 : 8000,
         })
         .select()
         .single();
