@@ -389,7 +389,7 @@ const Friends = () => {
                               💬 Chat
                             </Button>
                             <Button
-                              onClick={() => challengeFriend(friend.user_id)}
+                              onClick={() => setChallengeTarget(friend.user_id)}
                               className="btn-mystic text-white"
                             >
                               <Swords className="w-4 h-4 mr-2" />
