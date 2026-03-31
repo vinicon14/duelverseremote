@@ -173,6 +173,7 @@ async function startNotificationPolling({ resetKnown = false } = {}) {
   stopNotificationPolling();
   notificationPollInterval = setInterval(() => {
     void fetchUnreadNotifications();
+    void pollDuelInvites();
   }, NOTIFICATION_POLL_INTERVAL_MS);
 }
 
