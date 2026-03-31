@@ -556,6 +556,47 @@ const Friends = () => {
           </TabsContent>
         </Tabs>
       </main>
+
+      {/* TCG Selector Dialog */}
+      <AlertDialog open={!!challengeTarget} onOpenChange={(open) => { if (!open) setChallengeTarget(null); }}>
+        <AlertDialogContent className="card-mystic border-primary/30 max-w-sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-center text-xl">
+              <Swords className="w-6 h-6 inline mr-2" />
+              Escolha o TCG
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center">
+              Qual jogo você quer jogar neste duelo?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex flex-col gap-3 mt-2">
+            <Button
+              onClick={() => challengeTarget && challengeFriend(challengeTarget, 'yugioh')}
+              className="w-full h-14 text-lg"
+              variant="outline"
+            >
+              🎴 YGO — Yu-Gi-Oh!
+            </Button>
+            <Button
+              onClick={() => challengeTarget && challengeFriend(challengeTarget, 'magic')}
+              className="w-full h-14 text-lg"
+              variant="outline"
+            >
+              🧙 MTG — Magic: The Gathering
+            </Button>
+            <Button
+              onClick={() => challengeTarget && challengeFriend(challengeTarget, 'pokemon')}
+              className="w-full h-14 text-lg"
+              variant="outline"
+            >
+              ⚡ PKM — Pokémon TCG
+            </Button>
+          </div>
+          <Button variant="ghost" className="mt-2" onClick={() => setChallengeTarget(null)}>
+            Cancelar
+          </Button>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
