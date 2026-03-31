@@ -381,7 +381,6 @@ const Friends = () => {
                             <Button
                               onClick={() => challengeFriend(friend.user_id)}
                               className="btn-mystic text-white"
-                              disabled={!friendOnline}
                             >
                               <Swords className="w-4 h-4 mr-2" />
                               Desafiar
