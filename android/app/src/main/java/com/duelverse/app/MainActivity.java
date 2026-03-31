@@ -7,28 +7,36 @@ import android.app.NotificationManager;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.view.WindowManager;
 import android.webkit.JavascriptInterface;
+import android.webkit.PermissionRequest;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.webkit.PermissionRequest;
+
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.splashscreen.SplashScreen;
+
 import android.Manifest;
 
 public class MainActivity extends AppCompatActivity {
 
-    private WebView webView;
     private static final String CHANNEL_ID = "duelverse_notifications";
+    private static final String PREFS_NAME = "duelverse_native";
+    private static final String PREF_FSI_PROMPTED = "full_screen_intent_prompted";
+    private static final String BASE_URL = "https://duelverse.site";
     private static final int PERMISSION_REQUEST_CODE = 100;
+
+    private WebView webView;
     private int notificationId = 0;
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -53,9 +61,7 @@ public class MainActivity extends AppCompatActivity {
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
         settings.setUserAgentString(settings.getUserAgentString() + " DuelVerseApp/1.0");
 
-        // Add JavaScript bridge for native notifications
         webView.addJavascriptInterface(new DuelVerseNativeBridge(), "DuelVerseNative");
-
         webView.setWebViewClient(new WebViewClient());
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
@@ -64,18 +70,16 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // Request permissions on Android 13+
         requestAppPermissions();
 
-        SharedPreferences preferences = getSharedPreferences("duelverse_native", MODE_PRIVATE);
+        SharedPreferences preferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         if (preferences.getString("user_id", null) != null) {
             NotificationService.startService(this);
+            requestFullScreenIntentPermissionIfNeeded(preferences);
         }
 
-        // Check if launched from a duel invite notification
         handleDuelInviteIntent(getIntent());
-
-        webView.loadUrl("https://duelverse.site");
+        loadUrl(resolveInitialPath(getIntent()));
     }
 
     @Override
@@ -83,34 +87,79 @@ public class MainActivity extends AppCompatActivity {
         super.onNewIntent(intent);
         setIntent(intent);
         handleDuelInviteIntent(intent);
+        loadUrl(resolveInitialPath(intent));
+    }
+
+    private void requestFullScreenIntentPermissionIfNeeded(SharedPreferences preferences) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            return;
+        }
+
+        NotificationManager manager = getSystemService(NotificationManager.class);
+        if (manager == null || manager.canUseFullScreenIntent()) {
+            return;
+        }
+
+        boolean alreadyPrompted = preferences.getBoolean(PREF_FSI_PROMPTED, false);
+        if (alreadyPrompted) {
+            return;
+        }
+
+        preferences.edit().putBoolean(PREF_FSI_PROMPTED, true).apply();
+
+        try {
+            Intent settingsIntent = new Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT);
+            settingsIntent.setData(Uri.parse("package:" + getPackageName()));
+            settingsIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(settingsIntent);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private String resolveInitialPath(Intent intent) {
+        if (intent == null) {
+            return "/";
+        }
+
+        String navigateTo = intent.getStringExtra("navigate_to");
+        if (navigateTo != null && !navigateTo.trim().isEmpty()) {
+            return navigateTo;
+        }
+
+        return "/";
+    }
+
+    private void loadUrl(String path) {
+        if (webView == null) {
+            return;
+        }
+
+        String normalizedPath = (path == null || path.trim().isEmpty()) ? "/" : path.trim();
+        if (!normalizedPath.startsWith("/")) {
+            normalizedPath = "/" + normalizedPath;
+        }
+
+        webView.loadUrl(BASE_URL + normalizedPath);
     }
 
     private void handleDuelInviteIntent(Intent intent) {
-        if (intent == null) return;
-
-        // Handle duel invite auto-open
-        if (intent.getBooleanExtra("duel_invite", false)) {
-            // Keep screen on and dismiss keyguard for the call screen
-            getWindow().addFlags(
-                WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON |
-                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED |
-                WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
-            );
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-                setShowWhenLocked(true);
-                setTurnScreenOn(true);
-                KeyguardManager km = (KeyguardManager) getSystemService(KEYGUARD_SERVICE);
-                if (km != null) {
-                    km.requestDismissKeyguard(this, null);
-                }
-            }
+        if (intent == null || !intent.getBooleanExtra("duel_invite", false)) {
+            return;
         }
 
-        // Handle navigate_to (when user accepts from notification action)
-        String navigateTo = intent.getStringExtra("navigate_to");
-        if (navigateTo != null && webView != null) {
-            webView.loadUrl("https://duelverse.site" + navigateTo);
+        getWindow().addFlags(
+            WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON |
+            WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED |
+            WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
+        );
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(true);
+            setTurnScreenOn(true);
+            KeyguardManager km = (KeyguardManager) getSystemService(KEYGUARD_SERVICE);
+            if (km != null) {
+                km.requestDismissKeyguard(this, null);
+            }
         }
     }
 
@@ -162,7 +211,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    // JavaScript bridge class
     public class DuelVerseNativeBridge {
         @JavascriptInterface
         public void showNotification(String title, String body) {
@@ -182,7 +230,7 @@ public class MainActivity extends AppCompatActivity {
 
         @JavascriptInterface
         public void setAuthSession(String accessToken, String refreshToken, String userId) {
-            SharedPreferences preferences = getSharedPreferences("duelverse_native", MODE_PRIVATE);
+            SharedPreferences preferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
             preferences.edit()
                 .putString("access_token", accessToken)
                 .putString("refresh_token", refreshToken)
@@ -190,20 +238,23 @@ public class MainActivity extends AppCompatActivity {
                 .apply();
 
             NotificationService.startService(MainActivity.this);
+            requestFullScreenIntentPermissionIfNeeded(preferences);
         }
 
         @JavascriptInterface
         public void clearAuthSession() {
-            SharedPreferences preferences = getSharedPreferences("duelverse_native", MODE_PRIVATE);
+            SharedPreferences preferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
             preferences.edit()
                 .remove("access_token")
                 .remove("refresh_token")
                 .remove("user_id")
                 .remove("seen_notification_ids")
                 .remove("notification_baseline_ready")
+                .remove(PREF_FSI_PROMPTED)
                 .apply();
 
             NotificationService.stopService(MainActivity.this);
         }
     }
 }
+

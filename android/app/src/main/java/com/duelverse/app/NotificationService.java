@@ -397,37 +397,21 @@ public class NotificationService extends Service {
         }
     }
 
-    private void wakeScreenAndOpenApp(String duelId, String inviteId, String senderName, String tcgType) {
+    private void wakeScreenForIncomingCall() {
         try {
-            // Wake the screen
             PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
-            if (pm != null) {
-                PowerManager.WakeLock wakeLock = pm.newWakeLock(
-                    PowerManager.FULL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP | PowerManager.ON_AFTER_RELEASE,
-                    "duelverse:duelcall"
-                );
-                wakeLock.acquire(60000); // Keep screen on for 60s
+            if (pm == null) {
+                return;
             }
 
-            // Dismiss keyguard
-            KeyguardManager km = (KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);
-            if (km != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                // requestDismissKeyguard needs an activity, handled by MainActivity
-            }
-
-            // Launch MainActivity with duel invite data
-            Intent launchIntent = new Intent(this, MainActivity.class);
-            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-            launchIntent.putExtra("duel_invite", true);
-            launchIntent.putExtra("invite_id", inviteId);
-            launchIntent.putExtra("duel_id", duelId);
-            launchIntent.putExtra("sender_name", senderName);
-            launchIntent.putExtra("tcg_type", tcgType);
-            startActivity(launchIntent);
-
-            Log.d(TAG, "Woke screen and launched app for duel invite from " + senderName);
+            PowerManager.WakeLock wakeLock = pm.newWakeLock(
+                PowerManager.SCREEN_BRIGHT_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP | PowerManager.ON_AFTER_RELEASE,
+                "duelverse:duelcall"
+            );
+            wakeLock.acquire(5000);
+            Log.d(TAG, "Screen wake requested for incoming duel invite");
         } catch (Exception e) {
-            Log.e(TAG, "Failed to wake screen / open app", e);
+            Log.e(TAG, "Failed to wake screen for duel invite", e);
         }
     }
 
@@ -437,8 +421,7 @@ public class NotificationService extends Service {
             return;
         }
 
-        // Wake screen and open app automatically (like a phone call)
-        wakeScreenAndOpenApp(duelId, inviteId, senderName, tcgType);
+        wakeScreenForIncomingCall();
 
         // Accept action
         Intent acceptIntent = new Intent(this, NotificationService.class);
