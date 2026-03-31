@@ -175,10 +175,11 @@ export const AdminSettings = () => {
     try {
       const ext = file.name.split('.').pop()?.toLowerCase() || 'mp3';
       const targetPath = `${tcg}/ringtone.${ext}`;
+      const contentType = file.type || (ext === 'mp4' ? 'audio/mp4' : ext === 'wav' ? 'audio/wav' : ext === 'ogg' ? 'audio/ogg' : 'audio/mpeg');
 
       const { error: uploadError } = await supabase.storage
         .from('ringtones')
-        .upload(targetPath, file, { upsert: true, cacheControl: '3600' });
+        .upload(targetPath, file, { upsert: true, cacheControl: '3600', contentType });
 
       if (uploadError) throw uploadError;
 

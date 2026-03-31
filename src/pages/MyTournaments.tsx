@@ -165,13 +165,19 @@ const MyTournaments = () => {
         return;
       }
 
-      // Create duel
+      const tournament = myTournaments.find((t) => t.id === tournamentId);
+      const duelTcg = (tournament as any)?.tcg_type || 'yugioh';
+      const defaultLP = duelTcg === 'magic' ? 40 : duelTcg === 'pokemon' ? 6 : 8000;
+
       const { data: duelData, error: duelError } = await supabase
         .from('live_duels')
         .insert({
           creator_id: userId,
           status: 'waiting',
           is_ranked: false,
+          tcg_type: duelTcg,
+          player1_lp: defaultLP,
+          player2_lp: defaultLP,
         })
         .select()
         .single();

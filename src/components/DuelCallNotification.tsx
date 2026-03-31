@@ -133,18 +133,22 @@ export const DuelCallNotification = ({ currentUserId }: { currentUserId?: string
 
   const playRingtone = useCallback((tcgType: string) => {
     stopAudio();
-    
+
     const settingsKey = TCG_SETTINGS_KEY[tcgType] || 'ringtone_ygo';
-    const audioUrl = ringtoneUrls[settingsKey];
+    const rawAudioUrl = ringtoneUrls[settingsKey];
+    const audioUrl = rawAudioUrl?.split('?t=')[0] || rawAudioUrl;
 
     if (audioUrl) {
       try {
         const audio = new Audio(audioUrl);
         audio.loop = true;
-        audio.volume = 0.8;
+        audio.volume = 1;
+        audio.preload = 'auto';
+        audio.crossOrigin = 'anonymous';
         audioRef.current = audio;
+
         audio.play().catch((err) => {
-          console.warn('Failed to play audio URL, falling back to tones:', err);
+          console.warn('Failed to play uploaded ringtone, falling back to tones:', err);
           playFallbackTones(tcgType);
         });
         return;
@@ -153,9 +157,17 @@ export const DuelCallNotification = ({ currentUserId }: { currentUserId?: string
       }
     }
 
-    // Fallback to synthesized tones
     playFallbackTones(tcgType);
   }, [stopAudio, ringtoneUrls, playFallbackTones]);
+
+  useEffect(() => {
+    if (!invite) return;
+    const tcg = invite.duel?.tcg_type || 'yugioh';
+    const settingsKey = TCG_SETTINGS_KEY[tcg] || 'ringtone_ygo';
+    if (ringtoneUrls[settingsKey]) {
+      playRingtone(tcg);
+    }
+  }, [invite, ringtoneUrls, playRingtone]);
 
   useEffect(() => {
     if (!currentUserId) return;
