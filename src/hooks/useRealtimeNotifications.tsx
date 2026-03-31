@@ -104,5 +104,5 @@ export const useRealtimeNotifications = (userId: string | undefined) => {
       supabase.removeChannel(channel);
       supabase.removeChannel(globalChatChannel);
     };
-  }, [userId, hasPermission, showNotification]);
+  }, [userId, canNotify, showNotification]);
 };
