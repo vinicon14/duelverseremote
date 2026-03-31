@@ -244,14 +244,16 @@ const Friends = () => {
       if (duelError) throw duelError;
 
       // Criar convite de duelo
-      const { error: inviteError } = await supabase
+      const { data: inviteData, error: inviteError } = await supabase
         .from('duel_invites')
         .insert({
           sender_id: currentUser.id,
           receiver_id: friendUserId,
           duel_id: duelData.id,
           status: 'pending',
-        });
+        })
+        .select()
+        .single();
 
       if (inviteError) {
         console.error('Erro ao criar convite:', inviteError);
