@@ -275,7 +275,7 @@ export const AdminSettings = () => {
             <Input
               id="ringtone-mtg"
               type="url"
-              placeholder="https://www.youtube.com/watch?v=..."
+              placeholder="https://exemplo.com/ringtone-mtg.mp3"
               value={ringtoneMtg}
               onChange={(e) => setRingtoneMtg(e.target.value)}
             />
