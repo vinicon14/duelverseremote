@@ -131,6 +131,9 @@ const AppContent = () => {
   // Enable realtime notifications
   useRealtimeNotifications(user?.id);
   
+  // Listen for duel invite responses (accepted/rejected)
+  useDuelInviteResponse(user?.id);
+  
   // Enable online status tracking
   useOnlineStatus();
 
