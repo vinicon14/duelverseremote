@@ -11,6 +11,7 @@ export const AdminSettings = () => {
   const [supportEmail, setSupportEmail] = useState("");
   const [pixKey, setPixKey] = useState("");
   const [landingVideoUrl, setLandingVideoUrl] = useState("");
+  const [duelRingtoneUrl, setDuelRingtoneUrl] = useState("");
   const [windowsDownloadUrl, setWindowsDownloadUrl] = useState("");
   const [androidDownloadUrl, setAndroidDownloadUrl] = useState("");
   const [windowsFile, setWindowsFile] = useState<File | null>(null);
