@@ -69,16 +69,17 @@ export const ProAdCleaner = () => {
         }
       });
 
-      // Remove high z-index overlay elements (ad popups)
+      // Remove high z-index overlay elements (ad popups only - be specific)
       document.querySelectorAll('div').forEach(el => {
-        const style = el.getAttribute('style') || '';
         const id = el.id || '';
-        if (
-          (style.includes('z-index') && (style.includes('9999') || style.includes('2147483647')) && style.includes('fixed')) ||
-          id.includes('monetag') || id.includes('quge5')
-        ) {
+        if (id.includes('monetag') || id.includes('quge5')) {
           el.remove();
         }
+      });
+
+      // Remove AdSense vignette overlays (full-screen ad overlays)
+      document.querySelectorAll('div[id^="google_ads_"], div.google-auto-placed, div[data-google-query-id]').forEach(el => {
+        el.remove();
       });
     };
 
