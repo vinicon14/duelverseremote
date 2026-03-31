@@ -19,10 +19,6 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return outputArray;
 }
 
-// Detect native Android app
-const isNativeApp = () => navigator.userAgent.includes('DuelVerseApp');
-const getNativeBridge = () => (window as any).DuelVerseNative;
-
 export const useBrowserNotifications = () => {
   const [isSupported, setIsSupported] = useState(false);
   const [hasPermission, setHasPermission] = useState(false);
@@ -32,15 +28,6 @@ export const useBrowserNotifications = () => {
 
   useEffect(() => {
     const checkSupport = () => {
-      if (isNativeApp()) {
-        // Native app always supports notifications
-        setIsSupported(true);
-        const bridge = getNativeBridge();
-        setHasPermission(bridge?.hasNotificationPermission?.() ?? false);
-        setLoading(false);
-        return;
-      }
-
       const supported = 'Notification' in window;
       setIsSupported(supported);
       
@@ -148,23 +135,6 @@ export const useBrowserNotifications = () => {
     }
 
     try {
-      // Native app: use bridge
-      if (isNativeApp()) {
-        const bridge = getNativeBridge();
-        if (bridge?.requestNotificationPermission) {
-          bridge.requestNotificationPermission();
-          // Wait a bit for the permission dialog, then check
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          const granted = bridge.hasNotificationPermission?.() ?? false;
-          setHasPermission(granted);
-          if (granted) {
-            toast({ title: "Notificações ativadas!" });
-          }
-          return granted;
-        }
-        return false;
-      }
-
       const permission = await Notification.requestPermission();
       const granted = permission === 'granted';
       setHasPermission(granted);
@@ -174,6 +144,7 @@ export const useBrowserNotifications = () => {
           title: "Notificações ativadas!",
           description: "Você receberá notificações mesmo com o app fechado",
         });
+        // Subscribe to web push after permission granted
         await subscribeToPush();
       } else {
         toast({
@@ -195,9 +166,9 @@ export const useBrowserNotifications = () => {
     }
   };
 
-  // Auto-subscribe if permission already granted (not for native app)
+  // Auto-subscribe if permission already granted
   useEffect(() => {
-    if (hasPermission && !loading && !isNativeApp()) {
+    if (hasPermission && !loading) {
       subscribeToPush();
     }
   }, [hasPermission, loading, subscribeToPush]);
@@ -206,15 +177,6 @@ export const useBrowserNotifications = () => {
     if (!isSupported || !hasPermission) return;
     
     try {
-      // Native app: use bridge for native Android notifications
-      if (isNativeApp()) {
-        const bridge = getNativeBridge();
-        if (bridge?.showNotification) {
-          bridge.showNotification(title, options?.body || '');
-        }
-        return;
-      }
-
       if ('serviceWorker' in navigator) {
         const registration = await navigator.serviceWorker.ready;
         await registration.showNotification(title, {

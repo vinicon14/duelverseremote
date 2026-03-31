@@ -41,8 +41,7 @@ const Duels = () => {
   const [windowsDownloadUrl, setWindowsDownloadUrl] = useState("");
   const [androidDownloadUrl, setAndroidDownloadUrl] = useState("");
   const platform = detectPlatform();
-  const isNativeApp = navigator.userAgent.includes('DuelVerseApp');
-  const isWebBrowser = !platform.isStandalone && !(window as any).electronAPI?.isElectron && !isNativeApp;
+  const isWebBrowser = !platform.isStandalone && !(window as any).electronAPI?.isElectron;
 
   useEffect(() => {
     checkAuth();
