@@ -168,8 +168,10 @@ const AppContent = () => {
       <DynamicTheme />
       <UniversalNewTabBlocker />
       <ConditionalMonetagLoader />
+      <ProAdCleaner />
       <DuelInviteNotification currentUserId={user?.id} />
       <NotificationPrompt />
+      <NativePermissionPrompt userId={user?.id} />
       <RouterContent user={user} />
     </BrowserRouter>
   );
