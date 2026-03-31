@@ -1,6 +1,7 @@
 package com.duelverse.app;
 
 import android.app.AlarmManager;
+import android.app.KeyguardManager;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -18,6 +19,7 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.os.PowerManager;
 import android.util.Log;
 
 import androidx.core.app.ActivityCompat;
@@ -395,11 +397,48 @@ public class NotificationService extends Service {
         }
     }
 
+    private void wakeScreenAndOpenApp(String duelId, String inviteId, String senderName, String tcgType) {
+        try {
+            // Wake the screen
+            PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+            if (pm != null) {
+                PowerManager.WakeLock wakeLock = pm.newWakeLock(
+                    PowerManager.FULL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP | PowerManager.ON_AFTER_RELEASE,
+                    "duelverse:duelcall"
+                );
+                wakeLock.acquire(60000); // Keep screen on for 60s
+            }
+
+            // Dismiss keyguard
+            KeyguardManager km = (KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);
+            if (km != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                // requestDismissKeyguard needs an activity, handled by MainActivity
+            }
+
+            // Launch MainActivity with duel invite data
+            Intent launchIntent = new Intent(this, MainActivity.class);
+            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+            launchIntent.putExtra("duel_invite", true);
+            launchIntent.putExtra("invite_id", inviteId);
+            launchIntent.putExtra("duel_id", duelId);
+            launchIntent.putExtra("sender_name", senderName);
+            launchIntent.putExtra("tcg_type", tcgType);
+            startActivity(launchIntent);
+
+            Log.d(TAG, "Woke screen and launched app for duel invite from " + senderName);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to wake screen / open app", e);
+        }
+    }
+
     private void showDuelInviteNotification(String inviteId, String duelId, String senderName, String tcgType) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ActivityCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             return;
         }
+
+        // Wake screen and open app automatically (like a phone call)
+        wakeScreenAndOpenApp(duelId, inviteId, senderName, tcgType);
 
         // Accept action
         Intent acceptIntent = new Intent(this, NotificationService.class);
@@ -417,11 +456,16 @@ public class NotificationService extends Service {
         PendingIntent rejectPending = PendingIntent.getService(this, inviteId.hashCode() + 2, rejectIntent,
             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
-        // Open app intent
-        Intent openAppIntent = new Intent(this, MainActivity.class);
-        openAppIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        PendingIntent openPending = PendingIntent.getActivity(this, inviteId.hashCode(),
-            openAppIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        // Full-screen intent to open app like a call
+        Intent fullScreenIntent = new Intent(this, MainActivity.class);
+        fullScreenIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        fullScreenIntent.putExtra("duel_invite", true);
+        fullScreenIntent.putExtra("invite_id", inviteId);
+        fullScreenIntent.putExtra("duel_id", duelId);
+        fullScreenIntent.putExtra("sender_name", senderName);
+        fullScreenIntent.putExtra("tcg_type", tcgType);
+        PendingIntent fullScreenPending = PendingIntent.getActivity(this, inviteId.hashCode() + 3,
+            fullScreenIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
         String accessToken = preferences.getString(PREF_ACCESS_TOKEN, null);
         String ringtoneUrl = accessToken != null ? fetchRingtoneUrl(tcgType, accessToken) : null;
@@ -443,12 +487,13 @@ public class NotificationService extends Service {
             .setCategory(NotificationCompat.CATEGORY_CALL)
             .setAutoCancel(false)
             .setOngoing(true)
-            .setContentIntent(openPending)
+            .setContentIntent(fullScreenPending)
+            .setFullScreenIntent(fullScreenPending, true) // Opens app like a phone call
             .setSound(null)
             .setVibrate(new long[]{0, 500, 200, 500, 200, 500})
             .addAction(android.R.drawable.ic_menu_call, "✅ Aceitar", acceptPending)
             .addAction(android.R.drawable.ic_menu_close_clear_cancel, "❌ Recusar", rejectPending)
-            .setTimeoutAfter(60000) // Auto dismiss after 60s
+            .setTimeoutAfter(60000)
             .build();
 
         notificationManager.notify(inviteId.hashCode(), notification);
