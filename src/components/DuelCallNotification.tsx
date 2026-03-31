@@ -138,31 +138,34 @@ export const DuelCallNotification = ({ currentUserId }: { currentUserId?: string
     };
 
     const checkPending = async () => {
-      const { data, error } = await supabase
+      const { data: pendingInvites, error } = await supabase
         .from('duel_invites')
-        .select(`*, sender:profiles!duel_invites_sender_id_fkey(username, avatar_url), duel:live_duels!duel_invites_duel_id_fkey(tcg_type)`)
+        .select('*')
         .eq('receiver_id', currentUserId)
         .eq('status', 'pending')
         .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .limit(1);
 
       if (error) {
         console.error('Error checking pending invites:', error);
         return;
       }
 
-      if (data && data.sender) {
-        console.log('📞 Pending duel invite found:', data);
-        const tcg = Array.isArray(data.duel) ? data.duel[0]?.tcg_type : data.duel?.tcg_type;
-        setInvite({
-          id: data.id,
-          sender_id: data.sender_id,
-          duel_id: data.duel_id,
-          sender: Array.isArray(data.sender) ? data.sender[0] : data.sender,
-          duel: { tcg_type: tcg || 'yugioh' },
-        });
-        playRingtone(tcg || 'yugioh');
+      if (pendingInvites && pendingInvites.length > 0) {
+        const inv = pendingInvites[0];
+        const fullData = await fetchInviteWithDuel(inv.id);
+        if (fullData && fullData.sender) {
+          console.log('📞 Pending duel invite found:', fullData);
+          const tcg = fullData.duel?.tcg_type || 'yugioh';
+          setInvite({
+            id: fullData.id,
+            sender_id: fullData.sender_id,
+            duel_id: fullData.duel_id,
+            sender: fullData.sender,
+            duel: { tcg_type: tcg },
+          });
+          playRingtone(tcg);
+        }
       }
     };
     checkPending();
