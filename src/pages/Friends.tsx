@@ -35,6 +35,7 @@ const Friends = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [challengeTarget, setChallengeTarget] = useState<string | null>(null);
 
   // Extrair IDs dos amigos para o hook de status online
   const friendIds = useMemo(() => friends.map(f => f.user_id), [friends]);
