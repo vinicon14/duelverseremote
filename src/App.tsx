@@ -14,7 +14,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { User, Session } from '@supabase/supabase-js';
+import { User } from '@supabase/supabase-js';
 import { DuelInviteNotification } from "@/components/DuelInviteNotification";
 import { NotificationPrompt } from "@/components/NotificationPrompt";
 import { DynamicTheme } from "@/components/DynamicTheme";
@@ -124,7 +124,6 @@ const RouterContent = ({ user }: { user: User | null }) => {
 
 const AppContent = () => {
   const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
 
   useSubscriptionExpirationCheck();
   
@@ -134,10 +133,23 @@ const AppContent = () => {
   // Enable online status tracking
   useOnlineStatus();
 
+  const syncNativeAuth = (session: { access_token: string; refresh_token?: string; user?: { id?: string } } | null) => {
+    const nativeBridge = (window as any).DuelVerseNative;
+
+    if (nativeBridge?.setAuthSession && session?.access_token && session?.user?.id) {
+      nativeBridge.setAuthSession(
+        session.access_token,
+        session.refresh_token || '',
+        session.user.id,
+      );
+    } else if (nativeBridge?.clearAuthSession) {
+      nativeBridge.clearAuthSession();
+    }
+  };
+
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
-        setSession(session);
         setUser(session?.user ?? null);
 
         // Sync auth state with Electron desktop app
@@ -146,16 +158,19 @@ const AppContent = () => {
             (window as any).electronAPI.syncAuth(session.access_token, session.user.id);
           }
         }
+
+        syncNativeAuth(session);
       }
     );
 
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
       setUser(session?.user ?? null);
 
       if ((window as any).electronAPI?.syncAuth && session?.access_token && session?.user?.id) {
         (window as any).electronAPI.syncAuth(session.access_token, session.user.id);
       }
+
+      syncNativeAuth(session);
     });
 
     return () => {
