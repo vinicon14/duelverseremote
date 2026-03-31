@@ -11,7 +11,9 @@ export const AdminSettings = () => {
   const [supportEmail, setSupportEmail] = useState("");
   const [pixKey, setPixKey] = useState("");
   const [landingVideoUrl, setLandingVideoUrl] = useState("");
-  const [duelRingtoneUrl, setDuelRingtoneUrl] = useState("");
+  const [ringtoneYgo, setRingtoneYgo] = useState("");
+  const [ringtoneMtg, setRingtoneMtg] = useState("");
+  const [ringtonePkm, setRingtonePkm] = useState("");
   const [windowsDownloadUrl, setWindowsDownloadUrl] = useState("");
   const [androidDownloadUrl, setAndroidDownloadUrl] = useState("");
   const [windowsFile, setWindowsFile] = useState<File | null>(null);
@@ -48,14 +50,18 @@ export const AdminSettings = () => {
         const emailSetting = data.find((s) => s.key === 'support_email');
         const pixSetting = data.find((s) => s.key === 'pix_key');
         const videoSetting = data.find((s) => s.key === 'landing_video_url');
-        const ringtoneSetting = data.find((s) => s.key === 'duel_ringtone_url');
+        const ringYgo = data.find((s) => s.key === 'ringtone_ygo');
+        const ringMtg = data.find((s) => s.key === 'ringtone_mtg');
+        const ringPkm = data.find((s) => s.key === 'ringtone_pkm');
         const windowsSetting = data.find((s) => s.key === 'windows_download_url');
         const androidSetting = data.find((s) => s.key === 'android_download_url');
 
         if (emailSetting) setSupportEmail(emailSetting.value || '');
         if (pixSetting) setPixKey(pixSetting.value || '');
         if (videoSetting) setLandingVideoUrl(videoSetting.value || '');
-        if (ringtoneSetting) setDuelRingtoneUrl(ringtoneSetting.value || '');
+        if (ringYgo) setRingtoneYgo(ringYgo.value || '');
+        if (ringMtg) setRingtoneMtg(ringMtg.value || '');
+        if (ringPkm) setRingtonePkm(ringPkm.value || '');
         if (windowsSetting) setWindowsDownloadUrl(windowsSetting.value || '');
         if (androidSetting) setAndroidDownloadUrl(androidSetting.value || '');
       }
@@ -156,7 +162,9 @@ export const AdminSettings = () => {
         { key: 'support_email', value: supportEmail },
         { key: 'pix_key', value: pixKey },
         { key: 'landing_video_url', value: landingVideoUrl },
-        { key: 'duel_ringtone_url', value: duelRingtoneUrl },
+        { key: 'ringtone_ygo', value: ringtoneYgo },
+        { key: 'ringtone_mtg', value: ringtoneMtg },
+        { key: 'ringtone_pkm', value: ringtonePkm },
       ];
 
       for (const setting of settings) {
@@ -246,25 +254,45 @@ export const AdminSettings = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>🔔 Toque de Convite de Duelo</CardTitle>
+          <CardTitle>🔔 Toques de Convite de Duelo</CardTitle>
           <CardDescription>
-            Configure o áudio que toca quando alguém recebe um convite de duelo (estilo chamada)
+            Configure o áudio (YouTube) que toca para cada TCG quando alguém recebe um convite de duelo
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="duel-ringtone">URL do Vídeo/Áudio do YouTube</Label>
+            <Label htmlFor="ringtone-ygo">🎴 YGO (Yu-Gi-Oh!)</Label>
             <Input
-              id="duel-ringtone"
+              id="ringtone-ygo"
               type="url"
               placeholder="https://www.youtube.com/watch?v=..."
-              value={duelRingtoneUrl}
-              onChange={(e) => setDuelRingtoneUrl(e.target.value)}
+              value={ringtoneYgo}
+              onChange={(e) => setRingtoneYgo(e.target.value)}
             />
-            <p className="text-sm text-muted-foreground">
-              Cole a URL de um vídeo do YouTube. O áudio será extraído e tocado como toque de chamada quando um jogador receber um convite de duelo.
-            </p>
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="ringtone-mtg">🧙 MTG (Magic: The Gathering)</Label>
+            <Input
+              id="ringtone-mtg"
+              type="url"
+              placeholder="https://www.youtube.com/watch?v=..."
+              value={ringtoneMtg}
+              onChange={(e) => setRingtoneMtg(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="ringtone-pkm">⚡ PKM (Pokémon TCG)</Label>
+            <Input
+              id="ringtone-pkm"
+              type="url"
+              placeholder="https://www.youtube.com/watch?v=..."
+              value={ringtonePkm}
+              onChange={(e) => setRingtonePkm(e.target.value)}
+            />
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Cole URLs de vídeos do YouTube. O áudio será tocado como toque de chamada ao receber um convite do TCG correspondente.
+          </p>
         </CardContent>
       </Card>
 

@@ -17,6 +17,13 @@ import { useToast } from "@/components/ui/use-toast";
 import { Users, UserPlus, Check, X, Search, Swords } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useFriendsOnlineStatus } from "@/hooks/useFriendsOnlineStatus";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+} from "@/components/ui/alert-dialog";
 
 const Friends = () => {
   const navigate = useNavigate();
@@ -28,6 +35,7 @@ const Friends = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [challengeTarget, setChallengeTarget] = useState<string | null>(null);
 
   // Extrair IDs dos amigos para o hook de status online
   const friendIds = useMemo(() => friends.map(f => f.user_id), [friends]);
@@ -201,7 +209,8 @@ const Friends = () => {
     }
   };
 
-  const challengeFriend = async (friendUserId: string) => {
+  const challengeFriend = async (friendUserId: string, tcgType: string) => {
+    setChallengeTarget(null);
     try {
       // Verificar se o usuário já está em algum duelo ativo
       const { data: existingDuels } = await supabase
@@ -220,13 +229,14 @@ const Friends = () => {
         return;
       }
 
-      // Criar duelo casual
+      // Criar duelo casual com tcg_type
       const { data: duelData, error: duelError } = await supabase
         .from('live_duels')
         .insert({
           creator_id: currentUser.id,
           status: 'waiting',
           is_ranked: false,
+          tcg_type: tcgType,
         })
         .select()
         .single();
@@ -379,7 +389,7 @@ const Friends = () => {
                               💬 Chat
                             </Button>
                             <Button
-                              onClick={() => challengeFriend(friend.user_id)}
+                              onClick={() => setChallengeTarget(friend.user_id)}
                               className="btn-mystic text-white"
                             >
                               <Swords className="w-4 h-4 mr-2" />
@@ -546,6 +556,47 @@ const Friends = () => {
           </TabsContent>
         </Tabs>
       </main>
+
+      {/* TCG Selector Dialog */}
+      <AlertDialog open={!!challengeTarget} onOpenChange={(open) => { if (!open) setChallengeTarget(null); }}>
+        <AlertDialogContent className="card-mystic border-primary/30 max-w-sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-center text-xl">
+              <Swords className="w-6 h-6 inline mr-2" />
+              Escolha o TCG
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center">
+              Qual jogo você quer jogar neste duelo?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex flex-col gap-3 mt-2">
+            <Button
+              onClick={() => challengeTarget && challengeFriend(challengeTarget, 'yugioh')}
+              className="w-full h-14 text-lg"
+              variant="outline"
+            >
+              🎴 YGO — Yu-Gi-Oh!
+            </Button>
+            <Button
+              onClick={() => challengeTarget && challengeFriend(challengeTarget, 'magic')}
+              className="w-full h-14 text-lg"
+              variant="outline"
+            >
+              🧙 MTG — Magic: The Gathering
+            </Button>
+            <Button
+              onClick={() => challengeTarget && challengeFriend(challengeTarget, 'pokemon')}
+              className="w-full h-14 text-lg"
+              variant="outline"
+            >
+              ⚡ PKM — Pokémon TCG
+            </Button>
+          </div>
+          <Button variant="ghost" className="mt-2" onClick={() => setChallengeTarget(null)}>
+            Cancelar
+          </Button>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
