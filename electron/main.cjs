@@ -2,7 +2,9 @@ const { app, BrowserWindow, Tray, Menu, Notification, ipcMain, shell } = require
 const fs = require('fs');
 const path = require('path');
 
-app.setAppUserModelId('com.duelverse.desktop');
+const APP_USER_MODEL_ID = 'com.duelverse.desktop';
+
+app.setAppUserModelId(APP_USER_MODEL_ID);
 
 const REMOTE_URL = 'https://duelverse.site';
 const BACKEND_URL = 'https://xxttwzewtqxvpgefggah.supabase.co';
@@ -15,6 +17,31 @@ let authToken = null;
 let authUserId = null;
 let notificationPollInterval = null;
 let knownNotificationIds = new Set();
+
+function getAppIconPath() {
+  const iconFileName = process.platform === 'win32' ? 'icon.ico' : 'icon.png';
+
+  if (app.isPackaged) {
+    const packagedIconPath = path.join(process.resourcesPath, iconFileName);
+    if (fs.existsSync(packagedIconPath)) {
+      return packagedIconPath;
+    }
+  }
+
+  return path.join(__dirname, iconFileName);
+}
+
+function recreateShortcut(shortcutPath, shortcutOptions) {
+  try {
+    if (fs.existsSync(shortcutPath)) {
+      fs.unlinkSync(shortcutPath);
+    }
+  } catch (error) {
+    console.warn('[Electron] Failed to remove existing shortcut:', shortcutPath, error);
+  }
+
+  shell.writeShortcutLink(shortcutPath, 'create', shortcutOptions);
+}
 
 function showMainWindow() {
   if (!mainWindow) return;
@@ -211,7 +238,7 @@ function createWindow() {
     height: 800,
     minWidth: 800,
     minHeight: 600,
-    icon: path.join(__dirname, 'icon.png'),
+    icon: getAppIconPath(),
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
@@ -255,7 +282,7 @@ function createWindow() {
 
 function createTray() {
   try {
-    tray = new Tray(path.join(__dirname, 'icon.png'));
+    tray = new Tray(getAppIconPath());
   } catch {
     tray = null;
     return;
@@ -288,16 +315,17 @@ function createShortcuts() {
     target: process.execPath,
     args: '',
     description: 'Duelverse',
-    icon: path.join(__dirname, 'icon.ico'),
+    icon: getAppIconPath(),
     iconIndex: 0,
+    appUserModelId: APP_USER_MODEL_ID,
   };
 
   const desktopShortcut = path.join(app.getPath('desktop'), 'Duelverse.lnk');
-  shell.writeShortcutLink(desktopShortcut, fs.existsSync(desktopShortcut) ? 'update' : 'create', shortcutOptions);
+  recreateShortcut(desktopShortcut, shortcutOptions);
 
   const startMenuShortcut = path.join(app.getPath('startMenu'), 'Programs', 'Duelverse.lnk');
   fs.mkdirSync(path.dirname(startMenuShortcut), { recursive: true });
-  shell.writeShortcutLink(startMenuShortcut, fs.existsSync(startMenuShortcut) ? 'update' : 'create', shortcutOptions);
+  recreateShortcut(startMenuShortcut, shortcutOptions);
 }
 
 ipcMain.on('show-notification', (_, { title, body }) => {
