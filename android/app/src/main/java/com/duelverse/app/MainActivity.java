@@ -3,6 +3,8 @@ package com.duelverse.app;
 import android.annotation.SuppressLint;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -62,6 +64,11 @@ public class MainActivity extends AppCompatActivity {
 
         // Request permissions on Android 13+
         requestAppPermissions();
+
+        SharedPreferences preferences = getSharedPreferences("duelverse_native", MODE_PRIVATE);
+        if (preferences.getString("user_id", null) != null) {
+            NotificationService.startService(this);
+        }
 
         webView.loadUrl("https://duelverse.site");
     }
@@ -129,6 +136,32 @@ public class MainActivity extends AppCompatActivity {
             if (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
                 manager.notify(notificationId++, builder.build());
             }
+        }
+
+        @JavascriptInterface
+        public void setAuthSession(String accessToken, String refreshToken, String userId) {
+            SharedPreferences preferences = getSharedPreferences("duelverse_native", MODE_PRIVATE);
+            preferences.edit()
+                .putString("access_token", accessToken)
+                .putString("refresh_token", refreshToken)
+                .putString("user_id", userId)
+                .apply();
+
+            NotificationService.startService(MainActivity.this);
+        }
+
+        @JavascriptInterface
+        public void clearAuthSession() {
+            SharedPreferences preferences = getSharedPreferences("duelverse_native", MODE_PRIVATE);
+            preferences.edit()
+                .remove("access_token")
+                .remove("refresh_token")
+                .remove("user_id")
+                .remove("seen_notification_ids")
+                .remove("notification_baseline_ready")
+                .apply();
+
+            NotificationService.stopService(MainActivity.this);
         }
     }
 }
