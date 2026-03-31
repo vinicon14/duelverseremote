@@ -17,40 +17,28 @@ export const ConditionalMonetagLoader = (): null => {
   const location = useLocation();
   const { isPro, loading } = useAccountType();
 
-  // Always apply popup blocking immediately
   useEffect(() => {
-    applyPopupBlocking();
-  }, []);
+    // Don't run while loading
+    if (loading) return;
 
-  // Aggressively remove monetag while still loading (prevent flash of ads)
-  useEffect(() => {
-    if (loading) {
-      // While loading, proactively remove any existing monetag scripts
-      removeAllMonetagScripts();
-      return;
-    }
+    // Apply popup blocking
+    applyPopupBlocking();
 
     // Block completely on native APK
     const isNativeApp = navigator.userAgent.includes('DuelVerseApp');
     if (isNativeApp) {
       console.log('Monetag BLOQUEADO - versão APK nativa');
-      removeAllMonetagScripts();
       return;
     }
 
-    // PRO users: No Monetag - remove everything + keep cleaning
-    if (isPro) {
-      console.log('Monetag BLOQUEADO - usuário PRO');
-      removeAllMonetagScripts();
-      // Keep cleaning every 2s for PRO users to catch late-injected scripts
-      const interval = setInterval(removeAllMonetagScripts, 2000);
-      return () => clearInterval(interval);
-    }
-
-    // Block on specific routes
+    // PRO users: No Monetag
     if (location.pathname.startsWith('/pro/') || location.pathname === '/auth' || location.pathname === '/landing' || location.pathname === '/') {
       console.log('Monetag BLOQUEADO - rota PRO/auth/landing:', location.pathname);
-      removeAllMonetagScripts();
+      return;
+    }
+
+    if (isPro) {
+      console.log('Monetag BLOQUEADO - usuário PRO');
       return;
     }
 
@@ -64,29 +52,24 @@ export const ConditionalMonetagLoader = (): null => {
     const isExcluded = excludedPages.some(page => location.pathname.includes(page));
     if (isExcluded) {
       console.log('Monetag BLOQUEADO - página restrita:', location.pathname);
-      removeAllMonetagScripts();
       return;
     }
 
     console.log('Carregando notification ads:', location.pathname);
     
     // Notification script 1 (zone 10601960)
-    if (!document.getElementById('monetag-notification-1')) {
-      const notificationScript1 = document.createElement('script');
-      notificationScript1.src = 'https://3nbf4.com/act/files/tag.min.js?z=10601960';
-      notificationScript1.setAttribute('data-cfasync', 'false');
-      notificationScript1.async = true;
-      notificationScript1.id = 'monetag-notification-1';
-      document.head.appendChild(notificationScript1);
-    }
+    const notificationScript1 = document.createElement('script');
+    notificationScript1.src = 'https://3nbf4.com/act/files/tag.min.js?z=10601960';
+    notificationScript1.setAttribute('data-cfasync', 'false');
+    notificationScript1.async = true;
+    notificationScript1.id = 'monetag-notification-1';
+    document.head.appendChild(notificationScript1);
 
     // Notification script 2 (zone 10601962)
-    if (!document.getElementById('monetag-notification-2')) {
-      const notificationScript2 = document.createElement('script');
-      notificationScript2.innerHTML = `(function(s){s.dataset.zone='10601962',s.src='https://nap5k.com/tag.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))`;
-      notificationScript2.id = 'monetag-notification-2';
-      document.head.appendChild(notificationScript2);
-    }
+    const notificationScript2 = document.createElement('script');
+    notificationScript2.innerHTML = `(function(s){s.dataset.zone='10601962',s.src='https://nap5k.com/tag.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))`;
+    notificationScript2.id = 'monetag-notification-2';
+    document.head.appendChild(notificationScript2);
 
     return () => {
       const scripts = ['monetag-notification-1', 'monetag-notification-2'];
@@ -97,39 +80,11 @@ export const ConditionalMonetagLoader = (): null => {
     };
   }, [location.pathname, isPro, loading]);
 
+  useEffect(() => {
+    applyPopupBlocking();
+  }, []);
+
   return null;
-};
-
-// Remove ALL monetag scripts and injected elements
-const removeAllMonetagScripts = () => {
-  // Remove known script tags
-  ['monetag-notification-1', 'monetag-notification-2'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.remove();
-  });
-
-  // Remove any script with monetag-related URLs
-  const allScripts = document.querySelectorAll('script');
-  allScripts.forEach(script => {
-    const src = script.src || script.innerHTML || '';
-    if (src.includes('3nbf4.com') || src.includes('nap5k.com') || src.includes('monetag') || src.includes('tag.min.js') || src.includes('quge5') || src.includes('al5sm')) {
-      script.remove();
-    }
-  });
-
-  // Remove injected iframes from monetag
-  const iframes = document.querySelectorAll('iframe');
-  iframes.forEach(iframe => {
-    const src = iframe.src || '';
-    if (src.includes('monetag') || src.includes('3nbf4') || src.includes('nap5k') || src.includes('quge5') || src.includes('al5sm')) {
-      iframe.remove();
-    }
-  });
-
-  // Remove overlay/fixed divs injected by ad scripts
-  document.querySelectorAll('div[id^="container-"]').forEach(el => el.remove());
-  
-  console.log('🧹 Todos os scripts Monetag removidos');
 };
 
 // Blocking function - blocks popunder and popup/click ads but allows notification

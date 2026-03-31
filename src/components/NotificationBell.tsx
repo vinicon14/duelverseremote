@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Bell, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,86 +28,6 @@ export const NotificationBell = ({ userId }: { userId: string }) => {
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState<DBNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [open, setOpen] = useState(false);
-  const [isClearingAll, setIsClearingAll] = useState(false);
-
-  const getDismissedFriendRequestIds = useCallback(() => {
-    if (!userId) return [] as string[];
-
-    try {
-      const stored = localStorage.getItem(`dismissed_friend_requests_${userId}`);
-      const parsed = stored ? JSON.parse(stored) : [];
-      return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === 'string') : [];
-    } catch {
-      return [];
-    }
-  }, [userId]);
-
-  const setDismissedFriendRequestIds = useCallback((ids: string[]) => {
-    if (!userId) return;
-    localStorage.setItem(`dismissed_friend_requests_${userId}`, JSON.stringify(ids));
-  }, [userId]);
-
-  const dismissFriendRequestNotifications = useCallback((ids: string[]) => {
-    if (ids.length === 0) return;
-
-    const mergedIds = Array.from(new Set([...getDismissedFriendRequestIds(), ...ids]));
-    setDismissedFriendRequestIds(mergedIds);
-  }, [getDismissedFriendRequestIds, setDismissedFriendRequestIds]);
-
-  const fetchNotifications = useCallback(async () => {
-    try {
-      // Fetch all persisted notifications (unread)
-      const { data: dbNotifications } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('read', false)
-        .order('created_at', { ascending: false })
-        .limit(50);
-
-      // Fetch pending friend requests
-      const { data: friendRequests } = await supabase
-        .from('friend_requests')
-        .select('*, sender:profiles!friend_requests_sender_id_fkey(username)')
-        .eq('receiver_id', userId)
-        .eq('status', 'pending');
-
-      const pendingFriendRequests = friendRequests || [];
-      const activeFriendRequestIds = new Set(pendingFriendRequests.map(req => req.id));
-      const dismissedFriendRequestIds = getDismissedFriendRequestIds();
-      const validDismissedFriendRequestIds = dismissedFriendRequestIds.filter(id => activeFriendRequestIds.has(id));
-
-      if (validDismissedFriendRequestIds.length !== dismissedFriendRequestIds.length) {
-        setDismissedFriendRequestIds(validDismissedFriendRequestIds);
-      }
-
-      const dismissedFriendRequestIdSet = new Set(validDismissedFriendRequestIds);
-
-      const friendNotifs: DBNotification[] = pendingFriendRequests
-        .filter(req => !dismissedFriendRequestIdSet.has(req.id))
-        .map(req => ({
-          id: `fr_${req.id}`,
-          user_id: userId,
-          type: 'friend_request',
-          title: '👋 Pedido de Amizade',
-          message: `${(req.sender as any)?.username || 'Alguém'} quer ser seu amigo`,
-          data: req,
-          read: false,
-          created_at: req.created_at,
-        }));
-
-      const allNotifications = [
-        ...(dbNotifications || []),
-        ...friendNotifs,
-      ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-
-      setNotifications(allNotifications);
-      setUnreadCount(allNotifications.length);
-    } catch (error) {
-      console.error('Erro ao carregar notificações:', error);
-    }
-  }, [getDismissedFriendRequestIds, setDismissedFriendRequestIds, userId]);
 
   useEffect(() => {
     if (!userId) return;
@@ -148,7 +68,48 @@ export const NotificationBell = ({ userId }: { userId: string }) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fetchNotifications, userId]);
+  }, [userId]);
+
+  const fetchNotifications = async () => {
+    try {
+      // Fetch all persisted notifications (unread)
+      const { data: dbNotifications } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('read', false)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      // Fetch pending friend requests
+      const { data: friendRequests } = await supabase
+        .from('friend_requests')
+        .select('*, sender:profiles!friend_requests_sender_id_fkey(username)')
+        .eq('receiver_id', userId)
+        .eq('status', 'pending');
+
+      const friendNotifs: DBNotification[] = (friendRequests || []).map(req => ({
+        id: `fr_${req.id}`,
+        user_id: userId,
+        type: 'friend_request',
+        title: '👋 Pedido de Amizade',
+        message: `${(req.sender as any)?.username || 'Alguém'} quer ser seu amigo`,
+        data: req,
+        read: false,
+        created_at: req.created_at,
+      }));
+
+      const allNotifications = [
+        ...(dbNotifications || []),
+        ...friendNotifs,
+      ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+      setNotifications(allNotifications);
+      setUnreadCount(allNotifications.length);
+    } catch (error) {
+      console.error('Erro ao carregar notificações:', error);
+    }
+  };
 
   const handleNotificationClick = (notification: DBNotification) => {
     const url = notification.data?.url;
@@ -163,9 +124,8 @@ export const NotificationBell = ({ userId }: { userId: string }) => {
     e.stopPropagation();
 
     if (notification.type === 'friend_request') {
-      dismissFriendRequestNotifications([notification.id.replace('fr_', '')]);
-      setNotifications(prev => prev.filter(n => n.id !== notification.id));
-      setUnreadCount(prev => Math.max(0, prev - 1));
+      // Friend requests are dismissed by handling them on the friends page
+      navigate('/friends?tab=requests');
       return;
     }
 
@@ -179,68 +139,24 @@ export const NotificationBell = ({ userId }: { userId: string }) => {
     setUnreadCount(prev => Math.max(0, prev - 1));
   };
 
-  const markAllNotificationsAsRead = useCallback(async () => {
-    while (true) {
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('id')
-        .eq('user_id', userId)
-        .or('read.eq.false,read.is.null')
-        .limit(500);
-
-      if (error) throw error;
-
-      const ids = (data || []).map(notification => notification.id);
-
-      if (ids.length === 0) {
-        break;
-      }
-
-      const { error: updateError } = await supabase
-        .from('notifications')
-        .update({ read: true })
-        .in('id', ids);
-
-      if (updateError) throw updateError;
-
-      if (ids.length < 500) {
-        break;
-      }
-    }
-  }, [userId]);
-
-  const handleDismissAll = async () => {
-    if (isClearingAll) return;
-
-    const previousNotifications = notifications;
-    const previousUnreadCount = unreadCount;
-    const friendRequestIds = notifications
-      .filter(n => n.id.startsWith('fr_'))
-      .map(n => n.id.replace('fr_', ''));
-
-    setIsClearingAll(true);
-
-    try {
-      dismissFriendRequestNotifications(friendRequestIds);
-      setNotifications([]);
-      setUnreadCount(0);
-
-      await markAllNotificationsAsRead();
-      setOpen(false);
-    } catch (error) {
-      console.error('Erro ao limpar notificações:', error);
-      setNotifications(previousNotifications);
-      setUnreadCount(previousUnreadCount);
-      fetchNotifications();
-    } finally {
-      setIsClearingAll(false);
-    }
-  };
-
-  const handleDismissAllInteraction = async (e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleDismissAll = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    await handleDismissAll();
+    
+    const dbIds = notifications
+      .filter(n => !n.id.startsWith('fr_'))
+      .map(n => n.id);
+
+    if (dbIds.length > 0) {
+      await supabase
+        .from('notifications')
+        .update({ read: true })
+        .in('id', dbIds);
+    }
+
+    const friendNotifs = notifications.filter(n => n.id.startsWith('fr_'));
+    setNotifications(friendNotifs);
+    setUnreadCount(friendNotifs.length);
   };
 
   const formatTime = (dateStr: string) => {
@@ -252,7 +168,7 @@ export const NotificationBell = ({ userId }: { userId: string }) => {
   };
 
   return (
-    <DropdownMenu open={open} onOpenChange={(nextOpen) => !isClearingAll && setOpen(nextOpen)}>
+    <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5" />
@@ -266,22 +182,27 @@ export const NotificationBell = ({ userId }: { userId: string }) => {
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-80 p-0" onCloseAutoFocus={(e) => e.preventDefault()}>
+      <DropdownMenuContent align="end" className="w-80 p-0">
         {notifications.length > 0 && (
           <div className="flex items-center justify-between px-4 py-2 border-b border-border">
             <span className="text-xs font-semibold text-muted-foreground">Notificações</span>
-            <button
-              type="button"
-              disabled={isClearingAll}
-              className="text-xs h-6 px-2 text-muted-foreground hover:text-foreground rounded-md hover:bg-accent"
-              onClick={handleDismissAllInteraction}
-              onMouseDown={(e) => {
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs h-6 px-2 text-muted-foreground hover:text-foreground"
+              onPointerDown={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
               }}
+              onClick={handleDismissAll}
+              onTouchEnd={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleDismissAll(e as any);
+              }}
             >
-              {isClearingAll ? 'Limpando...' : 'Limpar tudo'}
-            </button>
+              Limpar tudo
+            </Button>
           </div>
         )}
         <ScrollArea className="h-[320px]">

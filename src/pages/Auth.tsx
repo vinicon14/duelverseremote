@@ -14,7 +14,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
 import { useToast } from "@/hooks/use-toast";
 import { Swords, Sparkles, Zap } from "lucide-react";
 import { TcgType } from "@/contexts/TcgContext";
@@ -67,14 +66,14 @@ const Auth = () => {
   const handleGoogleSignIn = async () => {
     try {
       setLoading(true);
-      const result = await lovable.auth.signInWithOAuth('google', {
-        redirect_uri: `${window.location.origin}/duels`,
-        extraParams: {
-          prompt: 'select_account',
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/duels`
         }
       });
 
-      if (result.error) throw result.error;
+      if (error) throw error;
     } catch (error: any) {
       console.error('❌ [AUTH] Erro no login com Google:', error);
       toast({
