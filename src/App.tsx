@@ -188,7 +188,7 @@ const AppContent = () => {
       <UniversalNewTabBlocker />
       <ConditionalMonetagLoader />
       <ProAdCleaner />
-      <DuelInviteNotification currentUserId={user?.id} />
+      <DuelCallNotification currentUserId={user?.id} />
       <NotificationPrompt />
       <NativePermissionPrompt userId={user?.id} />
       <RouterContent user={user} />
