@@ -6,12 +6,14 @@ export const detectPlatform = () => {
   const isMobile = isIOS || isAndroid || /Mobile/.test(userAgent);
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
                       (window.navigator as any).standalone === true;
+  const isNativeApp = /DuelVerseApp/i.test(userAgent);
   
   return {
     isIOS,
     isAndroid,
     isMobile,
     isStandalone,
+    isNativeApp,
     supportsWebPush: 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window
   };
 };
