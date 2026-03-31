@@ -198,7 +198,7 @@ export const DuelCallNotification = ({ currentUserId }: { currentUserId?: string
             if (nativeBridge?.showNotification) {
               nativeBridge.showNotification(
                 '⚔️ Desafio de Duelo!',
-                `${senderData?.username || 'Alguém'} te desafiou para um duelo!`
+                `${data.sender?.username || 'Alguém'} te desafiou para um duelo!`
               );
             }
           } catch (e) {}
