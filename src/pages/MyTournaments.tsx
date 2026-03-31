@@ -165,9 +165,8 @@ const MyTournaments = () => {
         return;
       }
 
-      // Create duel
-      const tournament = tournaments.find((t) => t.id === tournamentId);
-      const duelTcg = tournament?.tcg_type || 'yugioh';
+      const tournament = myTournaments.find((t) => t.id === tournamentId);
+      const duelTcg = (tournament as any)?.tcg_type || 'yugioh';
       const defaultLP = duelTcg === 'magic' ? 40 : duelTcg === 'pokemon' ? 6 : 8000;
 
       const { data: duelData, error: duelError } = await supabase

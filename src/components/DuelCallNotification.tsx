@@ -82,6 +82,15 @@ export const DuelCallNotification = ({ currentUserId }: { currentUserId?: string
     return () => clearInterval(interval);
   }, [invite]);
 
+  useEffect(() => {
+    if (!invite) return;
+    const tcg = invite.duel?.tcg_type || 'yugioh';
+    const settingsKey = TCG_SETTINGS_KEY[tcg] || 'ringtone_ygo';
+    if (ringtoneUrls[settingsKey]) {
+      playRingtone(tcg);
+    }
+  }, [invite, ringtoneUrls, playRingtone]);
+
   const stopAudio = useCallback(() => {
     if (audioRef.current) {
       audioRef.current.pause();
