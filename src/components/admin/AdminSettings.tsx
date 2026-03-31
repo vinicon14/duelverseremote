@@ -254,25 +254,45 @@ export const AdminSettings = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>🔔 Toque de Convite de Duelo</CardTitle>
+          <CardTitle>🔔 Toques de Convite de Duelo</CardTitle>
           <CardDescription>
-            Configure o áudio que toca quando alguém recebe um convite de duelo (estilo chamada)
+            Configure o áudio (YouTube) que toca para cada TCG quando alguém recebe um convite de duelo
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="duel-ringtone">URL do Vídeo/Áudio do YouTube</Label>
+            <Label htmlFor="ringtone-ygo">🎴 YGO (Yu-Gi-Oh!)</Label>
             <Input
-              id="duel-ringtone"
+              id="ringtone-ygo"
               type="url"
               placeholder="https://www.youtube.com/watch?v=..."
-              value={duelRingtoneUrl}
-              onChange={(e) => setDuelRingtoneUrl(e.target.value)}
+              value={ringtoneYgo}
+              onChange={(e) => setRingtoneYgo(e.target.value)}
             />
-            <p className="text-sm text-muted-foreground">
-              Cole a URL de um vídeo do YouTube. O áudio será extraído e tocado como toque de chamada quando um jogador receber um convite de duelo.
-            </p>
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="ringtone-mtg">🧙 MTG (Magic: The Gathering)</Label>
+            <Input
+              id="ringtone-mtg"
+              type="url"
+              placeholder="https://www.youtube.com/watch?v=..."
+              value={ringtoneMtg}
+              onChange={(e) => setRingtoneMtg(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="ringtone-pkm">⚡ PKM (Pokémon TCG)</Label>
+            <Input
+              id="ringtone-pkm"
+              type="url"
+              placeholder="https://www.youtube.com/watch?v=..."
+              value={ringtonePkm}
+              onChange={(e) => setRingtonePkm(e.target.value)}
+            />
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Cole URLs de vídeos do YouTube. O áudio será tocado como toque de chamada ao receber um convite do TCG correspondente.
+          </p>
         </CardContent>
       </Card>
 
