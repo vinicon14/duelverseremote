@@ -15,7 +15,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { User } from '@supabase/supabase-js';
-import { DuelInviteNotification } from "@/components/DuelInviteNotification";
+import { DuelCallNotification } from "@/components/DuelCallNotification";
+import { useDuelInviteResponse } from "@/hooks/useDuelInviteResponse";
 import { NotificationPrompt } from "@/components/NotificationPrompt";
 import { DynamicTheme } from "@/components/DynamicTheme";
 import { ProAdCleaner } from "@/components/ProAdCleaner";
@@ -130,6 +131,9 @@ const AppContent = () => {
   // Enable realtime notifications
   useRealtimeNotifications(user?.id);
   
+  // Listen for duel invite responses (accepted/rejected)
+  useDuelInviteResponse(user?.id);
+  
   // Enable online status tracking
   useOnlineStatus();
 
@@ -184,7 +188,7 @@ const AppContent = () => {
       <UniversalNewTabBlocker />
       <ConditionalMonetagLoader />
       <ProAdCleaner />
-      <DuelInviteNotification currentUserId={user?.id} />
+      <DuelCallNotification currentUserId={user?.id} />
       <NotificationPrompt />
       <NativePermissionPrompt userId={user?.id} />
       <RouterContent user={user} />

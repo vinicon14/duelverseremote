@@ -11,6 +11,7 @@ export const AdminSettings = () => {
   const [supportEmail, setSupportEmail] = useState("");
   const [pixKey, setPixKey] = useState("");
   const [landingVideoUrl, setLandingVideoUrl] = useState("");
+  const [duelRingtoneUrl, setDuelRingtoneUrl] = useState("");
   const [windowsDownloadUrl, setWindowsDownloadUrl] = useState("");
   const [androidDownloadUrl, setAndroidDownloadUrl] = useState("");
   const [windowsFile, setWindowsFile] = useState<File | null>(null);
@@ -47,12 +48,14 @@ export const AdminSettings = () => {
         const emailSetting = data.find((s) => s.key === 'support_email');
         const pixSetting = data.find((s) => s.key === 'pix_key');
         const videoSetting = data.find((s) => s.key === 'landing_video_url');
+        const ringtoneSetting = data.find((s) => s.key === 'duel_ringtone_url');
         const windowsSetting = data.find((s) => s.key === 'windows_download_url');
         const androidSetting = data.find((s) => s.key === 'android_download_url');
 
         if (emailSetting) setSupportEmail(emailSetting.value || '');
         if (pixSetting) setPixKey(pixSetting.value || '');
         if (videoSetting) setLandingVideoUrl(videoSetting.value || '');
+        if (ringtoneSetting) setDuelRingtoneUrl(ringtoneSetting.value || '');
         if (windowsSetting) setWindowsDownloadUrl(windowsSetting.value || '');
         if (androidSetting) setAndroidDownloadUrl(androidSetting.value || '');
       }
@@ -153,6 +156,7 @@ export const AdminSettings = () => {
         { key: 'support_email', value: supportEmail },
         { key: 'pix_key', value: pixKey },
         { key: 'landing_video_url', value: landingVideoUrl },
+        { key: 'duel_ringtone_url', value: duelRingtoneUrl },
       ];
 
       for (const setting of settings) {
@@ -235,6 +239,30 @@ export const AdminSettings = () => {
             />
             <p className="text-sm text-muted-foreground">
               Cole a URL de um vídeo do YouTube ou link direto de vídeo (.mp4). Será exibido na página inicial para visitantes.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>🔔 Toque de Convite de Duelo</CardTitle>
+          <CardDescription>
+            Configure o áudio que toca quando alguém recebe um convite de duelo (estilo chamada)
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="duel-ringtone">URL do Vídeo/Áudio do YouTube</Label>
+            <Input
+              id="duel-ringtone"
+              type="url"
+              placeholder="https://www.youtube.com/watch?v=..."
+              value={duelRingtoneUrl}
+              onChange={(e) => setDuelRingtoneUrl(e.target.value)}
+            />
+            <p className="text-sm text-muted-foreground">
+              Cole a URL de um vídeo do YouTube. O áudio será extraído e tocado como toque de chamada quando um jogador receber um convite de duelo.
             </p>
           </div>
         </CardContent>
