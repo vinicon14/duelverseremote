@@ -113,41 +113,59 @@ export const DuelCallNotification = ({ currentUserId }: { currentUserId?: string
     if (!currentUserId) return;
 
     const fetchInviteWithDuel = async (inviteId: string) => {
-      const { data, error } = await supabase
+      const { data: inviteData, error } = await supabase
         .from('duel_invites')
-        .select(`*, sender:profiles!duel_invites_sender_id_fkey(username, avatar_url), duel:live_duels!duel_invites_duel_id_fkey(tcg_type)`)
+        .select('*')
         .eq('id', inviteId)
         .maybeSingle();
-      if (error) console.error('Error fetching invite:', error);
-      return data;
+      if (error || !inviteData) {
+        console.error('Error fetching invite:', error);
+        return null;
+      }
+      // Fetch sender profile separately (no FK exists)
+      const { data: senderProfile } = await supabase
+        .from('profiles')
+        .select('username, avatar_url')
+        .eq('user_id', inviteData.sender_id)
+        .maybeSingle();
+      // Fetch duel tcg_type
+      const { data: duelData } = await supabase
+        .from('live_duels')
+        .select('tcg_type')
+        .eq('id', inviteData.duel_id)
+        .maybeSingle();
+      return { ...inviteData, sender: senderProfile, duel: duelData };
     };
 
     const checkPending = async () => {
-      const { data, error } = await supabase
+      const { data: pendingInvites, error } = await supabase
         .from('duel_invites')
-        .select(`*, sender:profiles!duel_invites_sender_id_fkey(username, avatar_url), duel:live_duels!duel_invites_duel_id_fkey(tcg_type)`)
+        .select('*')
         .eq('receiver_id', currentUserId)
         .eq('status', 'pending')
         .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .limit(1);
 
       if (error) {
         console.error('Error checking pending invites:', error);
         return;
       }
 
-      if (data && data.sender) {
-        console.log('📞 Pending duel invite found:', data);
-        const tcg = Array.isArray(data.duel) ? data.duel[0]?.tcg_type : data.duel?.tcg_type;
-        setInvite({
-          id: data.id,
-          sender_id: data.sender_id,
-          duel_id: data.duel_id,
-          sender: Array.isArray(data.sender) ? data.sender[0] : data.sender,
-          duel: { tcg_type: tcg || 'yugioh' },
-        });
-        playRingtone(tcg || 'yugioh');
+      if (pendingInvites && pendingInvites.length > 0) {
+        const inv = pendingInvites[0];
+        const fullData = await fetchInviteWithDuel(inv.id);
+        if (fullData && fullData.sender) {
+          console.log('📞 Pending duel invite found:', fullData);
+          const tcg = fullData.duel?.tcg_type || 'yugioh';
+          setInvite({
+            id: fullData.id,
+            sender_id: fullData.sender_id,
+            duel_id: fullData.duel_id,
+            sender: fullData.sender,
+            duel: { tcg_type: tcg },
+          });
+          playRingtone(tcg);
+        }
       }
     };
     checkPending();
@@ -163,17 +181,16 @@ export const DuelCallNotification = ({ currentUserId }: { currentUserId?: string
         console.log('📞 New duel invite received:', payload.new);
         const data = await fetchInviteWithDuel(payload.new.id);
         if (data && data.sender) {
-          const senderData = Array.isArray(data.sender) ? data.sender[0] : data.sender;
-          const tcg = Array.isArray(data.duel) ? data.duel[0]?.tcg_type : data.duel?.tcg_type;
+          const tcg = data.duel?.tcg_type || 'yugioh';
           
           setInvite({
             id: data.id,
             sender_id: data.sender_id,
             duel_id: data.duel_id,
-            sender: senderData,
-            duel: { tcg_type: tcg || 'yugioh' },
+            sender: data.sender,
+            duel: { tcg_type: tcg },
           });
-          playRingtone(tcg || 'yugioh');
+          playRingtone(tcg);
 
           // Native notification bridge
           try {
@@ -181,14 +198,14 @@ export const DuelCallNotification = ({ currentUserId }: { currentUserId?: string
             if (nativeBridge?.showNotification) {
               nativeBridge.showNotification(
                 '⚔️ Desafio de Duelo!',
-                `${senderData?.username || 'Alguém'} te desafiou para um duelo!`
+                `${data.sender?.username || 'Alguém'} te desafiou para um duelo!`
               );
             }
           } catch (e) {}
 
           if ('Notification' in window && Notification.permission === 'granted') {
             new Notification('⚔️ Desafio de Duelo!', {
-              body: `${senderData?.username || 'Alguém'} te desafiou para um duelo!`,
+              body: `${data.sender?.username || 'Alguém'} te desafiou para um duelo!`,
               icon: '/favicon.ico',
               requireInteraction: true,
             });
