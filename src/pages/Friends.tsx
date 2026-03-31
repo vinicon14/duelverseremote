@@ -281,7 +281,7 @@ const Friends = () => {
             userId: friendUserId,
             title: '⚔️ Desafio de Duelo!',
             body: `${myProfile?.username || 'Alguém'} te desafiou para um duelo!`,
-            data: { type: 'duel_invite', duelId: duelData.id },
+            data: { type: 'duel_invite', duelId: duelData.id, inviteId: inviteData?.id, url: '/friends' },
           }),
         });
       } catch (pushErr) {
