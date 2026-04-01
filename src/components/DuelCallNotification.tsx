@@ -235,6 +235,22 @@ export const DuelCallNotification = ({ currentUserId }: { currentUserId?: string
         setInvite(null);
         navigate(`/duel/${event.data.duelId}`);
       }
+      if (event.data?.type === 'DUEL_INVITE_RECEIVED' && event.data.inviteId) {
+        // Re-fetch the invite to show overlay
+        fetchInviteWithDuel(event.data.inviteId).then(data => {
+          if (data && data.sender) {
+            const tcg = data.duel?.tcg_type || 'yugioh';
+            setInvite({
+              id: data.id,
+              sender_id: data.sender_id,
+              duel_id: data.duel_id,
+              sender: data.sender,
+              duel: { tcg_type: tcg },
+            });
+            playRingtone(tcg);
+          }
+        });
+      }
     };
     navigator.serviceWorker?.addEventListener('message', handleSWMessage);
 
