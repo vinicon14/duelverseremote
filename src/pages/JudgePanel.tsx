@@ -143,10 +143,15 @@ export default function JudgePanel() {
     }
   };
 
-  const enterRoom = async (logId: string, matchId: string) => {
+  const enterRoom = async (logId: string, matchId: string, playerId: string) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+
+      if (user.id === playerId) {
+        toast({ title: "Ação não permitida", description: "Você não pode atender seu próprio chamado", variant: "destructive" });
+        return;
+      }
 
       const { error } = await supabase
         .from('judge_logs')
