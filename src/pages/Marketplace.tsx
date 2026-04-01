@@ -701,7 +701,6 @@ export default function Marketplace() {
                   )}
                 </Button>
               </SheetTrigger>
-              <SheetContent className="w-[380px]">
               <SheetContent className="w-[min(380px,100vw-2rem)]">
                 <SheetHeader>
                   <SheetTitle className="flex items-center gap-2">
