@@ -355,9 +355,10 @@ const Friends = () => {
                   return (
                     <Card key={friend.user_id} className="card-mystic hover:border-primary/40 transition-all">
                       <CardContent className="py-6">
-                        <div className="flex items-center gap-4">
-                          <div className="relative">
-                            <Avatar className="w-16 h-16 border-2 border-primary/30">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                          <div className="flex items-center gap-3 w-full sm:w-auto">
+                          <div className="relative shrink-0">
+                            <Avatar className="w-12 h-12 sm:w-16 sm:h-16 border-2 border-primary/30">
                               <AvatarImage src={friend.avatar_url || ""} />
                               <AvatarFallback className="bg-primary/20 text-lg">
                                 {friend.username?.charAt(0).toUpperCase() || "U"}
