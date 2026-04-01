@@ -5,7 +5,7 @@
  * Interface principal de duelo.
  * Gerencia videochamada (Daily.co), LP, timer, chat e estado do duelo em tempo real.
  */
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
