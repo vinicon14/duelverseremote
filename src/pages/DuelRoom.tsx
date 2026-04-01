@@ -5,12 +5,13 @@
  * Interface principal de duelo.
  * Gerencia videochamada (Daily.co), LP, timer, chat e estado do duelo em tempo real.
  */
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { PhoneOff, Loader2, Scale, Layers, Sparkles, Zap } from "lucide-react";
+import { PhoneOff, Loader2, Scale, Layers, Sparkles, Zap, Clock, Coins } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import { Navbar } from "@/components/Navbar";
 import { DuelChat } from "@/components/DuelChat";
 import { FloatingCalculator } from "@/components/FloatingCalculator";
@@ -54,11 +55,77 @@ const DuelRoom = () => {
   
   const isJudge = searchParams.get('role') === 'judge';
   const [hideControls, setHideControls] = useState(true);
+  const [judgeTimerSeconds, setJudgeTimerSeconds] = useState<number | null>(null);
+  const [judgeRewarded, setJudgeRewarded] = useState(false);
+  const judgeLogIdRef = useRef<string | null>(null);
+  const judgeTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   
   // Deck viewer state
   const [showDeckViewer, setShowDeckViewer] = useState(false);
   const { mainDeck, extraDeck, sideDeck, tokensDeck, importDeckFromYDK, loadDeckFromSaved, isLoading: isDeckLoading } = useDuelDeck();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Judge reward timer - fetch judge_log and countdown
+  const handleJudgeReward = useCallback(async (logId: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: rewarded } = await supabase.rpc('reward_judge_resolution', {
+        p_judge_id: user.id,
+        p_log_id: logId
+      });
+      if (rewarded) {
+        await supabase.from('judge_logs').update({ status: 'resolved', resolved_at: new Date().toISOString() }).eq('id', logId);
+        toast({ title: "✅ +2 DuelCoins!", description: "Recompensa recebida por permanecer 2 minutos na chamada" });
+      }
+    } catch (e) {
+      console.error('Judge reward error:', e);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    if (!isJudge || !id || !currentUser) return;
+
+    const fetchJudgeLog = async () => {
+      const { data } = await supabase
+        .from('judge_logs')
+        .select('id, judge_entered_at, status')
+        .eq('match_id', id)
+        .eq('judge_id', currentUser.id)
+        .eq('status', 'in_room')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (data?.judge_entered_at) {
+        judgeLogIdRef.current = data.id;
+        const elapsed = Math.floor((Date.now() - new Date(data.judge_entered_at).getTime()) / 1000);
+        const remaining = Math.max(0, 120 - elapsed);
+        setJudgeTimerSeconds(remaining);
+
+        if (remaining <= 0) {
+          setJudgeRewarded(true);
+          handleJudgeReward(data.id);
+          return;
+        }
+
+        judgeTimerRef.current = setInterval(() => {
+          setJudgeTimerSeconds(prev => {
+            if (prev === null || prev <= 1) {
+              if (judgeTimerRef.current) clearInterval(judgeTimerRef.current);
+              setJudgeRewarded(true);
+              if (judgeLogIdRef.current) handleJudgeReward(judgeLogIdRef.current);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      }
+    };
+
+    fetchJudgeLog();
+    return () => { if (judgeTimerRef.current) clearInterval(judgeTimerRef.current); };
+  }, [isJudge, id, currentUser, handleJudgeReward]);
 
   // Carrega dados do duelo e inicia timer
   useEffect(() => {
@@ -881,11 +948,28 @@ const DuelRoom = () => {
           <div className="absolute top-2 sm:top-4 right-2 sm:right-4 z-50 flex flex-col sm:flex-row gap-2 items-end sm:items-center">
             {!hideControls && (
               <>
-                {/* Badge de juiz */}
+                {/* Badge de juiz + Timer */}
                 {isJudge && (
-                  <div className="px-2 sm:px-3 py-1 sm:py-2 rounded-lg backdrop-blur-sm text-xs sm:text-sm font-bold bg-purple-500/95 text-white flex items-center gap-1">
-                    <Scale className="w-3 h-3 sm:w-4 sm:h-4" />
-                    Juiz
+                  <div className="flex flex-col gap-1 items-end">
+                    <div className="px-2 sm:px-3 py-1 sm:py-2 rounded-lg backdrop-blur-sm text-xs sm:text-sm font-bold bg-purple-500/95 text-white flex items-center gap-1">
+                      <Scale className="w-3 h-3 sm:w-4 sm:h-4" />
+                      Juiz
+                    </div>
+                    {judgeTimerSeconds !== null && !judgeRewarded && (
+                      <div className="px-2 py-1 rounded-lg backdrop-blur-sm bg-background/90 border border-border min-w-[140px]">
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
+                          <Clock className="w-3 h-3" />
+                          <span>Recompensa em {String(Math.floor(judgeTimerSeconds / 60)).padStart(2, '0')}:{String(judgeTimerSeconds % 60).padStart(2, '0')}</span>
+                        </div>
+                        <Progress value={((120 - judgeTimerSeconds) / 120) * 100} className="h-2" />
+                      </div>
+                    )}
+                    {judgeRewarded && (
+                      <div className="px-2 py-1 rounded-lg backdrop-blur-sm bg-green-500/90 text-white text-xs font-bold flex items-center gap-1">
+                        <Coins className="w-3 h-3" />
+                        +2 DuelCoins!
+                      </div>
+                    )}
                   </div>
                 )}
 
