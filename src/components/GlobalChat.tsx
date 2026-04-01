@@ -280,7 +280,7 @@ export const GlobalChat = () => {
     const cursorPos = inputRef.current?.selectionStart || newMessage.length;
     const textBeforeCursor = newMessage.slice(0, cursorPos);
     const textAfterCursor = newMessage.slice(cursorPos);
-    const beforeMention = textBeforeCursor.replace(/@\w*$/, '');
+    const beforeMention = textBeforeCursor.replace(/@[\w\u00C0-\u024F]*$/, '');
     const updated = `${beforeMention}@${username} ${textAfterCursor}`;
     setNewMessage(updated);
     setShowMentions(false);
