@@ -32,6 +32,10 @@ export const GlobalChat = () => {
   const [messages, setMessages] = useState<GlobalMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [mentionSuggestions, setMentionSuggestions] = useState<{ username: string; user_id: string }[]>([]);
+  const [showMentions, setShowMentions] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -246,6 +250,60 @@ export const GlobalChat = () => {
     }
   };
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setNewMessage(value);
+
+    // Detect @ mention
+    const cursorPos = e.target.selectionStart || value.length;
+    const textBeforeCursor = value.slice(0, cursorPos);
+    const mentionMatch = textBeforeCursor.match(/@(\w*)$/);
+
+    if (mentionMatch) {
+      const query = mentionMatch[1].toLowerCase();
+      setMentionQuery(query);
+      setShowMentions(true);
+      fetchMentionSuggestions(query);
+    } else {
+      setShowMentions(false);
+      setMentionSuggestions([]);
+    }
+  };
+
+  const fetchMentionSuggestions = async (query: string) => {
+    // Always include "todos" option
+    const staticOptions: { username: string; user_id: string }[] = [];
+    if ('todos'.startsWith(query)) {
+      staticOptions.push({ username: 'todos', user_id: 'todos' });
+    }
+
+    if (query.length === 0) {
+      setMentionSuggestions(staticOptions);
+      return;
+    }
+
+    const { data } = await supabase
+      .from('profiles')
+      .select('user_id, username')
+      .ilike('username', `${query}%`)
+      .neq('user_id', currentUser?.id || '')
+      .limit(5);
+
+    setMentionSuggestions([...staticOptions, ...(data || [])]);
+  };
+
+  const handleSelectMention = (username: string) => {
+    const cursorPos = inputRef.current?.selectionStart || newMessage.length;
+    const textBeforeCursor = newMessage.slice(0, cursorPos);
+    const textAfterCursor = newMessage.slice(cursorPos);
+    const beforeMention = textBeforeCursor.replace(/@\w*$/, '');
+    const updated = `${beforeMention}@${username} ${textAfterCursor}`;
+    setNewMessage(updated);
+    setShowMentions(false);
+    setMentionSuggestions([]);
+    setTimeout(() => inputRef.current?.focus(), 0);
+  };
+
   const deleteMessage = async (messageId: string) => {
     if (!isAdmin) return;
     
@@ -334,18 +392,41 @@ export const GlobalChat = () => {
           </div>
         </ScrollArea>
 
-        <form onSubmit={sendMessage} className="flex gap-2">
-          <Input
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Digite sua mensagem..."
-            className="bg-background/50"
-            maxLength={500}
-          />
-          <Button type="submit" size="icon" className="btn-mystic text-white flex-shrink-0">
-            <Send className="w-4 h-4" />
-          </Button>
-        </form>
+        <div className="relative">
+          {showMentions && mentionSuggestions.length > 0 && (
+            <div className="absolute bottom-full left-0 right-0 mb-1 bg-popover border border-border rounded-lg shadow-lg z-50 max-h-40 overflow-y-auto">
+              {mentionSuggestions.map((suggestion) => (
+                <button
+                  key={suggestion.user_id || suggestion.username}
+                  type="button"
+                  className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground transition-colors flex items-center gap-2"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    handleSelectMention(suggestion.username);
+                  }}
+                >
+                  <span className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                    {suggestion.username[0]?.toUpperCase()}
+                  </span>
+                  <span className="truncate">@{suggestion.username}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          <form onSubmit={sendMessage} className="flex gap-2">
+            <Input
+              ref={inputRef}
+              value={newMessage}
+              onChange={handleInputChange}
+              placeholder="Digite sua mensagem... Use @ para mencionar"
+              className="bg-background/50"
+              maxLength={500}
+            />
+            <Button type="submit" size="icon" className="btn-mystic text-white flex-shrink-0">
+              <Send className="w-4 h-4" />
+            </Button>
+          </form>
+        </div>
       </CardContent>
     </Card>
   );
