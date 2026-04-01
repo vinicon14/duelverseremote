@@ -32,6 +32,10 @@ export const GlobalChat = () => {
   const [messages, setMessages] = useState<GlobalMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [mentionSuggestions, setMentionSuggestions] = useState<{ username: string; user_id: string }[]>([]);
+  const [showMentions, setShowMentions] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
