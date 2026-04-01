@@ -378,7 +378,7 @@ export const GlobalChat = () => {
 
         <div className="relative">
           {showMentions && mentionSuggestions.length > 0 && (
-            <div className="absolute bottom-full left-0 right-0 mb-1 bg-popover border border-border rounded-lg shadow-lg z-50 max-h-40 overflow-y-auto">
+            <div className="absolute bottom-full left-0 right-0 mb-1 bg-popover border border-border rounded-lg shadow-lg z-[9999] max-h-48 overflow-y-auto touch-auto">
               {mentionSuggestions.map((suggestion) => (
                 <button
                   key={suggestion.user_id || suggestion.username}
