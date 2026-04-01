@@ -307,7 +307,7 @@ const Friends = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       
-      <main className="container mx-auto px-4 pt-24 pb-12">
+      <main className="container mx-auto px-4 pt-24 pb-24">
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-gradient-mystic mb-2">
             Amigos
@@ -355,9 +355,10 @@ const Friends = () => {
                   return (
                     <Card key={friend.user_id} className="card-mystic hover:border-primary/40 transition-all">
                       <CardContent className="py-6">
-                        <div className="flex items-center gap-4">
-                          <div className="relative">
-                            <Avatar className="w-16 h-16 border-2 border-primary/30">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                          <div className="flex items-center gap-3 w-full sm:w-auto">
+                          <div className="relative shrink-0">
+                            <Avatar className="w-12 h-12 sm:w-16 sm:h-16 border-2 border-primary/30">
                               <AvatarImage src={friend.avatar_url || ""} />
                               <AvatarFallback className="bg-primary/20 text-lg">
                                 {friend.username?.charAt(0).toUpperCase() || "U"}
@@ -368,33 +369,36 @@ const Friends = () => {
                             )}
                           </div>
 
-                          <div className="flex-1">
-                            <h3 className="font-semibold text-lg text-gradient-mystic flex items-center gap-2">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold text-base sm:text-lg text-gradient-mystic flex items-center gap-2 truncate">
                               {friend.username}
                               {friendOnline && (
                                 <span className="text-xs text-emerald-500 font-normal">● Online</span>
                               )}
                             </h3>
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-xs sm:text-sm text-muted-foreground">
                               {friendOnline 
                                 ? 'Online agora' 
                                 : `Visto ${new Date(friend.last_seen).toLocaleDateString()}`
                               }
                             </p>
                           </div>
+                          </div>
 
-                          <div className="flex gap-2">
+                          <div className="flex gap-2 shrink-0 w-full sm:w-auto">
                             <Button
                               variant="outline"
+                              size="sm"
                               onClick={() => navigate(`/chat/${friend.user_id}`)}
                             >
                               💬 Chat
                             </Button>
                             <Button
+                              size="sm"
                               onClick={() => setChallengeTarget(friend.user_id)}
                               className="btn-mystic text-white"
                             >
-                              <Swords className="w-4 h-4 mr-2" />
+                              <Swords className="w-4 h-4 mr-1" />
                               Desafiar
                             </Button>
                           </div>
