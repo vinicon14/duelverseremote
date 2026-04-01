@@ -308,7 +308,7 @@ export default function JudgePanel() {
                           <TableCell>{call.judge?.username || '-'}</TableCell>
                           <TableCell>
                             {call.status === 'in_room' && call.judge_id === currentUserId && (
-                              <JudgeTimer logId={call.id} onRewardEarned={handleRewardEarned} />
+                              <JudgeTimer logId={call.id} judgeEnteredAt={call.judge_entered_at} onRewardEarned={handleRewardEarned} />
                             )}
                             {call.status === 'resolved' && (
                               <span className="text-xs text-green-500">✅ Concluído</span>
