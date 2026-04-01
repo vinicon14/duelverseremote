@@ -250,7 +250,60 @@ export const GlobalChat = () => {
     }
   };
 
-  const deleteMessage = async (messageId: string) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setNewMessage(value);
+
+    // Detect @ mention
+    const cursorPos = e.target.selectionStart || value.length;
+    const textBeforeCursor = value.slice(0, cursorPos);
+    const mentionMatch = textBeforeCursor.match(/@(\w*)$/);
+
+    if (mentionMatch) {
+      const query = mentionMatch[1].toLowerCase();
+      setMentionQuery(query);
+      setShowMentions(true);
+      fetchMentionSuggestions(query);
+    } else {
+      setShowMentions(false);
+      setMentionSuggestions([]);
+    }
+  };
+
+  const fetchMentionSuggestions = async (query: string) => {
+    // Always include "todos" option
+    const staticOptions: { username: string; user_id: string }[] = [];
+    if ('todos'.startsWith(query)) {
+      staticOptions.push({ username: 'todos', user_id: 'todos' });
+    }
+
+    if (query.length === 0) {
+      setMentionSuggestions(staticOptions);
+      return;
+    }
+
+    const { data } = await supabase
+      .from('profiles')
+      .select('user_id, username')
+      .ilike('username', `${query}%`)
+      .neq('user_id', currentUser?.id || '')
+      .limit(5);
+
+    setMentionSuggestions([...staticOptions, ...(data || [])]);
+  };
+
+  const handleSelectMention = (username: string) => {
+    const cursorPos = inputRef.current?.selectionStart || newMessage.length;
+    const textBeforeCursor = newMessage.slice(0, cursorPos);
+    const textAfterCursor = newMessage.slice(cursorPos);
+    const beforeMention = textBeforeCursor.replace(/@\w*$/, '');
+    const updated = `${beforeMention}@${username} ${textAfterCursor}`;
+    setNewMessage(updated);
+    setShowMentions(false);
+    setMentionSuggestions([]);
+    setTimeout(() => inputRef.current?.focus(), 0);
+  };
+
     if (!isAdmin) return;
     
     try {
