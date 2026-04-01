@@ -671,22 +671,22 @@ export default function Marketplace() {
         </div>
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <ShoppingBag className="w-8 h-8 text-primary" />
-              <h1 className="text-4xl font-bold text-gradient-mystic">Marketplace</h1>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
+              <ShoppingBag className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
+              <h1 className="text-2xl sm:text-4xl font-bold text-gradient-mystic">Marketplace</h1>
             </div>
-            <p className="text-muted-foreground">
+            <p className="text-sm sm:text-base text-muted-foreground">
               Compre itens exclusivos com seus DuelCoins
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
             {/* Balance */}
-            <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-card border border-border">
-              <Coins className="w-5 h-5 text-secondary" />
-              <span className="font-bold text-secondary">{balance.toLocaleString()}</span>
+            <div className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg bg-card border border-border">
+              <Coins className="w-4 h-4 sm:w-5 sm:h-5 text-secondary" />
+              <span className="font-bold text-sm sm:text-base text-secondary">{balance.toLocaleString()}</span>
             </div>
 
             {/* Cart button */}
@@ -702,6 +702,7 @@ export default function Marketplace() {
                 </Button>
               </SheetTrigger>
               <SheetContent className="w-[380px]">
+              <SheetContent className="w-[min(380px,100vw-2rem)]">
                 <SheetHeader>
                   <SheetTitle className="flex items-center gap-2">
                     <ShoppingCart className="w-5 h-5" />
@@ -786,25 +787,25 @@ export default function Marketplace() {
             placeholder="Buscar produto por nome..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 max-w-md"
+            className="pl-9 w-full sm:max-w-md"
           />
         </div>
 
         {/* Tabs for Marketplace */}
         <Tabs defaultValue="official" className="w-full">
-          <TabsList className="mb-6">
-            <TabsTrigger value="official" className="gap-2">
-              <StoreIcon className="w-4 h-4" />
-              Loja Oficial
+          <TabsList className="mb-6 w-full sm:w-auto flex overflow-x-auto">
+            <TabsTrigger value="official" className="gap-1 sm:gap-2 text-xs sm:text-sm flex-1 sm:flex-none">
+              <StoreIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="hidden xs:inline">Loja</span> Oficial
             </TabsTrigger>
-            <TabsTrigger value="third-party" className="gap-2">
-              <Tag className="w-4 h-4" />
-              Anunciantes Terceiros
+            <TabsTrigger value="third-party" className="gap-1 sm:gap-2 text-xs sm:text-sm flex-1 sm:flex-none">
+              <Tag className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              Terceiros
             </TabsTrigger>
             {isPro && (
-              <TabsTrigger value="my-products" className="gap-2">
-                <Crown className="w-4 h-4 text-yellow-500" />
-                Meus Produtos
+              <TabsTrigger value="my-products" className="gap-1 sm:gap-2 text-xs sm:text-sm flex-1 sm:flex-none">
+                <Crown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-500" />
+                Meus
               </TabsTrigger>
             )}
           </TabsList>
@@ -838,7 +839,7 @@ export default function Marketplace() {
                 <p className="text-sm">Volte em breve para novos itens!</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
                 {filteredProducts.map(product => {
                   const catInfo = categoryLabels[product.category] || categoryLabels.digital_item;
                   return (
@@ -848,15 +849,15 @@ export default function Marketplace() {
                           <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
-                            <Package className="w-16 h-16 text-muted-foreground/30" />
+                            <Package className="w-10 h-10 sm:w-16 sm:h-16 text-muted-foreground/30" />
                           </div>
                         )}
-                        <Badge className={`absolute top-3 left-3 ${catInfo.color} border-0 gap-1`}>
-                          {catInfo.icon}
+                        <Badge className={`absolute top-2 left-2 sm:top-3 sm:left-3 ${catInfo.color} border-0 gap-1 text-[10px] sm:text-xs`}>
+                          <span className="hidden sm:inline">{catInfo.icon}</span>
                           {catInfo.label}
                         </Badge>
                         {product.stock !== null && product.stock <= 5 && product.stock > 0 && (
-                          <Badge className="absolute top-3 right-3 bg-destructive/90 text-destructive-foreground border-0">
+                          <Badge className="absolute top-2 right-2 sm:top-3 sm:right-3 bg-destructive/90 text-destructive-foreground border-0 text-[10px] sm:text-xs">
                             Restam {product.stock}
                           </Badge>
                         )}
@@ -867,21 +868,22 @@ export default function Marketplace() {
                         )}
                       </div>
 
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-lg line-clamp-1">{product.name}</CardTitle>
+                      <CardHeader className="p-2 sm:p-4 pb-1 sm:pb-2">
+                        <CardTitle className="text-sm sm:text-lg line-clamp-1">{product.name}</CardTitle>
                       </CardHeader>
 
-                      <CardFooter className="flex items-center justify-between pt-0">
-                        <div className="flex items-center gap-1 text-secondary font-bold text-lg">
-                          <Coins className="w-5 h-5" />
+                      <CardFooter className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-2 sm:p-4 pt-0 gap-1.5 sm:gap-0">
+                        <div className="flex items-center gap-1 text-secondary font-bold text-sm sm:text-lg">
+                          <Coins className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
                           {product.price_duelcoins.toLocaleString()}
                         </div>
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="outline" onClick={() => addToCart(product)} disabled={product.stock !== null && product.stock <= 0}>
-                            <ShoppingCart className="w-4 h-4" />
+                        <div className="flex gap-1 sm:gap-2 w-full sm:w-auto">
+                          <Button size="sm" variant="outline" onClick={() => addToCart(product)} disabled={product.stock !== null && product.stock <= 0} className="h-7 sm:h-9 px-2 sm:px-3">
+                            <ShoppingCart className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                           </Button>
-                          <Button size="sm" className="btn-mystic" onClick={() => handleBuyDirect(product)} disabled={purchasing || (product.stock !== null && product.stock <= 0)}>
-                            Comprar
+                          <Button size="sm" className="btn-mystic h-7 sm:h-9 px-2 sm:px-3 text-xs sm:text-sm flex-1 sm:flex-none" onClick={() => handleBuyDirect(product)} disabled={purchasing || (product.stock !== null && product.stock <= 0)}>
+                            <span className="hidden sm:inline">Comprar</span>
+                            <span className="sm:hidden">Buy</span>
                           </Button>
                         </div>
                       </CardFooter>
@@ -916,7 +918,7 @@ export default function Marketplace() {
                 <p className="text-sm">Anunciantes terceiros aparecerão aqui</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
                 {filteredThirdParty.map(product => {
                   const catInfo = categoryLabels[product.category] || categoryLabels.digital_item;
                   return (
@@ -926,34 +928,35 @@ export default function Marketplace() {
                           <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
-                            <Package className="w-16 h-16 text-muted-foreground/30" />
+                            <Package className="w-10 h-10 sm:w-16 sm:h-16 text-muted-foreground/30" />
                           </div>
                         )}
-                        <Badge className={`absolute top-3 left-3 ${catInfo.color} border-0 gap-1`}>
-                          {catInfo.icon}
+                        <Badge className={`absolute top-2 left-2 sm:top-3 sm:left-3 ${catInfo.color} border-0 gap-1 text-[10px] sm:text-xs`}>
+                          <span className="hidden sm:inline">{catInfo.icon}</span>
                           {catInfo.label}
                         </Badge>
-                        <Badge className="absolute top-3 right-3 bg-yellow-500/90 text-yellow-foreground border-0 gap-1">
-                          <Tag className="w-3 h-3" />
+                        <Badge className="absolute top-2 right-2 sm:top-3 sm:right-3 bg-yellow-500/90 text-yellow-foreground border-0 gap-1 text-[10px] sm:text-xs">
+                          <Tag className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                           Terceiro
                         </Badge>
                       </div>
 
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-lg line-clamp-1">{product.name}</CardTitle>
+                      <CardHeader className="p-2 sm:p-4 pb-1 sm:pb-2">
+                        <CardTitle className="text-sm sm:text-lg line-clamp-1">{product.name}</CardTitle>
                       </CardHeader>
 
-                      <CardFooter className="flex items-center justify-between pt-0">
-                        <div className="flex items-center gap-1 text-secondary font-bold text-lg">
-                          <Coins className="w-5 h-5" />
+                      <CardFooter className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-2 sm:p-4 pt-0 gap-1.5 sm:gap-0">
+                        <div className="flex items-center gap-1 text-secondary font-bold text-sm sm:text-lg">
+                          <Coins className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
                           {product.price_duelcoins.toLocaleString()}
                         </div>
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="outline" onClick={() => addToCart(product)} disabled={product.stock !== null && product.stock <= 0}>
-                            <ShoppingCart className="w-4 h-4" />
+                        <div className="flex gap-1 sm:gap-2 w-full sm:w-auto">
+                          <Button size="sm" variant="outline" onClick={() => addToCart(product)} disabled={product.stock !== null && product.stock <= 0} className="h-7 sm:h-9 px-2 sm:px-3">
+                            <ShoppingCart className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                           </Button>
-                          <Button size="sm" className="btn-mystic" onClick={() => handleBuyDirect(product)} disabled={purchasing || (product.stock !== null && product.stock <= 0)}>
-                            Comprar
+                          <Button size="sm" className="btn-mystic h-7 sm:h-9 px-2 sm:px-3 text-xs sm:text-sm flex-1 sm:flex-none" onClick={() => handleBuyDirect(product)} disabled={purchasing || (product.stock !== null && product.stock <= 0)}>
+                            <span className="hidden sm:inline">Comprar</span>
+                            <span className="sm:hidden">Buy</span>
                           </Button>
                         </div>
                       </CardFooter>
@@ -967,10 +970,10 @@ export default function Marketplace() {
           {/* My Products Tab (PRO only) */}
           {isPro && (
             <TabsContent value="my-products">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold">Meus Produtos</h2>
-                <Button className="btn-mystic" onClick={() => setCreateProductDialogOpen(true)}>
-                  <PlusCircle className="w-4 h-4 mr-2" />
+              <div className="flex justify-between items-center mb-4 sm:mb-6">
+                <h2 className="text-xl sm:text-2xl font-bold">Meus Produtos</h2>
+                <Button className="btn-mystic text-xs sm:text-sm" size="sm" onClick={() => setCreateProductDialogOpen(true)}>
+                  <PlusCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                   Criar Produto
                 </Button>
               </div>
@@ -982,7 +985,7 @@ export default function Marketplace() {
                   <p className="text-sm">Crie seu primeiro produto para vender!</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
                   {myProducts.map(product => {
                     const catInfo = categoryLabels[product.category] || categoryLabels.digital_item;
                     return (
@@ -995,38 +998,38 @@ export default function Marketplace() {
                               <Package className="w-16 h-16 text-muted-foreground/30" />
                             </div>
                           )}
-                          <Badge className={`absolute top-3 left-3 ${catInfo.color} border-0 gap-1`}>
-                            {catInfo.icon}
+                          <Badge className={`absolute top-2 left-2 sm:top-3 sm:left-3 ${catInfo.color} border-0 gap-1 text-[10px] sm:text-xs`}>
+                            <span className="hidden sm:inline">{catInfo.icon}</span>
                             {catInfo.label}
                           </Badge>
-                          <Badge className={`absolute top-3 right-3 ${product.is_active ? 'bg-green-500/90' : 'bg-red-500/90'} text-white border-0`}>
+                          <Badge className={`absolute top-2 right-2 sm:top-3 sm:right-3 ${product.is_active ? 'bg-green-500/90' : 'bg-red-500/90'} text-white border-0 text-[10px] sm:text-xs`}>
                             {product.is_active ? 'Ativo' : 'Inativo'}
                           </Badge>
                           {!(product as any).is_approved && (
-                            <Badge className="absolute bottom-3 left-3 bg-yellow-600 text-white border-0">
+                            <Badge className="absolute bottom-2 left-2 sm:bottom-3 sm:left-3 bg-yellow-600 text-white border-0 text-[10px] sm:text-xs">
                               Aguardando aprovação
                             </Badge>
                           )}
                         </div>
 
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-lg line-clamp-1">{product.name}</CardTitle>
+                        <CardHeader className="p-2 sm:p-4 pb-1 sm:pb-2">
+                          <CardTitle className="text-sm sm:text-lg line-clamp-1">{product.name}</CardTitle>
                         </CardHeader>
 
-                        <CardFooter className="flex items-center justify-between pt-0 gap-1 flex-wrap">
-                          <div className="flex items-center gap-1 text-secondary font-bold">
-                            <Coins className="w-4 h-4" />
+                        <CardFooter className="flex items-center justify-between p-2 sm:p-4 pt-0 gap-1 flex-wrap">
+                          <div className="flex items-center gap-1 text-secondary font-bold text-xs sm:text-base">
+                            <Coins className="w-3 h-3 sm:w-4 sm:h-4" />
                             {product.price_duelcoins.toLocaleString()}
                           </div>
                           <div className="flex gap-1">
-                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEditProduct(product)}>
-                              <Edit className="w-4 h-4" />
+                            <Button size="icon" variant="ghost" className="h-7 w-7 sm:h-8 sm:w-8" onClick={() => openEditProduct(product)}>
+                              <Edit className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                             </Button>
-                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleToggleMyProduct(product)}>
-                              {product.is_active ? <ToggleRight className="w-4 h-4 text-green-500" /> : <ToggleLeft className="w-4 h-4" />}
+                            <Button size="icon" variant="ghost" className="h-7 w-7 sm:h-8 sm:w-8" onClick={() => handleToggleMyProduct(product)}>
+                              {product.is_active ? <ToggleRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-500" /> : <ToggleLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
                             </Button>
-                            <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => handleDeleteMyProduct(product)}>
-                              <Trash2 className="w-4 h-4" />
+                            <Button size="icon" variant="ghost" className="h-7 w-7 sm:h-8 sm:w-8 text-destructive" onClick={() => handleDeleteMyProduct(product)}>
+                              <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                             </Button>
                           </div>
                         </CardFooter>
