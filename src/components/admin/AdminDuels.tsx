@@ -89,17 +89,31 @@ export const AdminDuels = () => {
     if (!selectedDuelId) return;
 
     try {
-      const { error } = await supabase
-        .from('live_duels')
-        .delete()
-        .eq('id', selectedDuelId);
+      if (selectedDuelId === 'ALL') {
+        const { error } = await supabase
+          .from('live_duels')
+          .delete()
+          .neq('id', '00000000-0000-0000-0000-000000000000');
 
-      if (error) throw error;
+        if (error) throw error;
 
-      toast({
-        title: "Sala excluída",
-        description: "A sala foi removida com sucesso.",
-      });
+        toast({
+          title: "Todas as salas excluídas",
+          description: `${duels.length} salas foram removidas com sucesso.`,
+        });
+      } else {
+        const { error } = await supabase
+          .from('live_duels')
+          .delete()
+          .eq('id', selectedDuelId);
+
+        if (error) throw error;
+
+        toast({
+          title: "Sala excluída",
+          description: "A sala foi removida com sucesso.",
+        });
+      }
 
       setDeleteDialogOpen(false);
       setSelectedDuelId(null);
