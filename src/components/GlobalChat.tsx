@@ -241,7 +241,7 @@ export const GlobalChat = () => {
     // Detect @ mention
     const cursorPos = e.target.selectionStart || value.length;
     const textBeforeCursor = value.slice(0, cursorPos);
-    const mentionMatch = textBeforeCursor.match(/@(\w*)$/);
+    const mentionMatch = textBeforeCursor.match(/@([\w\u00C0-\u024F]*)$/);
 
     if (mentionMatch) {
       const query = mentionMatch[1].toLowerCase();
@@ -280,7 +280,7 @@ export const GlobalChat = () => {
     const cursorPos = inputRef.current?.selectionStart || newMessage.length;
     const textBeforeCursor = newMessage.slice(0, cursorPos);
     const textAfterCursor = newMessage.slice(cursorPos);
-    const beforeMention = textBeforeCursor.replace(/@\w*$/, '');
+    const beforeMention = textBeforeCursor.replace(/@[\w\u00C0-\u024F]*$/, '');
     const updated = `${beforeMention}@${username} ${textAfterCursor}`;
     setNewMessage(updated);
     setShowMentions(false);
@@ -378,13 +378,13 @@ export const GlobalChat = () => {
 
         <div className="relative">
           {showMentions && mentionSuggestions.length > 0 && (
-            <div className="absolute bottom-full left-0 right-0 mb-1 bg-popover border border-border rounded-lg shadow-lg z-50 max-h-40 overflow-y-auto">
+            <div className="absolute bottom-full left-0 right-0 mb-1 bg-popover border border-border rounded-lg shadow-lg z-[9999] max-h-48 overflow-y-auto touch-auto">
               {mentionSuggestions.map((suggestion) => (
                 <button
                   key={suggestion.user_id || suggestion.username}
                   type="button"
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground transition-colors flex items-center gap-2"
-                  onMouseDown={(e) => {
+                  className="w-full text-left px-3 py-3 text-sm hover:bg-accent hover:text-accent-foreground active:bg-accent transition-colors flex items-center gap-2"
+                  onPointerDown={(e) => {
                     e.preventDefault();
                     handleSelectMention(suggestion.username);
                   }}

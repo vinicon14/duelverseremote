@@ -80,92 +80,97 @@ export const Navbar = () => {
     navigate('/auth');
   };
 
-  const NavLinks = () => (
-    <>
-      <Link to="/duels">
-        <Button variant="ghost" className="text-foreground hover:text-primary">
-          <Swords className="mr-2 h-4 w-4" />
-          Duelos
-        </Button>
-      </Link>
-      <Link to="/matchmaking">
-        <Button variant="ghost" className="text-foreground hover:text-primary">
-          <Zap className="mr-2 h-4 w-4" />
-          Fila Rápida
-        </Button>
-      </Link>
-      <Link to="/tournaments">
-        <Button variant="ghost" className="text-foreground hover:text-primary">
-          <Trophy className="mr-2 h-4 w-4" />
-          Torneios
-        </Button>
-      </Link>
-      <Link to="/friends">
-        <Button variant="ghost" className="text-foreground hover:text-primary">
-          <Users className="mr-2 h-4 w-4" />
-          Amigos
-        </Button>
-      </Link>
-      <Link to="/ranking">
-        <Button variant="ghost" className="text-foreground hover:text-primary">
-          <BarChart3 className="mr-2 h-4 w-4" />
-          Ranking
-        </Button>
-      </Link>
-      <Link to="/news">
-        <Button variant="ghost" className="text-foreground hover:text-primary">
-          <Newspaper className="mr-2 h-4 w-4" />
-          Notícias
-        </Button>
-      </Link>
-      <Link to="/gallery">
-        <Button variant="ghost" className="text-foreground hover:text-primary">
-          <Video className="mr-2 h-4 w-4" />
-          Galeria
-        </Button>
-      </Link>
-      <Link to={activeTcg === 'magic' ? '/magic-deck-builder' : '/deck-builder'}>
-        <Button variant="ghost" className="text-foreground hover:text-primary">
-          <Layers className="mr-2 h-4 w-4" />
-          Deck Build
-        </Button>
-      </Link>
-      <Link to="/duelcoins">
-        <Button variant="ghost" className="text-foreground hover:text-primary">
-          <Coins className="mr-2 h-4 w-4" />
-          DuelCoins
-        </Button>
-      </Link>
-      <Link to="/store">
-        <Button variant="ghost" className="text-foreground hover:text-primary">
-          <Store className="mr-2 h-4 w-4" />
-          Loja & Market
-        </Button>
-      </Link>
-      <Link to="/my-items">
-        <Button variant="ghost" className="text-foreground hover:text-primary">
-          <Gift className="mr-2 h-4 w-4" />
-          Meus Itens
-        </Button>
-      </Link>
-      {isAdmin && (
-        <Link to="/admin">
-          <Button variant="ghost" className="text-foreground hover:text-primary">
-            <Shield className="mr-2 h-4 w-4" />
-            Admin
+  const NavLinks = ({ mobile = false }: { mobile?: boolean }) => {
+    const btnClass = mobile 
+      ? "text-foreground hover:text-primary w-full justify-start h-11 text-base"
+      : "text-foreground hover:text-primary";
+    return (
+      <>
+        <Link to="/duels">
+          <Button variant="ghost" className={btnClass}>
+            <Swords className="mr-2 h-4 w-4" />
+            Duelos
           </Button>
         </Link>
-      )}
-      {isJudge && (
-        <Link to="/judge-panel">
-          <Button variant="ghost" className="text-foreground hover:text-primary">
-            <Scale className="mr-2 h-4 w-4" />
-            Juiz
+        <Link to="/matchmaking">
+          <Button variant="ghost" className={btnClass}>
+            <Zap className="mr-2 h-4 w-4" />
+            Fila Rápida
           </Button>
         </Link>
-      )}
-    </>
-  );
+        <Link to="/tournaments">
+          <Button variant="ghost" className={btnClass}>
+            <Trophy className="mr-2 h-4 w-4" />
+            Torneios
+          </Button>
+        </Link>
+        <Link to="/friends">
+          <Button variant="ghost" className={btnClass}>
+            <Users className="mr-2 h-4 w-4" />
+            Amigos
+          </Button>
+        </Link>
+        <Link to="/ranking">
+          <Button variant="ghost" className={btnClass}>
+            <BarChart3 className="mr-2 h-4 w-4" />
+            Ranking
+          </Button>
+        </Link>
+        <Link to="/news">
+          <Button variant="ghost" className={btnClass}>
+            <Newspaper className="mr-2 h-4 w-4" />
+            Notícias
+          </Button>
+        </Link>
+        <Link to="/gallery">
+          <Button variant="ghost" className={btnClass}>
+            <Video className="mr-2 h-4 w-4" />
+            Galeria
+          </Button>
+        </Link>
+        <Link to={activeTcg === 'magic' ? '/magic-deck-builder' : '/deck-builder'}>
+          <Button variant="ghost" className={btnClass}>
+            <Layers className="mr-2 h-4 w-4" />
+            Deck Build
+          </Button>
+        </Link>
+        <Link to="/duelcoins">
+          <Button variant="ghost" className={btnClass}>
+            <Coins className="mr-2 h-4 w-4" />
+            DuelCoins
+          </Button>
+        </Link>
+        <Link to="/store">
+          <Button variant="ghost" className={btnClass}>
+            <Store className="mr-2 h-4 w-4" />
+            Loja & Market
+          </Button>
+        </Link>
+        <Link to="/my-items">
+          <Button variant="ghost" className={btnClass}>
+            <Gift className="mr-2 h-4 w-4" />
+            Meus Itens
+          </Button>
+        </Link>
+        {isAdmin && (
+          <Link to="/admin">
+            <Button variant="ghost" className={btnClass}>
+              <Shield className="mr-2 h-4 w-4" />
+              Admin
+            </Button>
+          </Link>
+        )}
+        {isJudge && (
+          <Link to="/judge-panel">
+            <Button variant="ghost" className={btnClass}>
+              <Scale className="mr-2 h-4 w-4" />
+              Juiz
+            </Button>
+          </Link>
+        )}
+      </>
+    );
+  };
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 border-b border-primary/20 bg-card/80 backdrop-blur-lg">
@@ -233,30 +238,32 @@ export const Navbar = () => {
               <Menu className="h-6 w-6" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="right" className="w-64 h-screen overflow-y-auto">
-            <div className="flex flex-col space-y-4 pt-8 h-full">
-              <div className="flex items-center gap-2 pb-2 border-b border-border">
+          <SheetContent side="right" className="w-72 h-screen overflow-y-auto p-4">
+            <div className="flex flex-col space-y-1 pt-6 h-full pb-8">
+              <div className="flex items-center gap-2 pb-3 mb-2 border-b border-border">
                 <TcgSwitcher />
                 <OnlineUsersCounter />
                 {user && <NotificationBell userId={user.id} />}
               </div>
-              <NavLinks />
-              {user ? (
-                <>
-                  <Button variant="ghost" onClick={() => navigate('/profile')} className="justify-start">
-                    <User className="mr-2 h-4 w-4" />
-                    Perfil
+              <NavLinks mobile />
+              <div className="border-t border-border pt-2 mt-2">
+                {user ? (
+                  <>
+                    <Button variant="ghost" onClick={() => navigate('/profile')} className="w-full justify-start h-11 text-base">
+                      <User className="mr-2 h-4 w-4" />
+                      Perfil
+                    </Button>
+                    <Button variant="ghost" onClick={handleLogout} className="w-full justify-start h-11 text-base text-destructive">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Sair
+                    </Button>
+                  </>
+                ) : (
+                  <Button className="btn-mystic text-white w-full h-11" onClick={() => navigate('/auth')}>
+                    Entrar
                   </Button>
-                  <Button variant="ghost" onClick={handleLogout} className="justify-start">
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Sair
-                  </Button>
-                </>
-              ) : (
-                <Button className="btn-mystic text-white" onClick={() => navigate('/auth')}>
-                  Entrar
-                </Button>
-              )}
+                )}
+              </div>
             </div>
           </SheetContent>
         </Sheet>
