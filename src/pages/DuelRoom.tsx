@@ -65,6 +65,68 @@ const DuelRoom = () => {
   const { mainDeck, extraDeck, sideDeck, tokensDeck, importDeckFromYDK, loadDeckFromSaved, isLoading: isDeckLoading } = useDuelDeck();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Judge reward timer - fetch judge_log and countdown
+  const handleJudgeReward = useCallback(async (logId: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: rewarded } = await supabase.rpc('reward_judge_resolution', {
+        p_judge_id: user.id,
+        p_log_id: logId
+      });
+      if (rewarded) {
+        await supabase.from('judge_logs').update({ status: 'resolved', resolved_at: new Date().toISOString() }).eq('id', logId);
+        toast({ title: "✅ +2 DuelCoins!", description: "Recompensa recebida por permanecer 2 minutos na chamada" });
+      }
+    } catch (e) {
+      console.error('Judge reward error:', e);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    if (!isJudge || !id || !currentUser) return;
+
+    const fetchJudgeLog = async () => {
+      const { data } = await supabase
+        .from('judge_logs')
+        .select('id, judge_entered_at, status')
+        .eq('match_id', id)
+        .eq('judge_id', currentUser.id)
+        .eq('status', 'in_room')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (data?.judge_entered_at) {
+        judgeLogIdRef.current = data.id;
+        const elapsed = Math.floor((Date.now() - new Date(data.judge_entered_at).getTime()) / 1000);
+        const remaining = Math.max(0, 120 - elapsed);
+        setJudgeTimerSeconds(remaining);
+
+        if (remaining <= 0) {
+          setJudgeRewarded(true);
+          handleJudgeReward(data.id);
+          return;
+        }
+
+        judgeTimerRef.current = setInterval(() => {
+          setJudgeTimerSeconds(prev => {
+            if (prev === null || prev <= 1) {
+              if (judgeTimerRef.current) clearInterval(judgeTimerRef.current);
+              setJudgeRewarded(true);
+              if (judgeLogIdRef.current) handleJudgeReward(judgeLogIdRef.current);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      }
+    };
+
+    fetchJudgeLog();
+    return () => { if (judgeTimerRef.current) clearInterval(judgeTimerRef.current); };
+  }, [isJudge, id, currentUser, handleJudgeReward]);
+
   // Carrega dados do duelo e inicia timer
   useEffect(() => {
     const init = async () => {
