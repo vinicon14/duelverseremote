@@ -21,7 +21,7 @@ import { useBanCheck } from "@/hooks/useBanCheck";
 
 const REWARD_TIME_SECONDS = 120; // 2 minutes
 
-function JudgeTimer({ logId, judgeEnteredAt, onRewardEarned }: { logId: string; judgeEnteredAt: string | null; onRewardEarned: (logId: string) => void }) {
+function JudgeTimer({ logId, judgeEnteredAt, onRewardEarned, isRewarded }: { logId: string; judgeEnteredAt: string | null; onRewardEarned: (logId: string) => Promise<boolean>; isRewarded: boolean }) {
   const getSecondsLeft = useCallback(() => {
     if (!judgeEnteredAt) return REWARD_TIME_SECONDS;
     const elapsed = Math.floor((Date.now() - new Date(judgeEnteredAt).getTime()) / 1000);
@@ -29,7 +29,7 @@ function JudgeTimer({ logId, judgeEnteredAt, onRewardEarned }: { logId: string; 
   }, [judgeEnteredAt]);
 
   const [secondsLeft, setSecondsLeft] = useState(getSecondsLeft);
-  const [rewarded, setRewarded] = useState(false);
+  const [isProcessingReward, setIsProcessingReward] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -53,21 +53,32 @@ function JudgeTimer({ logId, judgeEnteredAt, onRewardEarned }: { logId: string; 
   }, [getSecondsLeft]);
 
   useEffect(() => {
-    if (secondsLeft === 0 && !rewarded) {
-      setRewarded(true);
-      onRewardEarned(logId);
+    if (secondsLeft === 0 && !isRewarded && !isProcessingReward) {
+      setIsProcessingReward(true);
+      void onRewardEarned(logId).finally(() => {
+        setIsProcessingReward(false);
+      });
     }
-  }, [secondsLeft, rewarded, logId, onRewardEarned]);
+  }, [secondsLeft, isRewarded, isProcessingReward, logId, onRewardEarned]);
 
   const minutes = Math.floor(secondsLeft / 60);
   const secs = secondsLeft % 60;
   const progress = ((REWARD_TIME_SECONDS - secondsLeft) / REWARD_TIME_SECONDS) * 100;
 
-  if (rewarded || secondsLeft === 0) {
+  if (isRewarded) {
     return (
       <div className="flex items-center gap-2 text-green-500 font-bold text-sm">
         <Coins className="w-4 h-4" />
         +2 DuelCoins!
+      </div>
+    );
+  }
+
+  if (secondsLeft === 0) {
+    return (
+      <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
+        <Clock className="w-3 h-3" />
+        {isProcessingReward ? 'Processando recompensa...' : 'Pronto para resolver'}
       </div>
     );
   }
@@ -339,7 +350,7 @@ export default function JudgePanel() {
                           <TableCell>{call.judge?.username || '-'}</TableCell>
                           <TableCell>
                             {call.status === 'in_room' && call.judge_id === currentUserId && (
-                              <JudgeTimer logId={call.id} judgeEnteredAt={call.judge_entered_at} onRewardEarned={handleRewardEarned} />
+                              <JudgeTimer logId={call.id} judgeEnteredAt={call.judge_entered_at} onRewardEarned={handleRewardEarned} isRewarded={rewardedLogs.has(call.id)} />
                             )}
                             {call.status === 'resolved' && (
                               <span className="text-xs text-green-500">✅ Concluído</span>
