@@ -188,13 +188,16 @@ export default function JudgePanel() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data: rewarded } = await supabase.rpc('reward_judge_resolution', {
+      await new Promise(resolve => setTimeout(resolve, 3000));
+
+      const { data: rewarded, error } = await supabase.rpc('reward_judge_resolution', {
         p_judge_id: user.id,
         p_log_id: logId
       });
 
+      console.log('Judge reward result:', { rewarded, error, logId });
+
       if (rewarded) {
-        // Auto-resolve after reward
         await supabase
           .from('judge_logs')
           .update({ status: 'resolved', resolved_at: new Date().toISOString() })
@@ -202,6 +205,19 @@ export default function JudgePanel() {
 
         toast({ title: "✅ +2 DuelCoins!", description: "Recompensa recebida por permanecer 2 minutos na chamada" });
         fetchCalls();
+      } else if (!error) {
+        // Retry after 5s
+        setTimeout(async () => {
+          const { data: retryResult } = await supabase.rpc('reward_judge_resolution', {
+            p_judge_id: user.id,
+            p_log_id: logId
+          });
+          if (retryResult) {
+            await supabase.from('judge_logs').update({ status: 'resolved', resolved_at: new Date().toISOString() }).eq('id', logId);
+            toast({ title: "✅ +2 DuelCoins!", description: "Recompensa recebida por permanecer 2 minutos na chamada" });
+            fetchCalls();
+          }
+        }, 5000);
       }
     } catch (error: any) {
       console.error('Reward error:', error);
