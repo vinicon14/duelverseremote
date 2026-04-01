@@ -31,14 +31,16 @@ export const ConditionalMonetagLoader = (): null => {
       return;
     }
 
-    // PRO users: No Monetag
-    if (location.pathname.startsWith('/pro/') || location.pathname === '/auth' || location.pathname === '/landing' || location.pathname === '/') {
-      console.log('Monetag BLOQUEADO - rota PRO/auth/landing:', location.pathname);
+    // PRO users: No Monetag - block AND remove existing
+    if (isPro) {
+      console.log('Monetag BLOQUEADO - usuário PRO');
+      removeExistingMonetagAssets();
       return;
     }
 
-    if (isPro) {
-      console.log('Monetag BLOQUEADO - usuário PRO');
+    if (location.pathname.startsWith('/pro/') || location.pathname === '/auth' || location.pathname === '/landing' || location.pathname === '/') {
+      console.log('Monetag BLOQUEADO - rota PRO/auth/landing:', location.pathname);
+      removeExistingMonetagAssets();
       return;
     }
 

@@ -89,17 +89,31 @@ export const AdminDuels = () => {
     if (!selectedDuelId) return;
 
     try {
-      const { error } = await supabase
-        .from('live_duels')
-        .delete()
-        .eq('id', selectedDuelId);
+      if (selectedDuelId === 'ALL') {
+        const { error } = await supabase
+          .from('live_duels')
+          .delete()
+          .neq('id', '00000000-0000-0000-0000-000000000000');
 
-      if (error) throw error;
+        if (error) throw error;
 
-      toast({
-        title: "Sala excluída",
-        description: "A sala foi removida com sucesso.",
-      });
+        toast({
+          title: "Todas as salas excluídas",
+          description: `${duels.length} salas foram removidas com sucesso.`,
+        });
+      } else {
+        const { error } = await supabase
+          .from('live_duels')
+          .delete()
+          .eq('id', selectedDuelId);
+
+        if (error) throw error;
+
+        toast({
+          title: "Sala excluída",
+          description: "A sala foi removida com sucesso.",
+        });
+      }
 
       setDeleteDialogOpen(false);
       setSelectedDuelId(null);
@@ -153,6 +167,18 @@ export const AdminDuels = () => {
             {duels.length} {duels.length === 1 ? 'sala ativa' : 'salas ativas'}
           </p>
         </div>
+        {duels.length > 0 && (
+          <Button
+            variant="destructive"
+            onClick={() => {
+              setSelectedDuelId('ALL');
+              setDeleteDialogOpen(true);
+            }}
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            Excluir Todas as Salas
+          </Button>
+        )}
       </div>
 
       <div className="grid gap-4">
@@ -231,9 +257,11 @@ export const AdminDuels = () => {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir sala?</AlertDialogTitle>
+            <AlertDialogTitle>{selectedDuelId === 'ALL' ? 'Excluir todas as salas?' : 'Excluir sala?'}</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação não pode ser desfeita. A sala será removida permanentemente e os jogadores serão desconectados.
+              {selectedDuelId === 'ALL'
+                ? `Esta ação não pode ser desfeita. Todas as ${duels.length} salas serão removidas permanentemente.`
+                : 'Esta ação não pode ser desfeita. A sala será removida permanentemente e os jogadores serão desconectados.'}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
