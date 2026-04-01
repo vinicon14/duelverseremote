@@ -924,6 +924,7 @@ const DuelRoom = () => {
                 <>
                   <HideElementsButton onToggle={() => setHideControls(!hideControls)} isHidden={hideControls} />
                   <RecordMatchButton duelId={id!} />
+                  <YouTubeLiveButton duelId={id!} />
                 </>
               )}
 
