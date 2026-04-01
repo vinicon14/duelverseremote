@@ -2061,6 +2061,10 @@ export type Database = {
         }
         Returns: string
       }
+      reward_judge_resolution: {
+        Args: { p_judge_id: string; p_log_id: string }
+        Returns: boolean
+      }
       search_users: {
         Args: { limit_count?: number; search_term: string }
         Returns: {

@@ -15,6 +15,7 @@ import { Navbar } from "@/components/Navbar";
 import { DuelChat } from "@/components/DuelChat";
 import { FloatingCalculator } from "@/components/FloatingCalculator";
 import { RecordMatchButton } from "@/components/RecordMatchButton";
+import { YouTubeLiveButton } from "@/components/YouTubeLiveButton";
 import { HideElementsButton } from "@/components/HideElementsButton";
 import { useBanCheck } from "@/hooks/useBanCheck";
 import { DuelDeckViewer } from "@/components/duel/DuelDeckViewer";
@@ -774,7 +775,7 @@ const DuelRoom = () => {
       setJudgeCalled(true);
       toast({
         title: "⚖️ Juiz chamado!",
-        description: "Um juiz será notificado e entrará na sala em breve",
+        description: "Todos os juízes foram notificados e entrarão na sala em breve",
       });
     } catch (error: any) {
       toast({
@@ -923,6 +924,7 @@ const DuelRoom = () => {
                 <>
                   <HideElementsButton onToggle={() => setHideControls(!hideControls)} isHidden={hideControls} />
                   <RecordMatchButton duelId={id!} />
+                  <YouTubeLiveButton duelId={id!} />
                 </>
               )}
 
