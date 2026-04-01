@@ -306,7 +306,7 @@ export default function JudgePanel() {
                           </TableCell>
                           <TableCell className="text-right space-x-2">
                             {call.status === 'pending' && (
-                              <Button size="sm" onClick={() => enterRoom(call.id, call.match_id)} className="btn-mystic">
+                              <Button size="sm" onClick={() => enterRoom(call.id, call.match_id, call.player_id)} className="btn-mystic">
                                 <Eye className="w-3 h-3 mr-1" />
                                 Entrar
                               </Button>
