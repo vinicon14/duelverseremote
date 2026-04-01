@@ -133,6 +133,15 @@ export default function JudgePanel() {
 
   const resolveCall = async (logId: string) => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Try to reward the judge (2 duelcoins if stayed 2+ min)
+      const { data: rewarded } = await supabase.rpc('reward_judge_resolution', {
+        p_judge_id: user.id,
+        p_log_id: logId
+      });
+
       const { error } = await supabase
         .from('judge_logs')
         .update({
@@ -143,10 +152,17 @@ export default function JudgePanel() {
 
       if (error) throw error;
 
-      toast({
-        title: "Chamada resolvida",
-        description: "A chamada foi marcada como resolvida"
-      });
+      if (rewarded) {
+        toast({
+          title: "✅ Chamada resolvida + 2 DuelCoins!",
+          description: "Você recebeu 2 DuelCoins por resolver esta chamada"
+        });
+      } else {
+        toast({
+          title: "Chamada resolvida",
+          description: "A chamada foi marcada como resolvida (permanência mínima de 2 min para recompensa)"
+        });
+      }
 
       fetchCalls();
     } catch (error: any) {

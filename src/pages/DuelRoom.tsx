@@ -774,7 +774,7 @@ const DuelRoom = () => {
       setJudgeCalled(true);
       toast({
         title: "⚖️ Juiz chamado!",
-        description: "Um juiz será notificado e entrará na sala em breve",
+        description: "Todos os juízes foram notificados e entrarão na sala em breve",
       });
     } catch (error: any) {
       toast({
