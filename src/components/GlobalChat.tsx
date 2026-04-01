@@ -304,6 +304,7 @@ export const GlobalChat = () => {
     setTimeout(() => inputRef.current?.focus(), 0);
   };
 
+  const deleteMessage = async (messageId: string) => {
     if (!isAdmin) return;
     
     try {
