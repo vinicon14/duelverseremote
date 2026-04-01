@@ -153,6 +153,18 @@ export const AdminDuels = () => {
             {duels.length} {duels.length === 1 ? 'sala ativa' : 'salas ativas'}
           </p>
         </div>
+        {duels.length > 0 && (
+          <Button
+            variant="destructive"
+            onClick={() => {
+              setSelectedDuelId('ALL');
+              setDeleteDialogOpen(true);
+            }}
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            Excluir Todas as Salas
+          </Button>
+        )}
       </div>
 
       <div className="grid gap-4">
