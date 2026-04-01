@@ -307,7 +307,7 @@ const Friends = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       
-      <main className="container mx-auto px-4 pt-24 pb-12">
+      <main className="container mx-auto px-4 pt-24 pb-24">
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-gradient-mystic mb-2">
             Amigos

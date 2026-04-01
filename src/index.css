@@ -83,6 +83,11 @@ All colors MUST be HSL.
 }
 
 @layer utilities {
+  /* Safe area for mobile devices with gesture bars / nav bars */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 16px);
+  }
+
   .text-gradient-mystic {
     @apply bg-clip-text text-transparent;
     background-image: var(--gradient-mystic);

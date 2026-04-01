@@ -294,8 +294,8 @@ export default function DuelCoins() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="rounded-md border">
-                <Table>
+              <div className="rounded-md border overflow-x-auto">
+                <Table className="text-sm">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Data</TableHead>
