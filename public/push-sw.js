@@ -1,6 +1,9 @@
 // Push Notification handlers for DuelVerse
 // This file is imported by the main Workbox service worker via importScripts
 
+const SUPABASE_URL = 'https://xxttwzewtqxvpgefggah.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4dHR3emV3dHF4dnBnZWZnZ2FoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk4NjY5NzQsImV4cCI6MjA3NTQ0Mjk3NH0.jhVKEu8tyid1gMnAxXZJdfrYt0a55eNpJT17hSdqtPQ';
+
 // Handle push notifications
 self.addEventListener('push', (event) => {
   console.log('📩 Push notification recebida:', event);
@@ -27,17 +30,13 @@ self.addEventListener('push', (event) => {
         badge: data.badge || notificationData.badge,
         data: data,
       };
-      console.log('📋 Notificação processada:', notificationData);
     } catch (e) {
       console.error('❌ Erro ao fazer parse do payload:', e);
       notificationData.body = event.data.text();
     }
   }
 
-  // Use unique tag per notification to prevent replacing previous ones
   const uniqueTag = 'duelverse-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5);
-
-  // Check if this is a duel invite notification - add action buttons
   const isDuelInvite = notificationData.data?.type === 'duel_invite';
   
   const options = {
@@ -46,36 +45,33 @@ self.addEventListener('push', (event) => {
     badge: notificationData.badge,
     data: notificationData.data,
     requireInteraction: true,
-    tag: uniqueTag,
-    vibrate: [200, 100, 200, 100, 200],
+    tag: isDuelInvite ? 'duel-invite-' + (notificationData.data?.inviteId || uniqueTag) : uniqueTag,
+    vibrate: isDuelInvite ? [300, 100, 300, 100, 300, 100, 300] : [200, 100, 200, 100, 200],
     renotify: true,
   };
 
   if (isDuelInvite) {
     options.actions = [
-      { action: 'accept_duel', title: '✅ Aceitar' },
+      { action: 'accept_duel', title: '✅ Aceitar Duelo' },
       { action: 'reject_duel', title: '❌ Recusar' },
     ];
-    options.vibrate = [300, 100, 300, 100, 300, 100, 300];
-    options.requireInteraction = true;
   }
 
-  // For duel invites, also try to focus/open the app immediately
   if (isDuelInvite) {
     event.waitUntil(
       Promise.all([
         self.registration.showNotification(notificationData.title, options),
-        // Try to focus existing window to show the in-app overlay
         self.clients.matchAll({ type: 'window', includeUncontrolled: true })
           .then((windowClients) => {
             for (const client of windowClients) {
               if ('focus' in client) {
+                client.postMessage({ 
+                  type: 'DUEL_INVITE_RECEIVED', 
+                  inviteId: notificationData.data?.inviteId,
+                  duelId: notificationData.data?.duelId 
+                });
                 return client.focus();
               }
-            }
-            // No existing window - open one
-            if (self.clients.openWindow) {
-              return self.clients.openWindow('/');
             }
           })
       ])
@@ -93,15 +89,70 @@ self.addEventListener('notificationclick', (event) => {
   const data = event.notification.data || {};
   const action = event.action;
 
-  // Handle duel invite actions
-  if (action === 'accept_duel' && data.duelId) {
+  if (action === 'accept_duel' && data.inviteId && data.duelId) {
+    event.waitUntil(
+      // Update invite status via Supabase REST API, then open duel room
+      fetch(`${SUPABASE_URL}/rest/v1/duel_invites?id=eq.${data.inviteId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+          'Prefer': 'return=minimal',
+        },
+        body: JSON.stringify({ status: 'accepted' }),
+      })
+      .then(() => {
+        return self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      })
+      .then((windowClients) => {
+        for (const client of windowClients) {
+          if ('focus' in client) {
+            client.focus();
+            client.postMessage({ type: 'ACCEPT_DUEL', duelId: data.duelId, inviteId: data.inviteId });
+            return;
+          }
+        }
+        if (self.clients.openWindow) {
+          return self.clients.openWindow('/duel/' + data.duelId);
+        }
+      })
+      .catch(err => {
+        console.error('Error accepting duel:', err);
+        if (self.clients.openWindow) {
+          return self.clients.openWindow('/duel/' + data.duelId);
+        }
+      })
+    );
+    return;
+  }
+
+  if (action === 'reject_duel' && data.inviteId) {
+    event.waitUntil(
+      fetch(`${SUPABASE_URL}/rest/v1/duel_invites?id=eq.${data.inviteId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+          'Prefer': 'return=minimal',
+        },
+        body: JSON.stringify({ status: 'rejected' }),
+      })
+      .catch(err => console.error('Error rejecting duel:', err))
+    );
+    return;
+  }
+
+  // For duel invite body click (no action button), open the app
+  if (data.type === 'duel_invite' && data.duelId) {
     event.waitUntil(
       self.clients.matchAll({ type: 'window', includeUncontrolled: true })
         .then((windowClients) => {
           for (const client of windowClients) {
             if ('focus' in client) {
               client.focus();
-              client.postMessage({ type: 'ACCEPT_DUEL', duelId: data.duelId, inviteId: data.inviteId });
+              client.postMessage({ type: 'DUEL_INVITE_RECEIVED', duelId: data.duelId, inviteId: data.inviteId });
               return;
             }
           }
@@ -113,34 +164,7 @@ self.addEventListener('notificationclick', (event) => {
     return;
   }
 
-  if (action === 'reject_duel') {
-    // Just close the notification - the invite will timeout
-    return;
-  }
-
-  // For duel invite clicks (no specific action button), open the app
-  if (data.type === 'duel_invite' && data.duelId) {
-    event.waitUntil(
-      self.clients.matchAll({ type: 'window', includeUncontrolled: true })
-        .then((windowClients) => {
-          for (const client of windowClients) {
-            if ('focus' in client) {
-              client.focus();
-              // The in-app overlay will handle showing accept/reject
-              return;
-            }
-          }
-          if (self.clients.openWindow) {
-            return self.clients.openWindow('/');
-          }
-        })
-    );
-    return;
-  }
-
   const urlToOpen = data.url || '/';
-  console.log('🔗 Abrindo URL:', urlToOpen);
-
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then((windowClients) => {
