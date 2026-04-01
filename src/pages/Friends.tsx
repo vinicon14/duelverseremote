@@ -369,22 +369,23 @@ const Friends = () => {
                             )}
                           </div>
 
-                          <div className="flex-1">
-                            <h3 className="font-semibold text-lg text-gradient-mystic flex items-center gap-2">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold text-base sm:text-lg text-gradient-mystic flex items-center gap-2 truncate">
                               {friend.username}
                               {friendOnline && (
                                 <span className="text-xs text-emerald-500 font-normal">● Online</span>
                               )}
                             </h3>
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-xs sm:text-sm text-muted-foreground">
                               {friendOnline 
                                 ? 'Online agora' 
                                 : `Visto ${new Date(friend.last_seen).toLocaleDateString()}`
                               }
                             </p>
                           </div>
+                          </div>
 
-                          <div className="flex gap-2 shrink-0">
+                          <div className="flex gap-2 shrink-0 w-full sm:w-auto">
                             <Button
                               variant="outline"
                               size="sm"
