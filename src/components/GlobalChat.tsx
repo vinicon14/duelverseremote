@@ -241,7 +241,7 @@ export const GlobalChat = () => {
     // Detect @ mention
     const cursorPos = e.target.selectionStart || value.length;
     const textBeforeCursor = value.slice(0, cursorPos);
-    const mentionMatch = textBeforeCursor.match(/@(\w*)$/);
+    const mentionMatch = textBeforeCursor.match(/@([\w\u00C0-\u024F]*)$/);
 
     if (mentionMatch) {
       const query = mentionMatch[1].toLowerCase();
