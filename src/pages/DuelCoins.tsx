@@ -178,7 +178,7 @@ export default function DuelCoins() {
     if (type === 'tournament_entry' || type === 'tournament_prize' || type === 'tournament_win') {
       return 'Torneios';
     }
-    if (type === 'admin_add' || type === 'admin_remove' || type === 'system' || type === 'daily_reward' || type === 'purchase' || type === 'redeem' || type === 'subscription') {
+    if (type === 'admin_add' || type === 'admin_remove' || type === 'system' || type === 'daily_reward' || type === 'purchase' || type === 'redeem' || type === 'subscription' || type === 'judge_reward') {
       return 'Sistema';
     }
     if (type === 'marketplace_purchase') {

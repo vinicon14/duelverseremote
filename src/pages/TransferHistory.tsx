@@ -108,7 +108,7 @@ export default function TransferHistory() {
     if (type === 'tournament_entry' || type === 'tournament_prize' || type === 'tournament_win') {
       return 'Torneios';
     }
-    if (type === 'admin_add' || type === 'admin_remove' || type === 'system' || type === 'daily_reward' || type === 'purchase' || type === 'redeem' || type === 'subscription') {
+    if (type === 'admin_add' || type === 'admin_remove' || type === 'system' || type === 'daily_reward' || type === 'purchase' || type === 'redeem' || type === 'subscription' || type === 'judge_reward') {
       return 'Sistema';
     }
     if (type === 'marketplace_purchase') {
@@ -153,6 +153,8 @@ export default function TransferHistory() {
         return 'Assinatura PRO';
       case 'redeem':
         return 'Resgate';
+      case 'judge_reward':
+        return 'Recompensa de Juiz';
       default:
         return type || 'Outro';
     }
