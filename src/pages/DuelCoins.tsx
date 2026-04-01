@@ -249,7 +249,7 @@ export default function DuelCoins() {
                 />
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Button
                   onClick={transferDuelCoins}
                   disabled={loading}
@@ -259,23 +259,26 @@ export default function DuelCoins() {
                   <Send className="w-4 h-4 mr-2" />
                   {loading ? "Transferindo..." : "Enviar DuelCoins"}
                 </Button>
-                <Button
-                  onClick={() => navigate("/buy-duelcoins")}
-                  variant="outline"
-                  size="lg"
-                  className="bg-yellow-500/10 border-yellow-500/30 hover:bg-yellow-500/20"
-                >
-                  <Coins className="w-4 h-4 mr-2 text-yellow-500" />
-                  Comprar
-                </Button>
-                <Button
-                  onClick={() => navigate("/transfer-history")}
-                  variant="outline"
-                  size="lg"
-                >
-                  <History className="w-4 h-4 mr-2" />
-                  Histórico
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => navigate("/buy-duelcoins")}
+                    variant="outline"
+                    size="lg"
+                    className="flex-1 bg-yellow-500/10 border-yellow-500/30 hover:bg-yellow-500/20"
+                  >
+                    <Coins className="w-4 h-4 mr-2 text-yellow-500" />
+                    Comprar
+                  </Button>
+                  <Button
+                    onClick={() => navigate("/transfer-history")}
+                    variant="outline"
+                    size="lg"
+                    className="flex-1"
+                  >
+                    <History className="w-4 h-4 mr-2" />
+                    Histórico
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
