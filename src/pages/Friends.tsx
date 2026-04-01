@@ -383,18 +383,20 @@ const Friends = () => {
                             </p>
                           </div>
 
-                          <div className="flex gap-2">
+                          <div className="flex gap-2 shrink-0">
                             <Button
                               variant="outline"
+                              size="sm"
                               onClick={() => navigate(`/chat/${friend.user_id}`)}
                             >
                               💬 Chat
                             </Button>
                             <Button
+                              size="sm"
                               onClick={() => setChallengeTarget(friend.user_id)}
                               className="btn-mystic text-white"
                             >
-                              <Swords className="w-4 h-4 mr-2" />
+                              <Swords className="w-4 h-4 mr-1" />
                               Desafiar
                             </Button>
                           </div>
