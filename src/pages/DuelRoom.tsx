@@ -948,11 +948,28 @@ const DuelRoom = () => {
           <div className="absolute top-2 sm:top-4 right-2 sm:right-4 z-50 flex flex-col sm:flex-row gap-2 items-end sm:items-center">
             {!hideControls && (
               <>
-                {/* Badge de juiz */}
+                {/* Badge de juiz + Timer */}
                 {isJudge && (
-                  <div className="px-2 sm:px-3 py-1 sm:py-2 rounded-lg backdrop-blur-sm text-xs sm:text-sm font-bold bg-purple-500/95 text-white flex items-center gap-1">
-                    <Scale className="w-3 h-3 sm:w-4 sm:h-4" />
-                    Juiz
+                  <div className="flex flex-col gap-1 items-end">
+                    <div className="px-2 sm:px-3 py-1 sm:py-2 rounded-lg backdrop-blur-sm text-xs sm:text-sm font-bold bg-purple-500/95 text-white flex items-center gap-1">
+                      <Scale className="w-3 h-3 sm:w-4 sm:h-4" />
+                      Juiz
+                    </div>
+                    {judgeTimerSeconds !== null && !judgeRewarded && (
+                      <div className="px-2 py-1 rounded-lg backdrop-blur-sm bg-background/90 border border-border min-w-[140px]">
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
+                          <Clock className="w-3 h-3" />
+                          <span>Recompensa em {String(Math.floor(judgeTimerSeconds / 60)).padStart(2, '0')}:{String(judgeTimerSeconds % 60).padStart(2, '0')}</span>
+                        </div>
+                        <Progress value={((120 - judgeTimerSeconds) / 120) * 100} className="h-2" />
+                      </div>
+                    )}
+                    {judgeRewarded && (
+                      <div className="px-2 py-1 rounded-lg backdrop-blur-sm bg-green-500/90 text-white text-xs font-bold flex items-center gap-1">
+                        <Coins className="w-3 h-3" />
+                        +2 DuelCoins!
+                      </div>
+                    )}
                   </div>
                 )}
 
