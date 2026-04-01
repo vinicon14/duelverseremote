@@ -59,6 +59,7 @@ const DuelRoom = () => {
   const [judgeRewarded, setJudgeRewarded] = useState(false);
   const judgeLogIdRef = useRef<string | null>(null);
   const judgeTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const judgeRewardProcessingRef = useRef(false);
   
   // Deck viewer state
   const [showDeckViewer, setShowDeckViewer] = useState(false);
@@ -67,9 +68,15 @@ const DuelRoom = () => {
 
   // Judge reward timer - fetch judge_log and countdown
   const handleJudgeReward = useCallback(async (logId: string) => {
+    if (judgeRewardProcessingRef.current || judgeRewarded) return;
+    judgeRewardProcessingRef.current = true;
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        judgeRewardProcessingRef.current = false;
+        return;
+      }
 
       // Try with a small delay to ensure server-side time has passed
       await new Promise(resolve => setTimeout(resolve, 3000));
@@ -83,31 +90,47 @@ const DuelRoom = () => {
 
       if (error) {
         console.error('Judge reward RPC error:', error);
+        judgeRewardProcessingRef.current = false;
         toast({ title: "Erro na recompensa", description: error.message, variant: "destructive" });
         return;
       }
 
       if (rewarded) {
         await supabase.from('judge_logs').update({ status: 'resolved', resolved_at: new Date().toISOString() }).eq('id', logId);
+        setJudgeRewarded(true);
+        judgeRewardProcessingRef.current = false;
         toast({ title: "✅ +2 DuelCoins!", description: "Recompensa recebida por permanecer 2 minutos na chamada" });
       } else {
         // Retry once more after 5s
         setTimeout(async () => {
-          const { data: retryResult } = await supabase.rpc('reward_judge_resolution', {
-            p_judge_id: user.id,
-            p_log_id: logId
-          });
-          if (retryResult) {
-            await supabase.from('judge_logs').update({ status: 'resolved', resolved_at: new Date().toISOString() }).eq('id', logId);
-            toast({ title: "✅ +2 DuelCoins!", description: "Recompensa recebida por permanecer 2 minutos na chamada" });
-            setJudgeRewarded(true);
+          try {
+            const { data: retryResult, error: retryError } = await supabase.rpc('reward_judge_resolution', {
+              p_judge_id: user.id,
+              p_log_id: logId
+            });
+
+            if (retryError) {
+              console.error('Judge reward retry error:', retryError);
+              toast({ title: "Erro na recompensa", description: retryError.message, variant: "destructive" });
+              judgeRewardProcessingRef.current = false;
+              return;
+            }
+
+            if (retryResult) {
+              await supabase.from('judge_logs').update({ status: 'resolved', resolved_at: new Date().toISOString() }).eq('id', logId);
+              setJudgeRewarded(true);
+              toast({ title: "✅ +2 DuelCoins!", description: "Recompensa recebida por permanecer 2 minutos na chamada" });
+            }
+          } finally {
+            judgeRewardProcessingRef.current = false;
           }
         }, 5000);
       }
     } catch (e) {
       console.error('Judge reward error:', e);
+      judgeRewardProcessingRef.current = false;
     }
-  }, [toast]);
+  }, [judgeRewarded, toast]);
 
   useEffect(() => {
     if (!isJudge || !id || !currentUser) return;
@@ -130,7 +153,6 @@ const DuelRoom = () => {
         setJudgeTimerSeconds(remaining);
 
         if (remaining <= 0) {
-          setJudgeRewarded(true);
           handleJudgeReward(data.id);
           return;
         }
@@ -139,7 +161,6 @@ const DuelRoom = () => {
           setJudgeTimerSeconds(prev => {
             if (prev === null || prev <= 1) {
               if (judgeTimerRef.current) clearInterval(judgeTimerRef.current);
-              setJudgeRewarded(true);
               if (judgeLogIdRef.current) handleJudgeReward(judgeLogIdRef.current);
               return 0;
             }

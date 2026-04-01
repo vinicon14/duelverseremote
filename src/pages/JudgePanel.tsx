@@ -21,7 +21,7 @@ import { useBanCheck } from "@/hooks/useBanCheck";
 
 const REWARD_TIME_SECONDS = 120; // 2 minutes
 
-function JudgeTimer({ logId, judgeEnteredAt, onRewardEarned }: { logId: string; judgeEnteredAt: string | null; onRewardEarned: (logId: string) => void }) {
+function JudgeTimer({ logId, judgeEnteredAt, onRewardEarned, isRewarded }: { logId: string; judgeEnteredAt: string | null; onRewardEarned: (logId: string) => Promise<boolean>; isRewarded: boolean }) {
   const getSecondsLeft = useCallback(() => {
     if (!judgeEnteredAt) return REWARD_TIME_SECONDS;
     const elapsed = Math.floor((Date.now() - new Date(judgeEnteredAt).getTime()) / 1000);
@@ -29,7 +29,7 @@ function JudgeTimer({ logId, judgeEnteredAt, onRewardEarned }: { logId: string; 
   }, [judgeEnteredAt]);
 
   const [secondsLeft, setSecondsLeft] = useState(getSecondsLeft);
-  const [rewarded, setRewarded] = useState(false);
+  const [isProcessingReward, setIsProcessingReward] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -53,21 +53,32 @@ function JudgeTimer({ logId, judgeEnteredAt, onRewardEarned }: { logId: string; 
   }, [getSecondsLeft]);
 
   useEffect(() => {
-    if (secondsLeft === 0 && !rewarded) {
-      setRewarded(true);
-      onRewardEarned(logId);
+    if (secondsLeft === 0 && !isRewarded && !isProcessingReward) {
+      setIsProcessingReward(true);
+      void onRewardEarned(logId).finally(() => {
+        setIsProcessingReward(false);
+      });
     }
-  }, [secondsLeft, rewarded, logId, onRewardEarned]);
+  }, [secondsLeft, isRewarded, isProcessingReward, logId, onRewardEarned]);
 
   const minutes = Math.floor(secondsLeft / 60);
   const secs = secondsLeft % 60;
   const progress = ((REWARD_TIME_SECONDS - secondsLeft) / REWARD_TIME_SECONDS) * 100;
 
-  if (rewarded || secondsLeft === 0) {
+  if (isRewarded) {
     return (
       <div className="flex items-center gap-2 text-green-500 font-bold text-sm">
         <Coins className="w-4 h-4" />
         +2 DuelCoins!
+      </div>
+    );
+  }
+
+  if (secondsLeft === 0) {
+    return (
+      <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
+        <Clock className="w-3 h-3" />
+        {isProcessingReward ? 'Processando recompensa...' : 'Pronto para resolver'}
       </div>
     );
   }
@@ -92,6 +103,7 @@ export default function JudgePanel() {
   const [loading, setLoading] = useState(true);
   const [activeTimers, setActiveTimers] = useState<Set<string>>(new Set());
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [rewardedLogs, setRewardedLogs] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id || null));
@@ -186,7 +198,7 @@ export default function JudgePanel() {
   const handleRewardEarned = useCallback(async (logId: string) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) return false;
 
       await new Promise(resolve => setTimeout(resolve, 3000));
 
@@ -203,24 +215,36 @@ export default function JudgePanel() {
           .update({ status: 'resolved', resolved_at: new Date().toISOString() })
           .eq('id', logId);
 
+        setRewardedLogs(prev => new Set(prev).add(logId));
         toast({ title: "✅ +2 DuelCoins!", description: "Recompensa recebida por permanecer 2 minutos na chamada" });
         fetchCalls();
+        return true;
       } else if (!error) {
-        // Retry after 5s
-        setTimeout(async () => {
-          const { data: retryResult } = await supabase.rpc('reward_judge_resolution', {
-            p_judge_id: user.id,
-            p_log_id: logId
-          });
-          if (retryResult) {
-            await supabase.from('judge_logs').update({ status: 'resolved', resolved_at: new Date().toISOString() }).eq('id', logId);
-            toast({ title: "✅ +2 DuelCoins!", description: "Recompensa recebida por permanecer 2 minutos na chamada" });
-            fetchCalls();
-          }
-        }, 5000);
+        await new Promise(resolve => setTimeout(resolve, 5000));
+
+        const { data: retryResult, error: retryError } = await supabase.rpc('reward_judge_resolution', {
+          p_judge_id: user.id,
+          p_log_id: logId
+        });
+
+        if (retryError) {
+          console.error('Judge reward retry error:', retryError);
+          return false;
+        }
+
+        if (retryResult) {
+          await supabase.from('judge_logs').update({ status: 'resolved', resolved_at: new Date().toISOString() }).eq('id', logId);
+          setRewardedLogs(prev => new Set(prev).add(logId));
+          toast({ title: "✅ +2 DuelCoins!", description: "Recompensa recebida por permanecer 2 minutos na chamada" });
+          fetchCalls();
+          return true;
+        }
       }
+
+      return false;
     } catch (error: any) {
       console.error('Reward error:', error);
+      return false;
     }
   }, [toast]);
 
@@ -229,10 +253,12 @@ export default function JudgePanel() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data: rewarded } = await supabase.rpc('reward_judge_resolution', {
+      const { data: rewarded, error: rewardError } = await supabase.rpc('reward_judge_resolution', {
         p_judge_id: user.id,
         p_log_id: logId
       });
+
+      if (rewardError) throw rewardError;
 
       await supabase
         .from('judge_logs')
@@ -324,7 +350,7 @@ export default function JudgePanel() {
                           <TableCell>{call.judge?.username || '-'}</TableCell>
                           <TableCell>
                             {call.status === 'in_room' && call.judge_id === currentUserId && (
-                              <JudgeTimer logId={call.id} judgeEnteredAt={call.judge_entered_at} onRewardEarned={handleRewardEarned} />
+                              <JudgeTimer logId={call.id} judgeEnteredAt={call.judge_entered_at} onRewardEarned={handleRewardEarned} isRewarded={rewardedLogs.has(call.id)} />
                             )}
                             {call.status === 'resolved' && (
                               <span className="text-xs text-green-500">✅ Concluído</span>
