@@ -238,30 +238,32 @@ export const Navbar = () => {
               <Menu className="h-6 w-6" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="right" className="w-64 h-screen overflow-y-auto">
-            <div className="flex flex-col space-y-4 pt-8 h-full">
-              <div className="flex items-center gap-2 pb-2 border-b border-border">
+          <SheetContent side="right" className="w-72 h-screen overflow-y-auto p-4">
+            <div className="flex flex-col space-y-1 pt-6 h-full pb-8">
+              <div className="flex items-center gap-2 pb-3 mb-2 border-b border-border">
                 <TcgSwitcher />
                 <OnlineUsersCounter />
                 {user && <NotificationBell userId={user.id} />}
               </div>
-              <NavLinks />
-              {user ? (
-                <>
-                  <Button variant="ghost" onClick={() => navigate('/profile')} className="justify-start">
-                    <User className="mr-2 h-4 w-4" />
-                    Perfil
+              <NavLinks mobile />
+              <div className="border-t border-border pt-2 mt-2">
+                {user ? (
+                  <>
+                    <Button variant="ghost" onClick={() => navigate('/profile')} className="w-full justify-start h-11 text-base">
+                      <User className="mr-2 h-4 w-4" />
+                      Perfil
+                    </Button>
+                    <Button variant="ghost" onClick={handleLogout} className="w-full justify-start h-11 text-base text-destructive">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Sair
+                    </Button>
+                  </>
+                ) : (
+                  <Button className="btn-mystic text-white w-full h-11" onClick={() => navigate('/auth')}>
+                    Entrar
                   </Button>
-                  <Button variant="ghost" onClick={handleLogout} className="justify-start">
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Sair
-                  </Button>
-                </>
-              ) : (
-                <Button className="btn-mystic text-white" onClick={() => navigate('/auth')}>
-                  Entrar
-                </Button>
-              )}
+                )}
+              </div>
             </div>
           </SheetContent>
         </Sheet>
