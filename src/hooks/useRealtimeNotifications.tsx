@@ -67,7 +67,7 @@ export const useRealtimeNotifications = (userId: string | undefined) => {
       )
       .subscribe();
 
-    // Subscribe to global chat messages
+    // Subscribe to global chat messages (only notify on @mentions)
     const globalChatChannel = supabase
       .channel('global-chat-notifications')
       .on(
@@ -79,8 +79,20 @@ export const useRealtimeNotifications = (userId: string | undefined) => {
         },
         async (payload) => {
           const msg = payload.new as { id: string; user_id: string; message: string };
-          // Don't notify for own messages
           if (msg.user_id === userId) return;
+
+          const msgText = msg.message || '';
+          // Get current user's username to check for @mention
+          const { data: myProfile } = await supabase
+            .from('profiles')
+            .select('username')
+            .eq('user_id', userId)
+            .single();
+          const myUsername = myProfile?.username?.toLowerCase() || '';
+          const hasMention = msgText.includes('@todos') ||
+            (myUsername && msgText.toLowerCase().includes(`@${myUsername}`));
+
+          if (!hasMention) return;
 
           const { data: profile } = await supabase
             .from('profiles')

@@ -192,18 +192,21 @@ export const GlobalChat = () => {
 
       if (error) throw error;
 
-      // Send push notification to all users (except sender)
-      try {
-        await supabase.functions.invoke('send-push-notification', {
-          body: {
-            title: '💬 Chat Global',
-            body: `${currentUser.username || 'Usuário'}: ${newMessage.trim().substring(0, 100)}`,
-            data: { type: 'global_chat', url: '/duels' },
-            exclude_user_id: currentUser.id,
-          },
-        });
-      } catch (pushError) {
-        console.error('Push notification error:', pushError);
+      // Send push notification only if message has @ mentions
+      const msgTrimmed = newMessage.trim();
+      if (msgTrimmed.includes('@')) {
+        try {
+          await supabase.functions.invoke('send-push-notification', {
+            body: {
+              title: '💬 Chat Global',
+              body: `${currentUser.username || 'Usuário'}: ${msgTrimmed.substring(0, 100)}`,
+              data: { type: 'global_chat', url: '/duels' },
+              exclude_user_id: currentUser.id,
+            },
+          });
+        } catch (pushError) {
+          console.error('Push notification error:', pushError);
+        }
       }
 
       setNewMessage("");

@@ -257,9 +257,11 @@ export const AdminDuels = () => {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir sala?</AlertDialogTitle>
+            <AlertDialogTitle>{selectedDuelId === 'ALL' ? 'Excluir todas as salas?' : 'Excluir sala?'}</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação não pode ser desfeita. A sala será removida permanentemente e os jogadores serão desconectados.
+              {selectedDuelId === 'ALL'
+                ? `Esta ação não pode ser desfeita. Todas as ${duels.length} salas serão removidas permanentemente.`
+                : 'Esta ação não pode ser desfeita. A sala será removida permanentemente e os jogadores serão desconectados.'}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
