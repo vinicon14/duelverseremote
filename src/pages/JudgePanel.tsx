@@ -21,12 +21,22 @@ import { useBanCheck } from "@/hooks/useBanCheck";
 
 const REWARD_TIME_SECONDS = 120; // 2 minutes
 
-function JudgeTimer({ logId, onRewardEarned }: { logId: string; onRewardEarned: (logId: string) => void }) {
-  const [secondsLeft, setSecondsLeft] = useState(REWARD_TIME_SECONDS);
+function JudgeTimer({ logId, judgeEnteredAt, onRewardEarned }: { logId: string; judgeEnteredAt: string | null; onRewardEarned: (logId: string) => void }) {
+  const getSecondsLeft = useCallback(() => {
+    if (!judgeEnteredAt) return REWARD_TIME_SECONDS;
+    const elapsed = Math.floor((Date.now() - new Date(judgeEnteredAt).getTime()) / 1000);
+    return Math.max(0, REWARD_TIME_SECONDS - elapsed);
+  }, [judgeEnteredAt]);
+
+  const [secondsLeft, setSecondsLeft] = useState(getSecondsLeft);
   const [rewarded, setRewarded] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
+    const initial = getSecondsLeft();
+    setSecondsLeft(initial);
+    if (initial <= 0) return;
+
     intervalRef.current = setInterval(() => {
       setSecondsLeft(prev => {
         if (prev <= 1) {
@@ -40,7 +50,7 @@ function JudgeTimer({ logId, onRewardEarned }: { logId: string; onRewardEarned: 
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, []);
+  }, [getSecondsLeft]);
 
   useEffect(() => {
     if (secondsLeft === 0 && !rewarded) {
@@ -53,7 +63,7 @@ function JudgeTimer({ logId, onRewardEarned }: { logId: string; onRewardEarned: 
   const secs = secondsLeft % 60;
   const progress = ((REWARD_TIME_SECONDS - secondsLeft) / REWARD_TIME_SECONDS) * 100;
 
-  if (rewarded) {
+  if (rewarded || secondsLeft === 0) {
     return (
       <div className="flex items-center gap-2 text-green-500 font-bold text-sm">
         <Coins className="w-4 h-4" />
