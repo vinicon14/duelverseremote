@@ -503,6 +503,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          judge_entered_at: string | null
           judge_id: string | null
           match_id: string
           player_id: string
@@ -512,6 +513,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          judge_entered_at?: string | null
           judge_id?: string | null
           match_id: string
           player_id: string
@@ -521,6 +523,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          judge_entered_at?: string | null
           judge_id?: string | null
           match_id?: string
           player_id?: string
