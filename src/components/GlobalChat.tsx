@@ -383,7 +383,7 @@ export const GlobalChat = () => {
                 <button
                   key={suggestion.user_id || suggestion.username}
                   type="button"
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground transition-colors flex items-center gap-2"
+                  className="w-full text-left px-3 py-3 text-sm hover:bg-accent hover:text-accent-foreground active:bg-accent transition-colors flex items-center gap-2"
                   onMouseDown={(e) => {
                     e.preventDefault();
                     handleSelectMention(suggestion.username);
