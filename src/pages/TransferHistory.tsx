@@ -153,6 +153,8 @@ export default function TransferHistory() {
         return 'Assinatura PRO';
       case 'redeem':
         return 'Resgate';
+      case 'judge_reward':
+        return 'Recompensa de Juiz';
       default:
         return type || 'Outro';
     }
