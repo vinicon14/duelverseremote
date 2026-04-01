@@ -66,20 +66,44 @@ export const GlobalChat = () => {
           setMessages(prev => [...prev, newMsg]);
           scrollToBottom();
           
-          // Show notification for new message (only if not own message)
+          // Show notification only if message contains @todos or @username
           const { data: { user } } = await supabase.auth.getUser();
           if (payload.new.user_id !== user?.id) {
-            if (Notification.permission === 'granted') {
-              new Notification(userData?.username || 'Anônimo', {
-                body: payload.new.message,
-                icon: userData?.avatar_url || undefined
+            const msgText = (payload.new.message as string) || '';
+            const { data: myProfile } = await supabase
+              .from('profiles')
+              .select('username')
+              .eq('user_id', user?.id || '')
+              .single();
+            const myUsername = myProfile?.username?.toLowerCase() || '';
+            const hasMention = msgText.includes('@todos') || 
+              (myUsername && msgText.toLowerCase().includes(`@${myUsername}`));
+            
+            if (hasMention) {
+              const senderName = userData?.username || 'Anônimo';
+              
+              if (Notification.permission === 'granted') {
+                new Notification(`💬 ${senderName}`, {
+                  body: msgText,
+                  icon: userData?.avatar_url || undefined
+                });
+              }
+              
+              // Native bridge (Android/Electron)
+              const isNativeApp = /DuelVerseApp/i.test(navigator.userAgent);
+              const isElectron = !!(window as any).electronAPI?.isElectron;
+              if (isNativeApp && (window as any).DuelVerseNative) {
+                (window as any).DuelVerseNative.showNotification(`💬 ${senderName}`, msgText);
+              } else if (isElectron && (window as any).electronAPI) {
+                (window as any).electronAPI.showNotification(`💬 ${senderName}`, msgText);
+              }
+              
+              toast({
+                title: `💬 ${senderName}`,
+                description: msgText,
+                duration: 5000,
               });
             }
-            toast({
-              title: userData?.username || 'Anônimo',
-              description: payload.new.message,
-              duration: 3000,
-            });
           }
         }
       )
