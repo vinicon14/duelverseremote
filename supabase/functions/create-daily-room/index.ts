@@ -19,16 +19,33 @@ serve(async (req) => {
 
   try {
     const { roomName } = await req.json();
+
+    // Input validation
+    if (!roomName || typeof roomName !== 'string') {
+      return new Response(
+        JSON.stringify({ error: 'Room name is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const roomNameRegex = /^[a-zA-Z0-9_-]{3,64}$/;
+    if (!roomNameRegex.test(roomName)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid room name. Use 3-64 alphanumeric characters, hyphens, or underscores only.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const DAILY_API_KEY = Deno.env.get('DAILY_API_KEY');
 
     if (!DAILY_API_KEY) {
       throw new Error('DAILY_API_KEY not configured');
     }
 
-    console.log('Checking if Daily.co room exists:', roomName);
+    const encodedRoomName = encodeURIComponent(roomName);
 
     // Tentar obter sala existente primeiro
-    const getResponse = await fetch(`https://api.daily.co/v1/rooms/${roomName}`, {
+    const getResponse = await fetch(`https://api.daily.co/v1/rooms/${encodedRoomName}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${DAILY_API_KEY}`,
@@ -38,7 +55,6 @@ serve(async (req) => {
     // Se a sala existir, retornar ela
     if (getResponse.ok) {
       const existingRoom = await getResponse.json();
-      console.log('Using existing room:', existingRoom.url);
       return new Response(
         JSON.stringify({ url: existingRoom.url, name: existingRoom.name }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -46,8 +62,6 @@ serve(async (req) => {
     }
 
     // Se não existir, criar nova sala
-    console.log('Creating new Daily.co room:', roomName);
-
     const createResponse = await fetch('https://api.daily.co/v1/rooms', {
       method: 'POST',
       headers: {
@@ -68,23 +82,23 @@ serve(async (req) => {
     });
 
     if (!createResponse.ok) {
-      const error = await createResponse.text();
-      console.error('Daily.co API error:', error);
-      throw new Error(`Failed to create room: ${error}`);
+      console.error('Daily.co API error:', {
+        status: createResponse.status,
+        statusText: createResponse.statusText,
+      });
+      throw new Error(`Failed to create room: ${createResponse.status}`);
     }
 
     const data = await createResponse.json();
-    console.log('Room created successfully:', data.url);
 
     return new Response(
       JSON.stringify({ url: data.url, name: data.name }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('Error in create-daily-room:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error in create-daily-room:', error instanceof Error ? error.message : 'Unknown error');
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: 'Failed to create video room' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
