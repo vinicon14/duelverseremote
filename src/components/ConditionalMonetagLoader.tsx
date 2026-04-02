@@ -81,7 +81,7 @@ export const ConditionalMonetagLoader = (): null => {
         if (script) script.remove();
       });
     };
-  }, [location.pathname, isPro, loading, isNativeApp]);
+  }, [location.pathname, isPro, loading, isNativeApp, isElectron]);
 
   useEffect(() => {
     applyPopupBlocking();

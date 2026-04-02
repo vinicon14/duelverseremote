@@ -14,13 +14,15 @@ export const NoMonetagAds = () => {
   const { isPro, loading } = useAccountType();
   const cleanupDoneRef = useRef(false);
 
+  const isElectron = !!(window as any).electronAPI?.isElectron;
+
   useEffect(() => {
     // Don't run while loading
     if (loading) return;
 
-    // For PRO users - block all ads immediately
-    if (isPro) {
-      console.log('PRO detectado - bloqueando Monetag completamente');
+    // For PRO users or Electron app - block all ads immediately
+    if (isPro || isElectron) {
+      console.log('Bloqueando Monetag completamente - PRO ou Electron');
       window._monetagBlocked = true;
       enableBlocking();
       return;
