@@ -17,6 +17,7 @@ export const ConditionalMonetagLoader = (): null => {
   const location = useLocation();
   const { isPro, loading } = useAccountType();
   const isNativeApp = /DuelVerseApp/i.test(navigator.userAgent);
+  const isElectron = !!(window as any).electronAPI?.isElectron;
 
   useEffect(() => {
     // Don't run while loading
@@ -25,8 +26,8 @@ export const ConditionalMonetagLoader = (): null => {
     // Apply popup blocking
     applyPopupBlocking();
 
-    if (isNativeApp) {
-      console.log('Monetag BLOQUEADO - APK nativo');
+    if (isNativeApp || isElectron) {
+      console.log('Monetag BLOQUEADO - app nativo (APK/Electron)');
       removeExistingMonetagAssets();
       return;
     }
