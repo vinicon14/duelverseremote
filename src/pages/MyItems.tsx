@@ -597,22 +597,26 @@ export default function MyItems() {
 
         {/* Tabs */}
         <Tabs defaultValue="active" className="w-full">
-          <TabsList className="mb-6 flex-wrap">
-            <TabsTrigger value="active" className="gap-2">
-              <Package className="w-4 h-4" />
-              Ativos ({inventory.length})
-            </TabsTrigger>
-            <TabsTrigger value="equip" className="gap-2">
-              <Image className="w-4 h-4" />
-              Equipamentos ({digitalEquipItems.length})
-            </TabsTrigger>
-            <TabsTrigger value="orders" className="gap-2">
-              <ShoppingCart className="w-4 h-4" />
-              Pedidos ({purchases.length})
-            </TabsTrigger>
-            <TabsTrigger value="used" className="gap-2">
-              <History className="w-4 h-4" />
-              Usados ({usedItems.length})
+          <div className="overflow-x-auto -mx-4 px-4 mb-6">
+            <TabsList className="flex-nowrap w-max sm:w-full">
+              <TabsTrigger value="active" className="gap-1 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
+                <Package className="w-3 h-3 sm:w-4 sm:h-4" />
+                Ativos ({inventory.length})
+              </TabsTrigger>
+              <TabsTrigger value="equip" className="gap-1 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
+                <Image className="w-3 h-3 sm:w-4 sm:h-4" />
+                Equip. ({digitalEquipItems.length})
+              </TabsTrigger>
+              <TabsTrigger value="orders" className="gap-1 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
+                <ShoppingCart className="w-3 h-3 sm:w-4 sm:h-4" />
+                Pedidos ({purchases.length})
+              </TabsTrigger>
+              <TabsTrigger value="used" className="gap-1 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
+                <History className="w-3 h-3 sm:w-4 sm:h-4" />
+                Usados ({usedItems.length})
+              </TabsTrigger>
+            </TabsList>
+          </div>
             </TabsTrigger>
           </TabsList>
 
