@@ -9,7 +9,7 @@ import { Save, Upload, ExternalLink, Monitor, Smartphone, Music, Trash2 } from "
 
 export const AdminSettings = () => {
   const [supportEmail, setSupportEmail] = useState("");
-  const [pixKey, setPixKey] = useState("");
+  
   const [landingVideoUrl, setLandingVideoUrl] = useState("");
   const [ringtoneYgo, setRingtoneYgo] = useState("");
   const [ringtoneMtg, setRingtoneMtg] = useState("");
