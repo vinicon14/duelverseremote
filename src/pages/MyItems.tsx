@@ -617,8 +617,6 @@ export default function MyItems() {
               </TabsTrigger>
             </TabsList>
           </div>
-            </TabsTrigger>
-          </TabsList>
 
           <TabsContent value="active">
             {filteredInventory.length === 0 ? (
