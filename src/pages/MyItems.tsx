@@ -5,7 +5,7 @@
  * Página para visualizar, transferir e usar itens do inventário.
  * Inclui sistema de equipar playmats e mangas de cartas (itens digitais).
  */
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { Card } from "@/components/ui/card";
@@ -13,10 +13,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { useAdmin } from "@/hooks/useAdmin";
 import { supabase } from "@/integrations/supabase/client";
-import { Package, Gift, Send, Zap, Loader2, History, ShoppingCart, Clock, Truck, CheckCircle, X, Coins, Sparkles, Image, Layers } from "lucide-react";
+import { Package, Gift, Send, Zap, Loader2, History, ShoppingCart, Clock, Truck, CheckCircle, X, Coins, Sparkles, Image, Layers, PlusCircle, Upload } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface ProductInfo {
@@ -61,6 +64,7 @@ const ORDER_STATUSES = [
 
 export default function MyItems() {
   const navigate = useNavigate();
+  const { isAdmin } = useAdmin();
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [usedItems, setUsedItems] = useState<InventoryItem[]>([]);
   const [purchases, setPurchases] = useState<Purchase[]>([]);
@@ -78,8 +82,20 @@ export default function MyItems() {
   const [pendingCosmeticItem, setPendingCosmeticItem] = useState<InventoryItem | null>(null);
   const [activePlaymatId, setActivePlaymatId] = useState<string | null>(null);
   const [activeSleeveId, setActiveSleeveId] = useState<string | null>(null);
+  // Admin create item state
+  const [createItemDialogOpen, setCreateItemDialogOpen] = useState(false);
+  const [creatingItem, setCreatingItem] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [newItem, setNewItem] = useState({
+    name: "",
+    description: "",
+    category: "digital_item",
+    image_url: "",
+    item_type: "" as string,
+  });
   const { toast } = useToast();
-
   useEffect(() => {
     // Load equipped items from localStorage
     setActivePlaymatId(localStorage.getItem('activePlaymatId'));
@@ -458,6 +474,87 @@ export default function MyItems() {
     );
   }
 
+  // Admin: handle image upload for create item
+  const handleAdminImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { toast({ title: 'Erro', description: 'Selecione uma imagem', variant: 'destructive' }); return; }
+    if (file.size > 5 * 1024 * 1024) { toast({ title: 'Erro', description: 'Máximo 5MB', variant: 'destructive' }); return; }
+    setUploadingImage(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = (event) => setImagePreview(event.target?.result as string);
+      reader.readAsDataURL(file);
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
+      const filePath = `marketplace/${user?.id || 'admin'}/${fileName}`;
+      const { error } = await supabase.storage.from('marketplace-images').upload(filePath, file, { cacheControl: '3600', upsert: false });
+      if (error) throw error;
+      const { data: { publicUrl } } = supabase.storage.from('marketplace-images').getPublicUrl(filePath);
+      setNewItem(prev => ({ ...prev, image_url: publicUrl }));
+      toast({ title: 'Imagem carregada!' });
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+    } finally { setUploadingImage(false); }
+  };
+
+  const handleCreatePersonalItem = async () => {
+    if (!newItem.name.trim()) {
+      toast({ title: "Erro", description: "Nome é obrigatório", variant: "destructive" });
+      return;
+    }
+    setCreatingItem(true);
+    try {
+      const metadata: any = {};
+      if (newItem.category === 'digital_item' && newItem.item_type) {
+        metadata.item_type = newItem.item_type;
+      }
+
+      // Create product (not visible in marketplace)
+      const { data: product, error: productError } = await supabase
+        .from('marketplace_products')
+        .insert({
+          name: newItem.name,
+          description: newItem.description || null,
+          price_duelcoins: 0,
+          category: newItem.category,
+          product_type: 'one_time',
+          image_url: newItem.image_url || null,
+          seller_id: user?.id,
+          is_third_party_seller: false,
+          is_active: false, // Not visible in marketplace
+          is_approved: true,
+          metadata,
+        })
+        .select()
+        .single();
+
+      if (productError) throw productError;
+
+      // Add directly to admin's inventory
+      const { error: inventoryError } = await supabase
+        .from('user_inventory' as any)
+        .insert({
+          user_id: user?.id,
+          product_id: product.id,
+          quantity: 1,
+          is_used: false,
+        });
+
+      if (inventoryError) throw inventoryError;
+
+      toast({ title: "Item criado! ✅", description: `"${newItem.name}" foi adicionado ao seu inventário.` });
+      setCreateItemDialogOpen(false);
+      setNewItem({ name: "", description: "", category: "digital_item", image_url: "", item_type: "" });
+      setImagePreview(null);
+      if (user) fetchInventory(user.id);
+    } catch (err: any) {
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    } finally {
+      setCreatingItem(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -474,10 +571,18 @@ export default function MyItems() {
             </p>
           </div>
 
-          <Button variant="outline" onClick={() => navigate('/marketplace')}>
-            <Package className="w-4 h-4 mr-2" />
-            Marketplace
-          </Button>
+          <div className="flex gap-2">
+            {isAdmin && (
+              <Button className="btn-mystic" onClick={() => setCreateItemDialogOpen(true)}>
+                <PlusCircle className="w-4 h-4 mr-2" />
+                Criar Meu Item
+              </Button>
+            )}
+            <Button variant="outline" onClick={() => navigate('/marketplace')}>
+              <Package className="w-4 h-4 mr-2" />
+              Marketplace
+            </Button>
+          </div>
         </div>
 
         {/* Search */}
@@ -745,6 +850,108 @@ export default function MyItems() {
                   <Zap className="w-4 h-4 mr-2" />
                 )}
                 Confirmar Uso
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        {/* Admin Create Item Dialog */}
+        <Dialog open={createItemDialogOpen} onOpenChange={setCreateItemDialogOpen}>
+          <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <PlusCircle className="w-5 h-5 text-primary" />
+                Criar Meu Item
+              </DialogTitle>
+              <DialogDescription>
+                Crie um item que irá direto para o seu inventário
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label>Nome do Item *</Label>
+                <Input
+                  placeholder="Ex: Playmat Dragon Shield"
+                  value={newItem.name}
+                  onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Descrição</Label>
+                <Textarea
+                  placeholder="Descrição do item..."
+                  value={newItem.description}
+                  onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
+                  rows={3}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Categoria</Label>
+                <Select value={newItem.category} onValueChange={(v) => setNewItem({ ...newItem, category: v, item_type: "" })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="digital_item">Item Digital</SelectItem>
+                    <SelectItem value="cosmetic">Cosmético</SelectItem>
+                    <SelectItem value="service">Serviço</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {newItem.category === 'digital_item' && (
+                <div className="space-y-2">
+                  <Label>Tipo do Item</Label>
+                  <Select value={newItem.item_type} onValueChange={(v) => setNewItem({ ...newItem, item_type: v })}>
+                    <SelectTrigger><SelectValue placeholder="Selecione o tipo" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="playmat">Playmat</SelectItem>
+                      <SelectItem value="sleeve">Sleeve</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label>Imagem</Label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleAdminImageChange}
+                />
+                {imagePreview ? (
+                  <div className="relative">
+                    <img src={imagePreview} alt="Preview" className="w-full h-40 object-cover rounded-lg" />
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      className="absolute top-2 right-2"
+                      onClick={() => { setImagePreview(null); setNewItem({ ...newItem, image_url: '' }); }}
+                    >
+                      <X className="w-3 h-3" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingImage}
+                  >
+                    {uploadingImage ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
+                    {uploadingImage ? 'Enviando...' : 'Carregar Imagem'}
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setCreateItemDialogOpen(false)}>Cancelar</Button>
+              <Button className="btn-mystic" onClick={handleCreatePersonalItem} disabled={creatingItem || !newItem.name.trim()}>
+                {creatingItem ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <PlusCircle className="w-4 h-4 mr-2" />}
+                Criar Item
               </Button>
             </DialogFooter>
           </DialogContent>
