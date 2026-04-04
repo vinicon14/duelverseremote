@@ -854,6 +854,108 @@ export default function MyItems() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        {/* Admin Create Item Dialog */}
+        <Dialog open={createItemDialogOpen} onOpenChange={setCreateItemDialogOpen}>
+          <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <PlusCircle className="w-5 h-5 text-primary" />
+                Criar Meu Item
+              </DialogTitle>
+              <DialogDescription>
+                Crie um item que irá direto para o seu inventário
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label>Nome do Item *</Label>
+                <Input
+                  placeholder="Ex: Playmat Dragon Shield"
+                  value={newItem.name}
+                  onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Descrição</Label>
+                <Textarea
+                  placeholder="Descrição do item..."
+                  value={newItem.description}
+                  onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
+                  rows={3}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Categoria</Label>
+                <Select value={newItem.category} onValueChange={(v) => setNewItem({ ...newItem, category: v, item_type: "" })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="digital_item">Item Digital</SelectItem>
+                    <SelectItem value="cosmetic">Cosmético</SelectItem>
+                    <SelectItem value="service">Serviço</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {newItem.category === 'digital_item' && (
+                <div className="space-y-2">
+                  <Label>Tipo do Item</Label>
+                  <Select value={newItem.item_type} onValueChange={(v) => setNewItem({ ...newItem, item_type: v })}>
+                    <SelectTrigger><SelectValue placeholder="Selecione o tipo" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="playmat">Playmat</SelectItem>
+                      <SelectItem value="sleeve">Sleeve</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label>Imagem</Label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleAdminImageChange}
+                />
+                {imagePreview ? (
+                  <div className="relative">
+                    <img src={imagePreview} alt="Preview" className="w-full h-40 object-cover rounded-lg" />
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      className="absolute top-2 right-2"
+                      onClick={() => { setImagePreview(null); setNewItem({ ...newItem, image_url: '' }); }}
+                    >
+                      <X className="w-3 h-3" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingImage}
+                  >
+                    {uploadingImage ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
+                    {uploadingImage ? 'Enviando...' : 'Carregar Imagem'}
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setCreateItemDialogOpen(false)}>Cancelar</Button>
+              <Button className="btn-mystic" onClick={handleCreatePersonalItem} disabled={creatingItem || !newItem.name.trim()}>
+                {creatingItem ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <PlusCircle className="w-4 h-4 mr-2" />}
+                Criar Item
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );
