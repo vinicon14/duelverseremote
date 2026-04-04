@@ -52,7 +52,7 @@ export const AdminSettings = () => {
 
       if (data) {
         const emailSetting = data.find((s) => s.key === 'support_email');
-        const pixSetting = data.find((s) => s.key === 'pix_key');
+        
         const videoSetting = data.find((s) => s.key === 'landing_video_url');
         const ringYgo = data.find((s) => s.key === 'ringtone_ygo');
         const ringMtg = data.find((s) => s.key === 'ringtone_mtg');
