@@ -254,18 +254,6 @@ export const AdminSettings = () => {
             </p>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="pix-key">Chave PIX (Cópia e Cola)</Label>
-            <Input
-              id="pix-key"
-              placeholder="00020126580014br.gov.bcb.pix..."
-              value={pixKey}
-              onChange={(e) => setPixKey(e.target.value)}
-            />
-            <p className="text-sm text-muted-foreground">
-              Chave PIX no formato cópia e cola para pagamentos
-            </p>
-          </div>
         </CardContent>
       </Card>
 
