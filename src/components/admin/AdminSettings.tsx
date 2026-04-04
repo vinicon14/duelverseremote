@@ -61,7 +61,7 @@ export const AdminSettings = () => {
         const androidSetting = data.find((s) => s.key === 'android_download_url');
 
         if (emailSetting) setSupportEmail(emailSetting.value || '');
-        if (pixSetting) setPixKey(pixSetting.value || '');
+        
         if (videoSetting) setLandingVideoUrl(videoSetting.value || '');
         if (ringYgo) setRingtoneYgo(ringYgo.value || '');
         if (ringMtg) setRingtoneMtg(ringMtg.value || '');
