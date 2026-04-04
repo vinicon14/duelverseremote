@@ -474,6 +474,87 @@ export default function MyItems() {
     );
   }
 
+  // Admin: handle image upload for create item
+  const handleAdminImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { toast({ title: 'Erro', description: 'Selecione uma imagem', variant: 'destructive' }); return; }
+    if (file.size > 5 * 1024 * 1024) { toast({ title: 'Erro', description: 'Máximo 5MB', variant: 'destructive' }); return; }
+    setUploadingImage(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = (event) => setImagePreview(event.target?.result as string);
+      reader.readAsDataURL(file);
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
+      const filePath = `marketplace/${user?.id || 'admin'}/${fileName}`;
+      const { error } = await supabase.storage.from('marketplace-images').upload(filePath, file, { cacheControl: '3600', upsert: false });
+      if (error) throw error;
+      const { data: { publicUrl } } = supabase.storage.from('marketplace-images').getPublicUrl(filePath);
+      setNewItem(prev => ({ ...prev, image_url: publicUrl }));
+      toast({ title: 'Imagem carregada!' });
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+    } finally { setUploadingImage(false); }
+  };
+
+  const handleCreatePersonalItem = async () => {
+    if (!newItem.name.trim()) {
+      toast({ title: "Erro", description: "Nome é obrigatório", variant: "destructive" });
+      return;
+    }
+    setCreatingItem(true);
+    try {
+      const metadata: any = {};
+      if (newItem.category === 'digital_item' && newItem.item_type) {
+        metadata.item_type = newItem.item_type;
+      }
+
+      // Create product (not visible in marketplace)
+      const { data: product, error: productError } = await supabase
+        .from('marketplace_products')
+        .insert({
+          name: newItem.name,
+          description: newItem.description || null,
+          price_duelcoins: 0,
+          category: newItem.category,
+          product_type: 'one_time',
+          image_url: newItem.image_url || null,
+          seller_id: user?.id,
+          is_third_party_seller: false,
+          is_active: false, // Not visible in marketplace
+          is_approved: true,
+          metadata,
+        })
+        .select()
+        .single();
+
+      if (productError) throw productError;
+
+      // Add directly to admin's inventory
+      const { error: inventoryError } = await supabase
+        .from('user_inventory' as any)
+        .insert({
+          user_id: user?.id,
+          product_id: product.id,
+          quantity: 1,
+          is_used: false,
+        });
+
+      if (inventoryError) throw inventoryError;
+
+      toast({ title: "Item criado! ✅", description: `"${newItem.name}" foi adicionado ao seu inventário.` });
+      setCreateItemDialogOpen(false);
+      setNewItem({ name: "", description: "", category: "digital_item", image_url: "", item_type: "" });
+      setImagePreview(null);
+      if (user) fetchInventory(user.id);
+    } catch (err: any) {
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    } finally {
+      setCreatingItem(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -490,10 +571,18 @@ export default function MyItems() {
             </p>
           </div>
 
-          <Button variant="outline" onClick={() => navigate('/marketplace')}>
-            <Package className="w-4 h-4 mr-2" />
-            Marketplace
-          </Button>
+          <div className="flex gap-2">
+            {isAdmin && (
+              <Button className="btn-mystic" onClick={() => setCreateItemDialogOpen(true)}>
+                <PlusCircle className="w-4 h-4 mr-2" />
+                Criar Meu Item
+              </Button>
+            )}
+            <Button variant="outline" onClick={() => navigate('/marketplace')}>
+              <Package className="w-4 h-4 mr-2" />
+              Marketplace
+            </Button>
+          </div>
         </div>
 
         {/* Search */}
