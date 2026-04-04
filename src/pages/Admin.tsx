@@ -50,18 +50,19 @@ export default function Admin() {
       <Navbar />
       
       <main className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <Shield className="w-8 h-8 text-primary" />
-            <h1 className="text-4xl font-bold text-gradient-mystic">Painel Administrativo</h1>
+        <div className="mb-6 sm:mb-8">
+          <div className="flex items-center gap-2 sm:gap-3 mb-2">
+            <Shield className="w-6 h-6 sm:w-8 sm:h-8 text-primary shrink-0" />
+            <h1 className="text-2xl sm:text-4xl font-bold text-gradient-mystic">Painel Admin</h1>
           </div>
-          <p className="text-muted-foreground">
+          <p className="text-sm sm:text-base text-muted-foreground">
             Gerencie notícias, anúncios e usuários da plataforma
           </p>
         </div>
 
         <Tabs defaultValue="news" className="w-full">
-          <TabsList className="grid w-full grid-cols-11">
+          <div className="overflow-x-auto -mx-4 px-4 pb-2">
+            <TabsList className="flex w-max sm:grid sm:w-full sm:grid-cols-11 gap-1">
             <TabsTrigger value="news">Notícias</TabsTrigger>
             <TabsTrigger value="ads">Anúncios</TabsTrigger>
             <TabsTrigger value="users">Usuários</TabsTrigger>
@@ -73,7 +74,8 @@ export default function Admin() {
             <TabsTrigger value="plans">Planos</TabsTrigger>
             <TabsTrigger value="marketplace">Aprovações</TabsTrigger>
             <TabsTrigger value="settings">Config</TabsTrigger>
-          </TabsList>
+            </TabsList>
+          </div>
           
           <TabsContent value="news" className="mt-6">
             <AdminNews />

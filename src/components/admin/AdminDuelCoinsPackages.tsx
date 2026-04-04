@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Switch } from "@/components/ui/switch";
-import { Coins, Plus, Pencil, Trash2, Package, ExternalLink, Loader2 } from "lucide-react";
+import { Coins, Plus, Pencil, Trash2, Package, Loader2 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -179,40 +179,8 @@ export const AdminDuelCoinsPackages = () => {
     }
   };
 
-  const webhookUrl = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/abacatepay-webhook`;
-
   return (
     <div className="space-y-6">
-      {/* Webhook Info */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ExternalLink className="w-5 h-5" />
-            Configuração AbacatePay
-          </CardTitle>
-          <CardDescription>
-            Configure o webhook abaixo no AbacatePay para receber confirmações de pagamento automaticamente
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            <Label>URL do Webhook (cole no AbacatePay)</Label>
-            <div className="flex gap-2">
-              <Input value={webhookUrl} readOnly className="font-mono text-xs" />
-              <Button variant="outline" onClick={() => {
-                navigator.clipboard.writeText(webhookUrl);
-                toast({ title: "URL copiada!" });
-              }}>
-                Copiar
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Configure este URL como webhook de notificação de pagamento no painel do AbacatePay.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Packages Management */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
@@ -254,8 +222,8 @@ export const AdminDuelCoinsPackages = () => {
                   </div>
                 </div>
                 <div>
-                  <Label>URL de Checkout (AbacatePay)</Label>
-                  <Input value={form.checkout_url} onChange={(e) => setForm({ ...form, checkout_url: e.target.value })} placeholder="https://abacatepay.com/..." />
+                  <Label>URL de Checkout (opcional)</Label>
+                  <Input value={form.checkout_url} onChange={(e) => setForm({ ...form, checkout_url: e.target.value })} placeholder="https://..." />
                 </div>
                 <div>
                   <Label>URL da Imagem (opcional)</Label>

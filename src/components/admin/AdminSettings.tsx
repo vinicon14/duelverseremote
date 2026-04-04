@@ -9,7 +9,7 @@ import { Save, Upload, ExternalLink, Monitor, Smartphone, Music, Trash2 } from "
 
 export const AdminSettings = () => {
   const [supportEmail, setSupportEmail] = useState("");
-  const [pixKey, setPixKey] = useState("");
+  
   const [landingVideoUrl, setLandingVideoUrl] = useState("");
   const [ringtoneYgo, setRingtoneYgo] = useState("");
   const [ringtoneMtg, setRingtoneMtg] = useState("");
@@ -52,7 +52,7 @@ export const AdminSettings = () => {
 
       if (data) {
         const emailSetting = data.find((s) => s.key === 'support_email');
-        const pixSetting = data.find((s) => s.key === 'pix_key');
+        
         const videoSetting = data.find((s) => s.key === 'landing_video_url');
         const ringYgo = data.find((s) => s.key === 'ringtone_ygo');
         const ringMtg = data.find((s) => s.key === 'ringtone_mtg');
@@ -61,7 +61,7 @@ export const AdminSettings = () => {
         const androidSetting = data.find((s) => s.key === 'android_download_url');
 
         if (emailSetting) setSupportEmail(emailSetting.value || '');
-        if (pixSetting) setPixKey(pixSetting.value || '');
+        
         if (videoSetting) setLandingVideoUrl(videoSetting.value || '');
         if (ringYgo) setRingtoneYgo(ringYgo.value || '');
         if (ringMtg) setRingtoneMtg(ringMtg.value || '');
@@ -204,7 +204,7 @@ export const AdminSettings = () => {
     try {
       const settings = [
         { key: 'support_email', value: supportEmail },
-        { key: 'pix_key', value: pixKey },
+        
         { key: 'landing_video_url', value: landingVideoUrl },
       ];
 
@@ -254,18 +254,6 @@ export const AdminSettings = () => {
             </p>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="pix-key">Chave PIX (Cópia e Cola)</Label>
-            <Input
-              id="pix-key"
-              placeholder="00020126580014br.gov.bcb.pix..."
-              value={pixKey}
-              onChange={(e) => setPixKey(e.target.value)}
-            />
-            <p className="text-sm text-muted-foreground">
-              Chave PIX no formato cópia e cola para pagamentos
-            </p>
-          </div>
         </CardContent>
       </Card>
 
