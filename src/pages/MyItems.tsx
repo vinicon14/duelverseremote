@@ -5,7 +5,7 @@
  * Página para visualizar, transferir e usar itens do inventário.
  * Inclui sistema de equipar playmats e mangas de cartas (itens digitais).
  */
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { Card } from "@/components/ui/card";
@@ -13,10 +13,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { useAdmin } from "@/hooks/useAdmin";
 import { supabase } from "@/integrations/supabase/client";
-import { Package, Gift, Send, Zap, Loader2, History, ShoppingCart, Clock, Truck, CheckCircle, X, Coins, Sparkles, Image, Layers } from "lucide-react";
+import { Package, Gift, Send, Zap, Loader2, History, ShoppingCart, Clock, Truck, CheckCircle, X, Coins, Sparkles, Image, Layers, PlusCircle, Upload } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface ProductInfo {
@@ -61,6 +64,7 @@ const ORDER_STATUSES = [
 
 export default function MyItems() {
   const navigate = useNavigate();
+  const { isAdmin } = useAdmin();
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [usedItems, setUsedItems] = useState<InventoryItem[]>([]);
   const [purchases, setPurchases] = useState<Purchase[]>([]);
@@ -78,8 +82,20 @@ export default function MyItems() {
   const [pendingCosmeticItem, setPendingCosmeticItem] = useState<InventoryItem | null>(null);
   const [activePlaymatId, setActivePlaymatId] = useState<string | null>(null);
   const [activeSleeveId, setActiveSleeveId] = useState<string | null>(null);
+  // Admin create item state
+  const [createItemDialogOpen, setCreateItemDialogOpen] = useState(false);
+  const [creatingItem, setCreatingItem] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [newItem, setNewItem] = useState({
+    name: "",
+    description: "",
+    category: "digital_item",
+    image_url: "",
+    item_type: "" as string,
+  });
   const { toast } = useToast();
-
   useEffect(() => {
     // Load equipped items from localStorage
     setActivePlaymatId(localStorage.getItem('activePlaymatId'));
