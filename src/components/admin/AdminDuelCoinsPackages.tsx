@@ -222,8 +222,8 @@ export const AdminDuelCoinsPackages = () => {
                   </div>
                 </div>
                 <div>
-                  <Label>URL de Checkout (AbacatePay)</Label>
-                  <Input value={form.checkout_url} onChange={(e) => setForm({ ...form, checkout_url: e.target.value })} placeholder="https://abacatepay.com/..." />
+                  <Label>URL de Checkout (opcional)</Label>
+                  <Input value={form.checkout_url} onChange={(e) => setForm({ ...form, checkout_url: e.target.value })} placeholder="https://..." />
                 </div>
                 <div>
                   <Label>URL da Imagem (opcional)</Label>

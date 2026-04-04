@@ -204,7 +204,7 @@ export const AdminSettings = () => {
     try {
       const settings = [
         { key: 'support_email', value: supportEmail },
-        { key: 'pix_key', value: pixKey },
+        
         { key: 'landing_video_url', value: landingVideoUrl },
       ];
 

@@ -74,7 +74,8 @@ export default function Admin() {
             <TabsTrigger value="plans">Planos</TabsTrigger>
             <TabsTrigger value="marketplace">Aprovações</TabsTrigger>
             <TabsTrigger value="settings">Config</TabsTrigger>
-          </TabsList>
+            </TabsList>
+          </div>
           
           <TabsContent value="news" className="mt-6">
             <AdminNews />
