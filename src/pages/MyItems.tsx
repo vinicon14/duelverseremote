@@ -560,26 +560,26 @@ export default function MyItems() {
       <Navbar />
       <main className="container mx-auto px-4 py-8 pt-24">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <Gift className="w-8 h-8 text-primary" />
-              <h1 className="text-4xl font-bold text-gradient-mystic">Meus Itens</h1>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
+              <Gift className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
+              <h1 className="text-2xl sm:text-4xl font-bold text-gradient-mystic">Meus Itens</h1>
             </div>
-            <p className="text-muted-foreground">
+            <p className="text-sm sm:text-base text-muted-foreground">
               Gerencie seus itens comprados no Marketplace
             </p>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 w-full sm:w-auto">
             {isAdmin && (
-              <Button className="btn-mystic" onClick={() => setCreateItemDialogOpen(true)}>
-                <PlusCircle className="w-4 h-4 mr-2" />
+              <Button className="btn-mystic flex-1 sm:flex-none text-xs sm:text-sm h-10 sm:h-11" onClick={() => setCreateItemDialogOpen(true)}>
+                <PlusCircle className="w-4 h-4 mr-1 sm:mr-2" />
                 Criar Meu Item
               </Button>
             )}
-            <Button variant="outline" onClick={() => navigate('/marketplace')}>
-              <Package className="w-4 h-4 mr-2" />
+            <Button variant="outline" className="flex-1 sm:flex-none text-xs sm:text-sm h-10 sm:h-11" onClick={() => navigate('/marketplace')}>
+              <Package className="w-4 h-4 mr-1 sm:mr-2" />
               Marketplace
             </Button>
           </div>
