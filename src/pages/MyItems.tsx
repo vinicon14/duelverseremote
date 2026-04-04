@@ -466,14 +466,6 @@ export default function MyItems() {
     );
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
   // Admin: handle image upload for create item
   const handleAdminImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -555,31 +547,39 @@ export default function MyItems() {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       <main className="container mx-auto px-4 py-8 pt-24">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <Gift className="w-8 h-8 text-primary" />
-              <h1 className="text-4xl font-bold text-gradient-mystic">Meus Itens</h1>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
+              <Gift className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
+              <h1 className="text-2xl sm:text-4xl font-bold text-gradient-mystic">Meus Itens</h1>
             </div>
-            <p className="text-muted-foreground">
+            <p className="text-sm sm:text-base text-muted-foreground">
               Gerencie seus itens comprados no Marketplace
             </p>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 w-full sm:w-auto">
             {isAdmin && (
-              <Button className="btn-mystic" onClick={() => setCreateItemDialogOpen(true)}>
-                <PlusCircle className="w-4 h-4 mr-2" />
+              <Button className="btn-mystic flex-1 sm:flex-none text-xs sm:text-sm h-10 sm:h-11" onClick={() => setCreateItemDialogOpen(true)}>
+                <PlusCircle className="w-4 h-4 mr-1 sm:mr-2" />
                 Criar Meu Item
               </Button>
             )}
-            <Button variant="outline" onClick={() => navigate('/marketplace')}>
-              <Package className="w-4 h-4 mr-2" />
+            <Button variant="outline" className="flex-1 sm:flex-none text-xs sm:text-sm h-10 sm:h-11" onClick={() => navigate('/marketplace')}>
+              <Package className="w-4 h-4 mr-1 sm:mr-2" />
               Marketplace
             </Button>
           </div>
@@ -597,24 +597,26 @@ export default function MyItems() {
 
         {/* Tabs */}
         <Tabs defaultValue="active" className="w-full">
-          <TabsList className="mb-6 flex-wrap">
-            <TabsTrigger value="active" className="gap-2">
-              <Package className="w-4 h-4" />
-              Ativos ({inventory.length})
-            </TabsTrigger>
-            <TabsTrigger value="equip" className="gap-2">
-              <Image className="w-4 h-4" />
-              Equipamentos ({digitalEquipItems.length})
-            </TabsTrigger>
-            <TabsTrigger value="orders" className="gap-2">
-              <ShoppingCart className="w-4 h-4" />
-              Pedidos ({purchases.length})
-            </TabsTrigger>
-            <TabsTrigger value="used" className="gap-2">
-              <History className="w-4 h-4" />
-              Usados ({usedItems.length})
-            </TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto -mx-4 px-4 mb-6">
+            <TabsList className="flex-nowrap w-max sm:w-full">
+              <TabsTrigger value="active" className="gap-1 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
+                <Package className="w-3 h-3 sm:w-4 sm:h-4" />
+                Ativos ({inventory.length})
+              </TabsTrigger>
+              <TabsTrigger value="equip" className="gap-1 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
+                <Image className="w-3 h-3 sm:w-4 sm:h-4" />
+                Equip. ({digitalEquipItems.length})
+              </TabsTrigger>
+              <TabsTrigger value="orders" className="gap-1 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
+                <ShoppingCart className="w-3 h-3 sm:w-4 sm:h-4" />
+                Pedidos ({purchases.length})
+              </TabsTrigger>
+              <TabsTrigger value="used" className="gap-1 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
+                <History className="w-3 h-3 sm:w-4 sm:h-4" />
+                Usados ({usedItems.length})
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="active">
             {filteredInventory.length === 0 ? (
