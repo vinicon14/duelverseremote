@@ -52,11 +52,11 @@ Deno.serve(async (req) => {
     
     // Supabase Auth Hook format: { user, email_data }
     // The hook sends: type, email, token_hash, redirect_to, etc.
-    const emailType = payload.type || payload.email_data?.type || payload.data?.action_type
-    const recipientEmail = payload.email || payload.email_data?.email || payload.data?.email
-    const tokenHash = payload.token_hash || payload.email_data?.token_hash
-    const redirectTo = payload.redirect_to || payload.email_data?.redirect_to || `https://${ROOT_DOMAIN}`
-    const token = payload.token || payload.email_data?.token || payload.data?.token
+    const emailType = payload.type || payload.email_data?.email_action_type || payload.email_data?.type || payload.data?.action_type
+    const recipientEmail = payload.user?.email || payload.email || payload.email_data?.email || payload.data?.email
+    const tokenHash = payload.email_data?.token_hash || payload.token_hash
+    const redirectTo = payload.email_data?.redirect_to || payload.redirect_to || `https://${ROOT_DOMAIN}`
+    const token = payload.email_data?.token || payload.token || payload.data?.token
 
     if (!emailType || !recipientEmail) {
       console.error('Missing email type or recipient', { emailType, recipientEmail })
