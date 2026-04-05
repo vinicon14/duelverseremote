@@ -80,9 +80,9 @@ Deno.serve(async (req) => {
           email: user.email || 'user@duelverse.app',
         },
         back_urls: {
-          success: `${origin_url || 'https://duelverseremote.lovable.app'}/buy-duelcoins?success=true`,
-          failure: `${origin_url || 'https://duelverseremote.lovable.app'}/buy-duelcoins?canceled=true`,
-          pending: `${origin_url || 'https://duelverseremote.lovable.app'}/buy-duelcoins?success=true`,
+          success: `${origin_url || 'https://duelverse.site'}/buy-duelcoins?success=true`,
+          failure: `${origin_url || 'https://duelverse.site'}/buy-duelcoins?canceled=true`,
+          pending: `${origin_url || 'https://duelverse.site'}/buy-duelcoins?success=true`,
         },
         auto_return: 'approved',
         notification_url: `${supabaseUrl}/functions/v1/mercadopago-webhook`,

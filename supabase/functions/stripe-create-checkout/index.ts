@@ -61,7 +61,7 @@ serve(async (req) => {
     }
 
     // Get origin for redirect URLs
-    const origin = req.headers.get("origin") || "https://duelverseremote.lovable.app";
+    const origin = req.headers.get("origin") || "https://duelverse.site";
 
     // Create checkout session
     const session = await stripe.checkout.sessions.create({
