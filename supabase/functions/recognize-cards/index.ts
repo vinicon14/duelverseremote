@@ -2,7 +2,7 @@
  * DuelVerse - Edge Function: Reconhecer Cartas
  * Desenvolvido por Vinícius
  * 
- * Utiliza Google Gemini API diretamente para reconhecer cartas Yu-Gi-Oh! a partir de imagens.
+ * Utiliza Lovable AI Gateway para reconhecer cartas Yu-Gi-Oh! a partir de imagens.
  */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -26,34 +26,35 @@ serve(async (req) => {
       );
     }
 
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-    if (!GEMINI_API_KEY) {
-      throw new Error("GEMINI_API_KEY is not configured");
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) {
+      throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    console.log("Starting card recognition with Gemini...");
+    console.log("Starting card recognition with Lovable AI Gateway...");
 
-    // Extract base64 data and mime type
-    let base64Data = imageBase64;
-    let mimeType = "image/jpeg";
-    if (imageBase64.startsWith("data:")) {
-      const match = imageBase64.match(/^data:(image\/\w+);base64,(.+)$/);
-      if (match) {
-        mimeType = match[1];
-        base64Data = match[2];
-      }
+    // Build image URL for the API
+    let imageUrl = imageBase64;
+    if (!imageBase64.startsWith("data:")) {
+      imageUrl = `data:image/jpeg;base64,${imageBase64}`;
     }
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      "https://ai.gateway.lovable.dev/v1/chat/completions",
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
-          contents: [
+          model: "google/gemini-2.5-flash",
+          messages: [
             {
-              parts: [
+              role: "user",
+              content: [
                 {
+                  type: "text",
                   text: `You are the world's leading expert on Yu-Gi-Oh! Trading Card Game. Identify EVERY Yu-Gi-Oh! card visible in this image.
 
 IDENTIFICATION TECHNIQUES:
@@ -74,17 +75,15 @@ Example: ["Dark Magician", "Blue-Eyes White Dragon", "Polymerization"]
 If no cards identifiable, return: []`
                 },
                 {
-                  inlineData: {
-                    mimeType,
-                    data: base64Data,
+                  type: "image_url",
+                  image_url: {
+                    url: imageUrl,
                   },
                 },
               ],
             },
           ],
-          generationConfig: {
-            maxOutputTokens: 2000,
-          },
+          max_tokens: 2000,
         }),
       }
     );
@@ -97,12 +96,12 @@ If no cards identifiable, return: []`
         );
       }
       const errorText = await response.text();
-      console.error("Gemini API error:", response.status, errorText);
+      console.error("AI Gateway error:", response.status, errorText);
       throw new Error("Failed to analyze image");
     }
 
     const data = await response.json();
-    const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "[]";
+    const content = data.choices?.[0]?.message?.content || "[]";
     
     // Parse the JSON array from the response
     let cardNames: string[] = [];
