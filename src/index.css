@@ -57,11 +57,33 @@ All colors MUST be HSL.
 @layer base {
   * {
     @apply border-border;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
 
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+    position: relative;
+    width: 100%;
+  }
+
+  /* Fix iOS input zoom */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+
+  /* Fix iOS 100vh */
+  .min-h-screen {
+    min-height: 100vh;
+    min-height: 100dvh;
   }
   
   /* Custom scrollbar */

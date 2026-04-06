@@ -85,64 +85,64 @@ const Landing = () => {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative pt-32 pb-24 px-4 overflow-hidden">
+      <section className="relative pt-24 pb-16 sm:pt-32 sm:pb-24 px-4 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-background to-accent/10" />
-        <div className="absolute top-20 left-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-10 right-10 w-96 h-96 bg-accent/10 rounded-full blur-3xl" />
+        <div className="absolute top-20 left-10 w-48 sm:w-72 h-48 sm:h-72 bg-primary/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-10 right-10 w-64 sm:w-96 h-64 sm:h-96 bg-accent/10 rounded-full blur-3xl" />
         
         <div className="container mx-auto relative z-10">
-          <div className="max-w-4xl mx-auto text-center space-y-8">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border text-sm tcg-border-animate">
-              <Star className="w-4 h-4" />
+          <div className="max-w-4xl mx-auto text-center space-y-6 sm:space-y-8">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full border text-xs sm:text-sm tcg-border-animate">
+              <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
               <span>A plataforma #1 de duelos de TCG online</span>
             </div>
             
-            <h1 className="text-5xl md:text-7xl font-extrabold leading-tight">
+            <h1 className="text-3xl sm:text-5xl md:text-7xl font-extrabold leading-tight">
               <span className="tcg-text-animate">Duele Online</span>
               <br />
               <span className="text-foreground">Como Nunca Antes</span>
             </h1>
             
-            <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+            <p className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed px-2">
               Desafie duelistas do mundo todo com chamadas de vídeo ao vivo, 
               torneios com premiações em DuelCoins e um sistema de ranking competitivo.
             </p>
             
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <Link to="/auth">
-                <Button size="lg" className="tcg-btn-animate text-primary-foreground text-lg px-10 py-6 rounded-xl">
-                  <Zap className="mr-2 h-5 w-5" />
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center px-2">
+              <Link to="/auth" className="w-full sm:w-auto">
+                <Button size="lg" className="tcg-btn-animate text-primary-foreground text-base sm:text-lg px-8 sm:px-10 py-5 sm:py-6 rounded-xl w-full sm:w-auto">
+                  <Zap className="mr-2 h-5 w-5 shrink-0" />
                   Comece Agora — É Grátis
                 </Button>
               </Link>
               {videoUrl &&
-              <a href="#video">
-                  <Button size="lg" variant="outline" className="tcg-border-animate text-lg px-8 py-6 rounded-xl">
-                    <Play className="mr-2 h-5 w-5" />
+              <a href="#video" className="w-full sm:w-auto">
+                  <Button size="lg" variant="outline" className="tcg-border-animate text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 rounded-xl w-full sm:w-auto">
+                    <Play className="mr-2 h-5 w-5 shrink-0" />
                     Ver Vídeo
                   </Button>
                 </a>
               }
             </div>
 
-            <div className="grid grid-cols-3 gap-8 max-w-xl mx-auto mt-16">
+            <div className="grid grid-cols-3 gap-4 sm:gap-8 max-w-xl mx-auto mt-10 sm:mt-16">
               <div className="text-center">
-                <div className="text-3xl md:text-4xl font-bold tcg-text-animate mb-1">1000+</div>
-                <div className="text-sm text-muted-foreground">Duelistas Ativos</div>
+                <div className="text-2xl sm:text-3xl md:text-4xl font-bold tcg-text-animate mb-1">1000+</div>
+                <div className="text-xs sm:text-sm text-muted-foreground">Duelistas Ativos</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl md:text-4xl font-bold tcg-text-animate mb-1">500+</div>
-                <div className="text-sm text-muted-foreground">Duelos Diários</div>
+                <div className="text-2xl sm:text-3xl md:text-4xl font-bold tcg-text-animate mb-1">500+</div>
+                <div className="text-xs sm:text-sm text-muted-foreground">Duelos Diários</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl md:text-4xl font-bold tcg-text-animate mb-1">50+</div>
-                <div className="text-sm text-muted-foreground">Torneios</div>
+                <div className="text-2xl sm:text-3xl md:text-4xl font-bold tcg-text-animate mb-1">50+</div>
+                <div className="text-xs sm:text-sm text-muted-foreground">Torneios</div>
               </div>
             </div>
 
-            <div className="pt-8">
+            <div className="pt-6 sm:pt-8">
               <a href="#features">
-                <ChevronDown className="w-8 h-8 text-muted-foreground mx-auto animate-bounce" />
+                <ChevronDown className="w-7 h-7 sm:w-8 sm:h-8 text-muted-foreground mx-auto animate-bounce" />
               </a>
             </div>
           </div>
@@ -277,17 +277,17 @@ const Landing = () => {
       </section>
 
       {/* CTA Final */}
-      <section className="py-24 px-4">
-        <div className="container mx-auto text-center space-y-8">
-          <h2 className="text-4xl md:text-5xl font-extrabold">
+      <section className="py-16 sm:py-24 px-4">
+        <div className="container mx-auto text-center space-y-6 sm:space-y-8">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold">
             <span className="tcg-text-animate">Pronto para Duelar?</span>
           </h2>
-          <p className="text-muted-foreground text-lg max-w-xl mx-auto">
+          <p className="text-muted-foreground text-base sm:text-lg max-w-xl mx-auto px-2">
             Junte-se a milhares de duelistas e comece sua jornada agora mesmo
           </p>
           <Link to="/auth">
-            <Button size="lg" className="tcg-btn-animate text-primary-foreground text-xl px-14 py-7 rounded-xl">
-              <Swords className="mr-2 h-6 w-6" />
+            <Button size="lg" className="tcg-btn-animate text-primary-foreground text-lg sm:text-xl px-10 sm:px-14 py-6 sm:py-7 rounded-xl">
+              <Swords className="mr-2 h-5 w-5 sm:h-6 sm:w-6 shrink-0" />
               Criar Conta Grátis
             </Button>
           </Link>
