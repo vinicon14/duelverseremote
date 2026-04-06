@@ -350,6 +350,23 @@ function createShortcuts() {
   recreateShortcut(startMenuShortcut, shortcutOptions);
 }
 
+ipcMain.handle('get-desktop-sources', async () => {
+  try {
+    const sources = await desktopCapturer.getSources({
+      types: ['screen', 'window'],
+      thumbnailSize: { width: 320, height: 180 },
+    });
+    return sources.map(source => ({
+      id: source.id,
+      name: source.name,
+      thumbnail: source.thumbnail.toDataURL(),
+    }));
+  } catch (e) {
+    console.error('[Electron] Failed to get desktop sources:', e);
+    return [];
+  }
+});
+
 ipcMain.on('show-notification', (_, { title, body }) => {
   if (Notification.isSupported()) {
     const notif = new Notification({ title, body, icon: path.join(__dirname, 'icon.png') });
