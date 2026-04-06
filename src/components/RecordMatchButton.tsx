@@ -140,9 +140,10 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
 
     // Detectar se é mobile (fallback; o botão já é ocultado no mobile)
     const isDeviceMobileUA = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    const isElectron = !!(window as any).electronAPI?.isElectron;
 
     // Verificar se a API de gravação está disponível
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+    if (!isElectron && (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia)) {
       toast({
         title: "Não suportado",
         description: isDeviceMobileUA
@@ -161,17 +162,48 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
         micStreamRef.current = null;
       }
 
-      const displayMediaOptions: any = {
-        video: {
-          displaySurface: "browser",
-          width: { ideal: isDeviceMobileUA ? 720 : 1280 },
-          height: { ideal: isDeviceMobileUA ? 1280 : 720 },
-          frameRate: { ideal: isDeviceMobileUA ? 15 : 30 },
-        },
-        audio: source !== "mic", // "som do jogo" somente se o usuário escolher
-      };
+      let displayStream: MediaStream;
 
-      const displayStream = await navigator.mediaDevices.getDisplayMedia(displayMediaOptions);
+      if (isElectron && (window as any).electronAPI?.getDesktopSources) {
+        // Electron: use desktopCapturer via IPC
+        const sources = await (window as any).electronAPI.getDesktopSources();
+        if (!sources || sources.length === 0) {
+          toast({
+            title: "Erro",
+            description: "Nenhuma fonte de tela encontrada.",
+            variant: "destructive",
+          });
+          return;
+        }
+        // Pick the first screen source (entire screen)
+        const screenSource = sources.find((s: any) => s.id.startsWith('screen:')) || sources[0];
+        
+        displayStream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: {
+            mandatory: {
+              chromeMediaSource: 'desktop',
+              chromeMediaSourceId: screenSource.id,
+              minWidth: 1280,
+              minHeight: 720,
+              maxFrameRate: 30,
+            },
+          } as any,
+        });
+      } else {
+        // Standard browser: use getDisplayMedia
+        const displayMediaOptions: any = {
+          video: {
+            displaySurface: "browser",
+            width: { ideal: isDeviceMobileUA ? 720 : 1280 },
+            height: { ideal: isDeviceMobileUA ? 1280 : 720 },
+            frameRate: { ideal: isDeviceMobileUA ? 15 : 30 },
+          },
+          audio: source !== "mic",
+        };
+
+        displayStream = await navigator.mediaDevices.getDisplayMedia(displayMediaOptions);
+      }
 
       // Capturar áudio do microfone (se necessário)
       let micStream: MediaStream | null = null;

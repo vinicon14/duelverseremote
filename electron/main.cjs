@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Tray, Menu, Notification, ipcMain, shell, nativeImage } = require('electron');
+const { app, BrowserWindow, Tray, Menu, Notification, ipcMain, shell, nativeImage, desktopCapturer } = require('electron');
 const fs = require('fs');
 const path = require('path');
 
@@ -349,6 +349,23 @@ function createShortcuts() {
   fs.mkdirSync(path.dirname(startMenuShortcut), { recursive: true });
   recreateShortcut(startMenuShortcut, shortcutOptions);
 }
+
+ipcMain.handle('get-desktop-sources', async () => {
+  try {
+    const sources = await desktopCapturer.getSources({
+      types: ['screen', 'window'],
+      thumbnailSize: { width: 320, height: 180 },
+    });
+    return sources.map(source => ({
+      id: source.id,
+      name: source.name,
+      thumbnail: source.thumbnail.toDataURL(),
+    }));
+  } catch (e) {
+    console.error('[Electron] Failed to get desktop sources:', e);
+    return [];
+  }
+});
 
 ipcMain.on('show-notification', (_, { title, body }) => {
   if (Notification.isSupported()) {
