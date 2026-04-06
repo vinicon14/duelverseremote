@@ -69,8 +69,8 @@ export const ProAdCleaner = () => {
     // Immediate cleanup
     cleanAllAds();
 
-    // Aggressive cleanup every 2s
-    const interval = setInterval(cleanAllAds, 2000);
+    // Aggressive cleanup every 1s to catch dynamic injections faster
+    const interval = setInterval(cleanAllAds, 1000);
 
     // MutationObserver - only block nodes added OUTSIDE React root
     const observer = new MutationObserver(mutations => {

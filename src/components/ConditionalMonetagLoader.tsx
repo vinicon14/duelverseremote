@@ -20,11 +20,15 @@ export const ConditionalMonetagLoader = (): null => {
   const isElectron = !!(window as any).electronAPI?.isElectron;
 
   useEffect(() => {
-    // Don't run while loading
-    if (loading) return;
-
-    // Apply popup blocking
+    // Apply popup blocking immediately regardless of loading state
     applyPopupBlocking();
+
+    // CRITICAL: Don't inject ANY scripts while loading - wait for PRO check
+    if (loading) {
+      // While loading, proactively remove any existing Monetag assets
+      removeExistingMonetagAssets();
+      return;
+    }
 
     if (isNativeApp || isElectron) {
       console.log('Monetag BLOQUEADO - app nativo (APK/Electron)');
@@ -32,11 +36,12 @@ export const ConditionalMonetagLoader = (): null => {
       return;
     }
 
-    // PRO users: No Monetag - block AND remove existing
+    // PRO users: No Monetag - block AND remove existing + continuous cleanup
     if (isPro) {
       console.log('Monetag BLOQUEADO - usuário PRO');
       removeExistingMonetagAssets();
-      return;
+      const proCleanupInterval = setInterval(removeExistingMonetagAssets, 1000);
+      return () => clearInterval(proCleanupInterval);
     }
 
     if (location.pathname.startsWith('/pro/') || location.pathname === '/auth' || location.pathname === '/landing' || location.pathname === '/') {
