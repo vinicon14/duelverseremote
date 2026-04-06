@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Trophy, Users, Clock, Calendar, Coins } from "lucide-react";
+import { Trophy, Users, Clock, Calendar, Coins, Share2 } from "lucide-react";
 import { WeeklyTournamentWithCount } from "@/types/weeklyTournament";
 
 interface WeeklyTournamentCardProps {
@@ -23,6 +23,19 @@ export const WeeklyTournamentCard = ({
 }: WeeklyTournamentCardProps) => {
   const { toast } = useToast();
   const [joining, setJoining] = useState(false);
+
+  const handleShare = async () => {
+    const url = `${window.location.origin}/tournaments/${tournament.id}`;
+    const text = `🏆 ${tournament.name} - Participe do torneio semanal no DuelVerse!`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: tournament.name, text, url });
+      } catch {}
+    } else {
+      await navigator.clipboard.writeText(url);
+      toast({ title: "Link copiado!", description: "Link do torneio copiado para a área de transferência." });
+    }
+  };
 
   const daysRemaining = Math.ceil(
     new Date(tournament.end_date).getTime() - Date.now()
@@ -107,7 +120,12 @@ export const WeeklyTournamentCard = ({
             </Badge>
           )}
         </div>
-        <CardTitle className="text-xl">{tournament.name}</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-xl">{tournament.name}</CardTitle>
+          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={handleShare}>
+            <Share2 className="w-4 h-4" />
+          </Button>
+        </div>
         <CardDescription>{tournament.description}</CardDescription>
       </CardHeader>
       <CardContent>

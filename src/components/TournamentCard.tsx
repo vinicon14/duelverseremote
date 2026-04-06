@@ -1,7 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, Users, Coins, Calendar } from "lucide-react";
+import { Trophy, Users, Coins, Calendar, Share2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface TournamentCardProps {
   tournament: {
@@ -19,6 +20,20 @@ interface TournamentCardProps {
 }
 
 export const TournamentCard = ({ tournament, onJoin }: TournamentCardProps) => {
+  const { toast } = useToast();
+
+  const handleShare = async () => {
+    const url = `${window.location.origin}/tournaments/${tournament.id}`;
+    const text = `🏆 ${tournament.name} - Participe do torneio no DuelVerse!`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: tournament.name, text, url });
+      } catch {}
+    } else {
+      await navigator.clipboard.writeText(url);
+      toast({ title: "Link copiado!", description: "Link do torneio copiado para a área de transferência." });
+    }
+  };
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'upcoming':
@@ -59,9 +74,14 @@ export const TournamentCard = ({ tournament, onJoin }: TournamentCardProps) => {
               </p>
             )}
           </div>
-          <Badge className={getStatusColor(tournament.status)}>
-            {getStatusText(tournament.status)}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleShare}>
+              <Share2 className="w-4 h-4" />
+            </Button>
+            <Badge className={getStatusColor(tournament.status)}>
+              {getStatusText(tournament.status)}
+            </Badge>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
