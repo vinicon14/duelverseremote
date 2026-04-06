@@ -426,41 +426,41 @@ const TournamentDetail = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       
-      <main className="container mx-auto px-4 pt-24 pb-12">
+      <main className="container mx-auto px-3 sm:px-4 pt-20 sm:pt-24 pb-24 sm:pb-12">
         <Button
           variant="ghost"
           onClick={() => navigate('/tournaments')}
-          className="mb-6"
+          className="mb-4 sm:mb-6"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
           Voltar
         </Button>
 
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className="grid gap-4 sm:gap-6 lg:grid-cols-3">
           {/* Tournament Info */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-4 sm:space-y-6">
             <Card className="card-mystic">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="text-3xl mb-2">{tournament.name}</CardTitle>
-                    <p className="text-muted-foreground">{tournament.description}</p>
+              <CardHeader className="p-4 sm:p-6">
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <CardTitle className="text-xl sm:text-3xl mb-2 break-words">{tournament.name}</CardTitle>
+                    <p className="text-sm sm:text-base text-muted-foreground break-words">{tournament.description}</p>
                   </div>
-                  <Badge className={getStatusColor(tournament.status)}>
+                  <Badge className={`${getStatusColor(tournament.status)} shrink-0`}>
                     {tournament.status === 'upcoming' && 'Em Breve'}
                     {tournament.status === 'active' && 'Ativo'}
                     {tournament.status === 'completed' && 'Finalizado'}
                   </Badge>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex items-center gap-2">
-                    <Users className="w-5 h-5 text-primary" />
+              <CardContent className="space-y-4 p-4 sm:p-6 pt-0 sm:pt-0">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <div className="flex items-center gap-2 text-sm sm:text-base">
+                    <Users className="w-4 h-4 sm:w-5 sm:h-5 text-primary shrink-0" />
                     <span>{participants.length}/{tournament.max_participants} Participantes</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Coins className="w-5 h-5 text-secondary" />
+                  <div className="flex items-center gap-2 text-sm sm:text-base">
+                    <Coins className="w-4 h-4 sm:w-5 sm:h-5 text-secondary shrink-0" />
                     <span>{tournament.prize_pool} Coins de Prêmio</span>
                   </div>
                 </div>
@@ -573,44 +573,42 @@ const TournamentDetail = () => {
                         {matches.filter(m => m.round === round).map(match => (
                           <Card key={match.id} className="bg-background/50">
                             <CardContent className="p-4">
-                              <div className="flex items-center justify-between gap-4">
-                                <div className="flex-1">
-                                   <div className="flex items-center gap-2 mb-2">
-                                     <span className={match.winner_id === match.player1_id ? 'font-bold text-primary' : ''}>
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
+                                <div className="flex-1 min-w-0">
+                                   <div className="flex items-center gap-2 mb-1">
+                                     <span className={`text-sm sm:text-base truncate ${match.winner_id === match.player1_id ? 'font-bold text-primary' : ''}`}>
                                        {match.player1?.[0]?.username || 'TBD'}
                                      </span>
                                    </div>
                                    <div className="flex items-center gap-2">
-                                     <span className={match.winner_id === match.player2_id ? 'font-bold text-primary' : ''}>
+                                     <span className={`text-sm sm:text-base truncate ${match.winner_id === match.player2_id ? 'font-bold text-primary' : ''}`}>
                                        {match.player2?.[0]?.username || 'TBD'}
                                      </span>
                                    </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                  <Badge variant={match.status === 'completed' ? 'default' : 'secondary'}>
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <Badge variant={match.status === 'completed' ? 'default' : 'secondary'} className="text-xs">
                                     {match.status === 'pending' && 'Pendente'}
                                     {match.status === 'in_progress' && 'Em Andamento'}
                                     {match.status === 'completed' && 'Concluído'}
                                   </Badge>
                                   {tournament.status === 'active' && match.status === 'pending' && (
                                     <>
-                                      {/* Botão de desafio para player1 */}
                                       {match.player1_id === currentUser?.id && match.player2_id && (
                                         <Button
                                           size="sm"
                                           onClick={() => challengeOpponent(match.player2_id)}
-                                          className="btn-mystic text-white"
+                                          className="btn-mystic text-white text-xs"
                                         >
                                           <Swords className="w-3 h-3 mr-1" />
                                           Desafiar
                                         </Button>
                                       )}
-                                      {/* Botão de desafio para player2 */}
                                       {match.player2_id === currentUser?.id && match.player1_id && (
                                         <Button
                                           size="sm"
                                           onClick={() => challengeOpponent(match.player1_id)}
-                                          className="btn-mystic text-white"
+                                          className="btn-mystic text-white text-xs"
                                         >
                                           <Swords className="w-3 h-3 mr-1" />
                                           Desafiar
@@ -644,12 +642,12 @@ const TournamentDetail = () => {
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             {/* Participants List */}
             <Card className="card-mystic">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="w-5 h-5" />
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                  <Users className="w-4 h-4 sm:w-5 sm:h-5" />
                   Participantes
                 </CardTitle>
               </CardHeader>
@@ -691,7 +689,7 @@ const TournamentDetail = () => {
             </Card>
 
             {/* Tournament Chat */}
-            <div className="h-[500px]">
+            <div className="h-[400px] sm:h-[500px]">
               <TournamentChat tournamentId={id!} />
             </div>
           </div>
