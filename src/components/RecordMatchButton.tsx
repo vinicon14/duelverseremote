@@ -143,7 +143,8 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
     const isElectron = !!(window as any).electronAPI?.isElectron;
 
     // Verificar se a API de gravação está disponível
-    if (!isElectron && (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia)) {
+    // No Electron, getDisplayMedia é habilitado via setDisplayMediaRequestHandler no main process
+    if (!navigator.mediaDevices || (!navigator.mediaDevices.getDisplayMedia && !isElectron)) {
       toast({
         title: "Não suportado",
         description: isDeviceMobileUA
@@ -164,46 +165,19 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
 
       let displayStream: MediaStream;
 
-      if (isElectron && (window as any).electronAPI?.getDesktopSources) {
-        // Electron: use desktopCapturer via IPC
-        const sources = await (window as any).electronAPI.getDesktopSources();
-        if (!sources || sources.length === 0) {
-          toast({
-            title: "Erro",
-            description: "Nenhuma fonte de tela encontrada.",
-            variant: "destructive",
-          });
-          return;
-        }
-        // Pick the first screen source (entire screen)
-        const screenSource = sources.find((s: any) => s.id.startsWith('screen:')) || sources[0];
-        
-        displayStream = await navigator.mediaDevices.getUserMedia({
-          audio: false,
-          video: {
-            mandatory: {
-              chromeMediaSource: 'desktop',
-              chromeMediaSourceId: screenSource.id,
-              minWidth: 1280,
-              minHeight: 720,
-              maxFrameRate: 30,
-            },
-          } as any,
-        });
-      } else {
-        // Standard browser: use getDisplayMedia
-        const displayMediaOptions: any = {
-          video: {
-            displaySurface: "browser",
-            width: { ideal: isDeviceMobileUA ? 720 : 1280 },
-            height: { ideal: isDeviceMobileUA ? 1280 : 720 },
-            frameRate: { ideal: isDeviceMobileUA ? 15 : 30 },
-          },
-          audio: source !== "mic",
-        };
+      // Use standard getDisplayMedia for both browser and Electron
+      // In Electron, the main process handles the source selection via setDisplayMediaRequestHandler
+      const displayMediaOptions: any = {
+        video: {
+          displaySurface: "browser",
+          width: { ideal: isDeviceMobileUA ? 720 : 1280 },
+          height: { ideal: isDeviceMobileUA ? 1280 : 720 },
+          frameRate: { ideal: isDeviceMobileUA ? 15 : 30 },
+        },
+        audio: source !== "mic",
+      };
 
-        displayStream = await navigator.mediaDevices.getDisplayMedia(displayMediaOptions);
-      }
+      displayStream = await navigator.mediaDevices.getDisplayMedia(displayMediaOptions);
 
       // Capturar áudio do microfone (se necessário)
       let micStream: MediaStream | null = null;
