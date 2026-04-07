@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Tray, Menu, Notification, ipcMain, shell, nativeImage, desktopCapturer } = require('electron');
+const { app, BrowserWindow, Tray, Menu, Notification, ipcMain, shell, nativeImage, desktopCapturer, session } = require('electron');
 const fs = require('fs');
 const path = require('path');
 
@@ -266,6 +266,21 @@ function createWindow() {
 
   mainWindow.loadURL(REMOTE_URL);
   setupZoomShortcuts();
+
+  // Allow getDisplayMedia to work with remote content by providing desktop sources
+  mainWindow.webContents.session.setDisplayMediaRequestHandler((request, callback) => {
+    desktopCapturer.getSources({ types: ['screen', 'window'] }).then((sources) => {
+      // Pick the first screen source
+      const screenSource = sources.find(s => s.id.startsWith('screen:')) || sources[0];
+      if (screenSource) {
+        callback({ video: screenSource, audio: 'loopback' });
+      } else {
+        callback({});
+      }
+    }).catch(() => {
+      callback({});
+    });
+  });
 
   // Force taskbar icon on Windows
   const appIcon = getAppIcon();
