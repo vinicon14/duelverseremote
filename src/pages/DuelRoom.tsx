@@ -10,7 +10,7 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { PhoneOff, Loader2, Scale, Layers, Sparkles, Zap, Clock, Coins } from "lucide-react";
+import { PhoneOff, Loader2, Scale, Layers, Sparkles, Zap, Clock, Coins, Monitor } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Navbar } from "@/components/Navbar";
 import { DuelChat } from "@/components/DuelChat";
