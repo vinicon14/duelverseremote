@@ -88,8 +88,19 @@ export const WeeklyTournamentCard = ({
         body: { tournament_id: tournament.id }
       });
 
-      if (fnError) throw new Error(fnError.message || 'Erro ao processar inscrição');
-      if (result && !result.success) throw new Error(result.message || 'Erro ao processar inscrição');
+      const message = result?.message || fnError?.message || 'Erro ao processar inscrição';
+
+      if (fnError || (result && !result.success)) {
+        const isAlreadyJoined = message.includes('já está inscrito') || message.includes('23505');
+        const isNoBalance = message.includes('Saldo insuficiente') || message.includes('precisa de');
+        
+        toast({
+          title: isAlreadyJoined ? "Você já está inscrito" : isNoBalance ? "Saldo insuficiente" : "Erro na inscrição",
+          description: isAlreadyJoined ? "Você já está inscrito neste torneio." : isNoBalance ? "Você não tem DuelCoins suficientes para se inscrever." : message,
+          variant: "destructive",
+        });
+        return;
+      }
 
       toast({
         title: "Inscrição realizada!",
@@ -97,9 +108,13 @@ export const WeeklyTournamentCard = ({
       });
       if (onJoin) onJoin();
     } catch (error: any) {
+      const msg = error?.message || '';
+      const isAlreadyJoined = msg.includes('já está inscrito') || msg.includes('23505');
+      const isNoBalance = msg.includes('Saldo insuficiente') || msg.includes('precisa de');
+      
       toast({
-        title: "Erro na inscrição",
-        description: error.message,
+        title: isAlreadyJoined ? "Você já está inscrito" : isNoBalance ? "Saldo insuficiente" : "Erro na inscrição",
+        description: isAlreadyJoined ? "Você já está inscrito neste torneio." : isNoBalance ? "Você não tem DuelCoins suficientes para se inscrever." : msg,
         variant: "destructive",
       });
     } finally {
