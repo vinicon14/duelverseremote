@@ -10,7 +10,7 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { PhoneOff, Loader2, Scale, Layers, Sparkles, Zap, Clock, Coins } from "lucide-react";
+import { PhoneOff, Loader2, Scale, Layers, Sparkles, Zap, Clock, Coins, Monitor } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Navbar } from "@/components/Navbar";
 import { DuelChat } from "@/components/DuelChat";
@@ -1061,10 +1061,30 @@ const DuelRoom = () => {
               {isParticipant && !isJudge && (
                 <>
                   <HideElementsButton onToggle={() => setHideControls(!hideControls)} isHidden={hideControls} />
-                  <RecordMatchButton duelId={id!} />
-                  <span className="hidden sm:inline-flex">
-                    <YouTubeLiveButton duelId={id!} />
-                  </span>
+                  {(window as any).electronAPI ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2 text-blue-500 border-blue-500/30 hover:bg-blue-500/10"
+                      onClick={() => {
+                        toast({
+                          title: "Sincronizar com OBS Studio",
+                          description: "Abra o OBS, adicione uma 'Captura de Janela' e selecione a janela do DuelVerse. Para transmitir ao vivo, configure sua chave RTMP do YouTube/Twitch nas configurações do OBS.",
+                          duration: 12000,
+                        });
+                      }}
+                    >
+                      <Monitor className="w-4 h-4" />
+                      <span className="hidden sm:inline">Sincronizar OBS</span>
+                    </Button>
+                  ) : (
+                    <>
+                      <RecordMatchButton duelId={id!} />
+                      <span className="hidden sm:inline-flex">
+                        <YouTubeLiveButton duelId={id!} />
+                      </span>
+                    </>
+                  )}
                 </>
               )}
 
