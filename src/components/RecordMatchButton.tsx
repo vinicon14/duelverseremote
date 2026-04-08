@@ -128,6 +128,85 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
     };
   }, [stopMicMonitoring]);
 
+  const requestDisplayStream = useCallback(async (
+    source: RecordingAudioSource,
+    isDeviceMobileUA: boolean,
+    isElectron: boolean,
+  ) => {
+    const shouldRequestSystemAudio = source !== "mic";
+    const supportsDisplaySurface = Boolean((navigator.mediaDevices.getSupportedConstraints?.() as any)?.displaySurface);
+    const attempts: Array<{ options: any; fallbackWithoutSystemAudio: boolean }> = [];
+
+    if (!isElectron && supportsDisplaySurface) {
+      attempts.push({
+        options: {
+          video: { displaySurface: "browser" },
+          audio: shouldRequestSystemAudio,
+        },
+        fallbackWithoutSystemAudio: false,
+      });
+    }
+
+    attempts.push({
+      options: {
+        video: true,
+        audio: shouldRequestSystemAudio,
+      },
+      fallbackWithoutSystemAudio: false,
+    });
+
+    if (isElectron && shouldRequestSystemAudio) {
+      attempts.push({
+        options: {
+          video: true,
+          audio: false,
+        },
+        fallbackWithoutSystemAudio: true,
+      });
+    }
+
+    let lastError: any = null;
+
+    for (const attempt of attempts) {
+      try {
+        const stream = await navigator.mediaDevices.getDisplayMedia(attempt.options);
+        const videoTrack = stream.getVideoTracks?.()[0];
+
+        if (videoTrack?.applyConstraints) {
+          try {
+            await videoTrack.applyConstraints({
+              width: { ideal: isDeviceMobileUA ? 720 : 1280 },
+              height: { ideal: isDeviceMobileUA ? 1280 : 720 },
+              frameRate: { ideal: isDeviceMobileUA ? 15 : 30 },
+            });
+          } catch (constraintError) {
+            console.warn("Não foi possível aplicar as preferências de vídeo da gravação:", constraintError);
+          }
+        }
+
+        return {
+          stream,
+          fallbackWithoutSystemAudio: attempt.fallbackWithoutSystemAudio,
+        };
+      } catch (error) {
+        lastError = error;
+        console.warn("Tentativa de captura falhou:", attempt.options, error);
+      }
+    }
+
+    throw lastError;
+  }, []);
+
+  const getSupportedRecordingMimeType = useCallback(() => {
+    const preferredMimeTypes = [
+      "video/webm;codecs=vp9,opus",
+      "video/webm;codecs=vp8,opus",
+      "video/webm",
+    ];
+
+    return preferredMimeTypes.find((candidate) => MediaRecorder.isTypeSupported(candidate));
+  }, []);
+
   const startRecording = async (source: RecordingAudioSource) => {
     if (!isPro) {
       toast({
@@ -163,21 +242,9 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
         micStreamRef.current = null;
       }
 
-      let displayStream: MediaStream;
-
-      // Use standard getDisplayMedia for both browser and Electron
-      // In Electron, the main process handles the source selection via setDisplayMediaRequestHandler
-      const displayMediaOptions: any = {
-        video: {
-          displaySurface: "browser",
-          width: { ideal: isDeviceMobileUA ? 720 : 1280 },
-          height: { ideal: isDeviceMobileUA ? 1280 : 720 },
-          frameRate: { ideal: isDeviceMobileUA ? 15 : 30 },
-        },
-        audio: source !== "mic",
-      };
-
-      displayStream = await navigator.mediaDevices.getDisplayMedia(displayMediaOptions);
+      const displayCapture = await requestDisplayStream(source, isDeviceMobileUA, isElectron);
+      const displayStream = displayCapture.stream;
+      const usedElectronAudioFallback = displayCapture.fallbackWithoutSystemAudio;
 
       // Capturar áudio do microfone (se necessário)
       let micStream: MediaStream | null = null;
@@ -229,11 +296,13 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
           const displayAudioSource = mixContext.createMediaStreamSource(displayAudioStream);
           displayAudioSource.connect(destination);
         } else {
-          // Importante: em muitos navegadores só grava áudio se compartilhar uma ABA e marcar "Compartilhar áudio".
           toast({
             title: "Sem áudio do jogo",
-            description:
-              "Para gravar o som do jogo, compartilhe uma aba e ative a opção de compartilhar áudio na janela do navegador.",
+            description: isElectron && usedElectronAudioFallback
+              ? source === "both"
+                ? "O app desktop iniciou a gravação sem o áudio do sistema. O microfone continuará sendo gravado normalmente."
+                : "O app desktop iniciou a gravação sem o áudio do sistema. Se quiser áudio, use a opção de microfone."
+              : "Para gravar o som do jogo, compartilhe uma aba e ative a opção de compartilhar áudio na janela do navegador.",
           });
         }
       }
@@ -256,18 +325,18 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
         ...destination.stream.getAudioTracks(),
       ]);
 
-      // Determinar melhor codec disponível
-      let mimeType = "video/webm;codecs=vp8,opus";
-      if (MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")) {
-        mimeType = "video/webm;codecs=vp9,opus";
-      } else if (MediaRecorder.isTypeSupported("video/webm;codecs=h264,opus")) {
-        mimeType = "video/webm;codecs=h264,opus";
-      }
-
-      const mediaRecorder = new MediaRecorder(combinedStream, {
-        mimeType,
-        videoBitsPerSecond: isDeviceMobileUA ? 1500000 : 2500000,
-      });
+      const mimeType = getSupportedRecordingMimeType();
+      const mediaRecorder = new MediaRecorder(
+        combinedStream,
+        mimeType
+          ? {
+              mimeType,
+              videoBitsPerSecond: isDeviceMobileUA ? 1500000 : 2500000,
+            }
+          : {
+              videoBitsPerSecond: isDeviceMobileUA ? 1500000 : 2500000,
+            },
+      );
 
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
@@ -279,7 +348,7 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
       };
 
       mediaRecorder.onstop = async () => {
-        const blob = new Blob(chunksRef.current, { type: "video/webm" });
+        const blob = new Blob(chunksRef.current, { type: mimeType || "video/webm" });
         videoBlob.current = blob;
 
         // Parar todas as tracks do stream
@@ -304,7 +373,7 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
       };
 
       // Detectar se o usuário parou a gravação pelo navegador
-      displayStream.getVideoTracks()[0].addEventListener("ended", () => {
+      displayStream.getVideoTracks()[0]?.addEventListener("ended", () => {
         if (isRecordingRef.current) {
           stopRecording();
         }
@@ -322,13 +391,22 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
         description: "Sua partida está sendo gravada.",
       });
     } catch (error: any) {
-      console.error("Erro ao iniciar gravação:", error);
+      console.error("Erro ao iniciar gravação:", {
+        name: error?.name,
+        message: error?.message,
+        stack: error?.stack,
+        isElectron,
+      });
 
       let errorMessage = "Não foi possível iniciar a gravação da tela.";
       if (error?.name === "NotAllowedError") {
         errorMessage = "Você precisa permitir o compartilhamento de tela.";
       } else if (error?.name === "NotSupportedError") {
-        errorMessage = "Seu navegador não suporta gravação de tela.";
+        errorMessage = isElectron
+          ? "O app desktop não conseguiu iniciar a captura de tela com essas opções."
+          : "Seu navegador não suporta gravação de tela.";
+      } else if (typeof error?.message === "string" && error.message.trim()) {
+        errorMessage = error.message;
       }
 
       toast({
