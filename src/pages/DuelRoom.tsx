@@ -25,6 +25,9 @@ import { MagicDuelViewer } from "@/components/duel/MagicDuelViewer";
 import { PokemonDuelViewer } from "@/components/duel/PokemonDuelViewer";
 import { useDuelDeck } from "@/hooks/useDuelDeck";
 import { useDuelPresence, useDuelCleanup } from "@/hooks/useDuelPresence";
+import { useAiDuel } from "@/hooks/useAiDuel";
+import { AiDeckSelectModal } from "@/components/duel/AiDeckSelectModal";
+import { AiDuelChat } from "@/components/duel/AiDuelChat";
 
 const DuelRoom = () => {
   useBanCheck(); // Proteger contra usuários banidos
@@ -65,6 +68,10 @@ const DuelRoom = () => {
   const [showDeckViewer, setShowDeckViewer] = useState(false);
   const { mainDeck, extraDeck, sideDeck, tokensDeck, importDeckFromYDK, loadDeckFromSaved, isLoading: isDeckLoading } = useDuelDeck();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // AI Solo Mode
+  const aiDuel = useAiDuel();
+  const [showAiDeckModal, setShowAiDeckModal] = useState(false);
 
   // Judge reward timer - fetch judge_log and countdown
   const handleJudgeReward = useCallback(async (logId: string) => {
@@ -1227,16 +1234,48 @@ const DuelRoom = () => {
           duelId={id}
           currentUserId={currentUser.id}
           opponentUsername={
-            currentUser.id === duel.creator_id 
+            aiDuel.aiMode ? 'IA' : currentUser.id === duel.creator_id 
               ? duel.opponent?.username 
               : duel.creator?.username
           }
+          hasOpponent={!!duel.opponent_id}
+          aiMode={aiDuel.aiMode}
+          onActivateAi={() => setShowAiDeckModal(true)}
         />
       )}
 
       {/* Chat Component */}
       {!hideControls && currentUser && (
         <DuelChat duelId={id!} currentUserId={currentUser.id} />
+      )}
+
+      {/* AI Deck Selection Modal */}
+      <AiDeckSelectModal
+        open={showAiDeckModal}
+        onClose={() => setShowAiDeckModal(false)}
+        onSelectDeck={(cards) => aiDuel.startAiMode(cards)}
+      />
+
+      {/* AI Chat - Only visible when AI mode is active */}
+      {aiDuel.aiMode && (
+        <AiDuelChat
+          messages={aiDuel.chatMessages}
+          isAiThinking={aiDuel.isAiThinking}
+          isAiTurn={aiDuel.isAiTurn}
+          isListening={aiDuel.isListening}
+          onSendMessage={aiDuel.sendChatToAi}
+          onStartListening={aiDuel.startListening}
+          onStopListening={aiDuel.stopListening}
+          onStartAiTurn={aiDuel.startAiTurn}
+          onStopAiMode={aiDuel.stopAiMode}
+          fieldState={{
+            monster1: null, monster2: null, monster3: null, monster4: null, monster5: null,
+            spell1: null, spell2: null, spell3: null, spell4: null, spell5: null,
+            extraMonster1: null, extraMonster2: null, fieldSpell: null,
+            graveyard: [], banished: [], extraDeck: [], deck: [], sideDeck: [], hand: [],
+          }}
+          playerLP={isPlayer1 ? player1LP : player2LP}
+        />
       )}
     </div>
   );

@@ -1,73 +1,38 @@
 
+# AI Solo Mode - DuelVerse (Yu-Gi-Oh!)
 
-## Plano: Correções de Anúncios PRO, Permissões APK, Notificações Nativas e Ícone PWA
+## Fase 1: Infraestrutura Backend
+- **Edge Function `ai-duel-engine`**: Recebe estado do jogo, deck da IA, histórico de ações e retorna decisão + mensagem de chat
+- Usa Lovable AI (Gemini) com system prompt especializado em regras de Yu-Gi-Oh!
+- Retorna JSON estruturado: `{ action, card, zone, chatMessage }`
 
-### Problema Atual
-1. **Anúncios Monetag aparecem para PRO** — O `ConditionalMonetagLoader` bloqueia corretamente, mas o `NoMonetagAds` aplica o mesmo bloqueio para FREE e PRO (ambos usam `enableBlocking()`). Além disso, o `index.html` carrega Google AdSense e AMP Auto Ads incondicionalmente para todos.
-2. **APK não pede permissões** — Câmera, microfone e notificações não são solicitados ao iniciar.
-3. **Notificações nativas no APK** — Não há ponte Java para disparar notificações nativas do Android.
-4. **Ícone PWA incorreto** — Os ícones atuais estão em escala de cinza. A imagem enviada (`channels4_profile.jpg`) é o logo correto (escudo com cartas em fundo preto).
+## Fase 2: UI de Ativação
+- Botão "Duelar contra IA" no `FloatingOpponentViewer` / `OpponentFieldViewer` (só aparece quando jogador está sozinho na sala)
+- Modal de seleção de deck da IA: digitar nome, importar decklist, ou deck aleatório
+- Estado `aiMode` no contexto do duelo
 
----
+## Fase 3: Motor de Decisão da IA
+- A IA analisa: campo atual, mão, cemitério, deck extra, LP de ambos
+- Toma decisões: Normal Summon, Special Summon, ativar efeito, setar, atacar, passar turno
+- Executa as ações no campo digital automaticamente (manipulando o estado do oponente)
 
-### Tarefa 1: Bloqueio Total de Anúncios para PRO
+## Fase 4: Sistema de Chat com IA
+- Chat integrado no visualizador de deck do oponente
+- IA comenta suas jogadas, reage a ações do jogador
+- Streaming de respostas para naturalidade
 
-**Arquivos:** `src/components/ConditionalMonetagLoader.tsx`, `src/components/NoMonetagAds.tsx`, `src/components/GoogleAd.tsx`, `src/pages/Home.tsx`, `src/pages/Duels.tsx`
+## Fase 5: Processamento de Áudio (Speech-to-Text)
+- Captura áudio do microfone do jogador
+- Usa Web Speech API (nativa do browser) para transcrição
+- Envia texto transcrito para a IA como contexto adicional
 
-- No `ConditionalMonetagLoader`, adicionar limpeza agressiva do DOM para PRO (remover scripts Monetag, iframes, divs `container-*`, scripts AdSense) com intervalo de 1s
-- No `NoMonetagAds`, diferenciar comportamento: PRO faz cleanup completo incluindo Google AdSense scripts; FREE mantém bloqueio apenas de popups
-- No `GoogleAd.tsx`, já retorna null para PRO (OK), mas garantir que o script AdSense do `index.html` também seja removido dinamicamente para PRO
-- Criar um componente `ProAdCleaner` que roda no App.tsx e remove todos os scripts de ads (AdSense, AMP, Monetag) do `<head>` quando detecta PRO
+## Limitações Reconhecidas
+- Visão computacional (câmera → cartas físicas) NÃO é viável neste ambiente - a IA lê o estado digital diretamente
+- A IA não terá conhecimento perfeito de todos os combos, mas será guiada por um prompt robusto com regras do YGO
 
-### Tarefa 2: Permissões no APK (Câmera, Microfone, Notificação)
-
-**Escopo:** Mudanças no código web (detecção via User Agent `DuelVerseApp`)
-
-- Criar componente `NativePermissionPrompt` que aparece logo após o login quando `isNativeApp === true`
-- Solicita permissões de câmera (`navigator.mediaDevices.getUserMedia({ video: true, audio: true })`), microfone e notificação (`Notification.requestPermission()`) em sequência
-- Exibe dialog modal explicando cada permissão antes de solicitar
-- Armazena em `localStorage` que as permissões já foram solicitadas para não repetir
-
-### Tarefa 3: Notificações Nativas no APK
-
-**Escopo:** Ponte JavaScript no web app que utiliza `DuelVerseNative` bridge
-
-- Atualizar `src/hooks/useBrowserNotifications.tsx` para detectar `DuelVerseNative` no window e chamar `window.DuelVerseNative.showNotification(title, body)` quando disponível
-- Atualizar `showNotification` para priorizar a ponte nativa sobre a API de Notification do browser
-- Isso já funciona se o APK implementar a bridge; o código web vai tentar usar a ponte e fazer fallback para Web Notification API
-
-### Tarefa 4: Ícone PWA Correto
-
-- Copiar `user-uploads://channels4_profile.jpg` para `public/favicon.png` (substituindo o atual em escala de cinza)
-- Regenerar todos os ícones PWA (72x72 até 512x512) e maskable icons a partir da nova imagem
-- Atualizar `public/apple-touch-icon.png`
-- O `vite.config.ts` já referencia os caminhos corretos, não precisa alterar
-
----
-
-### Detalhes Técnicos
-
-**ProAdCleaner (novo componente no App.tsx):**
-```typescript
-// Remove ALL ad scripts from DOM for PRO users
-// Runs on mount and every 2s to catch dynamic injections
-// Targets: adsbygoogle, amp-auto-ads, monetag scripts, container-* divs
-```
-
-**NativePermissionPrompt:**
-```typescript
-// Shows after login on native app (DuelVerseApp UA)
-// Step 1: Camera + Mic → getUserMedia({ video: true, audio: true })
-// Step 2: Notifications → Notification.requestPermission()
-// Stores 'native-permissions-prompted' in localStorage
-```
-
-**Notificação nativa bridge:**
-```typescript
-// In useBrowserNotifications showNotification:
-if ((window as any).DuelVerseNative?.showNotification) {
-  (window as any).DuelVerseNative.showNotification(title, options?.body || '');
-  return;
-}
-```
-
+## Ordem de Implementação
+1. Edge Function do motor de IA
+2. UI de ativação + seleção de deck
+3. Loop de jogo automatizado
+4. Chat integrado
+5. Speech-to-text
