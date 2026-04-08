@@ -94,7 +94,17 @@ const Tournaments = () => {
       });
 
       const result = data;
-      const message = result?.message || error?.message || 'Erro ao se inscrever';
+      let message = result?.message || '';
+      if (error && !message) {
+        try {
+          const ctx = (error as any)?.context;
+          if (ctx && typeof ctx.json === 'function') {
+            const body = await ctx.json();
+            message = body?.message || error.message;
+          } else { message = error.message; }
+        } catch { message = error.message; }
+      }
+      if (!message) message = 'Erro ao se inscrever';
 
       if (error || !result?.success) {
         const isAlreadyJoined = message.includes('já está inscrito') || message.includes('23505');
