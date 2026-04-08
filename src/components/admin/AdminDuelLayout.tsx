@@ -19,6 +19,10 @@ interface LayoutConfig {
   deck_viewer_mobile: ElementPosition;
   opponent_viewer_desktop: ElementPosition;
   opponent_viewer_mobile: ElementPosition;
+  hide_button_desktop: ElementPosition;
+  hide_button_mobile: ElementPosition;
+  record_button_desktop: ElementPosition;
+  record_button_mobile: ElementPosition;
 }
 
 const DEFAULT_CONFIG: LayoutConfig = {
@@ -28,12 +32,18 @@ const DEFAULT_CONFIG: LayoutConfig = {
   deck_viewer_mobile: { x: 8, y: 80 },
   opponent_viewer_desktop: { x: 8, y: 80 },
   opponent_viewer_mobile: { x: 8, y: 80 },
+  hide_button_desktop: { x: 0, y: 0 },
+  hide_button_mobile: { x: 0, y: 0 },
+  record_button_desktop: { x: 0, y: 0 },
+  record_button_mobile: { x: 0, y: 0 },
 };
 
 const ELEMENT_LABELS: Record<string, { icon: string; label: string }> = {
   calculator: { icon: "🧮", label: "Calculadora de LP" },
   deck_viewer: { icon: "🃏", label: "Visualizador de Deck" },
   opponent_viewer: { icon: "👁️", label: "Visualizador do Oponente" },
+  hide_button: { icon: "👁️‍🗨️", label: "Botão Ocultar Elementos" },
+  record_button: { icon: "🎥", label: "Botão Gravar Duelo" },
 };
 
 export const AdminDuelLayout = () => {
