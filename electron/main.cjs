@@ -268,18 +268,24 @@ function createWindow() {
   setupZoomShortcuts();
 
   // Allow getDisplayMedia to work with remote content by providing desktop sources
-  mainWindow.webContents.session.setDisplayMediaRequestHandler((request, callback) => {
-    desktopCapturer.getSources({ types: ['screen', 'window'] }).then((sources) => {
-      // Pick the first screen source
-      const screenSource = sources.find(s => s.id.startsWith('screen:')) || sources[0];
-      if (screenSource) {
-        callback({ video: screenSource, audio: 'loopback' });
-      } else {
+  mainWindow.webContents.session.setDisplayMediaRequestHandler(async (request, callback) => {
+    try {
+      const sources = await desktopCapturer.getSources({ types: ['screen', 'window'] });
+      const preferredSource = sources.find((source) => source.id.startsWith('screen:')) || sources[0];
+
+      if (!preferredSource) {
         callback({});
+        return;
       }
-    }).catch(() => {
+
+      callback({
+        video: request.videoRequested ? preferredSource : undefined,
+        audio: request.audioRequested ? 'loopback' : undefined,
+      });
+    } catch (error) {
+      console.error('[Electron] Failed to resolve display media request:', error);
       callback({});
-    });
+    }
   });
 
   // Force taskbar icon on Windows
