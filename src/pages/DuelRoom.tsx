@@ -1061,30 +1061,6 @@ const DuelRoom = () => {
               {isParticipant && !isJudge && (
                 <>
                   <HideElementsButton onToggle={() => setHideControls(!hideControls)} isHidden={hideControls} />
-                  {(window as any).electronAPI ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-2 text-blue-500 border-blue-500/30 hover:bg-blue-500/10"
-                      onClick={() => {
-                        toast({
-                          title: "Sincronizar com OBS Studio",
-                          description: "Abra o OBS, adicione uma 'Captura de Janela' e selecione a janela do DuelVerse. Para transmitir ao vivo, configure sua chave RTMP do YouTube/Twitch nas configurações do OBS.",
-                          duration: 12000,
-                        });
-                      }}
-                    >
-                      <Monitor className="w-4 h-4" />
-                      <span className="hidden sm:inline">Sincronizar OBS</span>
-                    </Button>
-                  ) : (
-                    <>
-                      <RecordMatchButton duelId={id!} />
-                      <span className="hidden sm:inline-flex">
-                        <YouTubeLiveButton duelId={id!} />
-                      </span>
-                    </>
-                  )}
                 </>
               )}
 
