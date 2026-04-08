@@ -493,7 +493,20 @@ const TournamentDetail = () => {
                             body: { tournament_id: id },
                           });
 
-                          const message = data?.message || error?.message || 'Erro ao se inscrever';
+                          // Parse error body if available
+                          let message = data?.message || '';
+                          if (error && !message) {
+                            try {
+                              const ctx = (error as any)?.context;
+                              if (ctx && typeof ctx.json === 'function') {
+                                const body = await ctx.json();
+                                message = body?.message || error.message;
+                              } else {
+                                message = error.message;
+                              }
+                            } catch { message = error.message; }
+                          }
+                          if (!message) message = 'Erro ao se inscrever';
 
                           if (error || !data?.success) {
                             const isAlreadyJoined = message.includes('já está inscrito') || message.includes('23505');

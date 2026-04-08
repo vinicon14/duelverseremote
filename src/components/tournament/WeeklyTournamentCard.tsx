@@ -88,7 +88,17 @@ export const WeeklyTournamentCard = ({
         body: { tournament_id: tournament.id }
       });
 
-      const message = result?.message || fnError?.message || 'Erro ao processar inscrição';
+      let message = result?.message || '';
+      if (fnError && !message) {
+        try {
+          const ctx = (fnError as any)?.context;
+          if (ctx && typeof ctx.json === 'function') {
+            const body = await ctx.json();
+            message = body?.message || fnError.message;
+          } else { message = fnError.message; }
+        } catch { message = fnError.message; }
+      }
+      if (!message) message = 'Erro ao processar inscrição';
 
       if (fnError || (result && !result.success)) {
         const isAlreadyJoined = message.includes('já está inscrito') || message.includes('23505');
