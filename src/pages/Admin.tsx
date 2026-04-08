@@ -21,6 +21,7 @@ import { AdminJudges } from "@/components/admin/AdminJudges";
 import { AdminSubscriptionPlans } from "@/components/admin/AdminSubscriptionPlans";
 import { AdminMarketplace } from "@/components/admin/AdminMarketplace";
 import { AdminDuelCoinsPackages } from "@/components/admin/AdminDuelCoinsPackages";
+import { AdminDuelLayout } from "@/components/admin/AdminDuelLayout";
 import { Shield, Loader2 } from "lucide-react";
 
 export default function Admin() {
@@ -62,7 +63,7 @@ export default function Admin() {
 
         <Tabs defaultValue="news" className="w-full">
           <div className="overflow-x-auto -mx-4 px-4 pb-2">
-            <TabsList className="flex w-max sm:grid sm:w-full sm:grid-cols-11 gap-1">
+            <TabsList className="flex w-max sm:grid sm:w-full sm:grid-cols-12 gap-1">
             <TabsTrigger value="news">Notícias</TabsTrigger>
             <TabsTrigger value="ads">Anúncios</TabsTrigger>
             <TabsTrigger value="users">Usuários</TabsTrigger>
@@ -73,6 +74,7 @@ export default function Admin() {
             <TabsTrigger value="judges">Juízes</TabsTrigger>
             <TabsTrigger value="plans">Planos</TabsTrigger>
             <TabsTrigger value="marketplace">Aprovações</TabsTrigger>
+            <TabsTrigger value="duel-layout">Layout Duelo</TabsTrigger>
             <TabsTrigger value="settings">Config</TabsTrigger>
             </TabsList>
           </div>
@@ -115,6 +117,10 @@ export default function Admin() {
           
           <TabsContent value="marketplace" className="mt-6">
             <AdminMarketplace />
+          </TabsContent>
+
+          <TabsContent value="duel-layout" className="mt-6">
+            <AdminDuelLayout />
           </TabsContent>
 
           <TabsContent value="settings" className="mt-6">
