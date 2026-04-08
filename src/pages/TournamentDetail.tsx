@@ -493,8 +493,20 @@ const TournamentDetail = () => {
                             body: { tournament_id: id },
                           });
 
-                          if (error) throw new Error(error.message);
-                          if (!data.success) throw new Error(data.message);
+                          const message = data?.message || error?.message || 'Erro ao se inscrever';
+
+                          if (error || !data?.success) {
+                            const isAlreadyJoined = message.includes('já está inscrito') || message.includes('23505');
+                            const isNoBalance = message.includes('Saldo insuficiente') || message.includes('precisa de');
+                            
+                            toast({
+                              title: isAlreadyJoined ? "Você já está inscrito" : isNoBalance ? "Saldo insuficiente" : "Não foi possível se inscrever",
+                              description: isAlreadyJoined ? "Você já está inscrito neste torneio." : isNoBalance ? "Você não tem DuelCoins suficientes para se inscrever." : message,
+                              variant: "destructive",
+                            });
+                            setLoading(false);
+                            return;
+                          }
 
                           toast({
                             title: "Sucesso!",
@@ -503,9 +515,13 @@ const TournamentDetail = () => {
 
                           await fetchTournamentData();
                         } catch (error: any) {
+                          const msg = error?.message || '';
+                          const isAlreadyJoined = msg.includes('já está inscrito') || msg.includes('23505');
+                          const isNoBalance = msg.includes('Saldo insuficiente') || msg.includes('precisa de');
+                          
                           toast({
-                            title: "Não foi possível se inscrever",
-                            description: error.message,
+                            title: isAlreadyJoined ? "Você já está inscrito" : isNoBalance ? "Saldo insuficiente" : "Não foi possível se inscrever",
+                            description: isAlreadyJoined ? "Você já está inscrito neste torneio." : isNoBalance ? "Você não tem DuelCoins suficientes para se inscrever." : msg,
                             variant: "destructive",
                           });
                         } finally {

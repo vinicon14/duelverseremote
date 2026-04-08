@@ -93,20 +93,35 @@ const Tournaments = () => {
         body: { tournament_id: tournamentId },
       });
 
-      if (error || !data?.success) {
-        throw new Error(data?.message || error?.message || 'Erro ao se inscrever');
+      const result = data;
+      const message = result?.message || error?.message || 'Erro ao se inscrever';
+
+      if (error || !result?.success) {
+        const isAlreadyJoined = message.includes('já está inscrito') || message.includes('23505');
+        const isNoBalance = message.includes('Saldo insuficiente') || message.includes('precisa de');
+        
+        toast({
+          title: isAlreadyJoined ? "Você já está inscrito" : isNoBalance ? "Saldo insuficiente" : "Erro ao se inscrever",
+          description: isAlreadyJoined ? "Você já está inscrito neste torneio." : isNoBalance ? "Você não tem DuelCoins suficientes para se inscrever." : message,
+          variant: "destructive",
+        });
+        return;
       }
 
       toast({
         title: "Inscrição realizada!",
-        description: data.message,
+        description: result.message,
       });
 
       await fetchTournaments();
     } catch (error: any) {
+      const msg = error?.message || '';
+      const isAlreadyJoined = msg.includes('já está inscrito') || msg.includes('23505');
+      const isNoBalance = msg.includes('Saldo insuficiente') || msg.includes('precisa de');
+      
       toast({
-        title: "Erro ao se inscrever",
-        description: error.message,
+        title: isAlreadyJoined ? "Você já está inscrito" : isNoBalance ? "Saldo insuficiente" : "Erro ao se inscrever",
+        description: isAlreadyJoined ? "Você já está inscrito neste torneio." : isNoBalance ? "Você não tem DuelCoins suficientes para se inscrever." : msg,
         variant: "destructive",
       });
     } finally {
