@@ -80,7 +80,7 @@ export const FloatingCalculator = ({
 
   const [position, setPosition] = useState(() => {
     const isMobile = window.innerWidth < 768;
-    return { x: isMobile ? 10 : 20, y: isMobile ? 95 : 100 };
+    return { x: isMobile ? 10 : 20, y: isMobile ? 130 : 140 };
   });
   const [isDragging, setIsDragging] = useState(false);
   const [isMinimized, setIsMinimized] = useState(true);
