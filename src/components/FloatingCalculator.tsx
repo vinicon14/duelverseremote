@@ -7,7 +7,6 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Heart, Shield, Minus, Plus, GripVertical, X, Maximize2, Minimize2, RotateCcw, PlusCircle, Trash2 } from "lucide-react";
-import { useDuelLayoutConfig } from "@/hooks/useDuelLayoutConfig";
 
 type PlayerKey = 'player1' | 'player2' | 'player3' | 'player4';
 
@@ -65,7 +64,6 @@ export const FloatingCalculator = ({
   onAddCustomCounter,
   onRemoveCustomCounter,
 }: FloatingCalculatorProps) => {
-  const { getPosition } = useDuelLayoutConfig();
   const isMagic = tcgType === 'magic';
   const isPokemon = tcgType === 'pokemon';
   const defaultLP = isPokemon ? 6 : isMagic ? 40 : 8000;
@@ -81,7 +79,8 @@ export const FloatingCalculator = ({
     : [{ label: '-100', amount: -100 }, { label: '+100', amount: 100 }];
 
   const [position, setPosition] = useState(() => {
-    return getPosition("calculator");
+    const isMobile = window.innerWidth < 768;
+    return { x: isMobile ? 10 : 20, y: isMobile ? 80 : 100 };
   });
   const [isDragging, setIsDragging] = useState(false);
   const [isMinimized, setIsMinimized] = useState(true);

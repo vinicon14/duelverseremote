@@ -23,7 +23,6 @@ import {
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useDraggable } from '@/hooks/useDraggable';
-import { useDuelLayoutConfig } from '@/hooks/useDuelLayoutConfig';
 import { MTG_CARD_BACK } from './mtgCardImage';
 
 interface OpponentCard {
@@ -156,9 +155,8 @@ export const FloatingOpponentViewer = ({
   const [selectedCard, setSelectedCard] = useState<OpponentCard | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
-  const { getPosition } = useDuelLayoutConfig();
   const { position, isDragging, elementRef, dragHandlers } = useDraggable({
-    initialPosition: getPosition("opponent_viewer"),
+    initialPosition: { x: 8, y: 80 },
   });
 
   useEffect(() => {

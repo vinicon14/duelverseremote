@@ -33,7 +33,6 @@ import { ZoneViewerModal } from './ZoneViewerModal';
 import { FieldCardActionsModal } from './FieldCardActionsModal';
 import { SideDeckSwapModal } from './SideDeckSwapModal';
 import { useDraggable } from '@/hooks/useDraggable';
-import { useDuelLayoutConfig } from '@/hooks/useDuelLayoutConfig';
 
 interface DuelDeckViewerProps {
   isOpen: boolean;
@@ -200,9 +199,8 @@ export const DuelDeckViewer = ({
   const [showSideSwap, setShowSideSwap] = useState(false);
 
   // Draggable functionality
-  const { getPosition } = useDuelLayoutConfig();
   const { position, isDragging, elementRef, dragHandlers } = useDraggable({
-    initialPosition: getPosition("deck_viewer"),
+    initialPosition: { x: 8, y: 80 },
   });
 
   // Persistent channel for broadcasting
