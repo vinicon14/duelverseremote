@@ -159,7 +159,7 @@ export const FloatingOpponentViewer = ({
   const [modalOpen, setModalOpen] = useState(false);
 
   const { position, isDragging, elementRef, dragHandlers } = useDraggable({
-    initialPosition: { x: 8, y: 115 },
+    initialPosition: { x: 8, y: 145 },
   });
 
   useEffect(() => {
