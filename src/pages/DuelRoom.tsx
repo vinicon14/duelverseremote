@@ -993,7 +993,7 @@ const DuelRoom = () => {
           </div>
 
           {/* Botões de controle - Canto superior ESQUERDO */}
-          <div className="absolute top-2 sm:top-4 left-2 sm:left-4 z-50 flex gap-1 sm:gap-2 items-center">
+          <div className="absolute top-2 sm:top-4 left-1/2 -translate-x-1/2 z-50 flex gap-1 sm:gap-2 items-center">
             {isParticipant && !isJudge && (
               <>
                 <HideElementsButton onToggle={() => setHideControls(!hideControls)} isHidden={hideControls} />
