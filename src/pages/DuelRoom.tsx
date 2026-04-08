@@ -993,7 +993,7 @@ const DuelRoom = () => {
           </div>
 
           {/* Botão de Sair e Timer - Fixo no canto superior direito */}
-          <div className="absolute top-12 sm:top-16 right-2 sm:right-4 z-50 flex flex-col sm:flex-row gap-2 items-end sm:items-center">
+          <div className="absolute top-8 sm:top-10 right-2 sm:right-4 z-50 flex flex-col sm:flex-row gap-2 items-end sm:items-center">
             {!hideControls && (
               <>
                 {/* Badge de juiz + Timer */}
