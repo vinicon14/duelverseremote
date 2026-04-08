@@ -1056,7 +1056,7 @@ const DuelRoom = () => {
               </>
             )}
             
-            <div className="flex gap-1 sm:gap-2">
+            <div className="flex flex-wrap gap-1 sm:gap-2 justify-end">
               {/* O botão de Ocultar e Gravar ficam sempre visíveis para participantes */}
               {isParticipant && !isJudge && (
                 <>
