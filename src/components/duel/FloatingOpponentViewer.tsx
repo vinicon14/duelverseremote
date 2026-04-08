@@ -24,7 +24,6 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useDraggable } from '@/hooks/useDraggable';
 import { MTG_CARD_BACK } from './mtgCardImage';
-import { Bot } from 'lucide-react';
 
 interface OpponentCard {
   id: number;
@@ -114,9 +113,6 @@ interface FloatingOpponentViewerProps {
   duelId: string;
   currentUserId: string;
   opponentUsername?: string;
-  hasOpponent?: boolean;
-  aiMode?: boolean;
-  onActivateAi?: () => void;
 }
 
 const buildPkmEffectText = (card: OpponentCard): string => {
@@ -150,10 +146,7 @@ const getCardBack = (tcgType?: string, sleeveUrl?: string | null) => {
 export const FloatingOpponentViewer = ({ 
   duelId, 
   currentUserId, 
-  opponentUsername = 'Oponente',
-  hasOpponent = true,
-  aiMode = false,
-  onActivateAi,
+  opponentUsername = 'Oponente' 
 }: FloatingOpponentViewerProps) => {
   const [opponentState, setOpponentState] = useState<OpponentState | null>(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -163,7 +156,7 @@ export const FloatingOpponentViewer = ({
   const [modalOpen, setModalOpen] = useState(false);
 
   const { position, isDragging, elementRef, dragHandlers } = useDraggable({
-    initialPosition: { x: 8, y: 180 },
+    initialPosition: { x: 8, y: 80 },
   });
 
   useEffect(() => {
@@ -459,17 +452,6 @@ export const FloatingOpponentViewer = ({
             <Eye className="h-6 w-6 mx-auto mb-2 opacity-50" />
             <p>Aguardando o oponente carregar o deck virtual...</p>
             <p className="text-xs mt-1">O oponente precisa abrir a Arena Digital</p>
-            {!hasOpponent && !aiMode && onActivateAi && (
-              <Button
-                onClick={onActivateAi}
-                className="mt-3 gap-2"
-                variant="default"
-                size="sm"
-              >
-                <Bot className="h-4 w-4" />
-                Duelar contra IA
-              </Button>
-            )}
           </div>
         ) : (
           <div className="space-y-2">
