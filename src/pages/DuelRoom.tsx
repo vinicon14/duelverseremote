@@ -25,6 +25,9 @@ import { MagicDuelViewer } from "@/components/duel/MagicDuelViewer";
 import { PokemonDuelViewer } from "@/components/duel/PokemonDuelViewer";
 import { useDuelDeck } from "@/hooks/useDuelDeck";
 import { useDuelPresence, useDuelCleanup } from "@/hooks/useDuelPresence";
+import { useAiDuel } from "@/hooks/useAiDuel";
+import { AiDeckSelectModal } from "@/components/duel/AiDeckSelectModal";
+import { AiDuelChat } from "@/components/duel/AiDuelChat";
 
 const DuelRoom = () => {
   useBanCheck(); // Proteger contra usuários banidos
@@ -66,6 +69,9 @@ const DuelRoom = () => {
   const { mainDeck, extraDeck, sideDeck, tokensDeck, importDeckFromYDK, loadDeckFromSaved, isLoading: isDeckLoading } = useDuelDeck();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // AI Solo Mode
+  const aiDuel = useAiDuel();
+  const [showAiDeckModal, setShowAiDeckModal] = useState(false);
 
   // Judge reward timer - fetch judge_log and countdown
   const handleJudgeReward = useCallback(async (logId: string) => {
@@ -992,40 +998,7 @@ const DuelRoom = () => {
             )}
           </div>
 
-          {/* Botões de controle - Canto superior ESQUERDO */}
-          <div className="absolute top-2 sm:top-4 left-1/2 -translate-x-1/2 z-50 flex gap-1 sm:gap-2 items-center">
-            {isParticipant && !isJudge && (
-              <>
-                <HideElementsButton onToggle={() => setHideControls(!hideControls)} isHidden={hideControls} />
-                {(window as any).electronAPI ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-2 text-blue-500 border-blue-500/30 hover:bg-blue-500/10"
-                    onClick={() => {
-                      toast({
-                        title: "Sincronizar com OBS Studio",
-                        description: "Abra o OBS, adicione uma 'Captura de Janela' e selecione a janela do DuelVerse. Para transmitir ao vivo, configure sua chave RTMP do YouTube/Twitch nas configurações do OBS.",
-                        duration: 12000,
-                      });
-                    }}
-                  >
-                    <Monitor className="w-4 h-4" />
-                    <span className="hidden sm:inline">Sincronizar OBS</span>
-                  </Button>
-                ) : (
-                  <>
-                    <RecordMatchButton duelId={id!} />
-                    <span className="hidden sm:inline-flex">
-                      <YouTubeLiveButton duelId={id!} />
-                    </span>
-                  </>
-                )}
-              </>
-            )}
-          </div>
-
-          {/* Badges e Timer - Canto superior direito */}
+          {/* Botão de Sair e Timer - Fixo no canto superior direito */}
           <div className="absolute top-2 sm:top-4 right-2 sm:right-4 z-50 flex flex-col sm:flex-row gap-2 items-end sm:items-center">
             {!hideControls && (
               <>
@@ -1084,6 +1057,36 @@ const DuelRoom = () => {
             )}
             
             <div className="flex gap-1 sm:gap-2">
+              {/* O botão de Ocultar e Gravar ficam sempre visíveis para participantes */}
+              {isParticipant && !isJudge && (
+                <>
+                  <HideElementsButton onToggle={() => setHideControls(!hideControls)} isHidden={hideControls} />
+                  {(window as any).electronAPI ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2 text-blue-500 border-blue-500/30 hover:bg-blue-500/10"
+                      onClick={() => {
+                        toast({
+                          title: "Sincronizar com OBS Studio",
+                          description: "Abra o OBS, adicione uma 'Captura de Janela' e selecione a janela do DuelVerse. Para transmitir ao vivo, configure sua chave RTMP do YouTube/Twitch nas configurações do OBS.",
+                          duration: 12000,
+                        });
+                      }}
+                    >
+                      <Monitor className="w-4 h-4" />
+                      <span className="hidden sm:inline">Sincronizar OBS</span>
+                    </Button>
+                  ) : (
+                    <>
+                      <RecordMatchButton duelId={id!} />
+                      <span className="hidden sm:inline-flex">
+                        <YouTubeLiveButton duelId={id!} />
+                      </span>
+                    </>
+                  )}
+                </>
+              )}
 
               {/* Todos os outros botões são controlados por `hideControls` */}
               {!hideControls && (
@@ -1251,11 +1254,13 @@ const DuelRoom = () => {
           duelId={id}
           currentUserId={currentUser.id}
           opponentUsername={
-            currentUser.id === duel.creator_id 
+            aiDuel.aiMode ? 'IA' : currentUser.id === duel.creator_id 
               ? duel.opponent?.username 
               : duel.creator?.username
           }
           hasOpponent={!!duel.opponent_id}
+          aiMode={aiDuel.aiMode}
+          onActivateAi={() => setShowAiDeckModal(true)}
         />
       )}
 
@@ -1264,6 +1269,34 @@ const DuelRoom = () => {
         <DuelChat duelId={id!} currentUserId={currentUser.id} />
       )}
 
+      {/* AI Deck Selection Modal */}
+      <AiDeckSelectModal
+        open={showAiDeckModal}
+        onClose={() => setShowAiDeckModal(false)}
+        onSelectDeck={(cards) => aiDuel.startAiMode(cards)}
+      />
+
+      {/* AI Chat - Only visible when AI mode is active */}
+      {aiDuel.aiMode && (
+        <AiDuelChat
+          messages={aiDuel.chatMessages}
+          isAiThinking={aiDuel.isAiThinking}
+          isAiTurn={aiDuel.isAiTurn}
+          isListening={aiDuel.isListening}
+          onSendMessage={aiDuel.sendChatToAi}
+          onStartListening={aiDuel.startListening}
+          onStopListening={aiDuel.stopListening}
+          onStartAiTurn={aiDuel.startAiTurn}
+          onStopAiMode={aiDuel.stopAiMode}
+          fieldState={{
+            monster1: null, monster2: null, monster3: null, monster4: null, monster5: null,
+            spell1: null, spell2: null, spell3: null, spell4: null, spell5: null,
+            extraMonster1: null, extraMonster2: null, fieldSpell: null,
+            graveyard: [], banished: [], extraDeck: [], deck: [], sideDeck: [], hand: [],
+          }}
+          playerLP={isPlayer1 ? player1LP : player2LP}
+        />
+      )}
     </div>
   );
 };
