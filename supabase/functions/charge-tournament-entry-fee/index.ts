@@ -32,7 +32,7 @@ serve(async (req) => {
     if (userError || !user) {
       return new Response(
         JSON.stringify({ success: false, message: 'Não autorizado' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -47,7 +47,7 @@ serve(async (req) => {
     if (profileError || !profile) {
       return new Response(
         JSON.stringify({ success: false, message: 'Perfil não encontrado' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -60,21 +60,21 @@ serve(async (req) => {
     if (tournamentError || !tournament) {
       return new Response(
         JSON.stringify({ success: false, message: 'Torneio não encontrado' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     if (tournament.created_by === user.id) {
       return new Response(
         JSON.stringify({ success: false, message: 'Você não pode se inscrever no seu próprio torneio' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     if (tournament.status !== 'upcoming') {
       return new Response(
         JSON.stringify({ success: false, message: 'Este torneio não está aceitando inscrições' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -86,14 +86,14 @@ serve(async (req) => {
     if (participantCount && participantCount >= tournament.max_participants) {
       return new Response(
         JSON.stringify({ success: false, message: 'Torneio lotado' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     if (tournament.entry_fee > 0 && profile.duelcoins_balance < tournament.entry_fee) {
       return new Response(
         JSON.stringify({ success: false, message: `Saldo insuficiente. Você precisa de ${tournament.entry_fee} DuelCoins` }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -132,7 +132,7 @@ serve(async (req) => {
       if (participantError.code === '23505') {
         return new Response(
           JSON.stringify({ success: false, message: 'Você já está inscrito neste torneio' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       throw participantError;
@@ -145,7 +145,7 @@ serve(async (req) => {
           ? `Inscrição realizada! ${tournament.entry_fee} DuelCoins pagos.`
           : 'Inscrição realizada com sucesso!'
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error: any) {
@@ -153,9 +153,9 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: false,
-        message: 'Erro ao processar inscrição. Tente novamente.'
+        message: error?.message || 'Erro ao processar inscrição. Tente novamente.'
       }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
