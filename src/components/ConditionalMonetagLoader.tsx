@@ -65,6 +65,12 @@ export const ConditionalMonetagLoader = (): null => {
 
     console.log('Carregando notification ads:', location.pathname);
     
+    // Double-check PRO status before injecting (safety net)
+    if (isPro) {
+      console.log('Monetag BLOQUEADO - verificação dupla PRO');
+      return;
+    }
+
     // Notification script 1 (zone 10601960)
     const notificationScript1 = document.createElement('script');
     notificationScript1.src = 'https://3nbf4.com/act/files/tag.min.js?z=10601960';
