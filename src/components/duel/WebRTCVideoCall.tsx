@@ -575,9 +575,17 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   const isSideBySide = layout === "side-by-side";
 
   // Build remote slots: fill with connected peers, pad with waiting slots
+  // For spectators: first peer goes to local panel, remaining peers go to remote slots
   const remoteSlots: (string | null)[] = [];
-  for (let i = 0; i < totalSlots - 1; i++) {
-    remoteSlots.push(remotePeerIds[i] || null);
+  if (isSpectator) {
+    // Skip first peer (used in local panel), use rest for remote slots
+    for (let i = 0; i < totalSlots - 1; i++) {
+      remoteSlots.push(remotePeerIds[i + 1] || null);
+    }
+  } else {
+    for (let i = 0; i < totalSlots - 1; i++) {
+      remoteSlots.push(remotePeerIds[i] || null);
+    }
   }
 
   const localVideoCallbackRef = useCallback((el: HTMLVideoElement | null) => {
