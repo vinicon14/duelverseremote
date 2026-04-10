@@ -26,6 +26,12 @@ interface RecordMatchButtonProps {
 
 type RecordingAudioSource = "system" | "mic" | "both";
 
+interface DesktopSource {
+  id: string;
+  name: string;
+  thumbnail: string;
+}
+
 export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonProps) => {
   const { toast } = useToast();
   const { isPro, loading: accountLoading } = useAccountType();
