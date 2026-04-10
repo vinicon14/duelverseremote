@@ -990,7 +990,7 @@ const DuelRoom = () => {
         channel.send({
           type: 'broadcast',
           event: 'deck-toggle',
-          payload: { userId: currentUser.id, isOpen: myDeckIsOpen },
+          payload: { userId: currentUser.id, isOpen: myDeckIsOpenRef.current },
         });
       }
     })
