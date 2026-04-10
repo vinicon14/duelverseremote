@@ -53,7 +53,7 @@ const TournamentDetail = () => {
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
-      navigate('/auth');
+      navigate('/auth', { state: { returnTo: `/tournaments/${id}` } });
       return;
     }
     setCurrentUser(session.user);
