@@ -17,13 +17,10 @@ interface WebRTCVideoCallProps {
   className?: string;
   layout?: VideoLayout;
   onLayoutChange?: (layout: VideoLayout) => void;
-  /** When true, local video is replaced by a deck overlay (managed by parent) */
+  maxPlayers?: number;
   localDeckOpen?: boolean;
-  /** When true, remote video is replaced by opponent deck overlay (managed by parent) */
   remoteDeckOpen?: boolean;
-  /** Render prop for local deck overlay content */
   localDeckContent?: React.ReactNode;
-  /** Render prop for remote deck overlay content */
   remoteDeckContent?: React.ReactNode;
 }
 
@@ -33,6 +30,13 @@ const ICE_SERVERS: RTCIceServer[] = [
   { urls: "stun:stun2.l.google.com:19302" },
 ];
 
+interface PeerState {
+  pc: RTCPeerConnection;
+  stream: MediaStream | null;
+  makingOffer: boolean;
+  ignoreOffer: boolean;
+}
+
 export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCallProps>(({
   duelId,
   userId,
@@ -40,26 +44,23 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   className,
   layout = "side-by-side",
   onLayoutChange,
+  maxPlayers = 2,
   localDeckOpen = false,
   remoteDeckOpen = false,
   localDeckContent,
   remoteDeckContent,
 }, ref) => {
   const localVideoRef = useRef<HTMLVideoElement>(null);
-  const remoteVideoRef = useRef<HTMLVideoElement>(null);
-  const pcRef = useRef<RTCPeerConnection | null>(null);
+  const remoteVideoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
+  const peersRef = useRef<Map<string, PeerState>>(new Map());
   const localStreamRef = useRef<MediaStream | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
-  const makingOfferRef = useRef(false);
-  const ignoreOfferRef = useRef(false);
-  const politeRef = useRef(isCreator);
 
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
-  const [connectionState, setConnectionState] = useState<string>("new");
-  const [hasRemoteStream, setHasRemoteStream] = useState(false);
+  const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(new Map());
+  const [remotePeerIds, setRemotePeerIds] = useState<string[]>([]);
 
-  // Expose video control to parent
   useImperativeHandle(ref, () => ({
     setVideoEnabled: (enabled: boolean) => {
       const stream = localStreamRef.current;
@@ -73,13 +74,28 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     isVideoOff,
   }), [isVideoOff]);
 
-  const createPeerConnection = useCallback(() => {
-    if (pcRef.current) {
-      pcRef.current.close();
+  const createPeerConnection = useCallback((remotePeerId: string) => {
+    const existing = peersRef.current.get(remotePeerId);
+    if (existing) {
+      existing.pc.close();
     }
 
     const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
-    pcRef.current = pc;
+    const peerState: PeerState = {
+      pc,
+      stream: null,
+      makingOffer: false,
+      ignoreOffer: false,
+    };
+    peersRef.current.set(remotePeerId, peerState);
+
+    // Add local tracks
+    const localStream = localStreamRef.current;
+    if (localStream) {
+      localStream.getTracks().forEach((track) => {
+        pc.addTrack(track, localStream);
+      });
+    }
 
     pc.onicecandidate = (event) => {
       if (event.candidate && channelRef.current) {
@@ -90,25 +106,30 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
             type: "ice-candidate",
             candidate: event.candidate.toJSON(),
             senderId: userId,
+            targetId: remotePeerId,
           },
         });
       }
     };
 
     pc.ontrack = (event) => {
-      if (remoteVideoRef.current && event.streams[0]) {
-        remoteVideoRef.current.srcObject = event.streams[0];
-        setHasRemoteStream(true);
+      if (event.streams[0]) {
+        peerState.stream = event.streams[0];
+        setRemoteStreams(prev => {
+          const next = new Map(prev);
+          next.set(remotePeerId, event.streams[0]);
+          return next;
+        });
+        setRemotePeerIds(prev => {
+          if (!prev.includes(remotePeerId)) return [...prev, remotePeerId];
+          return prev;
+        });
       }
-    };
-
-    pc.onconnectionstatechange = () => {
-      setConnectionState(pc.connectionState);
     };
 
     pc.onnegotiationneeded = async () => {
       try {
-        makingOfferRef.current = true;
+        peerState.makingOffer = true;
         await pc.setLocalDescription();
         channelRef.current?.send({
           type: "broadcast",
@@ -117,12 +138,13 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
             type: "offer",
             sdp: pc.localDescription,
             senderId: userId,
+            targetId: remotePeerId,
           },
         });
       } catch (err) {
         console.error("[WebRTC] negotiation error:", err);
       } finally {
-        makingOfferRef.current = false;
+        peerState.makingOffer = false;
       }
     };
 
@@ -132,18 +154,64 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   const handleSignal = useCallback(
     async (payload: any) => {
       if (payload.senderId === userId) return;
-      const pc = pcRef.current;
-      if (!pc) return;
+      // If signal has a targetId and it's not for us, ignore
+      if (payload.targetId && payload.targetId !== userId) return;
+
+      const remotePeerId = payload.senderId;
+
+      if (payload.type === "ready") {
+        // New peer announced itself, create connection and send offer
+        // The peer with "higher" id is polite (to break ties)
+        if (!peersRef.current.has(remotePeerId)) {
+          createPeerConnection(remotePeerId);
+        }
+        const peer = peersRef.current.get(remotePeerId);
+        if (!peer) return;
+
+        // Only one side should create the offer to avoid glare
+        // Use string comparison as tiebreaker
+        if (userId > remotePeerId) {
+          try {
+            peer.makingOffer = true;
+            const offer = await peer.pc.createOffer();
+            await peer.pc.setLocalDescription(offer);
+            channelRef.current?.send({
+              type: "broadcast",
+              event: "webrtc-signal",
+              payload: {
+                type: "offer",
+                sdp: peer.pc.localDescription,
+                senderId: userId,
+                targetId: remotePeerId,
+              },
+            });
+          } catch (err) {
+            console.error("[WebRTC] offer creation error:", err);
+          } finally {
+            peer.makingOffer = false;
+          }
+        }
+        return;
+      }
+
+      // Ensure peer connection exists
+      if (!peersRef.current.has(remotePeerId)) {
+        createPeerConnection(remotePeerId);
+      }
+      const peer = peersRef.current.get(remotePeerId);
+      if (!peer) return;
+      const pc = peer.pc;
+      const polite = userId < remotePeerId;
 
       try {
         if (payload.type === "offer" || payload.type === "answer") {
           const description = new RTCSessionDescription(payload.sdp);
           const offerCollision =
             payload.type === "offer" &&
-            (makingOfferRef.current || pc.signalingState !== "stable");
+            (peer.makingOffer || pc.signalingState !== "stable");
 
-          ignoreOfferRef.current = !politeRef.current && offerCollision;
-          if (ignoreOfferRef.current) return;
+          peer.ignoreOffer = !polite && offerCollision;
+          if (peer.ignoreOffer) return;
 
           await pc.setRemoteDescription(description);
 
@@ -156,6 +224,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
                 type: "answer",
                 sdp: pc.localDescription,
                 senderId: userId,
+                targetId: remotePeerId,
               },
             });
           }
@@ -163,29 +232,8 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
           try {
             await pc.addIceCandidate(new RTCIceCandidate(payload.candidate));
           } catch (err) {
-            if (!ignoreOfferRef.current) {
+            if (!peer.ignoreOffer) {
               console.error("[WebRTC] ICE candidate error:", err);
-            }
-          }
-        } else if (payload.type === "ready") {
-          if (isCreator && pc.signalingState === "stable" && !makingOfferRef.current) {
-            try {
-              makingOfferRef.current = true;
-              const offer = await pc.createOffer();
-              await pc.setLocalDescription(offer);
-              channelRef.current?.send({
-                type: "broadcast",
-                event: "webrtc-signal",
-                payload: {
-                  type: "offer",
-                  sdp: pc.localDescription,
-                  senderId: userId,
-                },
-              });
-            } catch (err) {
-              console.error("[WebRTC] offer creation error:", err);
-            } finally {
-              makingOfferRef.current = false;
             }
           }
         }
@@ -193,7 +241,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         console.error("[WebRTC] signal handling error:", err);
       }
     },
-    [userId, isCreator]
+    [userId, createPeerConnection]
   );
 
   useEffect(() => {
@@ -213,53 +261,30 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         if (localVideoRef.current) {
           localVideoRef.current.srcObject = stream;
         }
-
-        const pc = createPeerConnection();
-        stream.getTracks().forEach((track) => {
-          pc.addTrack(track, stream);
-        });
-
-        const channel = supabase.channel(`webrtc-signal-${duelId}`, {
-          config: { broadcast: { self: false } },
-        });
-
-        channel
-          .on("broadcast", { event: "webrtc-signal" }, ({ payload }) => {
-            handleSignal(payload);
-          })
-          .subscribe((status) => {
-            if (status === "SUBSCRIBED") {
-              channel.send({
-                type: "broadcast",
-                event: "webrtc-signal",
-                payload: { type: "ready", senderId: userId },
-              });
-            }
-          });
-
-        channelRef.current = channel;
       } catch (err) {
         console.error("[WebRTC] Failed to get media:", err);
-        createPeerConnection();
-
-        const channel = supabase.channel(`webrtc-signal-${duelId}`, {
-          config: { broadcast: { self: false } },
-        });
-        channel
-          .on("broadcast", { event: "webrtc-signal" }, ({ payload }) => {
-            handleSignal(payload);
-          })
-          .subscribe((status) => {
-            if (status === "SUBSCRIBED") {
-              channel.send({
-                type: "broadcast",
-                event: "webrtc-signal",
-                payload: { type: "ready", senderId: userId },
-              });
-            }
-          });
-        channelRef.current = channel;
       }
+
+      const channel = supabase.channel(`webrtc-signal-${duelId}`, {
+        config: { broadcast: { self: false } },
+      });
+
+      channel
+        .on("broadcast", { event: "webrtc-signal" }, ({ payload }) => {
+          handleSignal(payload);
+        })
+        .subscribe((status) => {
+          if (status === "SUBSCRIBED") {
+            // Announce ourselves
+            channel.send({
+              type: "broadcast",
+              event: "webrtc-signal",
+              payload: { type: "ready", senderId: userId },
+            });
+          }
+        });
+
+      channelRef.current = channel;
     };
 
     init();
@@ -268,14 +293,24 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       disposed = true;
       localStreamRef.current?.getTracks().forEach((t) => t.stop());
       localStreamRef.current = null;
-      pcRef.current?.close();
-      pcRef.current = null;
+      peersRef.current.forEach((peer) => peer.pc.close());
+      peersRef.current.clear();
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
       }
     };
-  }, [duelId, userId, createPeerConnection, handleSignal]);
+  }, [duelId, userId, handleSignal]);
+
+  // Attach remote streams to video elements
+  useEffect(() => {
+    remoteStreams.forEach((stream, peerId) => {
+      const el = remoteVideoRefs.current.get(peerId);
+      if (el && el.srcObject !== stream) {
+        el.srcObject = stream;
+      }
+    });
+  }, [remoteStreams, remotePeerIds]);
 
   const toggleMute = () => {
     const stream = localStreamRef.current;
@@ -297,116 +332,125 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     }
   };
 
-  const isConnecting = connectionState === "new" || connectionState === "connecting";
-  const isConnected = connectionState === "connected";
-  const isFailed = connectionState === "failed" || connectionState === "disconnected";
+  const setRemoteVideoRef = useCallback((peerId: string, el: HTMLVideoElement | null) => {
+    if (el) {
+      remoteVideoRefs.current.set(peerId, el);
+      const stream = remoteStreams.get(peerId);
+      if (stream && el.srcObject !== stream) {
+        el.srcObject = stream;
+      }
+    } else {
+      remoteVideoRefs.current.delete(peerId);
+    }
+  }, [remoteStreams]);
 
+  const hasRemotePeers = remotePeerIds.length > 0;
+  const totalSlots = maxPlayers;
+  const is4Player = totalSlots >= 4;
   const isSideBySide = layout === "side-by-side";
+
+  // Build remote slots: fill with connected peers, pad with waiting slots
+  const remoteSlots: (string | null)[] = [];
+  for (let i = 0; i < totalSlots - 1; i++) {
+    remoteSlots.push(remotePeerIds[i] || null);
+  }
+
+  const renderLocalPanel = () => (
+    <div className="relative w-full h-full rounded-lg overflow-hidden bg-black">
+      {localDeckOpen && localDeckContent ? (
+        <div className="w-full h-full overflow-auto bg-background">
+          {localDeckContent}
+        </div>
+      ) : (
+        <>
+          <video
+            ref={localVideoRef}
+            autoPlay
+            playsInline
+            muted
+            className="w-full h-full object-contain"
+            style={{ transform: "scaleX(-1)" }}
+          />
+          {isVideoOff && (
+            <div className="absolute inset-0 bg-muted flex items-center justify-center">
+              <VideoOff className="w-10 h-10 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground mt-2 absolute bottom-4">Câmera desligada</p>
+            </div>
+          )}
+        </>
+      )}
+      <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-black/60 text-xs text-white z-10">
+        Você
+      </div>
+    </div>
+  );
+
+  const renderRemotePanel = (peerId: string | null, index: number) => (
+    <div key={peerId || `waiting-${index}`} className="relative w-full h-full rounded-lg overflow-hidden bg-black">
+      {peerId && remoteDeckOpen && remoteDeckContent && index === 0 ? (
+        <div className="w-full h-full overflow-auto bg-background">
+          {remoteDeckContent}
+        </div>
+      ) : peerId ? (
+        <video
+          ref={(el) => setRemoteVideoRef(peerId, el)}
+          autoPlay
+          playsInline
+          className="w-full h-full object-contain"
+        />
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+          <div className="text-center space-y-3">
+            <Loader2 className="w-8 h-8 mx-auto text-primary animate-spin" />
+            <p className="text-xs text-muted-foreground">Aguardando jogador...</p>
+          </div>
+        </div>
+      )}
+      <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-black/60 text-xs text-white z-10">
+        {peerId ? `Oponente ${remoteSlots.length > 1 ? index + 1 : ''}` : `Jogador ${index + 2}`}
+      </div>
+    </div>
+  );
 
   return (
     <div className={`relative ${className || ""}`}>
-      {isSideBySide ? (
-        /* ===== SIDE-BY-SIDE LAYOUT (Discord-style) ===== */
-        <div className="flex w-full h-full gap-1">
-          {/* Left panel — LOCAL (my camera / my deck) */}
-          <div className="relative flex-1 rounded-lg overflow-hidden bg-black">
-            {localDeckOpen && localDeckContent ? (
-              <div className="w-full h-full overflow-auto bg-background">
-                {localDeckContent}
-              </div>
-            ) : (
-              <>
-                <video
-                  ref={localVideoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="w-full h-full object-contain"
-                  style={{ transform: "scaleX(-1)" }}
-                />
-                {isVideoOff && (
-                  <div className="absolute inset-0 bg-muted flex items-center justify-center">
-                    <VideoOff className="w-10 h-10 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground mt-2 absolute bottom-4">Câmera desligada</p>
-                  </div>
-                )}
-              </>
-            )}
-            <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-black/60 text-xs text-white z-10">
-              Você
-            </div>
+      {is4Player ? (
+        /* ===== 4-PLAYER GRID (2x2 quadrants) ===== */
+        <div className="grid grid-cols-2 grid-rows-2 w-full h-full gap-1">
+          {/* Top-left: Local (you) */}
+          <div className="relative overflow-hidden">
+            {renderLocalPanel()}
           </div>
-
-          {/* Right panel — REMOTE (opponent camera / opponent deck) */}
-          <div className="relative flex-1 rounded-lg overflow-hidden bg-black">
-            {remoteDeckOpen && remoteDeckContent ? (
-              <div className="w-full h-full overflow-auto bg-background">
-                {remoteDeckContent}
-              </div>
-            ) : (
-              <>
-                <video
-                  ref={remoteVideoRef}
-                  autoPlay
-                  playsInline
-                  className="w-full h-full object-contain"
-                />
-                {!hasRemoteStream && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/80">
-                    <div className="text-center space-y-3">
-                      {isConnecting && (
-                        <>
-                          <Loader2 className="w-8 h-8 mx-auto text-primary animate-spin" />
-                          <p className="text-xs text-muted-foreground">Aguardando oponente...</p>
-                        </>
-                      )}
-                      {isFailed && (
-                        <p className="text-xs text-destructive">Conexão perdida</p>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-            <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-black/60 text-xs text-white z-10">
-              Oponente
-            </div>
+          {/* Top-right: Remote 1 */}
+          <div className="relative overflow-hidden">
+            {renderRemotePanel(remoteSlots[0], 0)}
+          </div>
+          {/* Bottom-left: Remote 2 */}
+          <div className="relative overflow-hidden">
+            {renderRemotePanel(remoteSlots[1], 1)}
+          </div>
+          {/* Bottom-right: Remote 3 */}
+          <div className="relative overflow-hidden">
+            {renderRemotePanel(remoteSlots[2], 2)}
+          </div>
+        </div>
+      ) : isSideBySide ? (
+        /* ===== SIDE-BY-SIDE LAYOUT (Discord-style, 2 players) ===== */
+        <div className="flex w-full h-full gap-1">
+          <div className="relative flex-1">
+            {renderLocalPanel()}
+          </div>
+          <div className="relative flex-1">
+            {renderRemotePanel(remoteSlots[0], 0)}
           </div>
         </div>
       ) : (
-        /* ===== PIP LAYOUT (original) ===== */
+        /* ===== PIP LAYOUT (2 players) ===== */
         <>
           {/* Remote video (full size) */}
-          {remoteDeckOpen && remoteDeckContent ? (
-            <div className="w-full h-full overflow-auto bg-background">
-              {remoteDeckContent}
-            </div>
-          ) : (
-            <>
-              <video
-                ref={remoteVideoRef}
-                autoPlay
-                playsInline
-                className="w-full h-full object-cover bg-black"
-              />
-              {!hasRemoteStream && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/80">
-                  <div className="text-center space-y-3">
-                    {isConnecting && (
-                      <>
-                        <Loader2 className="w-10 h-10 mx-auto text-primary animate-spin" />
-                        <p className="text-sm text-muted-foreground">Aguardando oponente...</p>
-                      </>
-                    )}
-                    {isFailed && (
-                      <p className="text-sm text-destructive">Conexão perdida. Tente recarregar a página.</p>
-                    )}
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-
+          <div className="w-full h-full">
+            {renderRemotePanel(remoteSlots[0], 0)}
+          </div>
           {/* Local video (picture-in-picture) */}
           <div className="absolute bottom-14 right-3 w-[120px] sm:w-[160px] aspect-[4/3] rounded-lg overflow-hidden border-2 border-primary/40 shadow-lg bg-black z-20">
             {localDeckOpen && localDeckContent ? (
@@ -452,24 +496,19 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         >
           {isVideoOff ? <VideoOff className="w-4 h-4" /> : <Video className="w-4 h-4" />}
         </Button>
-        {/* Layout toggle */}
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => onLayoutChange?.(isSideBySide ? "pip" : "side-by-side")}
-          className="rounded-full w-10 h-10 backdrop-blur-sm bg-card/80"
-          title={isSideBySide ? "Modo PiP" : "Modo lado a lado"}
-        >
-          {isSideBySide ? <PictureInPicture2 className="w-4 h-4" /> : <LayoutGrid className="w-4 h-4" />}
-        </Button>
+        {/* Layout toggle (only for 2 players) */}
+        {!is4Player && (
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => onLayoutChange?.(isSideBySide ? "pip" : "side-by-side")}
+            className="rounded-full w-10 h-10 backdrop-blur-sm bg-card/80"
+            title={isSideBySide ? "Modo PiP" : "Modo lado a lado"}
+          >
+            {isSideBySide ? <PictureInPicture2 className="w-4 h-4" /> : <LayoutGrid className="w-4 h-4" />}
+          </Button>
+        )}
       </div>
-
-      {/* Connection status indicator */}
-      {isConnected && (
-        <div className="absolute top-3 left-3 z-20">
-          <div className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" title="Conectado" />
-        </div>
-      )}
     </div>
   );
 });

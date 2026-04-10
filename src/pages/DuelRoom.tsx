@@ -989,6 +989,7 @@ const DuelRoom = () => {
                 isCreator={currentUser.id === duel?.creator_id}
                 className="w-full h-full absolute inset-0"
                 layout={videoLayout}
+                maxPlayers={(duel as any)?.max_players || 2}
                 onLayoutChange={setVideoLayout}
                 localDeckOpen={myDeckIsOpen && isParticipant && !isJudge}
                 remoteDeckOpen={opponentDeckOpen && isParticipant && !isJudge}
