@@ -1252,10 +1252,6 @@ const DuelRoom = () => {
         />
       )}
 
-      {/* Chat Component */}
-      {!hideControls && currentUser && (
-        <DuelChat duelId={id!} currentUserId={currentUser.id} />
-      )}
     </div>
   );
 };
