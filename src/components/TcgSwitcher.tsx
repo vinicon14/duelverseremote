@@ -56,7 +56,7 @@ export const TcgSwitcher = () => {
           {TCG_NAMES[activeTcg]}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
+      <DropdownMenuContent align="end" className="z-[60]">
         {ALL_TCGS.map((tcg) => (
           <DropdownMenuItem
             key={tcg}
