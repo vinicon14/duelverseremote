@@ -62,6 +62,9 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   const [remotePeerIds, setRemotePeerIds] = useState<string[]>([]);
   const [pipSwapped, setPipSwapped] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const isDraggingRef = useRef(false);
+  const dragStartRef = useRef({ x: 0, y: 0, ox: 0, oy: 0 });
   const MAX_ZOOM = 4;
   const MIN_ZOOM = 1;
   const ZOOM_STEP = 0.5;
@@ -338,7 +341,32 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   };
 
   const zoomIn = () => setZoomLevel(prev => Math.min(prev + ZOOM_STEP, MAX_ZOOM));
-  const zoomOut = () => setZoomLevel(prev => Math.max(prev - ZOOM_STEP, MIN_ZOOM));
+  const zoomOut = () => {
+    setZoomLevel(prev => {
+      const next = Math.max(prev - ZOOM_STEP, MIN_ZOOM);
+      if (next <= 1) setPanOffset({ x: 0, y: 0 });
+      return next;
+    });
+  };
+
+  // Drag handlers for panning zoomed video
+  const handlePanStart = (e: React.PointerEvent) => {
+    if (zoomLevel <= 1) return;
+    isDraggingRef.current = true;
+    dragStartRef.current = { x: e.clientX, y: e.clientY, ox: panOffset.x, oy: panOffset.y };
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  };
+
+  const handlePanMove = (e: React.PointerEvent) => {
+    if (!isDraggingRef.current) return;
+    const dx = e.clientX - dragStartRef.current.x;
+    const dy = e.clientY - dragStartRef.current.y;
+    setPanOffset({ x: dragStartRef.current.ox + dx, y: dragStartRef.current.oy + dy });
+  };
+
+  const handlePanEnd = () => {
+    isDraggingRef.current = false;
+  };
 
   const setRemoteVideoRef = useCallback((peerId: string, el: HTMLVideoElement | null) => {
     if (el) {
@@ -378,8 +406,14 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         autoPlay
         playsInline
         muted
-        className={`w-full h-full object-contain ${localDeckOpen ? 'hidden' : ''}`}
-        style={{ transform: `scaleX(-1) scale(${zoomLevel})` }}
+        className={`w-full h-full object-contain ${localDeckOpen ? 'hidden' : ''} ${zoomLevel > 1 ? 'cursor-grab active:cursor-grabbing' : ''}`}
+        style={{
+          transform: `scaleX(-1) scale(${zoomLevel}) translate(${panOffset.x / zoomLevel}px, ${panOffset.y / zoomLevel}px)`,
+        }}
+        onPointerDown={handlePanStart}
+        onPointerMove={handlePanMove}
+        onPointerUp={handlePanEnd}
+        onPointerCancel={handlePanEnd}
       />
       {localDeckOpen && localDeckContent ? (
         <div className="w-full h-full overflow-auto bg-background touch-pan-y">
@@ -500,8 +534,14 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
                     autoPlay
                     playsInline
                     muted
-                    className="w-full h-full object-cover"
-                    style={{ transform: `scaleX(-1) scale(${zoomLevel})` }}
+                    className={`w-full h-full object-cover ${zoomLevel > 1 ? 'cursor-grab active:cursor-grabbing' : ''}`}
+                    style={{
+                      transform: `scaleX(-1) scale(${zoomLevel}) translate(${panOffset.x / zoomLevel}px, ${panOffset.y / zoomLevel}px)`,
+                    }}
+                    onPointerDown={handlePanStart}
+                    onPointerMove={handlePanMove}
+                    onPointerUp={handlePanEnd}
+                    onPointerCancel={handlePanEnd}
                   />
                   {isVideoOff && (
                     <div className="absolute inset-0 bg-muted flex items-center justify-center">
