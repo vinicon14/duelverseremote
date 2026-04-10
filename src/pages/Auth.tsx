@@ -84,8 +84,34 @@ const Auth = () => {
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
+        // Ensure tcg_profile exists before redirecting
+        const { data: tcgProfiles } = await supabase
+          .from('tcg_profiles')
+          .select('id, tcg_type')
+          .eq('user_id', session.user.id);
+
+        if (!tcgProfiles || tcgProfiles.length === 0) {
+          const { data: mainProfile } = await supabase
+            .from('profiles')
+            .select('username')
+            .eq('user_id', session.user.id)
+            .maybeSingle();
+          const username = mainProfile?.username || session.user.user_metadata?.username || session.user.email?.split('@')[0] || 'Duelista';
+
+          await supabase.from('tcg_profiles').insert({
+            user_id: session.user.id,
+            tcg_type: 'yugioh',
+            username,
+          });
+          localStorage.setItem('activeTcg', 'yugioh');
+        } else if (tcgProfiles.length > 1) {
+          navigate('/profile-select', { replace: true });
+          return;
+        } else {
+          localStorage.setItem('activeTcg', tcgProfiles[0].tcg_type);
+        }
         navigate(defaultRedirect, { replace: true });
       }
     });
