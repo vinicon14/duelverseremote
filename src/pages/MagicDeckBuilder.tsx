@@ -355,7 +355,7 @@ export default function MagicDeckBuilder() {
             <Button variant="outline" size="sm" onClick={exportDeck} className="gap-1">
               <Download className="w-4 h-4" /> Exportar
             </Button>
-            <Button variant="outline" size="sm" onClick={importDeck} className="gap-1">
+            <Button variant="outline" size="sm" onClick={() => setImportOpen(true)} className="gap-1">
               <Upload className="w-4 h-4" /> Importar
             </Button>
             <Button variant="outline" size="sm" onClick={loadSavedDecks} className="gap-1">
