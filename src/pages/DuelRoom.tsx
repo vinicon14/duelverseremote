@@ -1295,8 +1295,8 @@ const DuelRoom = () => {
         </div>
       </main>
 
-      {/* Calculadora Flutuante - Apenas participantes podem editar */}
-      {duel && currentUser && (
+      {/* Calculadora Flutuante - Apenas participantes e juízes, não espectadores */}
+      {duel && currentUser && !isSpectator && (
         <FloatingCalculator
           player1Name={duel.creator?.username || 'Player 1'}
           player2Name={duel.opponent?.username || 'Player 2'}
