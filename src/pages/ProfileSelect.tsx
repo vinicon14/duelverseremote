@@ -1,81 +1,67 @@
 /**
- * DuelVerse - Seleção de Perfil TCG (One-time cleanup)
+ * DuelVerse - Seleção de Perfil TCG
  * 
- * Tela exibida quando o usuário tem mais de um perfil TCG.
- * O usuário escolhe UM perfil e os demais são excluídos permanentemente.
+ * Tela pós-login para selecionar ou criar perfil por TCG.
  */
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useTcg, TcgType } from '@/contexts/TcgContext';
-import { useAdmin } from '@/hooks/useAdmin';
-import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Swords, Sparkles, Zap, Crown, AlertTriangle } from 'lucide-react';
+import { Swords, Sparkles, Zap, Plus, Crown, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 
-const TCG_CONFIG: Record<TcgType, { name: string; icon: React.ReactNode; color: string }> = {
+const TCG_CONFIG: Record<TcgType, { name: string; icon: React.ReactNode; color: string; gradient: string; description: string }> = {
   yugioh: {
-    name: "Yu-Gi-Oh!",
+    name: "YGO",
     icon: <Swords className="w-10 h-10" />,
     color: "text-purple-400",
+    gradient: "from-purple-600 to-pink-600",
+    description: "Duele com monstros, magias e armadilhas no TCG clássico!"
   },
   magic: {
-    name: "Magic: The Gathering",
+    name: "MTG",
     icon: <Sparkles className="w-10 h-10" />,
     color: "text-amber-400",
+    gradient: "from-amber-600 to-red-700",
+    description: "Explore os planos de MTG com criaturas, feitiços e planeswalkers!"
   },
   pokemon: {
-    name: "Pokémon TCG",
+    name: "PKM",
     icon: <Zap className="w-10 h-10" />,
     color: "text-yellow-400",
+    gradient: "from-yellow-500 to-blue-600",
+    description: "Capture, evolua e batalhe com Pokémon no TCG oficial!"
   }
 };
 
 export default function ProfileSelect() {
   const navigate = useNavigate();
-  const { profiles, isLoading, refreshProfiles } = useTcg();
-  const { isAdmin, loading: adminLoading } = useAdmin();
-  const [selecting, setSelecting] = useState(false);
+  const location = useLocation();
+  const { profiles, switchProfile, createProfile, isLoading } = useTcg();
+  const [creating, setCreating] = useState(false);
+  const returnTo = (location.state as any)?.returnTo || '/';
 
-  // Admins should never be on this page — they keep all profiles
-  useEffect(() => {
-    if (!adminLoading && isAdmin) {
-      if (!localStorage.getItem('activeTcg')) {
-        localStorage.setItem('activeTcg', 'yugioh');
-      }
-      navigate('/duels', { replace: true });
-    }
-  }, [isAdmin, adminLoading, navigate]);
+  const handleSelectProfile = (profileId: string) => {
+    switchProfile(profileId);
+    navigate(returnTo);
+  };
 
-  const handleSelectProfile = async (profileId: string, tcgType: TcgType) => {
-    setSelecting(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
-      // Delete all other TCG profiles
-      const { error } = await supabase
-        .from('tcg_profiles')
-        .delete()
-        .eq('user_id', user.id)
-        .neq('id', profileId);
-
-      if (error) throw error;
-
-      localStorage.setItem('activeTcg', tcgType);
-      await refreshProfiles();
-      toast.success(`Perfil ${TCG_CONFIG[tcgType]?.name || tcgType} selecionado!`);
-      navigate('/duels', { replace: true });
-    } catch (err: any) {
-      console.error('Error selecting profile:', err);
-      toast.error('Erro ao selecionar perfil.');
-    } finally {
-      setSelecting(false);
+  const handleCreateDirect = async (tcg: TcgType) => {
+    setCreating(true);
+    const success = await createProfile(tcg);
+    setCreating(false);
+    if (success) {
+      toast.success(`Perfil ${TCG_CONFIG[tcg].name} criado!`);
+      navigate(returnTo);
+    } else {
+      toast.error('Erro ao criar perfil. Talvez já exista um para esse TCG.');
     }
   };
 
-  if (isLoading || adminLoading) {
+  const existingTcgs = new Set(profiles.map(p => p.tcg_type));
+
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary" />
@@ -83,32 +69,14 @@ export default function ProfileSelect() {
     );
   }
 
-  if (isAdmin) return null;
-
-  // If only one profile, redirect immediately
-  if (profiles.length <= 1) {
-    if (profiles.length === 1) {
-      localStorage.setItem('activeTcg', profiles[0].tcg_type);
-    }
-    navigate('/duels', { replace: true });
-    return null;
-  }
-
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
-      <div className="text-center mb-6">
+      <div className="text-center mb-10">
         <h1 className="text-4xl font-bold text-gradient-mystic mb-2">DUELVERSE</h1>
-        <p className="text-muted-foreground text-lg">Escolha seu TCG principal</p>
+        <p className="text-muted-foreground text-lg">Selecione seu perfil de jogo</p>
       </div>
 
-      <div className="flex items-center gap-2 mb-8 p-3 rounded-lg bg-destructive/10 border border-destructive/30 max-w-md text-center">
-        <AlertTriangle className="w-5 h-5 text-destructive shrink-0" />
-        <p className="text-sm text-destructive">
-          Você possui mais de um perfil. Escolha <strong>um</strong> para manter — os demais serão removidos permanentemente.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl w-full">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl w-full mb-8">
         {profiles.map(profile => {
           const config = TCG_CONFIG[profile.tcg_type as TcgType];
           if (!config) return null;
@@ -116,11 +84,14 @@ export default function ProfileSelect() {
             <Card
               key={profile.id}
               className="cursor-pointer hover:border-primary/60 transition-all group card-mystic"
-              onClick={() => !selecting && handleSelectProfile(profile.id, profile.tcg_type)}
+              onClick={() => handleSelectProfile(profile.id)}
             >
               <CardHeader className="pb-3">
                 <div className={`${config.color} mb-2`}>{config.icon}</div>
-                <CardTitle>{config.name}</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  {config.name}
+                  <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </CardTitle>
                 <CardDescription>{profile.username}</CardDescription>
               </CardHeader>
               <CardContent>
@@ -130,14 +101,31 @@ export default function ProfileSelect() {
                   <span className="text-primary">{profile.points} pts</span>
                   <span className="flex items-center gap-1"><Crown className="w-3 h-3" /> Lv.{profile.level}</span>
                 </div>
-                <Button className="w-full mt-4" disabled={selecting}>
-                  {selecting ? 'Selecionando...' : 'Escolher este perfil'}
-                </Button>
               </CardContent>
             </Card>
           );
         })}
       </div>
+
+      {/* Create new profile buttons */}
+      <div className="flex flex-wrap gap-4 justify-center">
+        {(Object.keys(TCG_CONFIG) as TcgType[])
+          .filter(tcg => !existingTcgs.has(tcg))
+          .map(tcg => (
+            <Button
+              key={tcg}
+              variant="outline"
+              onClick={() => handleCreateDirect(tcg)}
+              className="gap-2"
+              disabled={creating}
+            >
+              <Plus className="w-4 h-4" />
+              {creating ? 'Criando...' : `Criar perfil ${TCG_CONFIG[tcg].name}`}
+            </Button>
+          ))
+        }
+      </div>
+
     </div>
   );
 }

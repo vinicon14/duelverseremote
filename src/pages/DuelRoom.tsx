@@ -1035,8 +1035,7 @@ const DuelRoom = () => {
                     <FloatingOpponentViewer
                       duelId={id}
                       currentUserId={currentUser.id}
-                      opponentUsername={duel.creator?.username || 'Jogador 1'}
-                      filterOpponentId={duel.creator_id || undefined}
+                      opponentUsername={duel.opponent?.username || 'Jogador 2'}
                       embedded
                     />
                   ) : myDeckIsOpen && isParticipant && !isJudge ? (
@@ -1098,12 +1097,11 @@ const DuelRoom = () => {
                       currentUserId={currentUser.id}
                       opponentUsername={
                         isSpectator
-                          ? (duel.opponent?.username || 'Jogador 2')
+                          ? (duel.creator?.username || 'Jogador')
                           : currentUser.id === duel.creator_id 
                             ? duel.opponent?.username 
                             : duel.creator?.username
                       }
-                      filterOpponentId={isSpectator ? (duel.opponent_id || undefined) : undefined}
                       embedded
                     />
                   ) : undefined

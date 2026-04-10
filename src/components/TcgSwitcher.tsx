@@ -1,17 +1,18 @@
 /**
- * DuelVerse - TCG Switcher / Badge
- * Admins can switch between TCGs. Regular users see a static badge.
+ * DuelVerse - TCG Switcher
+ * 
+ * Componente de troca rápida entre perfis TCG na navbar.
  */
 import { useTcg, TcgType } from '@/contexts/TcgContext';
-import { useAdmin } from '@/hooks/useAdmin';
-import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Swords, Sparkles, Zap } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Swords, Sparkles, Zap, ChevronDown } from 'lucide-react';
 
 const TCG_ICONS: Record<TcgType, React.ReactNode> = {
   yugioh: <Swords className="w-4 h-4" />,
@@ -25,48 +26,48 @@ const TCG_NAMES: Record<TcgType, string> = {
   pokemon: 'PKM',
 };
 
-const TCG_FULL_NAMES: Record<TcgType, string> = {
-  yugioh: 'Yu-Gi-Oh!',
-  magic: 'Magic: The Gathering',
-  pokemon: 'Pokémon TCG',
-};
-
-const ALL_TCGS: TcgType[] = ['yugioh', 'magic', 'pokemon'];
-
 export const TcgSwitcher = () => {
-  const { activeTcg, setActiveTcg } = useTcg();
-  const { isAdmin } = useAdmin();
+  const { activeTcg, profiles, switchProfile } = useTcg();
+  const navigate = useNavigate();
 
-  // Regular users: static badge
-  if (!isAdmin) {
+  if (profiles.length <= 1) {
     return (
-      <Button variant="ghost" size="sm" className="gap-1 text-xs pointer-events-none">
+      <Button 
+        variant="ghost" 
+        size="sm" 
+        className="gap-1 text-xs"
+        onClick={() => navigate('/profile-select')}
+      >
         {TCG_ICONS[activeTcg]}
         {TCG_NAMES[activeTcg]}
       </Button>
     );
   }
 
-  // Admins: dropdown switcher
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="sm" className="gap-1 text-xs">
           {TCG_ICONS[activeTcg]}
           {TCG_NAMES[activeTcg]}
+          <ChevronDown className="w-3 h-3" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="z-[60]">
-        {ALL_TCGS.map((tcg) => (
+      <DropdownMenuContent align="end">
+        {profiles.map(p => (
           <DropdownMenuItem
-            key={tcg}
-            onClick={() => setActiveTcg(tcg)}
-            className={activeTcg === tcg ? 'bg-accent' : ''}
+            key={p.id}
+            onClick={() => switchProfile(p.id)}
+            className={p.tcg_type === activeTcg ? 'bg-primary/10' : ''}
           >
-            <span className="mr-2">{TCG_ICONS[tcg]}</span>
-            {TCG_FULL_NAMES[tcg]}
+            {TCG_ICONS[p.tcg_type]}
+            <span className="ml-2">{TCG_NAMES[p.tcg_type]}</span>
+            <span className="ml-auto text-xs text-muted-foreground">{p.username}</span>
           </DropdownMenuItem>
         ))}
+        <DropdownMenuItem onClick={() => navigate('/profile-select')}>
+          + Gerenciar perfis
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

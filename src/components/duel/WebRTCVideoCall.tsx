@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, useCallback, useImperativeHandle, forwardRef } from "react";
-import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -92,7 +91,6 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(new Map());
   const [remotePeerIds, setRemotePeerIds] = useState<string[]>([]);
-  const [remoteVideoActive, setRemoteVideoActive] = useState<Map<string, boolean>>(new Map());
   const [pipSwapped, setPipSwapped] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
@@ -206,23 +204,12 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       return next;
     });
     setRemotePeerIds(prev => prev.filter(id => id !== peerId));
-    setRemoteVideoActive(prev => {
-      const next = new Map(prev);
-      next.delete(peerId);
-      return next;
-    });
     console.log("[WebRTC] Peer removed:", peerId);
   }, []);
 
   const createPeerConnection = useCallback((remotePeerId: string) => {
     const existing = peersRef.current.get(remotePeerId);
     if (existing) {
-      // Nullify event handlers BEFORE closing to prevent the old PC's
-      // 'closed' event from removing the NEW peer connection from state
-      existing.pc.oniceconnectionstatechange = null;
-      existing.pc.ontrack = null;
-      existing.pc.onnegotiationneeded = null;
-      existing.pc.onicecandidate = null;
       existing.pc.close();
     }
 
@@ -263,17 +250,12 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     // Monitor ICE connection and auto-recover or remove disconnected peer
     pc.oniceconnectionstatechange = () => {
       console.log(`[WebRTC] ICE state ${remotePeerId}: ${pc.iceConnectionState}`);
-      // Guard: only act if this PC is still the active one for this peer
-      const currentPeer = peersRef.current.get(remotePeerId);
-      if (!currentPeer || currentPeer.pc !== pc) return;
-
       if (pc.iceConnectionState === 'failed') {
         console.warn("[WebRTC] ICE failed for:", remotePeerId);
+        // Remove peer so UI shows "Aguardando jogador" again
         removePeer(remotePeerId);
       } else if (pc.iceConnectionState === 'disconnected') {
         setTimeout(() => {
-          const stillCurrent = peersRef.current.get(remotePeerId);
-          if (!stillCurrent || stillCurrent.pc !== pc) return;
           if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed') {
             console.warn("[WebRTC] Peer disconnected permanently:", remotePeerId);
             removePeer(remotePeerId);
@@ -296,27 +278,6 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
           if (!prev.includes(remotePeerId)) return [...prev, remotePeerId];
           return prev;
         });
-
-        // Track remote video track enabled state
-        const videoTrack = event.streams[0].getVideoTracks()[0];
-        if (videoTrack) {
-          setRemoteVideoActive(prev => {
-            const next = new Map(prev);
-            next.set(remotePeerId, videoTrack.enabled && !videoTrack.muted);
-            return next;
-          });
-          // Listen for track mute/unmute and ended events
-          const updateVideoState = () => {
-            setRemoteVideoActive(prev => {
-              const next = new Map(prev);
-              next.set(remotePeerId, videoTrack.enabled && !videoTrack.muted && videoTrack.readyState === 'live');
-              return next;
-            });
-          };
-          videoTrack.addEventListener('mute', updateVideoState);
-          videoTrack.addEventListener('unmute', updateVideoState);
-          videoTrack.addEventListener('ended', updateVideoState);
-        }
       }
     };
 
@@ -537,31 +498,9 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       const el = remoteVideoRefs.current.get(peerId);
       if (el && el.srcObject !== stream) {
         el.srcObject = stream;
-        // Force play on mobile WebView where autoplay may be blocked
-        el.play().catch(() => {});
       }
     });
   }, [remoteStreams, remotePeerIds]);
-
-  // Poll remote video track state (track.enabled changes don't fire events reliably)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setRemoteVideoActive(prev => {
-        let changed = false;
-        const next = new Map(prev);
-        remoteStreams.forEach((stream, peerId) => {
-          const vt = stream.getVideoTracks()[0];
-          const active = vt ? (vt.enabled && !vt.muted && vt.readyState === 'live') : false;
-          if (prev.get(peerId) !== active) {
-            next.set(peerId, active);
-            changed = true;
-          }
-        });
-        return changed ? next : prev;
-      });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [remoteStreams]);
 
   const toggleMute = () => {
     const stream = localStreamRef.current;
@@ -618,7 +557,6 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       const stream = remoteStreams.get(peerId);
       if (stream && el.srcObject !== stream) {
         el.srcObject = stream;
-        el.play().catch(() => {});
       }
     } else {
       remoteVideoRefs.current.delete(peerId);
@@ -680,47 +618,32 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
           <span className="text-xs sm:text-sm font-bold text-green-400">{spectatorLpOverlay.localLp}</span>
         </div>
       )}
-      {!spectatorLpOverlay && (
-        <div className="absolute bottom-1 left-1 sm:bottom-2 sm:left-2 px-1.5 py-0.5 rounded bg-black/60 text-[10px] sm:text-xs text-white z-10">
-          Você
-        </div>
-      )}
+      <div className="absolute bottom-1 left-1 sm:bottom-2 sm:left-2 px-1.5 py-0.5 rounded bg-black/60 text-[10px] sm:text-xs text-white z-10">
+        Você
+      </div>
     </div>
   );
 
   const renderRemotePanel = (peerId: string | null, index: number) => {
+    // Always show opponent deck overlay if available (no need to wait for remoteDeckOpen)
     const hasPerSlotContent = remoteDeckContents?.[index];
     const hasSingleContent = remoteDeckContent && index === 0 && !remoteDeckContents;
-    const hasDeckContent = peerId && (hasPerSlotContent || hasSingleContent);
-    const peerHasActiveVideo = peerId ? (remoteVideoActive.get(peerId) ?? false) : false;
-    const peerDeckIsOpen = peerId
-      ? (remoteDeckOpenSlots?.[index] ?? (index === 0 ? remoteDeckOpen : false))
-      : false;
-    const showDeckOverlay = Boolean(peerId && hasDeckContent && peerDeckIsOpen && !peerHasActiveVideo);
+    const showOverlay = peerId && (hasPerSlotContent || hasSingleContent);
 
     return (
       <div key={peerId || `waiting-${index}`} className="relative w-full h-full overflow-hidden bg-black">
-        {peerId && (
+        {showOverlay ? (
+          <div className="w-full h-full overflow-auto bg-background touch-pan-y">
+            {remoteDeckContents?.[index] || remoteDeckContent}
+          </div>
+        ) : peerId ? (
           <video
             ref={(el) => setRemoteVideoRef(peerId, el)}
             autoPlay
             playsInline
-            className={cn(
-              "w-full h-full object-contain absolute inset-0",
-              showDeckOverlay && "hidden"
-            )}
+            className="w-full h-full object-contain"
           />
-        )}
-        {hasDeckContent && (
-          <div className={cn(
-            "w-full h-full overflow-auto bg-background touch-pan-y absolute inset-0",
-            !showDeckOverlay && "hidden"
-          )}>
-            {remoteDeckContents?.[index] || remoteDeckContent}
-          </div>
-        )}
-        {/* Waiting state when no peer connected */}
-        {!peerId && (
+        ) : (
           <div className="absolute inset-0 flex items-center justify-center bg-black/80">
             <div className="text-center space-y-2">
               <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 mx-auto text-primary animate-spin" />
@@ -734,11 +657,9 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
             <span className="text-xs sm:text-sm font-bold text-green-400">{spectatorLpOverlay.remotePlayers[index].lp}</span>
           </div>
         )}
-        {!spectatorLpOverlay && (
-          <div className="absolute bottom-1 left-1 sm:bottom-2 sm:left-2 px-1.5 py-0.5 rounded bg-black/60 text-[10px] sm:text-xs text-white z-10">
-            {peerId ? `Oponente ${remoteSlots.length > 1 ? index + 1 : ''}` : `Jogador ${index + 2}`}
-          </div>
-        )}
+        <div className="absolute bottom-1 left-1 sm:bottom-2 sm:left-2 px-1.5 py-0.5 rounded bg-black/60 text-[10px] sm:text-xs text-white z-10">
+          {peerId ? `Oponente ${remoteSlots.length > 1 ? index + 1 : ''}` : `Jogador ${index + 2}`}
+        </div>
       </div>
     );
   };
