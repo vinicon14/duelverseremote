@@ -420,6 +420,11 @@ ipcMain.on('show-notification', (_, { title, body }) => {
   }
 });
 
+ipcMain.on('set-selected-source', (_, sourceId) => {
+  selectedSourceId = sourceId || null;
+  console.log('[Electron] Selected capture source:', selectedSourceId);
+});
+
 ipcMain.on('sync-auth', async (_, { token, userId }) => {
   const normalizedToken = token || null;
   const normalizedUserId = userId || null;
