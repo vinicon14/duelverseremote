@@ -1051,7 +1051,7 @@ const DuelRoom = () => {
                   ) : undefined
                 }
                 remoteDeckContent={
-                  opponentDeckOpen && isParticipant && !isJudge && currentUser && id && duel ? (
+                  opponentDeckOpen && isParticipant && !isJudge && currentUser && id && duel && ((duel as any)?.max_players || 2) <= 2 ? (
                     <FloatingOpponentViewer
                       duelId={id}
                       currentUserId={currentUser.id}
@@ -1063,6 +1063,24 @@ const DuelRoom = () => {
                       embedded
                     />
                   ) : undefined
+                }
+                // 4-player mode: per-slot opponent viewers
+                remoteDeckContents={
+                  ((duel as any)?.max_players || 2) >= 4 && isParticipant && !isJudge && currentUser && id && duel
+                    ? [0, 1, 2].map((_slotIdx) => (
+                        <FloatingOpponentViewer
+                          key={`opponent-slot-${_slotIdx}`}
+                          duelId={id}
+                          currentUserId={currentUser.id}
+                          embedded
+                        />
+                      ))
+                    : undefined
+                }
+                remoteDeckOpenSlots={
+                  ((duel as any)?.max_players || 2) >= 4
+                    ? [0, 1, 2].map(() => Object.values(opponentDeckOpenMap).some(Boolean) && isParticipant && !isJudge)
+                    : undefined
                 }
               />
             ) : (
