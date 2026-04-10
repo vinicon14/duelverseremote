@@ -36,6 +36,7 @@ const Duels = () => {
   const [durationMinutes, setDurationMinutes] = useState(50);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showAdPopup, setShowAdPopup] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [pendingAction, setPendingAction] = useState<{ type: 'create' | 'join', duelId?: string } | null>(null);
   const [showDownloadDialog, setShowDownloadDialog] = useState(false);
   const [windowsDownloadUrl, setWindowsDownloadUrl] = useState("");
