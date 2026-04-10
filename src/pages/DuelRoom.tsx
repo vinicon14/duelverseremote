@@ -1015,6 +1015,15 @@ const DuelRoom = () => {
                 layout={videoLayout}
                 maxPlayers={(duel as any)?.max_players || 2}
                 onLayoutChange={setVideoLayout}
+                spectatorLpOverlay={isSpectator && !isJudge ? {
+                  localLabel: duel.creator?.username || 'Player 1',
+                  localLp: player1LP,
+                  remotePlayers: [
+                    { label: duel.opponent?.username || 'Player 2', lp: player2LP },
+                    ...((duel as any)?.max_players >= 3 ? [{ label: 'Player 3', lp: player3LP }] : []),
+                    ...((duel as any)?.max_players >= 4 ? [{ label: 'Player 4', lp: player4LP }] : []),
+                  ]
+                } : undefined}
                 localDeckOpen={
                   isSpectator && !isJudge
                     ? true
