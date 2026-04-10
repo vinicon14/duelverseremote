@@ -22,6 +22,10 @@ interface WebRTCVideoCallProps {
   remoteDeckOpen?: boolean;
   localDeckContent?: React.ReactNode;
   remoteDeckContent?: React.ReactNode;
+  /** Per-slot remote deck content for 4-player mode (index 0-2 for each remote slot) */
+  remoteDeckContents?: (React.ReactNode | undefined)[];
+  /** Per-slot remote deck open flags for 4-player mode */
+  remoteDeckOpenSlots?: boolean[];
 }
 
 const ICE_SERVERS: RTCIceServer[] = [
