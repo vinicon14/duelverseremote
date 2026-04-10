@@ -45,6 +45,9 @@ const DuelRoom = () => {
   const [opponentDeckOpen, setOpponentDeckOpen] = useState(false);
   // Per-opponent deck open states for 4-player mode (keyed by peerId)
   const [opponentDeckOpenMap, setOpponentDeckOpenMap] = useState<Record<string, boolean>>({});
+  // Spectator: track each player's deck state independently
+  const [creatorDeckOpen, setCreatorDeckOpen] = useState(false);
+  const [opponentPlayerDeckOpen, setOpponentPlayerDeckOpen] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
   const [videoReady, setVideoReady] = useState(false);
   const [videoLayout, setVideoLayout] = useState<VideoLayout>("side-by-side");
