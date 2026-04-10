@@ -17,6 +17,7 @@ let authToken = null;
 let authUserId = null;
 let notificationPollInterval = null;
 let knownNotificationIds = new Set();
+let selectedSourceId = null;
 
 function getAppIconPath() {
   const iconFileName = process.platform === 'win32' ? 'icon.ico' : 'icon.png';

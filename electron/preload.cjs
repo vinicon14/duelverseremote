@@ -4,5 +4,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   showNotification: (title, body) => ipcRenderer.send('show-notification', { title, body }),
   syncAuth: (token, userId) => ipcRenderer.send('sync-auth', { token, userId }),
   getDesktopSources: () => ipcRenderer.invoke('get-desktop-sources'),
+  setSelectedSource: (sourceId) => ipcRenderer.send('set-selected-source', sourceId),
   isElectron: true,
 });
