@@ -938,11 +938,14 @@ const DuelRoom = () => {
 
   // Broadcast deck-open state to opponent & listen for opponent's deck state
   const myDeckIsOpen = showDeckViewer || showMagicViewer || showPokemonViewer;
+  const deckToggleChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   
   useEffect(() => {
     if (!id || !currentUser) return;
 
-    const channel = supabase.channel(`deck-open-${id}`);
+    const channel = supabase.channel(`deck-open-${id}`, {
+      config: { broadcast: { self: false } },
+    });
     
     // Listen for opponent opening/closing their deck
     channel.on('broadcast', { event: 'deck-toggle' }, ({ payload }) => {
@@ -951,20 +954,37 @@ const DuelRoom = () => {
         // Also track per-opponent state for 4-player
         setOpponentDeckOpenMap(prev => ({ ...prev, [payload.userId]: !!payload.isOpen }));
       }
-    }).subscribe();
+    }).subscribe(() => {
+      deckToggleChannelRef.current = channel;
+    });
 
-    return () => { supabase.removeChannel(channel); };
+    return () => { 
+      deckToggleChannelRef.current = null;
+      supabase.removeChannel(channel); 
+    };
   }, [id, currentUser]);
 
-  // Broadcast my deck state whenever it changes
+  // Broadcast my deck state whenever it changes (uses the already-subscribed channel)
   useEffect(() => {
     if (!id || !currentUser) return;
-    const channel = supabase.channel(`deck-open-${id}`);
-    channel.send({
-      type: 'broadcast',
-      event: 'deck-toggle',
-      payload: { userId: currentUser.id, isOpen: myDeckIsOpen },
-    });
+    const ch = deckToggleChannelRef.current;
+    if (ch) {
+      ch.send({
+        type: 'broadcast',
+        event: 'deck-toggle',
+        payload: { userId: currentUser.id, isOpen: myDeckIsOpen },
+      });
+    } else {
+      // Channel not ready yet, retry after a short delay
+      const timer = setTimeout(() => {
+        deckToggleChannelRef.current?.send({
+          type: 'broadcast',
+          event: 'deck-toggle',
+          payload: { userId: currentUser.id, isOpen: myDeckIsOpen },
+        });
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
   }, [id, currentUser, myDeckIsOpen]);
 
   // Auto-disable camera when deck opens, re-enable when it closes
