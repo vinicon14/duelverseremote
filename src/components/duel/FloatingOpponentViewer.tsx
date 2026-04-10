@@ -278,7 +278,6 @@ export const FloatingOpponentViewer = ({
           });
           // Auto-select first active opponent
           setActiveOpponentId(prev => prev || opId);
-          }
         }
       })
       .subscribe();
