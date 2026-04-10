@@ -256,36 +256,89 @@ export default function MagicDeckBuilder() {
     toast.success('Deck exportado!');
   };
 
-  const importDeck = () => {
+  const parseDeckList = (text: string): { main: { qty: number; name: string }[]; side: { qty: number; name: string }[] } => {
+    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+    const main: { qty: number; name: string }[] = [];
+    const side: { qty: number; name: string }[] = [];
+    let target: 'main' | 'side' = 'main';
+
+    for (const line of lines) {
+      const lower = line.toLowerCase();
+      if (lower.startsWith('//') || lower.startsWith('#')) continue;
+      if (lower === 'sideboard' || lower === 'sideboard:' || lower.includes('sideboard')) {
+        target = 'side';
+        continue;
+      }
+      if (lower === 'deck' || lower === 'deck:' || lower === 'main deck' || lower === 'main deck:' || lower === 'companion' || lower === 'commander') continue;
+      // Formats: "4 Lightning Bolt", "4x Lightning Bolt", "Lightning Bolt x4"
+      let match = line.match(/^(\d+)x?\s+(.+)$/);
+      if (!match) match = line.match(/^(.+?)\s+x(\d+)$/);
+      if (match) {
+        const idx = line.match(/^(\d+)/) ? 1 : 2;
+        const nameIdx = idx === 1 ? 2 : 1;
+        const qty = parseInt(match[idx]);
+        // Strip set/collector info like "(RNA)" or "[RNA:123]"
+        const name = match[nameIdx].replace(/\s*[\(\[][A-Z0-9]+[\)\]]\s*/g, '').replace(/\s*\/\/.*$/, '').trim();
+        if (name && qty > 0) (target === 'main' ? main : side).push({ qty, name });
+      }
+    }
+    return { main, side };
+  };
+
+  const importFromText = async (text: string) => {
+    const { main, side } = parseDeckList(text);
+    const total = main.length + side.length;
+    if (total === 0) {
+      toast.error('Nenhuma carta encontrada na lista. Use o formato: "4 Lightning Bolt"');
+      return;
+    }
+    setImporting(true);
+    const newMain: DeckCard[] = [];
+    const newSide: DeckCard[] = [];
+    let loaded = 0;
+    let failed = 0;
+
+    const fetchCard = async (name: string): Promise<ScryfallCard | null> => {
+      try {
+        const res = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(name)}`);
+        if (!res.ok) return null;
+        return await res.json();
+      } catch { return null; }
+    };
+
+    for (const entry of main) {
+      setImportProgress(`Importando ${++loaded}/${total}: ${entry.name}`);
+      const card = await fetchCard(entry.name);
+      if (card) newMain.push({ card, quantity: entry.qty });
+      else failed++;
+      await new Promise(r => setTimeout(r, 80)); // Scryfall rate limit
+    }
+    for (const entry of side) {
+      setImportProgress(`Importando ${++loaded}/${total}: ${entry.name}`);
+      const card = await fetchCard(entry.name);
+      if (card) newSide.push({ card, quantity: entry.qty });
+      else failed++;
+      await new Promise(r => setTimeout(r, 80));
+    }
+
+    setMainDeck(newMain);
+    setSideboard(newSide);
+    setImporting(false);
+    setImportOpen(false);
+    setImportText('');
+    setImportProgress('');
+    toast.success(`Deck importado! ${loaded - failed} cartas carregadas${failed ? `, ${failed} não encontradas` : ''}`);
+  };
+
+  const importDeckFromFile = () => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.txt';
+    input.accept = '.txt,.dec,.dek,.mwDeck';
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
       const text = await file.text();
-      const lines = text.split('\n').filter(l => l.trim() && !l.startsWith('//'));
-      let target: 'main' | 'side' = 'main';
-      const newMain: DeckCard[] = [];
-      const newSide: DeckCard[] = [];
-
-      for (const line of lines) {
-        if (line.toLowerCase().includes('sideboard')) { target = 'side'; continue; }
-        const match = line.match(/^(\d+)\s+(.+)$/);
-        if (!match) continue;
-        const qty = parseInt(match[1]);
-        const name = match[2].trim();
-        try {
-          const res = await fetch(`https://api.scryfall.com/cards/named?exact=${encodeURIComponent(name)}`);
-          if (!res.ok) continue;
-          const card: ScryfallCard = await res.json();
-          const arr = target === 'main' ? newMain : newSide;
-          arr.push({ card, quantity: qty });
-        } catch { /* skip */ }
-      }
-      setMainDeck(newMain);
-      setSideboard(newSide);
-      toast.success('Deck importado!');
+      await importFromText(text);
     };
     input.click();
   };
