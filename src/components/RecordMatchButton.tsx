@@ -600,7 +600,11 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
   return (
     <>
       {!isRecording ? (
-        <Button onClick={() => setShowSetupDialog(true)} variant="outline" size="sm" className="gap-2">
+        <Button onClick={() => {
+          const isElectron = !!(window as any).electronAPI?.isElectron;
+          if (isElectron) loadDesktopSources();
+          setShowSetupDialog(true);
+        }} variant="outline" size="sm" className="gap-2">
           <Video className="w-4 h-4" />
           Gravar Partida
         </Button>
