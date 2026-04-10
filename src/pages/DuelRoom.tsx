@@ -1015,10 +1015,21 @@ const DuelRoom = () => {
                 layout={videoLayout}
                 maxPlayers={(duel as any)?.max_players || 2}
                 onLayoutChange={setVideoLayout}
-                localDeckOpen={myDeckIsOpen && isParticipant && !isJudge}
+                localDeckOpen={
+                  isSpectator && !isJudge
+                    ? true
+                    : myDeckIsOpen && isParticipant && !isJudge
+                }
                 remoteDeckOpen={opponentDeckOpen && isParticipant && !isJudge}
                 localDeckContent={
-                  myDeckIsOpen && isParticipant && !isJudge ? (
+                  isSpectator && !isJudge && currentUser && id && duel && ((duel as any)?.max_players || 2) <= 2 ? (
+                    <FloatingOpponentViewer
+                      duelId={id}
+                      currentUserId={currentUser.id}
+                      opponentUsername={duel.opponent?.username || 'Jogador 2'}
+                      embedded
+                    />
+                  ) : myDeckIsOpen && isParticipant && !isJudge ? (
                     <>
                       {duel?.tcg_type === 'yugioh' && showDeckViewer && (
                         <>
