@@ -113,6 +113,7 @@ interface FloatingOpponentViewerProps {
   duelId: string;
   currentUserId: string;
   opponentUsername?: string;
+  embedded?: boolean;
 }
 
 const buildPkmEffectText = (card: OpponentCard): string => {
