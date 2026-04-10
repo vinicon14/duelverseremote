@@ -509,7 +509,7 @@ export const FloatingOpponentViewer = ({
       )}
 
       {/* Content */}
-      <div className={cn("p-2", embedded && "overflow-y-auto max-h-[calc(100%-40px)]")}>
+      <div className={cn("p-2", embedded ? "overflow-y-auto flex-1" : "overflow-y-auto max-h-[calc(100%-40px)]")}>
         {!opponentState ? (
           <div className="text-center text-sm text-muted-foreground py-4">
             <Eye className="h-6 w-6 mx-auto mb-2 opacity-50" />
