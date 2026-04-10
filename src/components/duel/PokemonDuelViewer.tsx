@@ -406,7 +406,7 @@ export const PokemonDuelViewer = ({ duelId, currentUserId, embedded = false }: P
   const activeSleeveUrl = typeof window !== 'undefined' ? localStorage.getItem('activeSleeveUrl') : null;
 
   return (
-    <div className={embedded ? "absolute inset-0 z-10 bg-card flex flex-col overflow-hidden" : "fixed bottom-0 left-0 right-0 z-40 border-t border-border"}>
+    <div className={embedded ? "absolute inset-0 z-10 bg-card flex flex-col items-center justify-center overflow-hidden" : "fixed bottom-0 left-0 right-0 z-40 border-t border-border"}>
       {/* Phase Indicator */}
       <div className="flex items-center justify-center gap-2 py-1.5 border-b border-border/50 bg-muted/30">
         {(['draw', 'main', 'attack', 'end'] as const).map(p => (
