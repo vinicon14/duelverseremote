@@ -1071,14 +1071,16 @@ const DuelRoom = () => {
                   ) : undefined
                 }
                 remoteDeckContent={
-                  isParticipant && !isJudge && currentUser && id && duel && ((duel as any)?.max_players || 2) <= 2 ? (
+                  !isJudge && currentUser && id && duel && ((duel as any)?.max_players || 2) <= 2 ? (
                     <FloatingOpponentViewer
                       duelId={id}
                       currentUserId={currentUser.id}
                       opponentUsername={
-                        currentUser.id === duel.creator_id 
-                          ? duel.opponent?.username 
-                          : duel.creator?.username
+                        isSpectator
+                          ? (duel.creator?.username || 'Jogador')
+                          : currentUser.id === duel.creator_id 
+                            ? duel.opponent?.username 
+                            : duel.creator?.username
                       }
                       embedded
                     />
@@ -1086,7 +1088,7 @@ const DuelRoom = () => {
                 }
                 // 4-player mode: per-slot opponent viewers
                 remoteDeckContents={
-                  ((duel as any)?.max_players || 2) >= 4 && isParticipant && !isJudge && currentUser && id && duel
+                  ((duel as any)?.max_players || 2) >= 4 && !isJudge && currentUser && id && duel
                     ? [0, 1, 2].map((_slotIdx) => (
                         <FloatingOpponentViewer
                           key={`opponent-slot-${_slotIdx}`}
@@ -1099,7 +1101,7 @@ const DuelRoom = () => {
                 }
                 remoteDeckOpenSlots={
                   ((duel as any)?.max_players || 2) >= 4
-                    ? [0, 1, 2].map(() => Object.values(opponentDeckOpenMap).some(Boolean) && isParticipant && !isJudge)
+                    ? [0, 1, 2].map(() => Object.values(opponentDeckOpenMap).some(Boolean) && !isJudge)
                     : undefined
                 }
               />
