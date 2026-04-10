@@ -705,10 +705,10 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         /* ===== SIDE-BY-SIDE (desktop) / STACKED (mobile) ===== */
         <div className="flex flex-col sm:flex-row w-full h-full">
           <div className="relative flex-1 min-h-0">
-            {renderLocalPanel()}
+            {isSpectator ? renderRemotePanel(remoteSlots[0], 0) : renderLocalPanel()}
           </div>
           <div className="relative flex-1 min-h-0">
-            {renderRemotePanel(remoteSlots[0], 0)}
+            {isSpectator ? renderRemotePanel(remoteSlots[1], 1) : renderRemotePanel(remoteSlots[0], 0)}
           </div>
         </div>
       ) : (
