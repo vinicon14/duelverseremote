@@ -572,6 +572,46 @@ export default function MagicDeckBuilder() {
             </ScrollArea>
           </DialogContent>
         </Dialog>
+
+        {/* Import Dialog */}
+        <Dialog open={importOpen} onOpenChange={v => { if (!importing) setImportOpen(v); }}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Importar Lista de Deck</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground">
+              Cole sua lista no formato: <code className="bg-muted px-1 rounded">4 Lightning Bolt</code>. 
+              Suporta formatos MTGA, MTGO e listas comuns. Separe o sideboard com uma linha "Sideboard".
+            </p>
+            <Textarea
+              value={importText}
+              onChange={e => setImportText(e.target.value)}
+              placeholder={`4 Lightning Bolt\n4 Counterspell\n2 Island\n\nSideboard\n2 Negate`}
+              rows={12}
+              disabled={importing}
+              className="font-mono text-sm"
+            />
+            {importing && importProgress && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                {importProgress}
+              </div>
+            )}
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <Button variant="outline" onClick={importDeckFromFile} disabled={importing} className="gap-1">
+                <Upload className="w-4 h-4" /> Importar Arquivo .txt
+              </Button>
+              <div className="flex gap-2">
+                <Button variant="ghost" onClick={() => { setImportOpen(false); setImportText(''); }} disabled={importing}>
+                  Cancelar
+                </Button>
+                <Button onClick={() => importFromText(importText)} disabled={importing || !importText.trim()}>
+                  {importing ? <><Loader2 className="w-4 h-4 animate-spin mr-1" /> Importando...</> : 'Importar Lista'}
+                </Button>
+              </div>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );
