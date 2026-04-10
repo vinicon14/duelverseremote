@@ -8,7 +8,7 @@
  * - Devolver cartas ao deck
  * - Zonas: Active, Bench, Prize, Discard, Deck, Stadium
  */
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -84,33 +84,70 @@ export const PokemonDuelViewer = ({ duelId, currentUserId, embedded = false }: P
     fetchDecks();
   }, []);
 
-  // Broadcast state
+  const broadcastChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const broadcastStateRef = useRef<() => void>(() => {});
+
+  const broadcastState = useCallback(() => {
+    const channel = broadcastChannelRef.current;
+    if (!channel) return;
+
+    channel.send({
+      type: 'broadcast',
+      event: 'deck-state',
+      payload: {
+        userId: currentUserId,
+        tcgType: 'pokemon',
+        active: fieldState.active ? { name: fieldState.active.name, images: fieldState.active.images, hp: fieldState.active.hp, types: fieldState.active.types, supertype: fieldState.active.supertype, energyAttached: fieldState.active.energyAttached, damageCounters: fieldState.active.damageCounters, attacks: fieldState.active.attacks, abilities: fieldState.active.abilities, rules: fieldState.active.rules } : null,
+        bench: fieldState.bench.map(c => ({ name: c.name, images: c.images, hp: c.hp, types: c.types, supertype: c.supertype, energyAttached: c.energyAttached, damageCounters: c.damageCounters, attacks: c.attacks, abilities: c.abilities, rules: c.rules })),
+        stadium: fieldState.stadium ? { name: fieldState.stadium.name, images: fieldState.stadium.images } : null,
+        activeTrainer: fieldState.activeTrainer ? { name: fieldState.activeTrainer.name, images: fieldState.activeTrainer.images } : null,
+        prizeCardsCount: fieldState.prizeCards.length,
+        discardCount: fieldState.discard.length,
+        discardCards: fieldState.discard.map(c => ({ name: c.name, image: c.images?.small || c.images?.large || '', id: parseInt(c.id) || 0 })),
+        handCount: fieldState.hand.length,
+        deckCount: fieldState.deck.length,
+        playmatUrl: localStorage.getItem('activePlaymatUrl') || null,
+        sleeveUrl: localStorage.getItem('activeSleeveUrl') || null,
+      },
+    });
+  }, [fieldState, currentUserId]);
+
   useEffect(() => {
-    const channel = supabase.channel(`deck-sync-${duelId}`);
-    const broadcastState = () => {
-      channel.send({
-        type: 'broadcast',
-        event: 'deck-state',
-        payload: {
-          userId: currentUserId,
-          tcgType: 'pokemon',
-          active: fieldState.active ? { name: fieldState.active.name, images: fieldState.active.images, hp: fieldState.active.hp, types: fieldState.active.types, supertype: fieldState.active.supertype, energyAttached: fieldState.active.energyAttached, damageCounters: fieldState.active.damageCounters, attacks: fieldState.active.attacks, abilities: fieldState.active.abilities, rules: fieldState.active.rules } : null,
-          bench: fieldState.bench.map(c => ({ name: c.name, images: c.images, hp: c.hp, types: c.types, supertype: c.supertype, energyAttached: c.energyAttached, damageCounters: c.damageCounters, attacks: c.attacks, abilities: c.abilities, rules: c.rules })),
-          stadium: fieldState.stadium ? { name: fieldState.stadium.name, images: fieldState.stadium.images } : null,
-          activeTrainer: fieldState.activeTrainer ? { name: fieldState.activeTrainer.name, images: fieldState.activeTrainer.images } : null,
-          prizeCardsCount: fieldState.prizeCards.length,
-          discardCount: fieldState.discard.length,
-          discardCards: fieldState.discard.map(c => ({ name: c.name, image: c.images?.small || c.images?.large || '', id: parseInt(c.id) || 0 })),
-          handCount: fieldState.hand.length,
-          deckCount: fieldState.deck.length,
-          playmatUrl: localStorage.getItem('activePlaymatUrl') || null,
-          sleeveUrl: localStorage.getItem('activeSleeveUrl') || null,
-        },
+    broadcastStateRef.current = broadcastState;
+  }, [broadcastState]);
+
+  useEffect(() => {
+    if (!duelId || !currentUserId) return;
+
+    const channel = supabase.channel(`deck-sync-${duelId}`, {
+      config: { broadcast: { self: false } },
+    });
+
+    channel
+      .on('broadcast', { event: 'deck-state-request' }, ({ payload }) => {
+        if (payload?.requesterId === currentUserId) return;
+        if (payload?.requestedOpponentId && payload.requestedOpponentId !== currentUserId) return;
+
+        broadcastStateRef.current();
+      })
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          broadcastChannelRef.current = channel;
+          broadcastStateRef.current();
+        }
       });
+
+    return () => {
+      if (broadcastChannelRef.current === channel) {
+        broadcastChannelRef.current = null;
+      }
+      supabase.removeChannel(channel);
     };
-    channel.subscribe(() => broadcastState());
-    return () => { supabase.removeChannel(channel); };
-  }, [fieldState, duelId, currentUserId]);
+  }, [duelId, currentUserId]);
+
+  useEffect(() => {
+    broadcastState();
+  }, [broadcastState]);
 
   const loadDeckToField = (savedDeck: any) => {
     const allCards: PokemonFieldCard[] = (savedDeck.main_deck as any[]).flatMap((card: any) => {

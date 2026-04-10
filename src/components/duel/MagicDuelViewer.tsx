@@ -5,7 +5,7 @@
  * Simula um deck físico com todas as interações: comprar, embaralhar,
  * mover cartas entre zonas (mão, campo, cemitério, exílio, etc).
  */
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -296,6 +296,12 @@ export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId, embedd
   // Stable channel for broadcasting
   const [broadcastChannel, setBroadcastChannel] = useState<ReturnType<typeof supabase.channel> | null>(null);
   const [channelReady, setChannelReady] = useState(false);
+  const broadcastStateRef = useRef<() => void>(() => {});
+  const isOpenRef = useRef(isOpen);
+
+  useEffect(() => {
+    isOpenRef.current = isOpen;
+  }, [isOpen]);
 
   // Create channel once
   useEffect(() => {
@@ -304,12 +310,21 @@ export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId, embedd
     const channel = supabase.channel(`deck-sync-${duelId}`, {
       config: { broadcast: { self: false } },
     });
-    channel.subscribe((status) => {
-      if (status === 'SUBSCRIBED') {
-        setBroadcastChannel(channel);
-        setChannelReady(true);
-      }
-    });
+    channel
+      .on('broadcast', { event: 'deck-state-request' }, ({ payload }) => {
+        if (payload?.requesterId === currentUserId) return;
+        if (payload?.requestedOpponentId && payload.requestedOpponentId !== currentUserId) return;
+
+        if (isOpenRef.current) {
+          broadcastStateRef.current();
+        }
+      })
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          setBroadcastChannel(channel);
+          setChannelReady(true);
+        }
+      });
 
     return () => {
       setChannelReady(false);
@@ -319,7 +334,7 @@ export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId, embedd
   }, [duelId, currentUserId]);
 
   // Broadcast state changes
-  useEffect(() => {
+  const broadcastState = useCallback(() => {
     if (!broadcastChannel || !channelReady || !currentUserId) return;
 
     const serializeCard = (c: MagicCard) => ({
@@ -357,6 +372,14 @@ export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId, embedd
       },
     });
   }, [fieldState, currentPhase, broadcastChannel, channelReady, currentUserId]);
+
+  useEffect(() => {
+    broadcastStateRef.current = broadcastState;
+  }, [broadcastState]);
+
+  useEffect(() => {
+    broadcastState();
+  }, [broadcastState]);
 
   const ZONE_LABELS: Record<string, string> = {
     hand: 'Mão',

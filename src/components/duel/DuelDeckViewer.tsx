@@ -207,17 +207,35 @@ export const DuelDeckViewer = ({
 
   // Persistent channel for broadcasting
   const [broadcastChannel, setBroadcastChannel] = useState<ReturnType<typeof supabase.channel> | null>(null);
+  const broadcastStateRef = useRef<() => void>(() => {});
+  const isOpenRef = useRef(isOpen);
+
+  useEffect(() => {
+    isOpenRef.current = isOpen;
+  }, [isOpen]);
 
   // Setup broadcast channel
   useEffect(() => {
     if (!duelId || !currentUserId) return;
     
-    const channel = supabase.channel(`deck-sync-${duelId}`);
-    channel.subscribe((status) => {
-      if (status === 'SUBSCRIBED') {
-        setBroadcastChannel(channel);
-      }
+    const channel = supabase.channel(`deck-sync-${duelId}`, {
+      config: { broadcast: { self: false } },
     });
+
+    channel
+      .on('broadcast', { event: 'deck-state-request' }, ({ payload }) => {
+        if (payload?.requesterId === currentUserId) return;
+        if (payload?.requestedOpponentId && payload.requestedOpponentId !== currentUserId) return;
+
+        if (isOpenRef.current) {
+          broadcastStateRef.current();
+        }
+      })
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          setBroadcastChannel(channel);
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);
@@ -306,6 +324,10 @@ export const DuelDeckViewer = ({
       }
     });
   }, [broadcastChannel, currentUserId, fieldState]);
+
+  useEffect(() => {
+    broadcastStateRef.current = broadcastState;
+  }, [broadcastState]);
 
   useEffect(() => {
     if (broadcastChannel && isOpen && currentUserId) {
