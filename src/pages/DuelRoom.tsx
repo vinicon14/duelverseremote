@@ -969,26 +969,89 @@ const DuelRoom = () => {
       
       <main className="px-2 sm:px-4 pt-16 sm:pt-20 pb-2 sm:pb-4">
         <div className="h-[calc(100vh-80px)] sm:h-[calc(100vh-100px)] relative">
-          {/* Video Call - Daily.co - SEMPRE VISÍVEL */}
+          {/* Video Call - Daily.co */}
           <div className="h-full w-full rounded-lg overflow-hidden bg-card shadow-2xl border border-primary/20 relative">
-            {roomUrl ? (
-              <iframe
-                src={roomUrl}
-                allow="camera; microphone; fullscreen; speaker; display-capture; autoplay"
-                className="w-full h-full"
-                title="Daily.co Video Call"
-                onLoad={() => console.log('Iframe loaded')}
-                onError={(e) => console.error('Iframe error:', e)}
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <div className="text-center space-y-4">
-                  <Loader2 className="w-12 h-12 mx-auto text-primary animate-spin" />
-                  <div>
-                    <p className="text-muted-foreground mb-2">Carregando sala de vídeo...</p>
-                    <p className="text-xs text-muted-foreground">ID: {id}</p>
+            {/* Hide iframe when deck viewer is open */}
+            {!(showDeckViewer || showMagicViewer || showPokemonViewer) ? (
+              <>
+                {roomUrl ? (
+                  <iframe
+                    src={roomUrl}
+                    allow="camera; microphone; fullscreen; speaker; display-capture; autoplay"
+                    className="w-full h-full"
+                    title="Daily.co Video Call"
+                    onLoad={() => console.log('Iframe loaded')}
+                    onError={(e) => console.error('Iframe error:', e)}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <div className="text-center space-y-4">
+                      <Loader2 className="w-12 h-12 mx-auto text-primary animate-spin" />
+                      <div>
+                        <p className="text-muted-foreground mb-2">Carregando sala de vídeo...</p>
+                        <p className="text-xs text-muted-foreground">ID: {id}</p>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                )}
+              </>
+            ) : (
+              /* Deck viewer rendered in place of camera */
+              <div className="w-full h-full relative">
+                {/* YGO Deck Viewer */}
+                {isParticipant && !isJudge && duel?.tcg_type === 'yugioh' && showDeckViewer && (
+                  <>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".ydk"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          importDeckFromYDK(file);
+                        }
+                        e.target.value = '';
+                      }}
+                    />
+                    <DuelDeckViewer
+                      isOpen={showDeckViewer}
+                      onClose={() => setShowDeckViewer(false)}
+                      deck={mainDeck}
+                      extraDeck={extraDeck}
+                      sideDeck={sideDeck}
+                      onLoadDeck={() => fileInputRef.current?.click()}
+                      duelId={id}
+                      currentUserId={currentUser?.id}
+                      opponentUsername={
+                        currentUser?.id === duel?.creator_id 
+                          ? duel?.opponent?.username 
+                          : duel?.creator?.username
+                      }
+                      embedded
+                    />
+                  </>
+                )}
+
+                {/* Magic Arena Viewer */}
+                {isParticipant && !isJudge && duel?.tcg_type === 'magic' && showMagicViewer && (
+                  <MagicDuelViewer
+                    isOpen={showMagicViewer}
+                    onClose={() => setShowMagicViewer(false)}
+                    duelId={id}
+                    currentUserId={currentUser?.id}
+                    embedded
+                  />
+                )}
+
+                {/* Pokemon Arena Viewer */}
+                {isParticipant && !isJudge && duel?.tcg_type === 'pokemon' && showPokemonViewer && currentUser && id && (
+                  <PokemonDuelViewer
+                    duelId={id}
+                    currentUserId={currentUser.id}
+                    embedded
+                  />
+                )}
               </div>
             )}
 
