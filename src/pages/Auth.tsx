@@ -27,9 +27,12 @@ const TCG_OPTIONS: { value: TcgType; label: string; icon: React.ReactNode; color
 
 const Auth = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [selectedTcg, setSelectedTcg] = useState<TcgType>('yugioh');
+
+  const returnTo = (location.state as any)?.returnTo;
 
   // Verificar se usuário já está logado e redirecionar
   useEffect(() => {
