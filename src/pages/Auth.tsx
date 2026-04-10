@@ -99,7 +99,7 @@ const Auth = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/duels`
+          redirectTo: `${window.location.origin}/auth`
         }
       });
 
@@ -161,7 +161,7 @@ const Auth = () => {
         description: "Bem-vindo de volta, duelista!"
       });
 
-      navigate('/duels');
+      // Navigation is handled by onAuthStateChange listener above
     } catch (error: any) {
       toast({
         title: "Erro ao fazer login",
