@@ -58,6 +58,7 @@ const DuelRoom = () => {
   const timeWarningShownRef = useRef(false);
   const callDurationRef = useRef<number>(0);
   const webrtcRef = useRef<WebRTCVideoCallHandle>(null);
+  const deckToggleChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   
   const isJudge = searchParams.get('role') === 'judge';
   const [hideControls, setHideControls] = useState(true);
