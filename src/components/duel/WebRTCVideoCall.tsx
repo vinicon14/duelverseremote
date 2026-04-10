@@ -183,6 +183,23 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     isVideoOff,
   }), [isVideoOff]);
 
+  // Remove a disconnected peer from state so UI reverts to "Aguardando jogador"
+  const removePeer = useCallback((peerId: string) => {
+    const peer = peersRef.current.get(peerId);
+    if (peer) {
+      peer.pc.close();
+      peersRef.current.delete(peerId);
+    }
+    remoteVideoRefs.current.delete(peerId);
+    setRemoteStreams(prev => {
+      const next = new Map(prev);
+      next.delete(peerId);
+      return next;
+    });
+    setRemotePeerIds(prev => prev.filter(id => id !== peerId));
+    console.log("[WebRTC] Peer removed:", peerId);
+  }, []);
+
   const createPeerConnection = useCallback((remotePeerId: string) => {
     const existing = peersRef.current.get(remotePeerId);
     if (existing) {
@@ -223,24 +240,22 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       }
     };
 
-    // Monitor ICE connection and auto-recover
+    // Monitor ICE connection and auto-recover or remove disconnected peer
     pc.oniceconnectionstatechange = () => {
       console.log(`[WebRTC] ICE state ${remotePeerId}: ${pc.iceConnectionState}`);
       if (pc.iceConnectionState === 'failed') {
-        console.warn("[WebRTC] ICE failed, restarting for:", remotePeerId);
-        pc.restartIce();
-        channelRef.current?.send({
-          type: "broadcast",
-          event: "webrtc-signal",
-          payload: { type: "ready", senderId: userId },
-        });
+        console.warn("[WebRTC] ICE failed for:", remotePeerId);
+        // Remove peer so UI shows "Aguardando jogador" again
+        removePeer(remotePeerId);
       } else if (pc.iceConnectionState === 'disconnected') {
         setTimeout(() => {
-          if (pc.iceConnectionState === 'disconnected') {
-            console.warn("[WebRTC] Still disconnected, restarting ICE");
-            pc.restartIce();
+          if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed') {
+            console.warn("[WebRTC] Peer disconnected permanently:", remotePeerId);
+            removePeer(remotePeerId);
           }
         }, 5000);
+      } else if (pc.iceConnectionState === 'closed') {
+        removePeer(remotePeerId);
       }
     };
 
@@ -596,36 +611,39 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     </div>
   );
 
-  const renderRemotePanel = (peerId: string | null, index: number) => (
-    <div key={peerId || `waiting-${index}`} className="relative w-full h-full overflow-hidden bg-black">
-      {peerId && (
-        // Check per-slot content first (4-player), then fallback to single remoteDeckContent
-        (remoteDeckContents?.[index] && (remoteDeckOpenSlots?.[index] ?? false)) ||
-        (remoteDeckOpen && remoteDeckContent && index === 0 && !remoteDeckContents)
-      ) ? (
-        <div className="w-full h-full overflow-auto bg-background touch-pan-y">
-          {remoteDeckContents?.[index] || remoteDeckContent}
-        </div>
-      ) : peerId ? (
-        <video
-          ref={(el) => setRemoteVideoRef(peerId, el)}
-          autoPlay
-          playsInline
-          className="w-full h-full object-contain"
-        />
-      ) : (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/80">
-          <div className="text-center space-y-2">
-            <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 mx-auto text-primary animate-spin" />
-            <p className="text-[10px] sm:text-xs text-muted-foreground">Aguardando jogador...</p>
+  const renderRemotePanel = (peerId: string | null, index: number) => {
+    // Always show opponent deck overlay if available (no need to wait for remoteDeckOpen)
+    const hasPerSlotContent = remoteDeckContents?.[index];
+    const hasSingleContent = remoteDeckContent && index === 0 && !remoteDeckContents;
+    const showOverlay = peerId && (hasPerSlotContent || hasSingleContent);
+
+    return (
+      <div key={peerId || `waiting-${index}`} className="relative w-full h-full overflow-hidden bg-black">
+        {showOverlay ? (
+          <div className="w-full h-full overflow-auto bg-background touch-pan-y">
+            {remoteDeckContents?.[index] || remoteDeckContent}
           </div>
+        ) : peerId ? (
+          <video
+            ref={(el) => setRemoteVideoRef(peerId, el)}
+            autoPlay
+            playsInline
+            className="w-full h-full object-contain"
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+            <div className="text-center space-y-2">
+              <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 mx-auto text-primary animate-spin" />
+              <p className="text-[10px] sm:text-xs text-muted-foreground">Aguardando jogador...</p>
+            </div>
+          </div>
+        )}
+        <div className="absolute bottom-1 left-1 sm:bottom-2 sm:left-2 px-1.5 py-0.5 rounded bg-black/60 text-[10px] sm:text-xs text-white z-10">
+          {peerId ? `Oponente ${remoteSlots.length > 1 ? index + 1 : ''}` : `Jogador ${index + 2}`}
         </div>
-      )}
-      <div className="absolute bottom-1 left-1 sm:bottom-2 sm:left-2 px-1.5 py-0.5 rounded bg-black/60 text-[10px] sm:text-xs text-white z-10">
-        {peerId ? `Oponente ${remoteSlots.length > 1 ? index + 1 : ''}` : `Jogador ${index + 2}`}
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className={`relative ${className || ""}`}>

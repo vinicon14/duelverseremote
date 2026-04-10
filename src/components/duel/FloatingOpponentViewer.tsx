@@ -160,7 +160,7 @@ export const FloatingOpponentViewer = ({
   const [opponentStates, setOpponentStates] = useState<Map<string, OpponentState>>(new Map());
   const [activeOpponentId, setActiveOpponentId] = useState<string | null>(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(true);
+  const [isMinimized, setIsMinimized] = useState(embedded ? false : true);
   const [isVisible, setIsVisible] = useState(true);
   const [selectedCard, setSelectedCard] = useState<OpponentCard | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -287,15 +287,13 @@ export const FloatingOpponentViewer = ({
     };
   }, [duelId, currentUserId]);
 
-  if (!isVisible) {
+  // When embedded, always show expanded — skip minimized/hidden states
+  if (!embedded && !isVisible) {
     return (
       <Button
         variant="secondary"
         size="sm"
-        className={cn(
-          "z-40 gap-2",
-          embedded ? "absolute left-2 top-2" : "fixed left-2 top-20"
-        )}
+        className="z-40 gap-2 fixed left-2 top-20"
         onClick={() => setIsVisible(true)}
       >
         <Eye className="h-4 w-4" />
@@ -304,18 +302,17 @@ export const FloatingOpponentViewer = ({
     );
   }
 
-  if (isMinimized) {
+  if (!embedded && isMinimized) {
     return (
       <div
         ref={elementRef}
         onClick={() => !isDragging && setIsMinimized(false)}
         className={cn(
-          "z-40 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-lg flex items-center gap-2 px-3 py-2 hover:bg-muted/50 transition-colors cursor-pointer",
-          embedded ? "absolute left-2 bottom-2" : "fixed",
+          "z-40 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-lg flex items-center gap-2 px-3 py-2 hover:bg-muted/50 transition-colors cursor-pointer fixed",
           isDragging && "cursor-grabbing"
         )}
-        style={embedded ? undefined : { left: position.x, top: position.y }}
-        {...(embedded ? {} : dragHandlers)}
+        style={{ left: position.x, top: position.y }}
+        {...dragHandlers}
       >
         <Eye className="h-5 w-5 text-primary" />
         <span className="text-sm font-medium whitespace-nowrap">Ver deck do oponente</span>
@@ -455,10 +452,10 @@ export const FloatingOpponentViewer = ({
     <div 
       ref={elementRef}
       className={cn(
-        "z-40 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-2xl overflow-hidden",
+        "z-40 overflow-hidden",
         embedded 
-          ? "absolute left-2 bottom-2 w-72 sm:w-80 max-h-[60%]" 
-          : "fixed w-80 sm:w-96",
+          ? "w-full h-full bg-card" 
+          : "fixed w-80 sm:w-96 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-2xl",
         isDragging && "cursor-grabbing"
       )}
       style={embedded ? undefined : { left: position.x, top: position.y }}
@@ -482,14 +479,16 @@ export const FloatingOpponentViewer = ({
                 : opponentUsername)}
           </span>
         </div>
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIsMinimized(true)}>
-            <Minimize2 className="h-3 w-3" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIsVisible(false)}>
-            <X className="h-3 w-3" />
-          </Button>
-        </div>
+        {!embedded && (
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIsMinimized(true)}>
+              <Minimize2 className="h-3 w-3" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIsVisible(false)}>
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Multi-opponent tabs */}
@@ -510,7 +509,7 @@ export const FloatingOpponentViewer = ({
       )}
 
       {/* Content */}
-      <div className={cn("p-2", embedded && "overflow-y-auto max-h-[calc(100%-40px)]")}>
+      <div className={cn("p-2", embedded ? "overflow-y-auto flex-1" : "overflow-y-auto max-h-[calc(100%-40px)]")}>
         {!opponentState ? (
           <div className="text-center text-sm text-muted-foreground py-4">
             <Eye className="h-6 w-6 mx-auto mb-2 opacity-50" />

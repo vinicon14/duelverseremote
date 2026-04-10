@@ -1071,7 +1071,7 @@ const DuelRoom = () => {
                   ) : undefined
                 }
                 remoteDeckContent={
-                  opponentDeckOpen && isParticipant && !isJudge && currentUser && id && duel && ((duel as any)?.max_players || 2) <= 2 ? (
+                  isParticipant && !isJudge && currentUser && id && duel && ((duel as any)?.max_players || 2) <= 2 ? (
                     <FloatingOpponentViewer
                       duelId={id}
                       currentUserId={currentUser.id}
