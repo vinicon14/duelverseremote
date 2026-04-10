@@ -370,10 +370,10 @@ export default function MagicDeckBuilder() {
             <CardHeader className="pb-3">
               <div className="flex justify-between items-center">
                 <CardTitle className="text-lg">
-                  Deck Principal ({totalMain}/60)
+                  Deck Principal ({totalMain}/100)
                 </CardTitle>
-                <Badge variant={totalMain >= 60 ? "default" : "secondary"}>
-                  {totalMain >= 60 ? '✓ Válido' : `Faltam ${60 - totalMain}`}
+                <Badge variant={totalMain >= 100 ? "default" : "secondary"}>
+                  {totalMain >= 100 ? '✓ Válido' : `Faltam ${100 - totalMain}`}
                 </Badge>
               </div>
             </CardHeader>
