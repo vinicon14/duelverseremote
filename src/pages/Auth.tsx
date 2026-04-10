@@ -44,13 +44,35 @@ const Auth = () => {
           if (event === 'SIGNED_IN') {
             const { data: tcgProfiles } = await supabase
               .from('tcg_profiles')
-              .select('id')
+              .select('id, tcg_type')
               .eq('user_id', session.user.id)
               .limit(1);
             
             if (!tcgProfiles || tcgProfiles.length === 0) {
-              navigate('/profile-select', { replace: true, state: { returnTo } });
+              // Auto-create TCG profile from signup metadata
+              const metaTcg = session.user.user_metadata?.selected_tcg as TcgType | undefined;
+              const tcgToCreate = metaTcg || 'yugioh';
+              
+              // Get username from profile or metadata
+              const { data: mainProfile } = await supabase
+                .from('profiles')
+                .select('username')
+                .eq('user_id', session.user.id)
+                .maybeSingle();
+              const username = mainProfile?.username || session.user.user_metadata?.username || session.user.email?.split('@')[0] || 'Duelista';
+
+              await supabase.from('tcg_profiles').insert({
+                user_id: session.user.id,
+                tcg_type: tcgToCreate,
+                username,
+              });
+
+              // Set active TCG in localStorage
+              localStorage.setItem('activeTcg', tcgToCreate);
+              navigate(defaultRedirect, { replace: true });
             } else {
+              // Set active TCG from existing profile
+              localStorage.setItem('activeTcg', tcgProfiles[0].tcg_type);
               navigate(defaultRedirect, { replace: true });
             }
           } else {
