@@ -6,7 +6,7 @@
  * Integra com Supabase Auth.
  */
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,12 +27,17 @@ const TCG_OPTIONS: { value: TcgType; label: string; icon: React.ReactNode; color
 
 const Auth = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [selectedTcg, setSelectedTcg] = useState<TcgType>('yugioh');
 
+  const returnTo = (location.state as any)?.returnTo;
+
   // Verificar se usuário já está logado e redirecionar
   useEffect(() => {
+    const defaultRedirect = returnTo || '/duels';
+    
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (session?.user) {
@@ -44,12 +49,12 @@ const Auth = () => {
               .limit(1);
             
             if (!tcgProfiles || tcgProfiles.length === 0) {
-              navigate('/profile-select', { replace: true });
+              navigate('/profile-select', { replace: true, state: { returnTo } });
             } else {
-              navigate('/duels', { replace: true });
+              navigate(defaultRedirect, { replace: true });
             }
           } else {
-            navigate('/duels', { replace: true });
+            navigate(defaultRedirect, { replace: true });
           }
         }
       }
@@ -57,7 +62,7 @@ const Auth = () => {
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        navigate('/duels', { replace: true });
+        navigate(defaultRedirect, { replace: true });
       }
     });
 

@@ -4,7 +4,7 @@
  * Tela pós-login para selecionar ou criar perfil por TCG.
  */
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useTcg, TcgType } from '@/contexts/TcgContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -37,12 +37,14 @@ const TCG_CONFIG: Record<TcgType, { name: string; icon: React.ReactNode; color: 
 
 export default function ProfileSelect() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { profiles, switchProfile, createProfile, isLoading } = useTcg();
   const [creating, setCreating] = useState(false);
+  const returnTo = (location.state as any)?.returnTo || '/';
 
   const handleSelectProfile = (profileId: string) => {
     switchProfile(profileId);
-    navigate('/');
+    navigate(returnTo);
   };
 
   const handleCreateDirect = async (tcg: TcgType) => {
@@ -51,7 +53,7 @@ export default function ProfileSelect() {
     setCreating(false);
     if (success) {
       toast.success(`Perfil ${TCG_CONFIG[tcg].name} criado!`);
-      navigate('/');
+      navigate(returnTo);
     } else {
       toast.error('Erro ao criar perfil. Talvez já exista um para esse TCG.');
     }
