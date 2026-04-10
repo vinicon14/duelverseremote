@@ -596,36 +596,39 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     </div>
   );
 
-  const renderRemotePanel = (peerId: string | null, index: number) => (
-    <div key={peerId || `waiting-${index}`} className="relative w-full h-full overflow-hidden bg-black">
-      {peerId && (
-        // Check per-slot content first (4-player), then fallback to single remoteDeckContent
-        (remoteDeckContents?.[index] && (remoteDeckOpenSlots?.[index] ?? false)) ||
-        (remoteDeckOpen && remoteDeckContent && index === 0 && !remoteDeckContents)
-      ) ? (
-        <div className="w-full h-full overflow-auto bg-background touch-pan-y">
-          {remoteDeckContents?.[index] || remoteDeckContent}
-        </div>
-      ) : peerId ? (
-        <video
-          ref={(el) => setRemoteVideoRef(peerId, el)}
-          autoPlay
-          playsInline
-          className="w-full h-full object-contain"
-        />
-      ) : (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/80">
-          <div className="text-center space-y-2">
-            <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 mx-auto text-primary animate-spin" />
-            <p className="text-[10px] sm:text-xs text-muted-foreground">Aguardando jogador...</p>
+  const renderRemotePanel = (peerId: string | null, index: number) => {
+    // Always show opponent deck overlay if available (no need to wait for remoteDeckOpen)
+    const hasPerSlotContent = remoteDeckContents?.[index];
+    const hasSingleContent = remoteDeckContent && index === 0 && !remoteDeckContents;
+    const showOverlay = peerId && (hasPerSlotContent || hasSingleContent);
+
+    return (
+      <div key={peerId || `waiting-${index}`} className="relative w-full h-full overflow-hidden bg-black">
+        {showOverlay ? (
+          <div className="w-full h-full overflow-auto bg-background touch-pan-y">
+            {remoteDeckContents?.[index] || remoteDeckContent}
           </div>
+        ) : peerId ? (
+          <video
+            ref={(el) => setRemoteVideoRef(peerId, el)}
+            autoPlay
+            playsInline
+            className="w-full h-full object-contain"
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+            <div className="text-center space-y-2">
+              <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 mx-auto text-primary animate-spin" />
+              <p className="text-[10px] sm:text-xs text-muted-foreground">Aguardando jogador...</p>
+            </div>
+          </div>
+        )}
+        <div className="absolute bottom-1 left-1 sm:bottom-2 sm:left-2 px-1.5 py-0.5 rounded bg-black/60 text-[10px] sm:text-xs text-white z-10">
+          {peerId ? `Oponente ${remoteSlots.length > 1 ? index + 1 : ''}` : `Jogador ${index + 2}`}
         </div>
-      )}
-      <div className="absolute bottom-1 left-1 sm:bottom-2 sm:left-2 px-1.5 py-0.5 rounded bg-black/60 text-[10px] sm:text-xs text-white z-10">
-        {peerId ? `Oponente ${remoteSlots.length > 1 ? index + 1 : ''}` : `Jogador ${index + 2}`}
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className={`relative ${className || ""}`}>
