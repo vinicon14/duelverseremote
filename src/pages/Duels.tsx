@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Navbar } from "@/components/Navbar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { Swords, Plus, Users, Clock, Download, Monitor, Smartphone, Share2 } from "lucide-react";
+import { Swords, Plus, Users, Clock, Download, Monitor, Smartphone, Share2, Search } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useBanCheck } from "@/hooks/useBanCheck";
 import { AdPopup } from "@/components/AdPopup";
@@ -36,6 +36,7 @@ const Duels = () => {
   const [durationMinutes, setDurationMinutes] = useState(50);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showAdPopup, setShowAdPopup] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [pendingAction, setPendingAction] = useState<{ type: 'create' | 'join', duelId?: string } | null>(null);
   const [showDownloadDialog, setShowDownloadDialog] = useState(false);
   const [windowsDownloadUrl, setWindowsDownloadUrl] = useState("");
@@ -511,25 +512,48 @@ const Duels = () => {
               </div>
             </div>
 
-            {loading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {[1, 2, 3].map((i) => (
-                  <Card key={i} className="card-mystic animate-pulse">
-                    <CardHeader className="h-32" />
-                  </Card>
-                ))}
+            {!loading && duels.length > 10 && (
+              <div className="relative mb-4">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar sala por nome..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 bg-background/50"
+                />
               </div>
-            ) : duels.length === 0 ? (
-              <Card className="card-mystic text-center py-12">
-                <Swords className="w-16 h-16 mx-auto text-primary/50 mb-4" />
-                <h3 className="text-xl font-semibold mb-2">Nenhum duelo disponível</h3>
-                <p className="text-muted-foreground">
-                  Seja o primeiro a criar uma sala!
-                </p>
-              </Card>
-            ) : (
+            )}
+
+            {(() => {
+              const filteredDuels = searchQuery.trim()
+                ? duels.filter(d => (d.room_name || '').toLowerCase().includes(searchQuery.trim().toLowerCase()))
+                : duels;
+
+              if (loading) return (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {[1, 2, 3].map((i) => (
+                    <Card key={i} className="card-mystic animate-pulse">
+                      <CardHeader className="h-32" />
+                    </Card>
+                  ))}
+                </div>
+              );
+
+              if (filteredDuels.length === 0) return (
+                <Card className="card-mystic text-center py-12">
+                  <Swords className="w-16 h-16 mx-auto text-primary/50 mb-4" />
+                  <h3 className="text-xl font-semibold mb-2">
+                    {searchQuery.trim() ? 'Nenhuma sala encontrada' : 'Nenhum duelo disponível'}
+                  </h3>
+                  <p className="text-muted-foreground">
+                    {searchQuery.trim() ? `Nenhuma sala corresponde a "${searchQuery}"` : 'Seja o primeiro a criar uma sala!'}
+                  </p>
+                </Card>
+              );
+
+              return (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {duels.map((duel) => (
+                {filteredDuels.map((duel) => (
                   <Card key={duel.id} className="card-mystic hover:border-primary/40 transition-all">
                     <CardHeader>
                       <CardTitle className="flex items-center justify-between flex-wrap gap-2">
@@ -635,7 +659,8 @@ const Duels = () => {
                   </Card>
                 ))}
               </div>
-            )}
+              );
+            })()}
           </div>
 
           {/* Chat Global */}

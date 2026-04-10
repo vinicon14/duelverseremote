@@ -11,7 +11,8 @@ import { Button } from "@/components/ui/button";
 import { ProNavbar } from "@/components/ProNavbar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Users, Clock, Trophy, Swords, Crown } from "lucide-react";
+import { Plus, Users, Clock, Trophy, Swords, Crown, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 export default function ProDuels() {
   const navigate = useNavigate();
@@ -19,6 +20,7 @@ export default function ProDuels() {
   const [duels, setDuels] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     checkAuth();
@@ -154,30 +156,55 @@ export default function ProDuels() {
 
         {/* Available Duels */}
         <h2 className="text-xl font-semibold mb-4">Salas Disponíveis</h2>
-        
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3].map(i => (
-              <Card key={i} className="card-mystic animate-pulse">
-                <CardContent className="h-40" />
-              </Card>
-            ))}
+
+        {!loading && duels.length > 10 && (
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar sala por nome..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 bg-background/50"
+            />
           </div>
-        ) : duels.length === 0 ? (
-          <Card className="card-mystic text-center py-12">
-            <Swords className="w-16 h-16 mx-auto text-primary/50 mb-4" />
-            <h3 className="text-xl font-semibold mb-2">Nenhuma sala disponível</h3>
-            <p className="text-muted-foreground mb-4">
-              Seja o primeiro a criar um duelo!
-            </p>
-            <Button onClick={createDuel} className="btn-mystic text-white">
-              <Plus className="mr-2 h-4 w-4" />
-              Criar Duelo
-            </Button>
-          </Card>
-        ) : (
+        )}
+        
+        {(() => {
+          const filteredDuels = searchQuery.trim()
+            ? duels.filter(d => (d.room_name || '').toLowerCase().includes(searchQuery.trim().toLowerCase()))
+            : duels;
+
+          if (loading) return (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3].map(i => (
+                <Card key={i} className="card-mystic animate-pulse">
+                  <CardContent className="h-40" />
+                </Card>
+              ))}
+            </div>
+          );
+
+          if (filteredDuels.length === 0) return (
+            <Card className="card-mystic text-center py-12">
+              <Swords className="w-16 h-16 mx-auto text-primary/50 mb-4" />
+              <h3 className="text-xl font-semibold mb-2">
+                {searchQuery.trim() ? 'Nenhuma sala encontrada' : 'Nenhuma sala disponível'}
+              </h3>
+              <p className="text-muted-foreground mb-4">
+                {searchQuery.trim() ? `Nenhuma sala corresponde a "${searchQuery}"` : 'Seja o primeiro a criar um duelo!'}
+              </p>
+              {!searchQuery.trim() && (
+                <Button onClick={createDuel} className="btn-mystic text-white">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Criar Duelo
+                </Button>
+              )}
+            </Card>
+          );
+
+          return (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {duels.map(duel => (
+            {filteredDuels.map(duel => (
               <Card key={duel.id} className="card-mystic hover:border-primary/60 transition-all">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
@@ -228,7 +255,8 @@ export default function ProDuels() {
               </Card>
             ))}
           </div>
-        )}
+          );
+        })()}
       </main>
     </div>
   );

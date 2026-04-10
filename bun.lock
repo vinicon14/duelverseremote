@@ -9,7 +9,6 @@
         "@capacitor/cli": "^8.2.0",
         "@capacitor/core": "^8.2.0",
         "@capacitor/ios": "^8.2.0",
-        "@daily-co/daily-js": "^0.85.0",
         "@hookform/resolvers": "^3.10.0",
         "@radix-ui/react-accordion": "^1.2.11",
         "@radix-ui/react-alert-dialog": "^1.1.14",
@@ -281,8 +280,6 @@
     "@capacitor/core": ["@capacitor/core@8.3.0", "https://europe-west1-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@capacitor/core/-/core-8.3.0.tgz", { "dependencies": { "tslib": "^2.1.0" } }, "sha512-S4ajn4G/fS3VJj8salxqH/3LO5PPWv1VxGKQ27OCajnDcLJjEg9VXwgMPnlypgkIOqCJ2fmQLtk8GT+BlI9/rw=="],
 
     "@capacitor/ios": ["@capacitor/ios@8.3.0", "https://europe-west1-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@capacitor/ios/-/ios-8.3.0.tgz", { "peerDependencies": { "@capacitor/core": "^8.3.0" } }, "sha512-5Rtwv8SITKlYTt8lAZG+khnVIdzPtqbocH3eP+JkEmX1vpSMwx4TOKtT8OBz8gpQ+pUJDRp7DBYOv3U6l/obCw=="],
-
-    "@daily-co/daily-js": ["@daily-co/daily-js@0.85.0", "", { "dependencies": { "@babel/runtime": "^7.12.5", "@sentry/browser": "^8.33.1", "bowser": "^2.8.1", "dequal": "^2.0.3", "events": "^3.1.0" } }, "sha512-lpl111ZWNTUWDnwYcPuNi9PGJPbLCeCw6LzmEY40nG0hv1jg5JLVW8Rq3Cj/+lOCP6W6h4PXm211ss0FFnxITQ=="],
 
     "@develar/schema-utils": ["@develar/schema-utils@2.6.5", "", { "dependencies": { "ajv": "^6.12.0", "ajv-keywords": "^3.4.1" } }, "sha512-0cp4PsWQ/9avqTVMCtZ+GirikIA36ikvjtHweU4/j8yLtgObI0+JUPhYFScgwlteveGB1rt3Cm8UhN04XayDig=="],
 
@@ -608,18 +605,6 @@
 
     "@sec-ant/readable-stream": ["@sec-ant/readable-stream@0.4.1", "https://europe-west1-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@sec-ant/readable-stream/-/readable-stream-0.4.1.tgz", {}, "sha512-831qok9r2t8AlxLko40y2ebgSDhenenCatLVeW/uBtnHPyhHOvG0C7TvfgecV+wHzIm5KUICgzmVpWS+IMEAeg=="],
 
-    "@sentry-internal/browser-utils": ["@sentry-internal/browser-utils@8.55.0", "", { "dependencies": { "@sentry/core": "8.55.0" } }, "sha512-ROgqtQfpH/82AQIpESPqPQe0UyWywKJsmVIqi3c5Fh+zkds5LUxnssTj3yNd1x+kxaPDVB023jAP+3ibNgeNDw=="],
-
-    "@sentry-internal/feedback": ["@sentry-internal/feedback@8.55.0", "", { "dependencies": { "@sentry/core": "8.55.0" } }, "sha512-cP3BD/Q6pquVQ+YL+rwCnorKuTXiS9KXW8HNKu4nmmBAyf7urjs+F6Hr1k9MXP5yQ8W3yK7jRWd09Yu6DHWOiw=="],
-
-    "@sentry-internal/replay": ["@sentry-internal/replay@8.55.0", "", { "dependencies": { "@sentry-internal/browser-utils": "8.55.0", "@sentry/core": "8.55.0" } }, "sha512-roCDEGkORwolxBn8xAKedybY+Jlefq3xYmgN2fr3BTnsXjSYOPC7D1/mYqINBat99nDtvgFvNfRcZPiwwZ1hSw=="],
-
-    "@sentry-internal/replay-canvas": ["@sentry-internal/replay-canvas@8.55.0", "", { "dependencies": { "@sentry-internal/replay": "8.55.0", "@sentry/core": "8.55.0" } }, "sha512-nIkfgRWk1091zHdu4NbocQsxZF1rv1f7bbp3tTIlZYbrH62XVZosx5iHAuZG0Zc48AETLE7K4AX9VGjvQj8i9w=="],
-
-    "@sentry/browser": ["@sentry/browser@8.55.0", "", { "dependencies": { "@sentry-internal/browser-utils": "8.55.0", "@sentry-internal/feedback": "8.55.0", "@sentry-internal/replay": "8.55.0", "@sentry-internal/replay-canvas": "8.55.0", "@sentry/core": "8.55.0" } }, "sha512-1A31mCEWCjaMxJt6qGUK+aDnLDcK6AwLAZnqpSchNysGni1pSn1RWSmk9TBF8qyTds5FH8B31H480uxMPUJ7Cw=="],
-
-    "@sentry/core": ["@sentry/core@8.55.0", "", {}, "sha512-6g7jpbefjHYs821Z+EBJ8r4Z7LT5h80YSWRJaylGS4nW5W5Z2KXzpdnyFarv37O7QjauzVC2E+PABmpkw5/JGA=="],
-
     "@sindresorhus/is": ["@sindresorhus/is@7.2.0", "https://europe-west1-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@sindresorhus/is/-/is-7.2.0.tgz", {}, "sha512-P1Cz1dWaFfR4IR+U13mqqiGsLFf1KbayybWwdd2vfctdV6hDpUkgCY0nKOLLTMSoRd/jJNjtbqzf13K8DCCXQw=="],
 
     "@supabase/auth-js": ["@supabase/auth-js@2.74.0", "", { "dependencies": { "@supabase/node-fetch": "2.6.15" } }, "sha512-EJYDxYhBCOS40VJvfQ5zSjo8Ku7JbTICLTcmXt4xHMQZt4IumpRfHg11exXI9uZ6G7fhsQlNgbzDhFN4Ni9NnA=="],
@@ -838,8 +823,6 @@
 
     "boolean": ["boolean@3.2.0", "https://europe-west1-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/boolean/-/boolean-3.2.0.tgz", {}, "sha512-d0II/GO9uf9lfUHH2BQsjxzRJZBdsjgsBiW4BvhWk/3qoKwQFjIDVN19PfX8F2D/r9PCMTtLWjYVCFrpeYUzsw=="],
 
-    "bowser": ["bowser@2.12.1", "", {}, "sha512-z4rE2Gxh7tvshQ4hluIT7XcFrgLIQaw9X3A+kTTRdovCz5PMukm/0QC/BKSYPj3omF5Qfypn9O/c5kgpmvYUCw=="],
-
     "bplist-parser": ["bplist-parser@0.3.2", "https://europe-west1-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/bplist-parser/-/bplist-parser-0.3.2.tgz", { "dependencies": { "big-integer": "1.6.x" } }, "sha512-apC2+fspHGI3mMKj+dGevkGo/tCqVB8jMb6i+OX+E29p0Iposz07fABkRIfVUPNd5A5VbuOz1bZbnmkKLYF+wQ=="],
 
     "brace-expansion": ["brace-expansion@1.1.12", "", { "dependencies": { "balanced-match": "^1.0.0", "concat-map": "0.0.1" } }, "sha512-9T9UjW3r0UW5c1Q7GTwllptXwhvYmEzFhzMfZ9H7FQWt+uZePjZPjBP/W1ZEyZ1twGWom5/56TF4lPcqjnDHcg=="],
@@ -990,8 +973,6 @@
 
     "delayed-stream": ["delayed-stream@1.0.0", "", {}, "sha512-ZySD7Nf91aLB0RxL4KGrKHBXl7Eds1DAmEdcoVawXnLD7SDhpNgtuII2aAkg7a7QS41jxPSZ17p4VdGnMHk3MQ=="],
 
-    "dequal": ["dequal@2.0.3", "", {}, "sha512-0je+qPKHEMohvfRTCEo3CrPG6cAzAYgmzKyxRiYSSDkS6eGJdyVJm7WaYA5ECaAD9wLB2T4EEeymA5aFVcYXCA=="],
-
     "detect-node": ["detect-node@2.1.0", "https://europe-west1-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/detect-node/-/detect-node-2.1.0.tgz", {}, "sha512-T0NIuQpnTvFDATNuHN5roPwSBG83rFsuO+MXXH9/3N1eFbn4wcPjttvjMLEPWJ0RGUYgQE7cGgS3tNxbqCGM7g=="],
 
     "detect-node-es": ["detect-node-es@1.1.0", "", {}, "sha512-ypdmJU/TbBby2Dxibuv7ZLW3Bs1QEmM7nHjEANfohJLvE0XVujisn1qPJcZxg+qDucsr+bP6fLD1rPS3AhJ7EQ=="],
@@ -1091,8 +1072,6 @@
     "esutils": ["esutils@2.0.3", "", {}, "sha512-kVscqXk4OCp68SZ0dkgEKVi6/8ij300KBWTJq32P/dYeWTSwK41WyTxalN1eRmA5Z9UU/LX9D7FWSmV9SAYx6g=="],
 
     "eventemitter3": ["eventemitter3@4.0.7", "", {}, "sha512-8guHBZCwKnFhYdHr2ysuRWErTwhoN2X8XELRlrRwpmfeY2jjuUN4taQMsULKUVo1K4DvZl+0pgfyoysHxvmvEw=="],
-
-    "events": ["events@3.3.0", "", {}, "sha512-mQw+2fkQbALzQ7V0MY0IqdnXNOeTtP4r0lN9z7AAawCXgqea7bDii20AYrIBrFd/Hx0M2Ocz6S111CaFkUcb0Q=="],
 
     "extract-zip": ["extract-zip@2.0.1", "https://europe-west1-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/extract-zip/-/extract-zip-2.0.1.tgz", { "dependencies": { "debug": "^4.1.1", "get-stream": "^5.1.0", "yauzl": "^2.10.0" }, "optionalDependencies": { "@types/yauzl": "^2.9.1" }, "bin": "cli.js" }, "sha512-GDhU9ntwuKyGXdZBUgTIe+vXnWj0fppUEtMDL0+idd5Sta8TGpHssn/eusA9mrPr9qNDym6SxAYZjNvCn/9RBg=="],
 
