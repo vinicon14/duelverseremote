@@ -498,8 +498,11 @@ const DuelRoom = () => {
 
       // Se a sala tem slots abertos para o jogador entrar
       const isAlreadyInDuel = isCreator || isOpponent || isPlayer3 || isPlayer4;
-      if (!isAlreadyInDuel) {
-        // Try to join an open slot
+      const entryRole = searchParams.get('role');
+      const wantsToSpectate = entryRole === 'spectate' || entryRole === 'judge';
+
+      if (!isAlreadyInDuel && !wantsToSpectate) {
+        // Try to join an open slot only if user is not explicitly spectating
         let joinedSlot: string | null = null;
         if (!data.opponent_id) {
           joinedSlot = 'opponent_id';
@@ -548,7 +551,16 @@ const DuelRoom = () => {
             return;
           }
         } else {
-          console.log('[DuelRoom] Usuário entrando como espectador');
+          // All slots full, enter as spectator
+          console.log('[DuelRoom] Sala lotada, entrando como espectador');
+          toast({
+            title: "👁️ Modo Espectador",
+            description: "Você está assistindo esta partida.",
+          });
+        }
+      } else if (!isAlreadyInDuel && wantsToSpectate) {
+        console.log('[DuelRoom] Entrando como espectador/juiz');
+        if (!isJudge) {
           toast({
             title: "👁️ Modo Espectador",
             description: "Você está assistindo esta partida.",
@@ -572,9 +584,11 @@ const DuelRoom = () => {
       // Videochamada WebRTC nativa — basta marcar como pronto
       setVideoReady(true);
 
-      // Garantir que started_at existe SEMPRE (timer inicia na criação)
+      // Garantir que started_at existe - apenas participantes devem escrever
+      const isAlreadyInDuelAfterJoin = data.creator_id === userId || data.opponent_id === userId || 
+        (data as any).player3_id === userId || (data as any).player4_id === userId;
       let startedAt = data.started_at;
-      if (!startedAt) {
+      if (!startedAt && isAlreadyInDuelAfterJoin) {
         const now = new Date().toISOString();
         const { error: updateError } = await supabase
           .from('live_duels')
