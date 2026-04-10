@@ -1,42 +1,41 @@
 
 
-## Plan: One TCG Per Account System
+## Plan: Ranking shows only user's TCG + platform consistency audit
 
-### What changes
+### 1. Ranking page — remove TCG tabs, use only `activeTcg`
 
-The system will enforce **one TCG profile per account**. Users who want to play multiple TCGs need separate accounts. The profile switcher will be removed.
+The Ranking page currently has tabs (YGO/MTG/PKM) allowing users to browse other TCGs' rankings. Since each account now has only one TCG, this switcher is unnecessary.
 
-### Steps
+**Changes to `src/pages/Ranking.tsx`:**
+- Remove the `selectedTcg` state and `Tabs` component
+- Use `activeTcg` from `useTcg()` directly to fetch rankings
+- Remove unused imports (`Tabs`, `TabsList`, `TabsTrigger`, `useState` for selectedTcg)
+- Title and subtitle use `activeTcg` instead of `selectedTcg`
 
-1. **Modify login flow (`src/pages/Auth.tsx`)**
-   - After login, if user has multiple TCG profiles, redirect to `/profile-select` where they pick ONE profile (the others get deleted)
-   - If user has exactly one profile, go straight to `/duels`
-   - On signup, create a single profile for the selected TCG as it already does
+### 2. Platform consistency audit
 
-2. **Update ProfileSelect page (`src/pages/ProfileSelect.tsx`)**
-   - Remove "create new profile" buttons
-   - Change to a one-time selection screen: "Choose your TCG" — selecting one deletes the others permanently
-   - Show a warning that unchosen profiles will be removed
-   - After selection, redirect to `/duels`
+Since the app is a single React codebase served via:
+- **Web (mobile/desktop)** — same bundle via Vite
+- **PWA (installed)** — same bundle, cached via service worker
+- **Capacitor native (Android)** — loads from `https://duelverse.site` (same deployed bundle)
+- **Electron desktop** — loads the same web app
 
-3. **Remove TcgSwitcher from Navbar (`src/components/Navbar.tsx`)**
-   - Remove `<TcgSwitcher />` from both desktop and mobile nav
-   - Keep showing the active TCG icon as a static badge (no dropdown)
+All platforms render the exact same React code. The recent changes (single profile per account, TcgSwitcher as static badge, profile-select cleanup) apply uniformly because they are all client-side React changes. No platform-specific code paths bypass these changes.
 
-4. **Simplify TcgSwitcher (`src/components/TcgSwitcher.tsx`)**
-   - Convert to a static display showing current TCG (no switching functionality)
+**Verification points — no issues found:**
+- `TcgSwitcher.tsx` — already converted to static badge (no switching)
+- `TcgContext.tsx` — `setActiveTcg` still exposed but only used internally during login/profile-select; no UI allows switching
+- `Navbar.tsx` — imports `TcgSwitcher` which is now static
+- `capacitor.config.json` — points to `duelverse.site`, will get updates when deployed
+- `electron/main.cjs` — loads the web app, gets same code
+- No platform-specific conditional rendering that would show old switcher behavior
 
-5. **Update TcgContext (`src/contexts/TcgContext.tsx`)**
-   - Remove `switchProfile` and `createProfile` from context
-   - Keep `activeTcg` and `activeProfile` as read-only state
-
-6. **Clean up profile-select route**
-   - Only accessible when user has multiple profiles (legacy cleanup scenario)
-   - After choosing, delete non-selected profiles from `tcg_profiles` table
+**Conclusion:** All platforms are consistent. Only the Ranking page needs updating.
 
 ### Technical details
 
-- Deletion of extra profiles uses `supabase.from('tcg_profiles').delete().eq('user_id', userId).neq('tcg_type', selectedTcg)`
-- No database migration needed — existing RLS allows users to delete own profiles (need to verify; may need to add DELETE policy)
-- The `tcg_profiles` table already has user update/insert policies; need to check if DELETE policy exists
+Single file change in `src/pages/Ranking.tsx`:
+- Remove `useState` for `selectedTcg`, remove `Tabs` imports
+- Replace all `selectedTcg` references with `activeTcg`
+- Remove the `<Tabs>` block entirely
 
