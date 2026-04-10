@@ -53,7 +53,7 @@ export const DynamicTheme = () => {
     }
 
     return () => {
-      Object.keys(theme || {}).forEach(key => {
+      Object.keys(theme || {}).forEach((key: string) => {
         root.style.removeProperty(key);
       });
     };
