@@ -53,6 +53,8 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   remoteDeckOpen = false,
   localDeckContent,
   remoteDeckContent,
+  remoteDeckContents,
+  remoteDeckOpenSlots,
 }, ref) => {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
