@@ -463,7 +463,7 @@ export const FloatingOpponentViewer = ({
       {/* Header */}
       <div 
         className={cn(
-          "flex items-center justify-between p-2 border-b border-border bg-muted/30",
+          "flex items-center justify-between p-2 border-b border-border bg-muted/30 flex-shrink-0",
           !embedded && "cursor-grab hover:bg-muted/50"
         )}
         {...(embedded ? {} : dragHandlers)}
