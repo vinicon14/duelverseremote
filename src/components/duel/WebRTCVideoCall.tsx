@@ -60,6 +60,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(new Map());
   const [remotePeerIds, setRemotePeerIds] = useState<string[]>([]);
+  const [pipSwapped, setPipSwapped] = useState(false);
 
   useImperativeHandle(ref, () => ({
     setVideoEnabled: (enabled: boolean) => {
