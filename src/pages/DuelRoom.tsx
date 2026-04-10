@@ -1011,6 +1011,7 @@ const DuelRoom = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <NoMonetagAds />
       {!hideControls && <Navbar />}
       
       <main className="px-2 sm:px-4 pt-16 sm:pt-20 pb-2 sm:pb-4">
