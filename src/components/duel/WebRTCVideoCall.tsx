@@ -28,6 +28,12 @@ interface WebRTCVideoCallProps {
   remoteDeckContents?: (React.ReactNode | undefined)[];
   /** Per-slot remote deck open flags for 4-player mode */
   remoteDeckOpenSlots?: boolean[];
+  /** Spectator LP overlay: labels & values for local panel and remote panels */
+  spectatorLpOverlay?: {
+    localLabel: string;
+    localLp: number;
+    remotePlayers: { label: string; lp: number }[];
+  };
 }
 
 const ICE_SERVERS: RTCIceServer[] = [
