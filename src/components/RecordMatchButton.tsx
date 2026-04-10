@@ -43,7 +43,8 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSetupDialog, setShowSetupDialog] = useState(false);
   const [audioSource, setAudioSource] = useState<RecordingAudioSource>("both");
-
+  const [desktopSources, setDesktopSources] = useState<DesktopSource[]>([]);
+  const [selectedSourceId, setSelectedSourceId] = useState<string>("");
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
