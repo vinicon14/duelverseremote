@@ -901,13 +901,9 @@ export const DuelDeckViewer = ({
 
   if (!isOpen) return null;
 
-  const containerStyle = isFullscreen 
-    ? {} 
-    : isMinimized 
-      ? { left: position.x, top: position.y } 
-      : { left: position.x, top: position.y };
-
-  const containerClasses = isFullscreen
+  const containerClasses = embedded
+    ? "absolute inset-0 z-10 bg-card flex flex-col"
+    : isFullscreen
     ? "fixed inset-4 z-50 bg-card/98 backdrop-blur-md border border-border rounded-xl shadow-2xl flex flex-col"
     : cn(
         "fixed z-40 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-2xl transition-all duration-300",
@@ -916,6 +912,12 @@ export const DuelDeckViewer = ({
           : "w-[420px] sm:w-[500px] max-w-[95vw] h-[700px] max-h-[90vh]",
         isDragging && "cursor-grabbing"
       );
+
+  const containerStyle = embedded ? undefined : (isFullscreen 
+    ? {} 
+    : isMinimized 
+      ? { left: position.x, top: position.y } 
+      : { left: position.x, top: position.y });
 
   return (
     <>
