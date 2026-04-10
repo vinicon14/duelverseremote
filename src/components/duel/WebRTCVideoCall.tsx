@@ -714,13 +714,13 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       ) : (
         /* ===== PIP LAYOUT (2 players) — click small to swap ===== */
         <>
-          {/* Big panel — always show deck viewers here regardless of swap */}
+          {/* Big panel */}
           <div className="w-full h-full">
-            {pipSwapped ? (
-              /* Local is big — show local deck or local video */
+            {isSpectator ? (
+              pipSwapped ? renderRemotePanel(remoteSlots[1], 1) : renderRemotePanel(remoteSlots[0], 0)
+            ) : pipSwapped ? (
               renderLocalPanel()
             ) : (
-              /* Remote is big — show remote deck overlay or remote video */
               renderRemotePanel(remoteSlots[0], 0)
             )}
           </div>
@@ -730,22 +730,27 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
             onClick={() => setPipSwapped(prev => !prev)}
             title="Clique para alternar"
           >
-            {pipSwapped ? (
-              /* Show remote in small — just video, no deck overlay */
-              remoteSlots[0] ? (
-                <video
-                  ref={(el) => setRemoteVideoRef(remoteSlots[0]!, el)}
-                  autoPlay
-                  playsInline
-                  className="w-full h-full object-cover"
-                />
+            {isSpectator ? (
+              pipSwapped ? (
+                remoteSlots[0] ? (
+                  <video ref={(el) => setRemoteVideoRef(remoteSlots[0]!, el)} autoPlay playsInline className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-black/80"><Loader2 className="w-4 h-4 text-primary animate-spin" /></div>
+                )
               ) : (
-                <div className="w-full h-full flex items-center justify-center bg-black/80">
-                  <Loader2 className="w-4 h-4 text-primary animate-spin" />
-                </div>
+                remoteSlots[1] ? (
+                  <video ref={(el) => setRemoteVideoRef(remoteSlots[1]!, el)} autoPlay playsInline className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-black/80"><Loader2 className="w-4 h-4 text-primary animate-spin" /></div>
+                )
+              )
+            ) : pipSwapped ? (
+              remoteSlots[0] ? (
+                <video ref={(el) => setRemoteVideoRef(remoteSlots[0]!, el)} autoPlay playsInline className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-black/80"><Loader2 className="w-4 h-4 text-primary animate-spin" /></div>
               )
             ) : (
-              /* Show local in small */
               localDeckOpen && localDeckContent ? (
                 <div className="w-full h-full overflow-hidden bg-background flex items-center justify-center">
                   <span className="text-[10px] text-muted-foreground">Deck aberto</span>
@@ -754,17 +759,10 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
                 <>
                   <video
                     ref={localVideoCallbackRef}
-                    autoPlay
-                    playsInline
-                    muted
+                    autoPlay playsInline muted
                     className={`w-full h-full object-cover ${zoomLevel > 1 ? 'cursor-grab active:cursor-grabbing' : ''}`}
-                    style={{
-                      transform: `scaleX(-1) scale(${zoomLevel}) translate(${panOffset.x / zoomLevel}px, ${panOffset.y / zoomLevel}px)`,
-                    }}
-                    onPointerDown={handlePanStart}
-                    onPointerMove={handlePanMove}
-                    onPointerUp={handlePanEnd}
-                    onPointerCancel={handlePanEnd}
+                    style={{ transform: `scaleX(-1) scale(${zoomLevel}) translate(${panOffset.x / zoomLevel}px, ${panOffset.y / zoomLevel}px)` }}
+                    onPointerDown={handlePanStart} onPointerMove={handlePanMove} onPointerUp={handlePanEnd} onPointerCancel={handlePanEnd}
                   />
                   {isVideoOff && (
                     <div className="absolute inset-0 bg-muted flex items-center justify-center">
