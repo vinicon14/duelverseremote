@@ -417,7 +417,7 @@ const DuelRoom = () => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const getDailyRoomUrl = (duelId: string) => `https://duelverse.daily.co/duelverse-${duelId}?layout=grid`;
+  const getDailyRoomUrl = (duelId: string) => `https://duelverse.daily.co/duelverse-${duelId}?activeSpeakerMode=false`;
 
 
   const checkAuth = async () => {
