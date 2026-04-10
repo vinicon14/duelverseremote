@@ -426,7 +426,15 @@ ipcMain.on('sync-auth', async (_, { token, userId }) => {
   await startNotificationPolling({ resetKnown: userChanged || !notificationPollInterval });
 });
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  // Clear cache to always load latest version
+  try {
+    await session.defaultSession.clearCache();
+    console.log('[Electron] Cache cleared successfully');
+  } catch (e) {
+    console.warn('[Electron] Failed to clear cache:', e);
+  }
+
   setAutoLaunch();
   createWindow();
   createTray();
