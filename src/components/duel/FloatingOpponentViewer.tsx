@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -164,10 +164,15 @@ export const FloatingOpponentViewer = ({
   const [isVisible, setIsVisible] = useState(true);
   const [selectedCard, setSelectedCard] = useState<OpponentCard | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const opponentStatesRef = useRef(opponentStates);
 
   const { position, isDragging, elementRef, dragHandlers } = useDraggable({
     initialPosition: { x: 8, y: 80 },
   });
+
+  useEffect(() => {
+    opponentStatesRef.current = opponentStates;
+  }, [opponentStates]);
 
   // Derive the single opponentState for backward compatibility
   const opponentState: OpponentState | null = (() => {
@@ -184,7 +189,22 @@ export const FloatingOpponentViewer = ({
   useEffect(() => {
     if (!duelId) return;
 
-    const channel = supabase.channel(`deck-sync-${duelId}`);
+    const channel = supabase.channel(`deck-sync-${duelId}`, {
+      config: { broadcast: { self: false } },
+    });
+    let initialRequestTimer: ReturnType<typeof setTimeout> | null = null;
+    let retryRequestTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const requestLatestDeckState = () => {
+      channel.send({
+        type: 'broadcast',
+        event: 'deck-state-request',
+        payload: {
+          requesterId: currentUserId,
+          requestedOpponentId: filterOpponentId || null,
+        },
+      });
+    };
     
     channel
       .on('broadcast', { event: 'deck-state' }, ({ payload }) => {
@@ -280,12 +300,27 @@ export const FloatingOpponentViewer = ({
           setActiveOpponentId(prev => prev || opId);
         }
       })
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          initialRequestTimer = setTimeout(requestLatestDeckState, 150);
+          retryRequestTimer = setTimeout(() => {
+            const alreadyHasState = filterOpponentId
+              ? opponentStatesRef.current.has(filterOpponentId)
+              : opponentStatesRef.current.size > 0;
+
+            if (!alreadyHasState) {
+              requestLatestDeckState();
+            }
+          }, 900);
+        }
+      });
 
     return () => {
+      if (initialRequestTimer) clearTimeout(initialRequestTimer);
+      if (retryRequestTimer) clearTimeout(retryRequestTimer);
       supabase.removeChannel(channel);
     };
-  }, [duelId, currentUserId]);
+  }, [duelId, currentUserId, filterOpponentId]);
 
   // When embedded, always show expanded — skip minimized/hidden states
   if (!embedded && !isVisible) {
