@@ -55,7 +55,7 @@ interface PokemonDuelViewerProps {
   embedded?: boolean;
 }
 
-export const PokemonDuelViewer = ({ duelId, currentUserId }: PokemonDuelViewerProps) => {
+export const PokemonDuelViewer = ({ duelId, currentUserId, embedded = false }: PokemonDuelViewerProps) => {
   const { toast } = useToast();
   const { savedDecks, fetchDecks, isLoading: loadingDecks } = useSavedDecks('pokemon');
 

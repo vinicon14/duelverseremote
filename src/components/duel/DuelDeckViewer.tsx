@@ -171,6 +171,7 @@ export const DuelDeckViewer = ({
   duelId,
   currentUserId,
   opponentUsername,
+  embedded = false,
 }: DuelDeckViewerProps) => {
   const [selectedEffectCard, setSelectedEffectCard] = useState<GameCard | null>(null);
   const [effectModalOpen, setEffectModalOpen] = useState(false);

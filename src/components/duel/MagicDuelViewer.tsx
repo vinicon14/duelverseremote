@@ -37,7 +37,7 @@ interface MagicDuelViewerProps {
   embedded?: boolean;
 }
 
-export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId }: MagicDuelViewerProps) => {
+export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId, embedded = false }: MagicDuelViewerProps) => {
   const [fieldState, setFieldState] = useState<MagicFieldState>(createInitialFieldState);
   const [currentPhase, setCurrentPhase] = useState<MagicPhase>('untap');
   const [deckLoaded, setDeckLoaded] = useState(false);
