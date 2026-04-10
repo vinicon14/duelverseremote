@@ -411,6 +411,13 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         if (localVideoRef.current) {
           localVideoRef.current.srcObject = stream;
         }
+        // Track initial device IDs
+        const aTrack = stream.getAudioTracks()[0];
+        const vTrack = stream.getVideoTracks()[0];
+        if (aTrack) setSelectedAudioId(aTrack.getSettings().deviceId || "");
+        if (vTrack) setSelectedVideoId(vTrack.getSettings().deviceId || "");
+        // Re-enumerate to get labels
+        enumerateDevices();
         // If peer connections were already created before media was ready,
         // add tracks to all existing peers now
         peersRef.current.forEach((peerState, peerId) => {
