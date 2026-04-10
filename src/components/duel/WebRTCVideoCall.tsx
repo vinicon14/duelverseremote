@@ -356,9 +356,9 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   }
 
   const renderLocalPanel = () => (
-    <div className="relative w-full h-full rounded-lg overflow-hidden bg-black">
+    <div className="relative w-full h-full overflow-hidden bg-black">
       {localDeckOpen && localDeckContent ? (
-        <div className="w-full h-full overflow-auto bg-background">
+        <div className="w-full h-full overflow-auto bg-background touch-pan-y">
           {localDeckContent}
         </div>
       ) : (
@@ -373,13 +373,13 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
           />
           {isVideoOff && (
             <div className="absolute inset-0 bg-muted flex items-center justify-center">
-              <VideoOff className="w-10 h-10 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground mt-2 absolute bottom-4">Câmera desligada</p>
+              <VideoOff className="w-8 h-8 sm:w-10 sm:h-10 text-muted-foreground" />
+              <p className="text-xs sm:text-sm text-muted-foreground mt-2 absolute bottom-4">Câmera desligada</p>
             </div>
           )}
         </>
       )}
-      <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-black/60 text-xs text-white z-10">
+      <div className="absolute bottom-1 left-1 sm:bottom-2 sm:left-2 px-1.5 py-0.5 rounded bg-black/60 text-[10px] sm:text-xs text-white z-10">
         Você
       </div>
     </div>
