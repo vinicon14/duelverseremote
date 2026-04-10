@@ -1029,23 +1029,25 @@ const DuelRoom = () => {
                 maxPlayers={(duel as any)?.max_players || 2}
                 onLayoutChange={setVideoLayout}
                 spectatorLpOverlay={isSpectator && !isJudge ? {
-                  localLabel: duel.creator?.username || 'Player 1',
-                  localLp: player1LP,
+                  localLabel: '', // Not used for spectators (all panels are remote)
+                  localLp: 0,
                   remotePlayers: [
+                    { label: duel.creator?.username || 'Player 1', lp: player1LP },
                     { label: duel.opponent?.username || 'Player 2', lp: player2LP },
                     ...((duel as any)?.max_players >= 3 ? [{ label: 'Player 3', lp: player3LP }] : []),
                     ...((duel as any)?.max_players >= 4 ? [{ label: 'Player 4', lp: player4LP }] : []),
                   ]
                 } : undefined}
                 localDeckOpen={
-                  isSpectator && !isJudge
-                    ? creatorDeckOpen
-                    : myDeckIsOpen && isParticipant && !isJudge
+                  !isSpectator && myDeckIsOpen && isParticipant && !isJudge
                 }
                 remoteDeckOpen={
+                  !isSpectator && opponentDeckOpen && isParticipant && !isJudge
+                }
+                remoteDeckOpenSlots={
                   isSpectator && !isJudge
-                    ? opponentPlayerDeckOpen
-                    : opponentDeckOpen && isParticipant && !isJudge
+                    ? [creatorDeckOpen, opponentPlayerDeckOpen]
+                    : undefined
                 }
                 localDeckContent={
                   isSpectator && !isJudge && currentUser && id && duel && ((duel as any)?.max_players || 2) <= 2 ? (
