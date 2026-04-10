@@ -321,7 +321,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
                   autoPlay
                   playsInline
                   muted
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-contain"
                   style={{ transform: "scaleX(-1)" }}
                 />
                 {isVideoOff && (
@@ -349,7 +349,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
                   ref={remoteVideoRef}
                   autoPlay
                   playsInline
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-contain"
                 />
                 {!hasRemoteStream && (
                   <div className="absolute inset-0 flex items-center justify-center bg-black/80">
