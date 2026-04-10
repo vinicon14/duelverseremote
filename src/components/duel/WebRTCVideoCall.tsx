@@ -32,6 +32,22 @@ const ICE_SERVERS: RTCIceServer[] = [
   { urls: "stun:stun.l.google.com:19302" },
   { urls: "stun:stun1.l.google.com:19302" },
   { urls: "stun:stun2.l.google.com:19302" },
+  // Free TURN servers for NAT traversal between different networks
+  {
+    urls: "turn:openrelay.metered.ca:80",
+    username: "openrelayproject",
+    credential: "openrelayproject",
+  },
+  {
+    urls: "turn:openrelay.metered.ca:443",
+    username: "openrelayproject",
+    credential: "openrelayproject",
+  },
+  {
+    urls: "turn:openrelay.metered.ca:443?transport=tcp",
+    username: "openrelayproject",
+    credential: "openrelayproject",
+  },
 ];
 
 interface PeerState {
@@ -109,6 +125,8 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       localStream.getTracks().forEach((track) => {
         pc.addTrack(track, localStream);
       });
+    } else {
+      console.warn("[WebRTC] No local stream yet for peer:", remotePeerId);
     }
 
     pc.onicecandidate = (event) => {
@@ -123,6 +141,27 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
             targetId: remotePeerId,
           },
         });
+      }
+    };
+
+    // Monitor ICE connection and auto-recover
+    pc.oniceconnectionstatechange = () => {
+      console.log(`[WebRTC] ICE state ${remotePeerId}: ${pc.iceConnectionState}`);
+      if (pc.iceConnectionState === 'failed') {
+        console.warn("[WebRTC] ICE failed, restarting for:", remotePeerId);
+        pc.restartIce();
+        channelRef.current?.send({
+          type: "broadcast",
+          event: "webrtc-signal",
+          payload: { type: "ready", senderId: userId },
+        });
+      } else if (pc.iceConnectionState === 'disconnected') {
+        setTimeout(() => {
+          if (pc.iceConnectionState === 'disconnected') {
+            console.warn("[WebRTC] Still disconnected, restarting ICE");
+            pc.restartIce();
+          }
+        }, 5000);
       }
     };
 
@@ -293,6 +332,17 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         if (localVideoRef.current) {
           localVideoRef.current.srcObject = stream;
         }
+        // If peer connections were already created before media was ready,
+        // add tracks to all existing peers now
+        peersRef.current.forEach((peerState, peerId) => {
+          const senders = peerState.pc.getSenders();
+          if (senders.length === 0) {
+            console.log("[WebRTC] Adding late tracks to peer:", peerId);
+            stream.getTracks().forEach((track) => {
+              peerState.pc.addTrack(track, stream);
+            });
+          }
+        });
       } else {
         console.error("[WebRTC] Could not acquire any media stream");
       }
