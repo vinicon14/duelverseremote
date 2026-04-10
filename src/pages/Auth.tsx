@@ -45,8 +45,7 @@ const Auth = () => {
             const { data: tcgProfiles } = await supabase
               .from('tcg_profiles')
               .select('id, tcg_type')
-              .eq('user_id', session.user.id)
-              .limit(1);
+              .eq('user_id', session.user.id);
             
             if (!tcgProfiles || tcgProfiles.length === 0) {
               // Auto-create TCG profile from signup metadata
