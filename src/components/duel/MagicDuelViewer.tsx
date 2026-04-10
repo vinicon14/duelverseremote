@@ -377,7 +377,7 @@ export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId }: Magi
   return (
     <>
       <Sheet open={isOpen} onOpenChange={onClose}>
-        <SheetContent side="bottom" className="h-[85vh] sm:h-[80vh] p-2 sm:p-4">
+        <SheetContent side="bottom" className="h-[85vh] sm:h-[80vh] p-2 sm:p-4 z-[60]">
           <SheetHeader className="pb-2">
             <SheetTitle className="flex items-center justify-between text-sm flex-wrap gap-1">
               <span>Arena MTG</span>
