@@ -4,7 +4,7 @@
  * Tela pós-login para selecionar ou criar perfil por TCG.
  */
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useTcg, TcgType } from '@/contexts/TcgContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
