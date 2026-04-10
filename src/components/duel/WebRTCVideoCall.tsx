@@ -1,13 +1,30 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useImperativeHandle, forwardRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Mic, MicOff, Video, VideoOff, Loader2 } from "lucide-react";
+import { Mic, MicOff, Video, VideoOff, Loader2, LayoutGrid, PictureInPicture2 } from "lucide-react";
+
+export type VideoLayout = "side-by-side" | "pip";
+
+export interface WebRTCVideoCallHandle {
+  setVideoEnabled: (enabled: boolean) => void;
+  isVideoOff: boolean;
+}
 
 interface WebRTCVideoCallProps {
   duelId: string;
   userId: string;
   isCreator: boolean;
   className?: string;
+  layout?: VideoLayout;
+  onLayoutChange?: (layout: VideoLayout) => void;
+  /** When true, local video is replaced by a deck overlay (managed by parent) */
+  localDeckOpen?: boolean;
+  /** When true, remote video is replaced by opponent deck overlay (managed by parent) */
+  remoteDeckOpen?: boolean;
+  /** Render prop for local deck overlay content */
+  localDeckContent?: React.ReactNode;
+  /** Render prop for remote deck overlay content */
+  remoteDeckContent?: React.ReactNode;
 }
 
 const ICE_SERVERS: RTCIceServer[] = [
@@ -16,7 +33,18 @@ const ICE_SERVERS: RTCIceServer[] = [
   { urls: "stun:stun2.l.google.com:19302" },
 ];
 
-export const WebRTCVideoCall = ({ duelId, userId, isCreator, className }: WebRTCVideoCallProps) => {
+export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCallProps>(({
+  duelId,
+  userId,
+  isCreator,
+  className,
+  layout = "side-by-side",
+  onLayoutChange,
+  localDeckOpen = false,
+  remoteDeckOpen = false,
+  localDeckContent,
+  remoteDeckContent,
+}, ref) => {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
@@ -24,12 +52,26 @@ export const WebRTCVideoCall = ({ duelId, userId, isCreator, className }: WebRTC
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const makingOfferRef = useRef(false);
   const ignoreOfferRef = useRef(false);
-  const politeRef = useRef(isCreator); // creator is the "polite" peer
+  const politeRef = useRef(isCreator);
 
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [connectionState, setConnectionState] = useState<string>("new");
   const [hasRemoteStream, setHasRemoteStream] = useState(false);
+
+  // Expose video control to parent
+  useImperativeHandle(ref, () => ({
+    setVideoEnabled: (enabled: boolean) => {
+      const stream = localStreamRef.current;
+      if (!stream) return;
+      const videoTrack = stream.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.enabled = enabled;
+        setIsVideoOff(!enabled);
+      }
+    },
+    isVideoOff,
+  }), [isVideoOff]);
 
   const createPeerConnection = useCallback(() => {
     if (pcRef.current) {
@@ -126,7 +168,6 @@ export const WebRTCVideoCall = ({ duelId, userId, isCreator, className }: WebRTC
             }
           }
         } else if (payload.type === "ready") {
-          // Other peer joined — if we're creator, start the offer
           if (isCreator && pc.signalingState === "stable" && !makingOfferRef.current) {
             try {
               makingOfferRef.current = true;
@@ -159,7 +200,6 @@ export const WebRTCVideoCall = ({ duelId, userId, isCreator, className }: WebRTC
     let disposed = false;
 
     const init = async () => {
-      // Get local media
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: true,
@@ -174,13 +214,11 @@ export const WebRTCVideoCall = ({ duelId, userId, isCreator, className }: WebRTC
           localVideoRef.current.srcObject = stream;
         }
 
-        // Create peer connection and add tracks
         const pc = createPeerConnection();
         stream.getTracks().forEach((track) => {
           pc.addTrack(track, stream);
         });
 
-        // Set up signaling channel
         const channel = supabase.channel(`webrtc-signal-${duelId}`, {
           config: { broadcast: { self: false } },
         });
@@ -191,7 +229,6 @@ export const WebRTCVideoCall = ({ duelId, userId, isCreator, className }: WebRTC
           })
           .subscribe((status) => {
             if (status === "SUBSCRIBED") {
-              // Announce readiness
               channel.send({
                 type: "broadcast",
                 event: "webrtc-signal",
@@ -203,7 +240,6 @@ export const WebRTCVideoCall = ({ duelId, userId, isCreator, className }: WebRTC
         channelRef.current = channel;
       } catch (err) {
         console.error("[WebRTC] Failed to get media:", err);
-        // Still create PC for receiving
         createPeerConnection();
 
         const channel = supabase.channel(`webrtc-signal-${duelId}`, {
@@ -265,51 +301,140 @@ export const WebRTCVideoCall = ({ duelId, userId, isCreator, className }: WebRTC
   const isConnected = connectionState === "connected";
   const isFailed = connectionState === "failed" || connectionState === "disconnected";
 
+  const isSideBySide = layout === "side-by-side";
+
   return (
     <div className={`relative ${className || ""}`}>
-      {/* Remote video (full size) */}
-      <video
-        ref={remoteVideoRef}
-        autoPlay
-        playsInline
-        className="w-full h-full object-cover bg-black"
-      />
-
-      {/* Status overlay when no remote stream */}
-      {!hasRemoteStream && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/80">
-          <div className="text-center space-y-3">
-            {isConnecting && (
+      {isSideBySide ? (
+        /* ===== SIDE-BY-SIDE LAYOUT (Discord-style) ===== */
+        <div className="flex w-full h-full gap-1">
+          {/* Left panel — LOCAL (my camera / my deck) */}
+          <div className="relative flex-1 rounded-lg overflow-hidden bg-black">
+            {localDeckOpen && localDeckContent ? (
+              <div className="w-full h-full overflow-auto bg-background">
+                {localDeckContent}
+              </div>
+            ) : (
               <>
-                <Loader2 className="w-10 h-10 mx-auto text-primary animate-spin" />
-                <p className="text-sm text-muted-foreground">Aguardando oponente...</p>
+                <video
+                  ref={localVideoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full h-full object-cover"
+                  style={{ transform: "scaleX(-1)" }}
+                />
+                {isVideoOff && (
+                  <div className="absolute inset-0 bg-muted flex items-center justify-center">
+                    <VideoOff className="w-10 h-10 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground mt-2 absolute bottom-4">Câmera desligada</p>
+                  </div>
+                )}
               </>
             )}
-            {isFailed && (
-              <p className="text-sm text-destructive">Conexão perdida. Tente recarregar a página.</p>
+            <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-black/60 text-xs text-white z-10">
+              Você
+            </div>
+          </div>
+
+          {/* Right panel — REMOTE (opponent camera / opponent deck) */}
+          <div className="relative flex-1 rounded-lg overflow-hidden bg-black">
+            {remoteDeckOpen && remoteDeckContent ? (
+              <div className="w-full h-full overflow-auto bg-background">
+                {remoteDeckContent}
+              </div>
+            ) : (
+              <>
+                <video
+                  ref={remoteVideoRef}
+                  autoPlay
+                  playsInline
+                  className="w-full h-full object-cover"
+                />
+                {!hasRemoteStream && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+                    <div className="text-center space-y-3">
+                      {isConnecting && (
+                        <>
+                          <Loader2 className="w-8 h-8 mx-auto text-primary animate-spin" />
+                          <p className="text-xs text-muted-foreground">Aguardando oponente...</p>
+                        </>
+                      )}
+                      {isFailed && (
+                        <p className="text-xs text-destructive">Conexão perdida</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
+            <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-black/60 text-xs text-white z-10">
+              Oponente
+            </div>
           </div>
         </div>
+      ) : (
+        /* ===== PIP LAYOUT (original) ===== */
+        <>
+          {/* Remote video (full size) */}
+          {remoteDeckOpen && remoteDeckContent ? (
+            <div className="w-full h-full overflow-auto bg-background">
+              {remoteDeckContent}
+            </div>
+          ) : (
+            <>
+              <video
+                ref={remoteVideoRef}
+                autoPlay
+                playsInline
+                className="w-full h-full object-cover bg-black"
+              />
+              {!hasRemoteStream && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+                  <div className="text-center space-y-3">
+                    {isConnecting && (
+                      <>
+                        <Loader2 className="w-10 h-10 mx-auto text-primary animate-spin" />
+                        <p className="text-sm text-muted-foreground">Aguardando oponente...</p>
+                      </>
+                    )}
+                    {isFailed && (
+                      <p className="text-sm text-destructive">Conexão perdida. Tente recarregar a página.</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Local video (picture-in-picture) */}
+          <div className="absolute bottom-14 right-3 w-[120px] sm:w-[160px] aspect-[4/3] rounded-lg overflow-hidden border-2 border-primary/40 shadow-lg bg-black z-20">
+            {localDeckOpen && localDeckContent ? (
+              <div className="w-full h-full overflow-hidden bg-background flex items-center justify-center">
+                <span className="text-[10px] text-muted-foreground">Deck aberto</span>
+              </div>
+            ) : (
+              <>
+                <video
+                  ref={localVideoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full h-full object-cover"
+                  style={{ transform: "scaleX(-1)" }}
+                />
+                {isVideoOff && (
+                  <div className="absolute inset-0 bg-muted flex items-center justify-center">
+                    <VideoOff className="w-6 h-6 text-muted-foreground" />
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </>
       )}
 
-      {/* Local video (picture-in-picture) */}
-      <div className="absolute bottom-14 right-3 w-[120px] sm:w-[160px] aspect-[4/3] rounded-lg overflow-hidden border-2 border-primary/40 shadow-lg bg-black z-20">
-        <video
-          ref={localVideoRef}
-          autoPlay
-          playsInline
-          muted
-          className="w-full h-full object-cover mirror"
-          style={{ transform: "scaleX(-1)" }}
-        />
-        {isVideoOff && (
-          <div className="absolute inset-0 bg-muted flex items-center justify-center">
-            <VideoOff className="w-6 h-6 text-muted-foreground" />
-          </div>
-        )}
-      </div>
-
-      {/* Controls */}
+      {/* Controls bar */}
       <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2 z-20">
         <Button
           variant="outline"
@@ -327,6 +452,16 @@ export const WebRTCVideoCall = ({ duelId, userId, isCreator, className }: WebRTC
         >
           {isVideoOff ? <VideoOff className="w-4 h-4" /> : <Video className="w-4 h-4" />}
         </Button>
+        {/* Layout toggle */}
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => onLayoutChange?.(isSideBySide ? "pip" : "side-by-side")}
+          className="rounded-full w-10 h-10 backdrop-blur-sm bg-card/80"
+          title={isSideBySide ? "Modo PiP" : "Modo lado a lado"}
+        >
+          {isSideBySide ? <PictureInPicture2 className="w-4 h-4" /> : <LayoutGrid className="w-4 h-4" />}
+        </Button>
       </div>
 
       {/* Connection status indicator */}
@@ -337,4 +472,6 @@ export const WebRTCVideoCall = ({ duelId, userId, isCreator, className }: WebRTC
       )}
     </div>
   );
-};
+});
+
+WebRTCVideoCall.displayName = "WebRTCVideoCall";
