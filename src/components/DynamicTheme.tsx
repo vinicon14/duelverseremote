@@ -4,7 +4,7 @@
  * Aplica temas visuais diferentes baseado no TCG ativo.
  */
 import { useEffect } from 'react';
-import { useTcgSafe, TcgType } from '@/contexts/TcgContext';
+import { useTcg, TcgType } from '@/contexts/TcgContext';
 
 const TCG_THEMES: Record<TcgType, Record<string, string>> = {
   yugioh: {
@@ -40,8 +40,7 @@ const TCG_THEMES: Record<TcgType, Record<string, string>> = {
 };
 
 export const DynamicTheme = () => {
-  const ctx = useTcgSafe();
-  const activeTcg = ctx?.activeTcg ?? 'yugioh';
+  const { activeTcg } = useTcg();
 
   useEffect(() => {
     const root = document.documentElement;
@@ -53,7 +52,7 @@ export const DynamicTheme = () => {
     }
 
     return () => {
-      Object.keys(theme || {}).forEach((key: string) => {
+      Object.keys(theme || {}).forEach(key => {
         root.style.removeProperty(key);
       });
     };
