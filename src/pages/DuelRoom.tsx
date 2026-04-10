@@ -958,6 +958,8 @@ const DuelRoom = () => {
 
   // Broadcast deck-open state to opponent & listen for opponent's deck state
   const myDeckIsOpen = showDeckViewer || showMagicViewer || showPokemonViewer;
+  const myDeckIsOpenRef = useRef(myDeckIsOpen);
+  myDeckIsOpenRef.current = myDeckIsOpen;
   
   useEffect(() => {
     if (!id || !currentUser) return;
