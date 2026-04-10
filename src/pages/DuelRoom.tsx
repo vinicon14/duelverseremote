@@ -948,6 +948,8 @@ const DuelRoom = () => {
     channel.on('broadcast', { event: 'deck-toggle' }, ({ payload }) => {
       if (payload.userId !== currentUser.id) {
         setOpponentDeckOpen(!!payload.isOpen);
+        // Also track per-opponent state for 4-player
+        setOpponentDeckOpenMap(prev => ({ ...prev, [payload.userId]: !!payload.isOpen }));
       }
     }).subscribe();
 
