@@ -980,8 +980,31 @@ const DuelRoom = () => {
           setOpponentPlayerDeckOpen(!!payload.isOpen);
         }
       }
-    }).subscribe(() => {
+    })
+    // Players respond to spectator requests with their current deck state
+    .on('broadcast', { event: 'deck-state-request' }, () => {
+      // Only players respond (not spectators)
+      if (currentUser.id === duel?.creator_id || currentUser.id === duel?.opponent_id) {
+        channel.send({
+          type: 'broadcast',
+          event: 'deck-toggle',
+          payload: { userId: currentUser.id, isOpen: myDeckIsOpen },
+        });
+      }
+    })
+    .subscribe(() => {
       deckToggleChannelRef.current = channel;
+      // Spectator: request current deck states from players already in the room
+      const isSpec = currentUser.id !== duel?.creator_id && currentUser.id !== duel?.opponent_id;
+      if (isSpec) {
+        setTimeout(() => {
+          channel.send({
+            type: 'broadcast',
+            event: 'deck-state-request',
+            payload: {},
+          });
+        }, 500);
+      }
     });
 
     return () => { 
@@ -1234,6 +1257,7 @@ const DuelRoom = () => {
               {/* Spectator: only Gravar and Sair */}
               {isSpectator && !isJudge ? (
                 <>
+                  <HideElementsButton onToggle={() => setHideControls(!hideControls)} isHidden={hideControls} />
                   {!(window as any).electronAPI?.isElectron && <RecordMatchButton duelId={id!} />}
                   <ElectronRecordButton duelId={id!} />
                   <Button
