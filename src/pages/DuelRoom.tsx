@@ -19,6 +19,7 @@ import { RecordMatchButton } from "@/components/RecordMatchButton";
 import { ElectronRecordButton } from "@/components/ElectronRecordButton";
 import { YouTubeLiveButton } from "@/components/YouTubeLiveButton";
 import { HideElementsButton } from "@/components/HideElementsButton";
+import { NoMonetagAds } from "@/components/NoMonetagAds";
 import { useBanCheck } from "@/hooks/useBanCheck";
 import { DuelDeckViewer } from "@/components/duel/DuelDeckViewer";
 import { FloatingOpponentViewer } from "@/components/duel/FloatingOpponentViewer";
@@ -1010,6 +1011,7 @@ const DuelRoom = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <NoMonetagAds />
       {!hideControls && <Navbar />}
       
       <main className="px-2 sm:px-4 pt-16 sm:pt-20 pb-2 sm:pb-4">
