@@ -36,6 +36,8 @@ interface WebRTCVideoCallProps {
   };
   /** When true, user is a spectator: receive-only, no local media, no controls */
   isSpectator?: boolean;
+  /** Creator user ID - used by spectators to correctly order peers (creator on left) */
+  creatorId?: string;
 }
 
 const ICE_SERVERS: RTCIceServer[] = [
@@ -83,6 +85,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   remoteDeckOpenSlots,
   spectatorLpOverlay,
   isSpectator = false,
+  creatorId,
 }, ref) => {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
@@ -576,12 +579,20 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   const isSideBySide = layout === "side-by-side";
 
   // Build remote slots: fill with connected peers, pad with waiting slots
-  // For spectators: first peer goes to local panel, remaining peers go to remote slots
+  // For spectators: sort peers so creator comes first (local panel = left = creator)
+  const sortedPeerIds = isSpectator && creatorId
+    ? [...remotePeerIds].sort((a, b) => {
+        if (a === creatorId) return -1;
+        if (b === creatorId) return 1;
+        return 0;
+      })
+    : remotePeerIds;
+
   const remoteSlots: (string | null)[] = [];
   if (isSpectator) {
     // Skip first peer (used in local panel), use rest for remote slots
     for (let i = 0; i < totalSlots - 1; i++) {
-      remoteSlots.push(remotePeerIds[i + 1] || null);
+      remoteSlots.push(sortedPeerIds[i + 1] || null);
     }
   } else {
     for (let i = 0; i < totalSlots - 1; i++) {
@@ -601,7 +612,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     if (isSpectator) {
       // Spectator's "local panel" actually shows player 1 (creator) stream
       // We use the first remote peer as player 1
-      const player1PeerId = remotePeerIds[0] || null;
+      const player1PeerId = sortedPeerIds[0] || null;
       return (
         <div className="relative w-full h-full overflow-hidden bg-black">
           {player1PeerId ? (
