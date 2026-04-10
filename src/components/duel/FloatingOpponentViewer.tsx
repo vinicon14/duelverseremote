@@ -189,8 +189,10 @@ export const FloatingOpponentViewer = ({
     channel
       .on('broadcast', { event: 'deck-state' }, ({ payload }) => {
         if (payload.userId && payload.userId !== currentUserId) {
+          const opId = payload.userId as string;
+          let newState: OpponentState;
           if (payload.tcgType === 'magic') {
-            setOpponentState({
+            newState = {
               hand: payload.hand || 0,
               field: [],
               graveyard: payload.graveyard || [],
@@ -206,9 +208,9 @@ export const FloatingOpponentViewer = ({
               phase: payload.phase,
               playmatUrl: payload.playmatUrl || null,
               sleeveUrl: payload.sleeveUrl || null,
-            });
+            };
           } else if (payload.tcgType === 'pokemon') {
-            setOpponentState({
+            newState = {
               hand: payload.handCount || 0,
               field: [],
               graveyard: [],
@@ -252,9 +254,9 @@ export const FloatingOpponentViewer = ({
               pkmDiscard: (payload.discardCards || []).map((c: any) => ({ id: c.id || 0, name: c.name, image: c.image })),
               playmatUrl: payload.playmatUrl || null,
               sleeveUrl: payload.sleeveUrl || null,
-            });
+            };
           } else {
-            setOpponentState({
+            newState = {
               hand: payload.hand || 0,
               field: payload.field || [],
               monsterZones: payload.monsterZones || undefined,
@@ -267,7 +269,15 @@ export const FloatingOpponentViewer = ({
               extraCount: payload.extraCount || 0,
               playmatUrl: payload.playmatUrl || null,
               sleeveUrl: payload.sleeveUrl || null,
-            });
+            };
+          }
+          setOpponentStates(prev => {
+            const next = new Map(prev);
+            next.set(opId, newState);
+            return next;
+          });
+          // Auto-select first active opponent
+          setActiveOpponentId(prev => prev || opId);
           }
         }
       })
