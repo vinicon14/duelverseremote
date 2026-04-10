@@ -147,7 +147,8 @@ const getCardBack = (tcgType?: string, sleeveUrl?: string | null) => {
 export const FloatingOpponentViewer = ({ 
   duelId, 
   currentUserId, 
-  opponentUsername = 'Oponente' 
+  opponentUsername = 'Oponente',
+  embedded = false 
 }: FloatingOpponentViewerProps) => {
   const [opponentState, setOpponentState] = useState<OpponentState | null>(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
