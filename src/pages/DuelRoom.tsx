@@ -1248,57 +1248,15 @@ const DuelRoom = () => {
         />
       )}
 
-      {/* Deck Viewer Component - YGO */}
-      {isParticipant && !isJudge && duel?.tcg_type === 'yugioh' && (
-        <>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".ydk"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) {
-                importDeckFromYDK(file);
-              }
-              e.target.value = '';
-            }}
-          />
-          <DuelDeckViewer
-            isOpen={showDeckViewer}
-            onClose={() => setShowDeckViewer(false)}
-            deck={mainDeck}
-            extraDeck={extraDeck}
-            sideDeck={sideDeck}
-            onLoadDeck={() => fileInputRef.current?.click()}
-            duelId={id}
-            currentUserId={currentUser?.id}
-            opponentUsername={
-              currentUser?.id === duel?.creator_id 
-                ? duel?.opponent?.username 
-                : duel?.creator?.username
-            }
-          />
-        </>
+      {/* Chat Component */}
+      {!hideControls && currentUser && (
+        <DuelChat duelId={id!} currentUserId={currentUser.id} />
       )}
+    </div>
+  );
+};
 
-      {/* Pokemon Arena Viewer */}
-      {isParticipant && !isJudge && duel?.tcg_type === 'pokemon' && showPokemonViewer && currentUser && id && (
-        <PokemonDuelViewer
-          duelId={id}
-          currentUserId={currentUser.id}
-        />
-      )}
-
-      {/* Magic Arena Viewer */}
-      {isParticipant && !isJudge && duel?.tcg_type === 'magic' && (
-        <MagicDuelViewer
-          isOpen={showMagicViewer}
-          onClose={() => setShowMagicViewer(false)}
-          duelId={id}
-          currentUserId={currentUser?.id}
-        />
-      )}
+export default DuelRoom;
 
 
       {/* Chat Component */}
