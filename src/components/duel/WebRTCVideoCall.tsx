@@ -93,6 +93,83 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   const MIN_ZOOM = 1;
   const ZOOM_STEP = 0.5;
 
+  // Device selection
+  const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
+  const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedAudioId, setSelectedAudioId] = useState<string>("");
+  const [selectedVideoId, setSelectedVideoId] = useState<string>("");
+  const [showDeviceMenu, setShowDeviceMenu] = useState(false);
+
+  // Enumerate available devices
+  const enumerateDevices = useCallback(async () => {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      setAudioDevices(devices.filter(d => d.kind === 'audioinput'));
+      setVideoDevices(devices.filter(d => d.kind === 'videoinput'));
+    } catch (err) {
+      console.warn("[WebRTC] Failed to enumerate devices:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    enumerateDevices();
+    // Re-enumerate when devices change (plug/unplug)
+    navigator.mediaDevices?.addEventListener?.('devicechange', enumerateDevices);
+    return () => {
+      navigator.mediaDevices?.removeEventListener?.('devicechange', enumerateDevices);
+    };
+  }, [enumerateDevices]);
+
+  // Switch device: acquire new stream with chosen device, replace tracks in all peers
+  const switchDevice = useCallback(async (audioId?: string, videoId?: string) => {
+    const constraints: MediaStreamConstraints = {
+      audio: audioId ? { deviceId: { exact: audioId } } : true,
+      video: videoId ? { deviceId: { exact: videoId }, width: { ideal: 640 }, height: { ideal: 480 } } : { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+    };
+
+    try {
+      const newStream = await navigator.mediaDevices.getUserMedia(constraints);
+
+      // Stop old tracks
+      localStreamRef.current?.getTracks().forEach(t => t.stop());
+      localStreamRef.current = newStream;
+
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = newStream;
+      }
+
+      // Replace tracks in all peer connections
+      peersRef.current.forEach((peerState) => {
+        const senders = peerState.pc.getSenders();
+        newStream.getTracks().forEach(newTrack => {
+          const sender = senders.find(s => s.track?.kind === newTrack.kind);
+          if (sender) {
+            sender.replaceTrack(newTrack);
+          } else {
+            peerState.pc.addTrack(newTrack, newStream);
+          }
+        });
+      });
+
+      // Re-enumerate to get labels (available after permission grant)
+      await enumerateDevices();
+
+      // Update selected IDs
+      const newAudioTrack = newStream.getAudioTracks()[0];
+      const newVideoTrack = newStream.getVideoTracks()[0];
+      if (newAudioTrack) setSelectedAudioId(newAudioTrack.getSettings().deviceId || "");
+      if (newVideoTrack) setSelectedVideoId(newVideoTrack.getSettings().deviceId || "");
+
+      // Restore mute/video-off state
+      if (isMuted && newAudioTrack) newAudioTrack.enabled = false;
+      if (isVideoOff && newVideoTrack) newVideoTrack.enabled = false;
+
+      console.log("[WebRTC] Device switched successfully");
+    } catch (err) {
+      console.error("[WebRTC] Failed to switch device:", err);
+    }
+  }, [isMuted, isVideoOff, enumerateDevices]);
+
   useImperativeHandle(ref, () => ({
     setVideoEnabled: (enabled: boolean) => {
       const stream = localStreamRef.current;
