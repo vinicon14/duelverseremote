@@ -62,6 +62,10 @@ export default function MagicDeckBuilder() {
   const [selectedCard, setSelectedCard] = useState<ScryfallCard | null>(null);
   const [saveOpen, setSaveOpen] = useState(false);
   const [loadOpen, setLoadOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importText, setImportText] = useState('');
+  const [importing, setImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState('');
   const [deckName, setDeckName] = useState('');
   const [saving, setSaving] = useState(false);
   const [savedDecks, setSavedDecks] = useState<any[]>([]);
