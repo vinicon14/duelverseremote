@@ -203,22 +203,21 @@ export const NoMonetagAds = () => {
               }
             }
 
-            // Check popup/overlay elements
-            const isPopupOrOverlay = 
-              (style.includes('fixed') && style.includes('z-index') && (style.includes('9999') || style.includes('2147483647'))) ||
+            // Check Monetag-specific elements only (not generic overlay/popup)
+            const rootEl = document.getElementById('root');
+            if (rootEl?.contains(el)) return; // Never touch React tree
+            const elClassName = typeof className === 'string' ? className : '';
+            const isMonetagOverlay = 
               id.includes('quge5') || 
               id.includes('monetag') ||
-              id.includes('popup') ||
-              id.includes('popunder') ||
-              className.includes('quge5') || 
-              className.includes('monetag') ||
-              className.includes('popup') ||
-              className.includes('popunder') ||
-              className.includes('overlay');
+              elClassName.includes('quge5') || 
+              elClassName.includes('monetag');
             
-            if (isPopupOrOverlay) {
+            const isSuspiciousHighZIndex = 
+              (style.includes('fixed') && style.includes('z-index') && (style.includes('2147483647') || style.includes('999999')));
+            
+            if (isMonetagOverlay || isSuspiciousHighZIndex) {
               el.remove();
-              console.log('Bloqueado elemento popup/overlay injetado:', id || className);
             }
           }
         });
