@@ -91,6 +91,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(new Map());
   const [remotePeerIds, setRemotePeerIds] = useState<string[]>([]);
+  const [remoteVideoActive, setRemoteVideoActive] = useState<Map<string, boolean>>(new Map());
   const [pipSwapped, setPipSwapped] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
@@ -204,6 +205,11 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       return next;
     });
     setRemotePeerIds(prev => prev.filter(id => id !== peerId));
+    setRemoteVideoActive(prev => {
+      const next = new Map(prev);
+      next.delete(peerId);
+      return next;
+    });
     console.log("[WebRTC] Peer removed:", peerId);
   }, []);
 
@@ -278,6 +284,27 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
           if (!prev.includes(remotePeerId)) return [...prev, remotePeerId];
           return prev;
         });
+
+        // Track remote video track enabled state
+        const videoTrack = event.streams[0].getVideoTracks()[0];
+        if (videoTrack) {
+          setRemoteVideoActive(prev => {
+            const next = new Map(prev);
+            next.set(remotePeerId, videoTrack.enabled && !videoTrack.muted);
+            return next;
+          });
+          // Listen for track mute/unmute and ended events
+          const updateVideoState = () => {
+            setRemoteVideoActive(prev => {
+              const next = new Map(prev);
+              next.set(remotePeerId, videoTrack.enabled && !videoTrack.muted && videoTrack.readyState === 'live');
+              return next;
+            });
+          };
+          videoTrack.addEventListener('mute', updateVideoState);
+          videoTrack.addEventListener('unmute', updateVideoState);
+          videoTrack.addEventListener('ended', updateVideoState);
+        }
       }
     };
 
@@ -502,6 +529,26 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     });
   }, [remoteStreams, remotePeerIds]);
 
+  // Poll remote video track state (track.enabled changes don't fire events reliably)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setRemoteVideoActive(prev => {
+        let changed = false;
+        const next = new Map(prev);
+        remoteStreams.forEach((stream, peerId) => {
+          const vt = stream.getVideoTracks()[0];
+          const active = vt ? (vt.enabled && !vt.muted && vt.readyState === 'live') : false;
+          if (prev.get(peerId) !== active) {
+            next.set(peerId, active);
+            changed = true;
+          }
+        });
+        return changed ? next : prev;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [remoteStreams]);
+
   const toggleMute = () => {
     const stream = localStreamRef.current;
     if (!stream) return;
@@ -627,14 +674,23 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   );
 
   const renderRemotePanel = (peerId: string | null, index: number) => {
-    // Always show opponent deck overlay if available (no need to wait for remoteDeckOpen)
     const hasPerSlotContent = remoteDeckContents?.[index];
     const hasSingleContent = remoteDeckContent && index === 0 && !remoteDeckContents;
-    const showOverlay = peerId && (hasPerSlotContent || hasSingleContent);
+    const hasDeckContent = peerId && (hasPerSlotContent || hasSingleContent);
+    // Camera takes priority: only show deck overlay when remote camera is OFF
+    const peerHasActiveVideo = peerId ? (remoteVideoActive.get(peerId) ?? false) : false;
+    const showOverlay = hasDeckContent && !peerHasActiveVideo;
 
     return (
       <div key={peerId || `waiting-${index}`} className="relative w-full h-full overflow-hidden bg-black">
-        {showOverlay ? (
+        {peerId && peerHasActiveVideo ? (
+          <video
+            ref={(el) => setRemoteVideoRef(peerId, el)}
+            autoPlay
+            playsInline
+            className="w-full h-full object-contain"
+          />
+        ) : showOverlay ? (
           <div className="w-full h-full overflow-auto bg-background touch-pan-y">
             {remoteDeckContents?.[index] || remoteDeckContent}
           </div>
