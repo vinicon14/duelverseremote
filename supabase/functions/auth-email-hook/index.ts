@@ -41,6 +41,7 @@ const SITE_NAME = "DuelVerse"
 const SENDER_DOMAIN = "notify.duelverse.site"
 const ROOT_DOMAIN = "duelverse.site"
 const FROM_DOMAIN = "duelverse.site"
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || 'https://xxttwzewtqxvpgefggah.supabase.co'
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -78,11 +79,10 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Build confirmation URL
+    // Build confirmation URL using Supabase auth verify endpoint
     let confirmationUrl = redirectTo
     if (tokenHash) {
-      const baseUrl = `https://${ROOT_DOMAIN}`
-      confirmationUrl = `${baseUrl}/auth/confirm?token_hash=${tokenHash}&type=${emailType}`
+      confirmationUrl = `${SUPABASE_URL}/auth/v1/verify?token=${tokenHash}&type=${emailType}&redirect_to=https://${ROOT_DOMAIN}`
     }
     if (payload.data?.url) {
       confirmationUrl = payload.data.url
