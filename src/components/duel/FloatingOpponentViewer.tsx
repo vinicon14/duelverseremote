@@ -471,10 +471,16 @@ export const FloatingOpponentViewer = ({
         )}
         {...(embedded ? {} : dragHandlers)}
       >
-        <div className="flex items-center gap-2">
-          {!embedded && <Move className="h-3 w-3 text-muted-foreground" />}
-          <Eye className="h-4 w-4 text-primary" />
-          <span className="text-sm font-semibold">Deck de {opponentUsername}</span>
+        <div className="flex items-center gap-2 min-w-0">
+          {!embedded && <Move className="h-3 w-3 text-muted-foreground flex-shrink-0" />}
+          <Eye className="h-4 w-4 text-primary flex-shrink-0" />
+          <span className="text-sm font-semibold truncate">
+            Deck de {isMultiOpponent 
+              ? (opponentUsernames?.[activeOpponentId || ''] || `Oponente`) 
+              : (filterOpponentId 
+                ? (opponentUsernames?.[filterOpponentId] || opponentUsername)
+                : opponentUsername)}
+          </span>
         </div>
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIsMinimized(true)}>
@@ -485,6 +491,23 @@ export const FloatingOpponentViewer = ({
           </Button>
         </div>
       </div>
+
+      {/* Multi-opponent tabs */}
+      {isMultiOpponent && !isMinimized && (
+        <div className="flex gap-1 px-2 py-1 border-b border-border bg-muted/20 overflow-x-auto">
+          {opponentIds.map((opId, idx) => (
+            <Button
+              key={opId}
+              variant={activeOpponentId === opId ? 'default' : 'ghost'}
+              size="sm"
+              className="h-6 px-2 text-[10px] flex-shrink-0"
+              onClick={() => setActiveOpponentId(opId)}
+            >
+              {opponentUsernames?.[opId] || `Oponente ${idx + 1}`}
+            </Button>
+          ))}
+        </div>
+      )}
 
       {/* Content */}
       <div className={cn("p-2", embedded && "overflow-y-auto max-h-[calc(100%-40px)]")}>
