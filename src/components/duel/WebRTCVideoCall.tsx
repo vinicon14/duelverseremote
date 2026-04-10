@@ -627,32 +627,41 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   );
 
   const renderRemotePanel = (peerId: string | null, index: number) => {
-    // Always show opponent deck overlay if available (no need to wait for remoteDeckOpen)
+    // Determine if deck overlay should be shown for this slot
+    const perSlotOpen = remoteDeckOpenSlots?.[index];
+    const singleSlotOpen = remoteDeckOpen && index === 0 && !remoteDeckOpenSlots;
+    const isDeckOpenForSlot = perSlotOpen || singleSlotOpen;
+
     const hasPerSlotContent = remoteDeckContents?.[index];
     const hasSingleContent = remoteDeckContent && index === 0 && !remoteDeckContents;
-    const showOverlay = peerId && (hasPerSlotContent || hasSingleContent);
+    const deckContentForSlot = hasPerSlotContent || (hasSingleContent ? remoteDeckContent : null);
+
+    // Only show deck overlay when deck is explicitly open AND content exists
+    const showDeckOverlay = isDeckOpenForSlot && deckContentForSlot;
 
     return (
       <div key={peerId || `waiting-${index}`} className="relative w-full h-full overflow-hidden bg-black">
-        {showOverlay ? (
-          <div className="w-full h-full overflow-auto bg-background touch-pan-y">
-            {remoteDeckContents?.[index] || remoteDeckContent}
-          </div>
-        ) : peerId ? (
+        {/* Always keep video mounted so stream persists */}
+        {peerId && (
           <video
             ref={(el) => setRemoteVideoRef(peerId, el)}
             autoPlay
             playsInline
-            className="w-full h-full object-contain"
+            className={`w-full h-full object-contain ${showDeckOverlay ? 'hidden' : ''}`}
           />
-        ) : (
+        )}
+        {showDeckOverlay ? (
+          <div className="w-full h-full overflow-auto bg-background touch-pan-y">
+            {deckContentForSlot}
+          </div>
+        ) : !peerId ? (
           <div className="absolute inset-0 flex items-center justify-center bg-black/80">
             <div className="text-center space-y-2">
               <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 mx-auto text-primary animate-spin" />
               <p className="text-[10px] sm:text-xs text-muted-foreground">Aguardando jogador...</p>
             </div>
           </div>
-        )}
+        ) : null}
         {spectatorLpOverlay?.remotePlayers?.[index] && (
           <div className="absolute top-1 left-1 sm:top-2 sm:left-2 px-2 py-1 rounded bg-black/70 backdrop-blur-sm text-white z-20 flex items-center gap-1.5">
             <span className="text-[10px] sm:text-xs font-medium truncate max-w-[80px]">{spectatorLpOverlay.remotePlayers[index].label}</span>
