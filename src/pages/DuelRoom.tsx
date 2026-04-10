@@ -45,6 +45,7 @@ const DuelRoom = () => {
   const [opponentDeckOpen, setOpponentDeckOpen] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
   const [videoReady, setVideoReady] = useState(false);
+  const [videoLayout, setVideoLayout] = useState<VideoLayout>("side-by-side");
   const [isTimerPaused, setIsTimerPaused] = useState(false);
   const [judgeCalled, setJudgeCalled] = useState(false);
   const [elementsHidden, setElementsHidden] = useState(false);
@@ -54,6 +55,7 @@ const DuelRoom = () => {
   const timeEndedShownRef = useRef(false);
   const timeWarningShownRef = useRef(false);
   const callDurationRef = useRef<number>(0);
+  const webrtcRef = useRef<WebRTCVideoCallHandle>(null);
   
   const isJudge = searchParams.get('role') === 'judge';
   const [hideControls, setHideControls] = useState(true);
