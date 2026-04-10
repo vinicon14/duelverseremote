@@ -1235,18 +1235,6 @@ const DuelRoom = () => {
         />
       )}
 
-      {/* Floating Opponent Viewer - Always visible for participants */}
-      {isParticipant && !isJudge && currentUser && id && duel && (
-        <FloatingOpponentViewer
-          duelId={id}
-          currentUserId={currentUser.id}
-          opponentUsername={
-            currentUser.id === duel.creator_id 
-              ? duel.opponent?.username 
-              : duel.creator?.username
-          }
-        />
-      )}
 
       {/* Chat Component */}
       {!hideControls && currentUser && (
