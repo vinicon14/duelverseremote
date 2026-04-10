@@ -300,7 +300,9 @@ export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId }: Magi
   useEffect(() => {
     if (!duelId || !currentUserId) return;
 
-    const channel = supabase.channel(`deck-sync-magic-${duelId}-${currentUserId}`);
+    const channel = supabase.channel(`deck-sync-${duelId}`, {
+      config: { broadcast: { self: false } },
+    });
     channel.subscribe((status) => {
       if (status === 'SUBSCRIBED') {
         setBroadcastChannel(channel);
