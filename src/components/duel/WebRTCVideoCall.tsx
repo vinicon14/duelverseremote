@@ -405,6 +405,9 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     let disposed = false;
 
     const acquireMedia = async (): Promise<MediaStream | null> => {
+      // Spectators don't need local media - receive only
+      if (isSpectator) return null;
+
       // Try with facingMode for mobile compatibility first
       const constraints = [
         { video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: true },
@@ -454,7 +457,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
             });
           }
         });
-      } else {
+      } else if (!isSpectator) {
         console.error("[WebRTC] Could not acquire any media stream");
       }
 
@@ -493,7 +496,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         channelRef.current = null;
       }
     };
-  }, [duelId, userId, handleSignal]);
+  }, [duelId, userId, handleSignal, isSpectator]);
 
   // Attach remote streams to video elements
   useEffect(() => {
