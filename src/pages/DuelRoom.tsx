@@ -573,8 +573,8 @@ const DuelRoom = () => {
         }
 
         const resolvedRoomUrl = roomData?.url 
-          ? `${roomData.url}${roomData.url.includes('?') ? '&' : '?'}layout=grid` 
-          : (roomData?.name ? `https://duelverse.daily.co/${roomData.name}?layout=grid` : fallbackRoomUrl);
+          ? `${roomData.url}${roomData.url.includes('?') ? '&' : '?'}activeSpeakerMode=false` 
+          : (roomData?.name ? `https://duelverse.daily.co/${roomData.name}?activeSpeakerMode=false` : fallbackRoomUrl);
 
         if (resolvedRoomUrl) {
           setRoomUrl(resolvedRoomUrl);
