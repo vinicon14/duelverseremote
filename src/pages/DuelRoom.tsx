@@ -939,7 +939,6 @@ const DuelRoom = () => {
 
   // Broadcast deck-open state to opponent & listen for opponent's deck state
   const myDeckIsOpen = showDeckViewer || showMagicViewer || showPokemonViewer;
-  const deckToggleChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   
   useEffect(() => {
     if (!id || !currentUser) return;
