@@ -964,6 +964,35 @@ const DuelRoom = () => {
   // Hook para limpeza automática de salas vazias
   useDuelCleanup(id);
 
+  // Broadcast deck-open state to opponent & listen for opponent's deck state
+  const myDeckIsOpen = showDeckViewer || showMagicViewer || showPokemonViewer;
+  
+  useEffect(() => {
+    if (!id || !currentUser) return;
+
+    const channel = supabase.channel(`deck-open-${id}`);
+    
+    // Listen for opponent opening/closing their deck
+    channel.on('broadcast', { event: 'deck-toggle' }, ({ payload }) => {
+      if (payload.userId !== currentUser.id) {
+        setOpponentDeckOpen(!!payload.isOpen);
+      }
+    }).subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [id, currentUser]);
+
+  // Broadcast my deck state whenever it changes
+  useEffect(() => {
+    if (!id || !currentUser) return;
+    const channel = supabase.channel(`deck-open-${id}`);
+    channel.send({
+      type: 'broadcast',
+      event: 'deck-toggle',
+      payload: { userId: currentUser.id, isOpen: myDeckIsOpen },
+    });
+  }, [id, currentUser, myDeckIsOpen]);
+
   return (
     <div className="min-h-screen bg-background">
       {!hideControls && <Navbar />}
