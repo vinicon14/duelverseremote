@@ -60,6 +60,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(new Map());
   const [remotePeerIds, setRemotePeerIds] = useState<string[]>([]);
+  const [pipSwapped, setPipSwapped] = useState(false);
 
   useImperativeHandle(ref, () => ({
     setVideoEnabled: (enabled: boolean) => {
@@ -453,34 +454,55 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
           </div>
         </div>
       ) : (
-        /* ===== PIP LAYOUT (2 players) ===== */
+        /* ===== PIP LAYOUT (2 players) — click small to swap ===== */
         <>
-          {/* Remote video (full size) */}
+          {/* Big panel */}
           <div className="w-full h-full">
-            {renderRemotePanel(remoteSlots[0], 0)}
+            {pipSwapped ? renderLocalPanel() : renderRemotePanel(remoteSlots[0], 0)}
           </div>
-          {/* Local video (picture-in-picture) */}
-          <div className="absolute bottom-14 right-3 w-[120px] sm:w-[160px] aspect-[4/3] rounded-lg overflow-hidden border-2 border-primary/40 shadow-lg bg-black z-20">
-            {localDeckOpen && localDeckContent ? (
-              <div className="w-full h-full overflow-hidden bg-background flex items-center justify-center">
-                <span className="text-[10px] text-muted-foreground">Deck aberto</span>
-              </div>
-            ) : (
-              <>
+          {/* Small PiP panel — click to swap */}
+          <div
+            className="absolute bottom-14 right-3 w-[120px] sm:w-[160px] aspect-[4/3] rounded-lg overflow-hidden border-2 border-primary/40 shadow-lg bg-black z-20 cursor-pointer"
+            onClick={() => setPipSwapped(prev => !prev)}
+            title="Clique para alternar"
+          >
+            {pipSwapped ? (
+              /* Show remote in small */
+              remoteSlots[0] ? (
                 <video
-                  ref={localVideoCallbackRef}
+                  ref={(el) => setRemoteVideoRef(remoteSlots[0]!, el)}
                   autoPlay
                   playsInline
-                  muted
                   className="w-full h-full object-cover"
-                  style={{ transform: "scaleX(-1)" }}
                 />
-                {isVideoOff && (
-                  <div className="absolute inset-0 bg-muted flex items-center justify-center">
-                    <VideoOff className="w-6 h-6 text-muted-foreground" />
-                  </div>
-                )}
-              </>
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-black/80">
+                  <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                </div>
+              )
+            ) : (
+              /* Show local in small */
+              localDeckOpen && localDeckContent ? (
+                <div className="w-full h-full overflow-hidden bg-background flex items-center justify-center">
+                  <span className="text-[10px] text-muted-foreground">Deck aberto</span>
+                </div>
+              ) : (
+                <>
+                  <video
+                    ref={localVideoCallbackRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-cover"
+                    style={{ transform: "scaleX(-1)" }}
+                  />
+                  {isVideoOff && (
+                    <div className="absolute inset-0 bg-muted flex items-center justify-center">
+                      <VideoOff className="w-6 h-6 text-muted-foreground" />
+                    </div>
+                  )}
+                </>
+              )
             )}
           </div>
         </>
