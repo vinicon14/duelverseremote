@@ -679,29 +679,32 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     const hasDeckContent = peerId && (hasPerSlotContent || hasSingleContent);
     // Camera takes priority: only show deck overlay when remote camera is OFF
     const peerHasActiveVideo = peerId ? (remoteVideoActive.get(peerId) ?? false) : false;
-    const showOverlay = hasDeckContent && !peerHasActiveVideo;
 
     return (
       <div key={peerId || `waiting-${index}`} className="relative w-full h-full overflow-hidden bg-black">
-        {peerId && peerHasActiveVideo ? (
+        {/* Always render video element so it stays attached */}
+        {peerId && (
           <video
             ref={(el) => setRemoteVideoRef(peerId, el)}
             autoPlay
             playsInline
-            className="w-full h-full object-contain"
+            className={cn(
+              "w-full h-full object-contain absolute inset-0",
+              (!peerHasActiveVideo && hasDeckContent) && "hidden"
+            )}
           />
-        ) : showOverlay ? (
-          <div className="w-full h-full overflow-auto bg-background touch-pan-y">
+        )}
+        {/* Always keep deck overlay mounted (for subscription), but hide when camera is active */}
+        {hasDeckContent && (
+          <div className={cn(
+            "w-full h-full overflow-auto bg-background touch-pan-y absolute inset-0",
+            peerHasActiveVideo && "hidden"
+          )}>
             {remoteDeckContents?.[index] || remoteDeckContent}
           </div>
-        ) : peerId ? (
-          <video
-            ref={(el) => setRemoteVideoRef(peerId, el)}
-            autoPlay
-            playsInline
-            className="w-full h-full object-contain"
-          />
-        ) : (
+        )}
+        {/* Waiting state when no peer connected */}
+        {!peerId && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/80">
             <div className="text-center space-y-2">
               <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 mx-auto text-primary animate-spin" />
