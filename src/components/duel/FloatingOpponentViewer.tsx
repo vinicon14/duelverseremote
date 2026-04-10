@@ -517,7 +517,7 @@ export const FloatingOpponentViewer = ({
             <p className="text-xs mt-1">O oponente precisa abrir a Arena Digital</p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className={cn("space-y-2", embedded && "w-full max-w-md")}>
             {/* Stats Bar */}
             <div className="flex items-center justify-between gap-2 p-2 bg-muted/50 rounded-lg">
               <div className="flex items-center gap-1">
