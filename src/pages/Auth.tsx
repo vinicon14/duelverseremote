@@ -423,27 +423,7 @@ const Auth = () => {
                   <Input id="signup-confirm-password" name="signup-confirm-password" type="password" placeholder="••••••••" required minLength={6} className="bg-background/50" />
                 </div>
 
-                {/* TCG Selection */}
-                <div className="space-y-2">
-                  <Label>Escolha seu primeiro TCG</Label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {TCG_OPTIONS.map(opt => (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        onClick={() => setSelectedTcg(opt.value)}
-                        className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border-2 transition-all ${
-                          selectedTcg === opt.value
-                            ? opt.color + ' border-opacity-100 shadow-md'
-                            : 'border-border/50 opacity-60 hover:opacity-80'
-                        }`}
-                      >
-                        {opt.icon}
-                        <span className="text-[10px] font-medium leading-tight text-center">{opt.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                {/* TCG is always Yu-Gi-Oh! */}
 
                 <Button type="submit" className="w-full auth-cycle-btn text-white" disabled={loading}>
                   {loading ? "Cadastrando..." : "Criar Conta"}
