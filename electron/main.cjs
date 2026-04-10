@@ -289,10 +289,22 @@ function createWindow() {
         return;
       }
 
-      callback({
+      // Only provide audio if requested AND loopback is likely supported
+      // Many systems don't support loopback audio, so we provide video-only as safe default
+      const result = {
         video: request.videoRequested ? preferredSource : undefined,
-        audio: request.audioRequested ? 'loopback' : undefined,
-      });
+      };
+
+      // Try to include audio but don't let it block the capture
+      if (request.audioRequested) {
+        try {
+          result.audio = 'loopback';
+        } catch (e) {
+          console.warn('[Electron] Loopback audio not available:', e);
+        }
+      }
+
+      callback(result);
     } catch (error) {
       console.error('[Electron] Failed to resolve display media request:', error);
       callback({});
