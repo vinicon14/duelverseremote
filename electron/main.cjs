@@ -446,6 +446,7 @@ ipcMain.handle('save-file-locally', async (_, arrayBuffer, defaultName) => {
   }
 });
 
+ipcMain.handle('sync-auth', async (_, { token, userId }) => {
   const normalizedToken = token || null;
   const normalizedUserId = userId || null;
   const userChanged = authUserId !== normalizedUserId;
