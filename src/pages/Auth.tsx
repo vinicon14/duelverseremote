@@ -436,6 +436,17 @@ const Auth = () => {
                 <Button type="submit" className="w-full auth-cycle-btn text-white" disabled={loading}>
                   {loading ? "Entrando..." : "Entrar"}
                 </Button>
+                {lastFailedEmail && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full text-sm"
+                    disabled={loading}
+                    onClick={() => handleResendConfirmation(lastFailedEmail)}
+                  >
+                    📧 Reenviar email de confirmação
+                  </Button>
+                )}
               </form>
 
               {!detectPlatform().isNativeApp && (
