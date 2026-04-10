@@ -689,12 +689,14 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     const hasPerSlotContent = remoteDeckContents?.[index];
     const hasSingleContent = remoteDeckContent && index === 0 && !remoteDeckContents;
     const hasDeckContent = peerId && (hasPerSlotContent || hasSingleContent);
-    // Camera takes priority: only show deck overlay when remote camera is OFF
     const peerHasActiveVideo = peerId ? (remoteVideoActive.get(peerId) ?? false) : false;
+    const peerDeckIsOpen = peerId
+      ? (remoteDeckOpenSlots?.[index] ?? (index === 0 ? remoteDeckOpen : false))
+      : false;
+    const showDeckOverlay = Boolean(peerId && hasDeckContent && peerDeckIsOpen && !peerHasActiveVideo);
 
     return (
       <div key={peerId || `waiting-${index}`} className="relative w-full h-full overflow-hidden bg-black">
-        {/* Always render video element so it stays attached */}
         {peerId && (
           <video
             ref={(el) => setRemoteVideoRef(peerId, el)}
@@ -702,15 +704,14 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
             playsInline
             className={cn(
               "w-full h-full object-contain absolute inset-0",
-              (!peerHasActiveVideo && hasDeckContent) && "hidden"
+              showDeckOverlay && "hidden"
             )}
           />
         )}
-        {/* Always keep deck overlay mounted (for subscription), but hide when camera is active */}
         {hasDeckContent && (
           <div className={cn(
             "w-full h-full overflow-auto bg-background touch-pan-y absolute inset-0",
-            peerHasActiveVideo && "hidden"
+            !showDeckOverlay && "hidden"
           )}>
             {remoteDeckContents?.[index] || remoteDeckContent}
           </div>
