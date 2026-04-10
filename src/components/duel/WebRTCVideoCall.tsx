@@ -337,6 +337,9 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     }
   };
 
+  const zoomIn = () => setZoomLevel(prev => Math.min(prev + ZOOM_STEP, MAX_ZOOM));
+  const zoomOut = () => setZoomLevel(prev => Math.max(prev - ZOOM_STEP, MIN_ZOOM));
+
   const setRemoteVideoRef = useCallback((peerId: string, el: HTMLVideoElement | null) => {
     if (el) {
       remoteVideoRefs.current.set(peerId, el);
