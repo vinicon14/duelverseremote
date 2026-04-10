@@ -126,7 +126,7 @@ export const NoMonetagAds = () => {
       // Remove popup/overlay elements (fixed position, high z-index)
       document.querySelectorAll('*').forEach((el) => {
         const id = el.id || '';
-        const className = typeof el.className === 'string' ? el.className : (el.className?.baseVal || '');
+        const className = typeof el.className === 'string' ? el.className : ((el.className as any)?.baseVal || '');
         const style = el.getAttribute('style') || '';
         
         // Block popup/overlay ads (fixed position, high z-index, or Monetag related)
