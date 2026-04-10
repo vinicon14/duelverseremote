@@ -123,28 +123,25 @@ export const NoMonetagAds = () => {
         }
       });
 
-      // Remove popup/overlay elements (fixed position, high z-index)
-      document.querySelectorAll('*').forEach((el) => {
+      // Remove Monetag-specific overlay elements (NOT generic overlays)
+      const rootEl = document.getElementById('root');
+      document.querySelectorAll('body > div, body > section, body > aside').forEach((el) => {
+        if (rootEl?.contains(el)) return; // Never touch React tree
         const id = el.id || '';
-        const className = el.className || '';
+        const elClassName = typeof el.className === 'string' ? el.className : '';
         const style = el.getAttribute('style') || '';
         
-        // Block popup/overlay ads (fixed position, high z-index, or Monetag related)
-        const isPopupOrOverlay = 
-          (style.includes('fixed') && style.includes('z-index') && (style.includes('9999') || style.includes('2147483647'))) ||
+        const isMonetagOverlay = 
           id.includes('quge5') || 
           id.includes('monetag') ||
-          id.includes('popup') ||
-          id.includes('popunder') ||
-          className.includes('quge5') || 
-          className.includes('monetag') ||
-          className.includes('popup') ||
-          className.includes('popunder') ||
-          className.includes('overlay');
+          elClassName.includes('quge5') || 
+          elClassName.includes('monetag');
         
-        if (isPopupOrOverlay) {
+        const isSuspiciousHighZIndex = 
+          (style.includes('fixed') && style.includes('z-index') && (style.includes('2147483647') || style.includes('999999')));
+        
+        if (isMonetagOverlay || isSuspiciousHighZIndex) {
           el.remove();
-          console.log('Removido elemento popup/overlay:', id || className);
         }
       });
 
