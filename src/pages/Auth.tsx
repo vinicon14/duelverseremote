@@ -40,25 +40,48 @@ const Auth = () => {
     
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (session?.user) {
+      if (session?.user) {
           if (event === 'SIGNED_IN') {
+            // Check if user is admin
+            const { data: adminRole } = await supabase
+              .from('user_roles')
+              .select('role')
+              .eq('user_id', session.user.id)
+              .eq('role', 'admin')
+              .maybeSingle();
+            const isAdmin = !!adminRole;
+
             const { data: tcgProfiles } = await supabase
               .from('tcg_profiles')
               .select('id, tcg_type')
               .eq('user_id', session.user.id);
-            
-            if (!tcgProfiles || tcgProfiles.length === 0) {
+
+            // Get username
+            const { data: mainProfile } = await supabase
+              .from('profiles')
+              .select('username')
+              .eq('user_id', session.user.id)
+              .maybeSingle();
+            const username = mainProfile?.username || session.user.user_metadata?.username || session.user.email?.split('@')[0] || 'Duelista';
+
+            if (isAdmin) {
+              // Admins get all 3 TCG profiles automatically
+              const allTcgs: TcgType[] = ['yugioh', 'magic', 'pokemon'];
+              const existingTypes = (tcgProfiles || []).map(p => p.tcg_type);
+              const missing = allTcgs.filter(t => !existingTypes.includes(t));
+              if (missing.length > 0) {
+                await supabase.from('tcg_profiles').insert(
+                  missing.map(tcg => ({ user_id: session.user.id, tcg_type: tcg, username }))
+                );
+              }
+              if (!localStorage.getItem('activeTcg')) {
+                localStorage.setItem('activeTcg', 'yugioh');
+              }
+              navigate(defaultRedirect, { replace: true });
+            } else if (!tcgProfiles || tcgProfiles.length === 0) {
               // Auto-create TCG profile from signup metadata
               const metaTcg = session.user.user_metadata?.selected_tcg as TcgType | undefined;
               const tcgToCreate = metaTcg || 'yugioh';
-              
-              // Get username from profile or metadata
-              const { data: mainProfile } = await supabase
-                .from('profiles')
-                .select('username')
-                .eq('user_id', session.user.id)
-                .maybeSingle();
-              const username = mainProfile?.username || session.user.user_metadata?.username || session.user.email?.split('@')[0] || 'Duelista';
 
               await supabase.from('tcg_profiles').insert({
                 user_id: session.user.id,
@@ -66,14 +89,11 @@ const Auth = () => {
                 username,
               });
 
-              // Set active TCG in localStorage
               localStorage.setItem('activeTcg', tcgToCreate);
               navigate(defaultRedirect, { replace: true });
             } else if (tcgProfiles.length > 1) {
-              // Multiple profiles exist — user must choose one (others will be deleted)
               navigate('/profile-select', { replace: true });
             } else {
-              // Single profile — set it and go
               localStorage.setItem('activeTcg', tcgProfiles[0].tcg_type);
               navigate(defaultRedirect, { replace: true });
             }
@@ -86,20 +106,40 @@ const Auth = () => {
 
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
-        // Ensure tcg_profile exists before redirecting
+        // Check if admin
+        const { data: adminRole } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', session.user.id)
+          .eq('role', 'admin')
+          .maybeSingle();
+        const isAdmin = !!adminRole;
+
         const { data: tcgProfiles } = await supabase
           .from('tcg_profiles')
           .select('id, tcg_type')
           .eq('user_id', session.user.id);
 
-        if (!tcgProfiles || tcgProfiles.length === 0) {
-          const { data: mainProfile } = await supabase
-            .from('profiles')
-            .select('username')
-            .eq('user_id', session.user.id)
-            .maybeSingle();
-          const username = mainProfile?.username || session.user.user_metadata?.username || session.user.email?.split('@')[0] || 'Duelista';
+        const { data: mainProfile } = await supabase
+          .from('profiles')
+          .select('username')
+          .eq('user_id', session.user.id)
+          .maybeSingle();
+        const username = mainProfile?.username || session.user.user_metadata?.username || session.user.email?.split('@')[0] || 'Duelista';
 
+        if (isAdmin) {
+          const allTcgs: TcgType[] = ['yugioh', 'magic', 'pokemon'];
+          const existingTypes = (tcgProfiles || []).map(p => p.tcg_type);
+          const missing = allTcgs.filter(t => !existingTypes.includes(t));
+          if (missing.length > 0) {
+            await supabase.from('tcg_profiles').insert(
+              missing.map(tcg => ({ user_id: session.user.id, tcg_type: tcg, username }))
+            );
+          }
+          if (!localStorage.getItem('activeTcg')) {
+            localStorage.setItem('activeTcg', 'yugioh');
+          }
+        } else if (!tcgProfiles || tcgProfiles.length === 0) {
           await supabase.from('tcg_profiles').insert({
             user_id: session.user.id,
             tcg_type: 'yugioh',
