@@ -1027,6 +1027,7 @@ const DuelRoom = () => {
                 className="w-full h-full absolute inset-0"
                 layout={videoLayout}
                 maxPlayers={(duel as any)?.max_players || 2}
+                isSpectator={!!isSpectator && !isJudge}
                 onLayoutChange={setVideoLayout}
                 spectatorLpOverlay={isSpectator && !isJudge ? {
                   localLabel: duel.creator?.username || 'Player 1',
@@ -1216,89 +1217,11 @@ const DuelRoom = () => {
             )}
             
             <div className="flex gap-1 sm:gap-2">
-              {/* O botão de Ocultar e Gravar ficam sempre visíveis */}
-              {!isJudge && (
+              {/* Spectator: only Gravar and Sair */}
+              {isSpectator && !isJudge ? (
                 <>
-                  <HideElementsButton onToggle={() => setHideControls(!hideControls)} isHidden={hideControls} />
                   <RecordMatchButton duelId={id!} />
                   <ElectronRecordButton duelId={id!} />
-                  {isParticipant && (
-                    <span className="hidden sm:inline-flex">
-                      <YouTubeLiveButton duelId={id!} />
-                    </span>
-                  )}
-                </>
-              )}
-
-              {/* Todos os outros botões são controlados por `hideControls` */}
-              {!hideControls && (
-                <>
-                  {isParticipant && !isJudge && (
-                    <>
-                      {/* Botão do Deck - YGO ou Magic */}
-                      {duel?.tcg_type === 'magic' ? (
-                        <Button
-                          onClick={() => setShowMagicViewer(!showMagicViewer)}
-                          variant="outline"
-                          size="sm"
-                          className="bg-amber-600/95 hover:bg-amber-700 text-white backdrop-blur-sm text-xs sm:text-sm"
-                          title="Abrir Arena Magic"
-                        >
-                          <Sparkles className="w-3 h-3 sm:w-4 sm:h-4" />
-                        </Button>
-                      ) : duel?.tcg_type === 'pokemon' ? (
-                        <Button
-                          onClick={() => setShowPokemonViewer(!showPokemonViewer)}
-                          variant="outline"
-                          size="sm"
-                          className="bg-yellow-500/95 hover:bg-yellow-600 text-white backdrop-blur-sm text-xs sm:text-sm"
-                          title="Abrir Arena Pokémon"
-                        >
-                          <Zap className="w-3 h-3 sm:w-4 sm:h-4" />
-                        </Button>
-                      ) : (
-                        <Button
-                          onClick={() => setShowDeckViewer(!showDeckViewer)}
-                          variant="outline"
-                          size="sm"
-                          className="bg-amber-600/95 hover:bg-amber-700 text-white backdrop-blur-sm text-xs sm:text-sm"
-                          title="Abrir Deck"
-                        >
-                          <Layers className="w-3 h-3 sm:w-4 sm:h-4" />
-                        </Button>
-                      )}
-                      <Button
-                        onClick={callJudge}
-                        disabled={judgeCalled}
-                        variant="outline"
-                        size="sm"
-                        className="bg-purple-600/95 hover:bg-purple-700 text-white backdrop-blur-sm text-xs sm:text-sm"
-                        title="Chamar Juiz"
-                      >
-                        <Scale className="w-3 h-3 sm:w-4 sm:h-4" />
-                        {judgeCalled && <span className="ml-1 hidden sm:inline">✓</span>}
-                      </Button>
-                      <Button
-                        onClick={toggleTimerPause}
-                        variant="outline"
-                        size="sm"
-                        className="bg-card/95 backdrop-blur-sm text-xs sm:text-sm"
-                        title={isTimerPaused ? "Retomar timer" : "Pausar timer"}
-                      >
-                        {isTimerPaused ? '▶️' : '⏸️'}
-                      </Button>
-                      <Button
-                        onClick={() => endDuel()}
-                        variant="outline"
-                        size="sm"
-                        className="bg-green-600/95 hover:bg-green-700 text-white backdrop-blur-sm text-xs sm:text-sm"
-                        title="Finalizar partida"
-                      >
-                        <span className="hidden sm:inline">Finalizar</span>
-                        <span className="sm:hidden">Fim</span>
-                      </Button>
-                    </>
-                  )}
                   <Button
                     onClick={handleLeave}
                     variant="destructive"
@@ -1308,6 +1231,103 @@ const DuelRoom = () => {
                     <PhoneOff className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
                     <span className="hidden sm:inline">Sair</span>
                   </Button>
+                </>
+              ) : (
+                <>
+                  {/* O botão de Ocultar e Gravar ficam sempre visíveis */}
+                  {!isJudge && (
+                    <>
+                      <HideElementsButton onToggle={() => setHideControls(!hideControls)} isHidden={hideControls} />
+                      <RecordMatchButton duelId={id!} />
+                      <ElectronRecordButton duelId={id!} />
+                      {isParticipant && (
+                        <span className="hidden sm:inline-flex">
+                          <YouTubeLiveButton duelId={id!} />
+                        </span>
+                      )}
+                    </>
+                  )}
+
+                  {/* Todos os outros botões são controlados por `hideControls` */}
+                  {!hideControls && (
+                    <>
+                      {isParticipant && !isJudge && (
+                        <>
+                          {/* Botão do Deck - YGO ou Magic */}
+                          {duel?.tcg_type === 'magic' ? (
+                            <Button
+                              onClick={() => setShowMagicViewer(!showMagicViewer)}
+                              variant="outline"
+                              size="sm"
+                              className="bg-amber-600/95 hover:bg-amber-700 text-white backdrop-blur-sm text-xs sm:text-sm"
+                              title="Abrir Arena Magic"
+                            >
+                              <Sparkles className="w-3 h-3 sm:w-4 sm:h-4" />
+                            </Button>
+                          ) : duel?.tcg_type === 'pokemon' ? (
+                            <Button
+                              onClick={() => setShowPokemonViewer(!showPokemonViewer)}
+                              variant="outline"
+                              size="sm"
+                              className="bg-yellow-500/95 hover:bg-yellow-600 text-white backdrop-blur-sm text-xs sm:text-sm"
+                              title="Abrir Arena Pokémon"
+                            >
+                              <Zap className="w-3 h-3 sm:w-4 sm:h-4" />
+                            </Button>
+                          ) : (
+                            <Button
+                              onClick={() => setShowDeckViewer(!showDeckViewer)}
+                              variant="outline"
+                              size="sm"
+                              className="bg-amber-600/95 hover:bg-amber-700 text-white backdrop-blur-sm text-xs sm:text-sm"
+                              title="Abrir Deck"
+                            >
+                              <Layers className="w-3 h-3 sm:w-4 sm:h-4" />
+                            </Button>
+                          )}
+                          <Button
+                            onClick={callJudge}
+                            disabled={judgeCalled}
+                            variant="outline"
+                            size="sm"
+                            className="bg-purple-600/95 hover:bg-purple-700 text-white backdrop-blur-sm text-xs sm:text-sm"
+                            title="Chamar Juiz"
+                          >
+                            <Scale className="w-3 h-3 sm:w-4 sm:h-4" />
+                            {judgeCalled && <span className="ml-1 hidden sm:inline">✓</span>}
+                          </Button>
+                          <Button
+                            onClick={toggleTimerPause}
+                            variant="outline"
+                            size="sm"
+                            className="bg-card/95 backdrop-blur-sm text-xs sm:text-sm"
+                            title={isTimerPaused ? "Retomar timer" : "Pausar timer"}
+                          >
+                            {isTimerPaused ? '▶️' : '⏸️'}
+                          </Button>
+                          <Button
+                            onClick={() => endDuel()}
+                            variant="outline"
+                            size="sm"
+                            className="bg-green-600/95 hover:bg-green-700 text-white backdrop-blur-sm text-xs sm:text-sm"
+                            title="Finalizar partida"
+                          >
+                            <span className="hidden sm:inline">Finalizar</span>
+                            <span className="sm:hidden">Fim</span>
+                          </Button>
+                        </>
+                      )}
+                      <Button
+                        onClick={handleLeave}
+                        variant="destructive"
+                        size="sm"
+                        className="bg-destructive/95 backdrop-blur-sm text-xs sm:text-sm"
+                      >
+                        <PhoneOff className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+                        <span className="hidden sm:inline">Sair</span>
+                      </Button>
+                    </>
+                  )}
                 </>
               )}
             </div>
