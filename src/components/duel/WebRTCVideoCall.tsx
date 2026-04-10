@@ -34,6 +34,8 @@ interface WebRTCVideoCallProps {
     localLp: number;
     remotePlayers: { label: string; lp: number }[];
   };
+  /** When true, user is a spectator: receive-only, no local media, no controls */
+  isSpectator?: boolean;
 }
 
 const ICE_SERVERS: RTCIceServer[] = [
@@ -80,6 +82,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   remoteDeckContents,
   remoteDeckOpenSlots,
   spectatorLpOverlay,
+  isSpectator = false,
 }, ref) => {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
