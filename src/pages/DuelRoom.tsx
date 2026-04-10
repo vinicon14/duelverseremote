@@ -1015,10 +1015,31 @@ const DuelRoom = () => {
                 layout={videoLayout}
                 maxPlayers={(duel as any)?.max_players || 2}
                 onLayoutChange={setVideoLayout}
-                localDeckOpen={myDeckIsOpen && isParticipant && !isJudge}
+                spectatorLpOverlay={isSpectator && !isJudge ? {
+                  localLabel: duel.creator?.username || 'Player 1',
+                  localLp: player1LP,
+                  remotePlayers: [
+                    { label: duel.opponent?.username || 'Player 2', lp: player2LP },
+                    ...((duel as any)?.max_players >= 3 ? [{ label: 'Player 3', lp: player3LP }] : []),
+                    ...((duel as any)?.max_players >= 4 ? [{ label: 'Player 4', lp: player4LP }] : []),
+                  ]
+                } : undefined}
+                localDeckOpen={
+                  isSpectator && !isJudge
+                    ? true
+                    : myDeckIsOpen && isParticipant && !isJudge
+                }
                 remoteDeckOpen={opponentDeckOpen && isParticipant && !isJudge}
                 localDeckContent={
-                  myDeckIsOpen && isParticipant && !isJudge ? (
+                  isSpectator && !isJudge && currentUser && id && duel && ((duel as any)?.max_players || 2) <= 2 ? (
+                    <FloatingOpponentViewer
+                      duelId={id}
+                      currentUserId={currentUser.id}
+                      opponentUsername={duel.creator?.username || 'Jogador 1'}
+                      filterOpponentId={duel.creator_id || undefined}
+                      embedded
+                    />
+                  ) : myDeckIsOpen && isParticipant && !isJudge ? (
                     <>
                       {duel?.tcg_type === 'yugioh' && showDeckViewer && (
                         <>
@@ -1077,11 +1098,12 @@ const DuelRoom = () => {
                       currentUserId={currentUser.id}
                       opponentUsername={
                         isSpectator
-                          ? (duel.creator?.username || 'Jogador')
+                          ? (duel.opponent?.username || 'Jogador 2')
                           : currentUser.id === duel.creator_id 
                             ? duel.opponent?.username 
                             : duel.creator?.username
                       }
+                      filterOpponentId={isSpectator ? (duel.opponent_id || undefined) : undefined}
                       embedded
                     />
                   ) : undefined
@@ -1275,8 +1297,8 @@ const DuelRoom = () => {
         </div>
       </main>
 
-      {/* Calculadora Flutuante - Apenas participantes podem editar */}
-      {duel && currentUser && (
+      {/* Calculadora Flutuante - Apenas participantes e juízes, não espectadores */}
+      {duel && currentUser && !isSpectator && (
         <FloatingCalculator
           player1Name={duel.creator?.username || 'Player 1'}
           player2Name={duel.opponent?.username || 'Player 2'}

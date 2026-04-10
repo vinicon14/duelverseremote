@@ -28,6 +28,12 @@ interface WebRTCVideoCallProps {
   remoteDeckContents?: (React.ReactNode | undefined)[];
   /** Per-slot remote deck open flags for 4-player mode */
   remoteDeckOpenSlots?: boolean[];
+  /** Spectator LP overlay: labels & values for local panel and remote panels */
+  spectatorLpOverlay?: {
+    localLabel: string;
+    localLp: number;
+    remotePlayers: { label: string; lp: number }[];
+  };
 }
 
 const ICE_SERVERS: RTCIceServer[] = [
@@ -73,6 +79,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   remoteDeckContent,
   remoteDeckContents,
   remoteDeckOpenSlots,
+  spectatorLpOverlay,
 }, ref) => {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
@@ -605,9 +612,17 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
           )}
         </>
       )}
-      <div className="absolute bottom-1 left-1 sm:bottom-2 sm:left-2 px-1.5 py-0.5 rounded bg-black/60 text-[10px] sm:text-xs text-white z-10">
-        Você
-      </div>
+      {spectatorLpOverlay && (
+        <div className="absolute top-1 left-1 sm:top-2 sm:left-2 px-2 py-1 rounded bg-black/70 backdrop-blur-sm text-white z-20 flex items-center gap-1.5">
+          <span className="text-[10px] sm:text-xs font-medium truncate max-w-[80px]">{spectatorLpOverlay.localLabel}</span>
+          <span className="text-xs sm:text-sm font-bold text-green-400">{spectatorLpOverlay.localLp}</span>
+        </div>
+      )}
+      {!spectatorLpOverlay && (
+        <div className="absolute bottom-1 left-1 sm:bottom-2 sm:left-2 px-1.5 py-0.5 rounded bg-black/60 text-[10px] sm:text-xs text-white z-10">
+          Você
+        </div>
+      )}
     </div>
   );
 
@@ -638,9 +653,17 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
             </div>
           </div>
         )}
-        <div className="absolute bottom-1 left-1 sm:bottom-2 sm:left-2 px-1.5 py-0.5 rounded bg-black/60 text-[10px] sm:text-xs text-white z-10">
-          {peerId ? `Oponente ${remoteSlots.length > 1 ? index + 1 : ''}` : `Jogador ${index + 2}`}
-        </div>
+        {spectatorLpOverlay?.remotePlayers?.[index] && (
+          <div className="absolute top-1 left-1 sm:top-2 sm:left-2 px-2 py-1 rounded bg-black/70 backdrop-blur-sm text-white z-20 flex items-center gap-1.5">
+            <span className="text-[10px] sm:text-xs font-medium truncate max-w-[80px]">{spectatorLpOverlay.remotePlayers[index].label}</span>
+            <span className="text-xs sm:text-sm font-bold text-green-400">{spectatorLpOverlay.remotePlayers[index].lp}</span>
+          </div>
+        )}
+        {!spectatorLpOverlay && (
+          <div className="absolute bottom-1 left-1 sm:bottom-2 sm:left-2 px-1.5 py-0.5 rounded bg-black/60 text-[10px] sm:text-xs text-white z-10">
+            {peerId ? `Oponente ${remoteSlots.length > 1 ? index + 1 : ''}` : `Jogador ${index + 2}`}
+          </div>
+        )}
       </div>
     );
   };
@@ -680,9 +703,15 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       ) : (
         /* ===== PIP LAYOUT (2 players) — click small to swap ===== */
         <>
-          {/* Big panel */}
+          {/* Big panel — always show deck viewers here regardless of swap */}
           <div className="w-full h-full">
-            {pipSwapped ? renderLocalPanel() : renderRemotePanel(remoteSlots[0], 0)}
+            {pipSwapped ? (
+              /* Local is big — show local deck or local video */
+              renderLocalPanel()
+            ) : (
+              /* Remote is big — show remote deck overlay or remote video */
+              renderRemotePanel(remoteSlots[0], 0)
+            )}
           </div>
           {/* Small PiP panel — click to swap */}
           <div
@@ -691,7 +720,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
             title="Clique para alternar"
           >
             {pipSwapped ? (
-              /* Show remote in small */
+              /* Show remote in small — just video, no deck overlay */
               remoteSlots[0] ? (
                 <video
                   ref={(el) => setRemoteVideoRef(remoteSlots[0]!, el)}
