@@ -680,15 +680,9 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       ) : (
         /* ===== PIP LAYOUT (2 players) — click small to swap ===== */
         <>
-          {/* Big panel — always show deck viewers here regardless of swap */}
+          {/* Big panel */}
           <div className="w-full h-full">
-            {pipSwapped ? (
-              /* Local is big — show local deck or local video */
-              renderLocalPanel()
-            ) : (
-              /* Remote is big — show remote deck overlay or remote video */
-              renderRemotePanel(remoteSlots[0], 0)
-            )}
+            {pipSwapped ? renderLocalPanel() : renderRemotePanel(remoteSlots[0], 0)}
           </div>
           {/* Small PiP panel — click to swap */}
           <div
@@ -697,7 +691,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
             title="Clique para alternar"
           >
             {pipSwapped ? (
-              /* Show remote in small — just video, no deck overlay */
+              /* Show remote in small */
               remoteSlots[0] ? (
                 <video
                   ref={(el) => setRemoteVideoRef(remoteSlots[0]!, el)}
