@@ -529,6 +529,26 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     });
   }, [remoteStreams, remotePeerIds]);
 
+  // Poll remote video track state (track.enabled changes don't fire events reliably)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setRemoteVideoActive(prev => {
+        let changed = false;
+        const next = new Map(prev);
+        remoteStreams.forEach((stream, peerId) => {
+          const vt = stream.getVideoTracks()[0];
+          const active = vt ? (vt.enabled && !vt.muted && vt.readyState === 'live') : false;
+          if (prev.get(peerId) !== active) {
+            next.set(peerId, active);
+            changed = true;
+          }
+        });
+        return changed ? next : prev;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [remoteStreams]);
+
   const toggleMute = () => {
     const stream = localStreamRef.current;
     if (!stream) return;
