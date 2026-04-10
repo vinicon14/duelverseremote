@@ -1044,11 +1044,6 @@ const DuelRoom = () => {
                 remoteDeckOpen={
                   !isSpectator && opponentDeckOpen && isParticipant && !isJudge
                 }
-                remoteDeckOpenSlots={
-                  isSpectator && !isJudge
-                    ? [creatorDeckOpen, opponentPlayerDeckOpen]
-                    : undefined
-                }
                 localDeckContent={
                   myDeckIsOpen && isParticipant && !isJudge ? (
                     <>
