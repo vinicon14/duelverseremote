@@ -618,6 +618,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       const stream = remoteStreams.get(peerId);
       if (stream && el.srcObject !== stream) {
         el.srcObject = stream;
+        el.play().catch(() => {});
       }
     } else {
       remoteVideoRefs.current.delete(peerId);
