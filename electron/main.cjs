@@ -17,6 +17,7 @@ let authToken = null;
 let authUserId = null;
 let notificationPollInterval = null;
 let knownNotificationIds = new Set();
+let selectedSourceId = null;
 
 function getAppIconPath() {
   const iconFileName = process.platform === 'win32' ? 'icon.ico' : 'icon.png';
@@ -282,20 +283,27 @@ function createWindow() {
   mainWindow.webContents.session.setDisplayMediaRequestHandler(async (request, callback) => {
     try {
       const sources = await desktopCapturer.getSources({ types: ['screen', 'window'] });
-      const preferredSource = sources.find((source) => source.id.startsWith('screen:')) || sources[0];
+      
+      // Use user-selected source if available, otherwise fall back to first screen
+      let preferredSource = null;
+      if (selectedSourceId) {
+        preferredSource = sources.find((source) => source.id === selectedSourceId);
+        // Clear selection after use
+        selectedSourceId = null;
+      }
+      if (!preferredSource) {
+        preferredSource = sources.find((source) => source.id.startsWith('screen:')) || sources[0];
+      }
 
       if (!preferredSource) {
         callback({});
         return;
       }
 
-      // Only provide audio if requested AND loopback is likely supported
-      // Many systems don't support loopback audio, so we provide video-only as safe default
       const result = {
         video: request.videoRequested ? preferredSource : undefined,
       };
 
-      // Try to include audio but don't let it block the capture
       if (request.audioRequested) {
         try {
           result.audio = 'loopback';
@@ -417,6 +425,11 @@ ipcMain.on('show-notification', (_, { title, body }) => {
     notif.on('click', () => { showMainWindow(); });
     notif.show();
   }
+});
+
+ipcMain.on('set-selected-source', (_, sourceId) => {
+  selectedSourceId = sourceId || null;
+  console.log('[Electron] Selected capture source:', selectedSourceId);
 });
 
 ipcMain.on('sync-auth', async (_, { token, userId }) => {

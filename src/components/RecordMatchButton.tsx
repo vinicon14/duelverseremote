@@ -26,6 +26,12 @@ interface RecordMatchButtonProps {
 
 type RecordingAudioSource = "system" | "mic" | "both";
 
+interface DesktopSource {
+  id: string;
+  name: string;
+  thumbnail: string;
+}
+
 export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonProps) => {
   const { toast } = useToast();
   const { isPro, loading: accountLoading } = useAccountType();
@@ -37,7 +43,8 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSetupDialog, setShowSetupDialog] = useState(false);
   const [audioSource, setAudioSource] = useState<RecordingAudioSource>("both");
-
+  const [desktopSources, setDesktopSources] = useState<DesktopSource[]>([]);
+  const [selectedSourceId, setSelectedSourceId] = useState<string>("");
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -216,6 +223,20 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
     return preferredMimeTypes.find((candidate) => MediaRecorder.isTypeSupported(candidate));
   }, []);
 
+  const loadDesktopSources = useCallback(async () => {
+    const electronAPI = (window as any).electronAPI;
+    if (!electronAPI?.getDesktopSources) return;
+    try {
+      const sources = await electronAPI.getDesktopSources();
+      setDesktopSources(sources || []);
+      if (sources?.length > 0 && !selectedSourceId) {
+        setSelectedSourceId(sources[0].id);
+      }
+    } catch (err) {
+      console.warn('Failed to load desktop sources:', err);
+    }
+  }, [selectedSourceId]);
+
   const startRecording = async (source: RecordingAudioSource) => {
     if (!isPro) {
       toast({
@@ -229,6 +250,11 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
     // Detectar se é mobile (fallback; o botão já é ocultado no mobile)
     const isDeviceMobileUA = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     const isElectron = !!(window as any).electronAPI?.isElectron;
+
+    // No Electron, enviar source selecionada antes de iniciar captura
+    if (isElectron && selectedSourceId) {
+      (window as any).electronAPI.setSelectedSource(selectedSourceId);
+    }
 
     // Verificar se a API de gravação está disponível
     // No Electron, getDisplayMedia é habilitado via setDisplayMediaRequestHandler no main process
@@ -574,7 +600,11 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
   return (
     <>
       {!isRecording ? (
-        <Button onClick={() => setShowSetupDialog(true)} variant="outline" size="sm" className="gap-2">
+        <Button onClick={() => {
+          const isElectron = !!(window as any).electronAPI?.isElectron;
+          if (isElectron) loadDesktopSources();
+          setShowSetupDialog(true);
+        }} variant="outline" size="sm" className="gap-2">
           <Video className="w-4 h-4" />
           Gravar Partida
         </Button>
@@ -626,20 +656,56 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
 
       {/* Dialog de configuração (fonte de áudio) */}
       <Dialog open={showSetupDialog} onOpenChange={setShowSetupDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Configurar gravação</DialogTitle>
             <DialogDescription>
-              Escolha o áudio que será gravado. (Dica: para “som do jogo”, compartilhe uma aba e ative “compartilhar áudio”.)
+              {!!(window as any).electronAPI?.isElectron
+                ? 'Escolha a tela ou janela que deseja gravar e a fonte de áudio.'
+                : 'Escolha o áudio que será gravado. (Dica: para “som do jogo”, compartilhe uma aba e ative “compartilhar áudio”.)'}
             </DialogDescription>
           </DialogHeader>
+
+          {/* Source picker - Electron only */}
+          {!!(window as any).electronAPI?.isElectron && desktopSources.length > 0 && (
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Fonte de captura</Label>
+              <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-1">
+                {desktopSources.map((source) => (
+                  <div
+                    key={source.id}
+                    onClick={() => setSelectedSourceId(source.id)}
+                    className={`cursor-pointer rounded-lg border-2 p-1.5 transition-colors ${
+                      selectedSourceId === source.id
+                        ? 'border-primary bg-primary/10'
+                        : 'border-border hover:border-primary/50'
+                    }`}
+                  >
+                    <img
+                      src={source.thumbnail}
+                      alt={source.name}
+                      className="w-full h-20 object-contain rounded bg-black"
+                    />
+                    <p className="text-[10px] text-center mt-1 truncate text-foreground">{source.name}</p>
+                  </div>
+                ))}
+              </div>
+              <Button variant="ghost" size="sm" className="w-full text-xs" onClick={loadDesktopSources}>
+                🔄 Atualizar fontes
+              </Button>
+            </div>
+          )}
 
           <RadioGroup value={audioSource} onValueChange={(v) => setAudioSource(v as RecordingAudioSource)}>
             <div className="flex items-start gap-3 rounded-lg border p-3">
               <RadioGroupItem id="audio-system" value="system" className="mt-1" />
               <div className="grid gap-1">
-                <Label htmlFor="audio-system">Som do jogo (aba)</Label>
-                <p className="text-xs text-muted-foreground">Grava apenas o áudio do compartilhamento (quando disponível).</p>
+                <Label htmlFor="audio-system">Som do jogo {!!(window as any).electronAPI?.isElectron ? '(sistema)' : '(aba)'}</Label>
+                <p className="text-xs text-muted-foreground">
+                  {!!(window as any).electronAPI?.isElectron
+                    ? 'Grava o áudio do sistema (loopback, quando suportado).'
+                    : 'Grava apenas o áudio do compartilhamento (quando disponível).'}
+                </p>
               </div>
             </div>
 
