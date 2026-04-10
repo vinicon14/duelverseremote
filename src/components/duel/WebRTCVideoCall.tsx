@@ -223,24 +223,22 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       }
     };
 
-    // Monitor ICE connection and auto-recover
+    // Monitor ICE connection and auto-recover or remove disconnected peer
     pc.oniceconnectionstatechange = () => {
       console.log(`[WebRTC] ICE state ${remotePeerId}: ${pc.iceConnectionState}`);
       if (pc.iceConnectionState === 'failed') {
-        console.warn("[WebRTC] ICE failed, restarting for:", remotePeerId);
-        pc.restartIce();
-        channelRef.current?.send({
-          type: "broadcast",
-          event: "webrtc-signal",
-          payload: { type: "ready", senderId: userId },
-        });
+        console.warn("[WebRTC] ICE failed for:", remotePeerId);
+        // Remove peer so UI shows "Aguardando jogador" again
+        removePeer(remotePeerId);
       } else if (pc.iceConnectionState === 'disconnected') {
         setTimeout(() => {
-          if (pc.iceConnectionState === 'disconnected') {
-            console.warn("[WebRTC] Still disconnected, restarting ICE");
-            pc.restartIce();
+          if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed') {
+            console.warn("[WebRTC] Peer disconnected permanently:", remotePeerId);
+            removePeer(remotePeerId);
           }
         }, 5000);
+      } else if (pc.iceConnectionState === 'closed') {
+        removePeer(remotePeerId);
       }
     };
 
