@@ -69,13 +69,12 @@ const Auth = () => {
               // Set active TCG in localStorage
               localStorage.setItem('activeTcg', tcgToCreate);
               navigate(defaultRedirect, { replace: true });
+            } else if (tcgProfiles.length > 1) {
+              // Multiple profiles exist — user must choose one (others will be deleted)
+              navigate('/profile-select', { replace: true });
             } else {
-              // Restore last active TCG from localStorage, fallback to first profile
-              const savedTcg = localStorage.getItem('activeTcg');
-              const hasMatchingProfile = tcgProfiles.some(p => p.tcg_type === savedTcg);
-              if (!savedTcg || !hasMatchingProfile) {
-                localStorage.setItem('activeTcg', tcgProfiles[0].tcg_type);
-              }
+              // Single profile — set it and go
+              localStorage.setItem('activeTcg', tcgProfiles[0].tcg_type);
               navigate(defaultRedirect, { replace: true });
             }
           } else {
