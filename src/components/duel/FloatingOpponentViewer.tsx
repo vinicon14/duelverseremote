@@ -479,14 +479,16 @@ export const FloatingOpponentViewer = ({
                 : opponentUsername)}
           </span>
         </div>
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIsMinimized(true)}>
-            <Minimize2 className="h-3 w-3" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIsVisible(false)}>
-            <X className="h-3 w-3" />
-          </Button>
-        </div>
+        {!embedded && (
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIsMinimized(true)}>
+              <Minimize2 className="h-3 w-3" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIsVisible(false)}>
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Multi-opponent tabs */}
