@@ -661,7 +661,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
               <p className="text-[10px] sm:text-xs text-muted-foreground">Aguardando jogador...</p>
             </div>
           </div>
-        )}
+        ) : null}
         {spectatorLpOverlay?.remotePlayers?.[index] && (
           <div className="absolute top-1 left-1 sm:top-2 sm:left-2 px-2 py-1 rounded bg-black/70 backdrop-blur-sm text-white z-20 flex items-center gap-1.5">
             <span className="text-[10px] sm:text-xs font-medium truncate max-w-[80px]">{spectatorLpOverlay.remotePlayers[index].label}</span>
