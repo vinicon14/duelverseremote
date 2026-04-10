@@ -434,10 +434,13 @@ export const FloatingOpponentViewer = ({
       )}
       style={embedded ? undefined : { left: position.x, top: position.y }}
     >
-      {/* Draggable Header */}
+      {/* Header */}
       <div 
-        className="flex items-center justify-between p-2 border-b border-border bg-muted/30 cursor-grab hover:bg-muted/50"
-        {...dragHandlers}
+        className={cn(
+          "flex items-center justify-between p-2 border-b border-border bg-muted/30",
+          !embedded && "cursor-grab hover:bg-muted/50"
+        )}
+        {...(embedded ? {} : dragHandlers)}
       >
         <div className="flex items-center gap-2">
           <Move className="h-3 w-3 text-muted-foreground" />
