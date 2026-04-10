@@ -659,7 +659,8 @@ const Duels = () => {
                   </Card>
                 ))}
               </div>
-            )}
+              );
+            })()}
           </div>
 
           {/* Chat Global */}
