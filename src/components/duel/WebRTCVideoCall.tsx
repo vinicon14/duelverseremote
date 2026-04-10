@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState, useCallback, useImperativeHandle, forwardRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Mic, MicOff, Video, VideoOff, Loader2, LayoutGrid, PictureInPicture2, ZoomIn, ZoomOut } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Mic, MicOff, Video, VideoOff, Loader2, LayoutGrid, PictureInPicture2, ZoomIn, ZoomOut, Settings } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 export type VideoLayout = "side-by-side" | "pip";
 
@@ -90,6 +92,83 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   const MAX_ZOOM = 4;
   const MIN_ZOOM = 1;
   const ZOOM_STEP = 0.5;
+
+  // Device selection
+  const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
+  const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedAudioId, setSelectedAudioId] = useState<string>("");
+  const [selectedVideoId, setSelectedVideoId] = useState<string>("");
+  const [showDeviceMenu, setShowDeviceMenu] = useState(false);
+
+  // Enumerate available devices
+  const enumerateDevices = useCallback(async () => {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      setAudioDevices(devices.filter(d => d.kind === 'audioinput'));
+      setVideoDevices(devices.filter(d => d.kind === 'videoinput'));
+    } catch (err) {
+      console.warn("[WebRTC] Failed to enumerate devices:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    enumerateDevices();
+    // Re-enumerate when devices change (plug/unplug)
+    navigator.mediaDevices?.addEventListener?.('devicechange', enumerateDevices);
+    return () => {
+      navigator.mediaDevices?.removeEventListener?.('devicechange', enumerateDevices);
+    };
+  }, [enumerateDevices]);
+
+  // Switch device: acquire new stream with chosen device, replace tracks in all peers
+  const switchDevice = useCallback(async (audioId?: string, videoId?: string) => {
+    const constraints: MediaStreamConstraints = {
+      audio: audioId ? { deviceId: { exact: audioId } } : true,
+      video: videoId ? { deviceId: { exact: videoId }, width: { ideal: 640 }, height: { ideal: 480 } } : { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+    };
+
+    try {
+      const newStream = await navigator.mediaDevices.getUserMedia(constraints);
+
+      // Stop old tracks
+      localStreamRef.current?.getTracks().forEach(t => t.stop());
+      localStreamRef.current = newStream;
+
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = newStream;
+      }
+
+      // Replace tracks in all peer connections
+      peersRef.current.forEach((peerState) => {
+        const senders = peerState.pc.getSenders();
+        newStream.getTracks().forEach(newTrack => {
+          const sender = senders.find(s => s.track?.kind === newTrack.kind);
+          if (sender) {
+            sender.replaceTrack(newTrack);
+          } else {
+            peerState.pc.addTrack(newTrack, newStream);
+          }
+        });
+      });
+
+      // Re-enumerate to get labels (available after permission grant)
+      await enumerateDevices();
+
+      // Update selected IDs
+      const newAudioTrack = newStream.getAudioTracks()[0];
+      const newVideoTrack = newStream.getVideoTracks()[0];
+      if (newAudioTrack) setSelectedAudioId(newAudioTrack.getSettings().deviceId || "");
+      if (newVideoTrack) setSelectedVideoId(newVideoTrack.getSettings().deviceId || "");
+
+      // Restore mute/video-off state
+      if (isMuted && newAudioTrack) newAudioTrack.enabled = false;
+      if (isVideoOff && newVideoTrack) newVideoTrack.enabled = false;
+
+      console.log("[WebRTC] Device switched successfully");
+    } catch (err) {
+      console.error("[WebRTC] Failed to switch device:", err);
+    }
+  }, [isMuted, isVideoOff, enumerateDevices]);
 
   useImperativeHandle(ref, () => ({
     setVideoEnabled: (enabled: boolean) => {
@@ -332,6 +411,13 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         if (localVideoRef.current) {
           localVideoRef.current.srcObject = stream;
         }
+        // Track initial device IDs
+        const aTrack = stream.getAudioTracks()[0];
+        const vTrack = stream.getVideoTracks()[0];
+        if (aTrack) setSelectedAudioId(aTrack.getSettings().deviceId || "");
+        if (vTrack) setSelectedVideoId(vTrack.getSettings().deviceId || "");
+        // Re-enumerate to get labels
+        enumerateDevices();
         // If peer connections were already created before media was ready,
         // add tracks to all existing peers now
         peersRef.current.forEach((peerState, peerId) => {
@@ -673,6 +759,67 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         >
           <ZoomIn className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
         </Button>
+        {/* Device selector */}
+        <Popover open={showDeviceMenu} onOpenChange={setShowDeviceMenu}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              className="rounded-full w-8 h-8 sm:w-10 sm:h-10 backdrop-blur-sm bg-card/80"
+              title="Configurar câmera e microfone"
+            >
+              <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent side="top" align="center" className="w-72 p-3 space-y-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium flex items-center gap-1.5">
+                <Video className="w-3 h-3" /> Câmera
+              </label>
+              <Select
+                value={selectedVideoId}
+                onValueChange={(val) => {
+                  setSelectedVideoId(val);
+                  switchDevice(selectedAudioId || undefined, val);
+                }}
+              >
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="Selecionar câmera" />
+                </SelectTrigger>
+                <SelectContent>
+                  {videoDevices.map((d, i) => (
+                    <SelectItem key={d.deviceId} value={d.deviceId} className="text-xs">
+                      {d.label || `Câmera ${i + 1}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium flex items-center gap-1.5">
+                <Mic className="w-3 h-3" /> Microfone
+              </label>
+              <Select
+                value={selectedAudioId}
+                onValueChange={(val) => {
+                  setSelectedAudioId(val);
+                  switchDevice(val, selectedVideoId || undefined);
+                }}
+              >
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="Selecionar microfone" />
+                </SelectTrigger>
+                <SelectContent>
+                  {audioDevices.map((d, i) => (
+                    <SelectItem key={d.deviceId} value={d.deviceId} className="text-xs">
+                      {d.label || `Microfone ${i + 1}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </PopoverContent>
+        </Popover>
         {/* Layout toggle (only for 2 players) */}
         {!is4Player && (
           <Button
