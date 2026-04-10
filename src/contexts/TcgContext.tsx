@@ -1,8 +1,8 @@
 /**
  * DuelVerse - TCG Context Provider
- * Sistema de perfis multi-TCG
+ * Sistema de perfil único por conta.
  * 
- * Gerencia o perfil ativo do usuário e o TCG selecionado.
+ * Gerencia o perfil ativo do usuário e o TCG selecionado (read-only).
  */
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -26,8 +26,6 @@ interface TcgContextType {
   activeProfile: TcgProfile | null;
   profiles: TcgProfile[];
   setActiveTcg: (tcg: TcgType) => void;
-  switchProfile: (profileId: string) => void;
-  createProfile: (tcg: TcgType, username?: string) => Promise<boolean>;
   refreshProfiles: () => Promise<void>;
   isLoading: boolean;
 }
@@ -98,56 +96,12 @@ export const TcgProvider = ({ children }: { children: ReactNode }) => {
     if (match) setActiveProfile(match);
   };
 
-  const switchProfile = (profileId: string) => {
-    const match = profiles.find(p => p.id === profileId);
-    if (match) {
-      setActiveProfile(match);
-      setActiveTcgState(match.tcg_type);
-      localStorage.setItem('activeTcg', match.tcg_type);
-    }
-  };
-
-  const createProfile = async (tcg: TcgType, username?: string): Promise<boolean> => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return false;
-
-    // Se não receber username, buscar do perfil principal
-    let finalUsername = username?.trim();
-    if (!finalUsername) {
-      const { data: mainProfile } = await supabase
-        .from('profiles')
-        .select('username')
-        .eq('user_id', user.id)
-        .maybeSingle();
-      finalUsername = mainProfile?.username || user.email?.split('@')[0] || 'Duelista';
-    }
-
-    const { error } = await supabase
-      .from('tcg_profiles')
-      .insert({
-        user_id: user.id,
-        tcg_type: tcg,
-        username: finalUsername,
-      });
-
-    if (error) {
-      console.error('Error creating TCG profile:', error);
-      return false;
-    }
-
-    await fetchProfiles();
-    setActiveTcg(tcg);
-    return true;
-  };
-
   return (
     <TcgContext.Provider value={{
       activeTcg,
       activeProfile,
       profiles,
       setActiveTcg,
-      switchProfile,
-      createProfile,
       refreshProfiles: fetchProfiles,
       isLoading
     }}>
