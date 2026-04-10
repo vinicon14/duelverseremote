@@ -587,50 +587,89 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     }
   }, []);
 
-  const renderLocalPanel = () => (
-    <div className="relative w-full h-full overflow-hidden bg-black">
-      {/* Always keep video in DOM so srcObject persists */}
-      <video
-        ref={localVideoCallbackRef}
-        autoPlay
-        playsInline
-        muted
-        className={`w-full h-full object-contain ${localDeckOpen ? 'hidden' : ''} ${zoomLevel > 1 ? 'cursor-grab active:cursor-grabbing' : ''}`}
-        style={{
-          transform: `scaleX(-1) scale(${zoomLevel}) translate(${panOffset.x / zoomLevel}px, ${panOffset.y / zoomLevel}px)`,
-        }}
-        onPointerDown={handlePanStart}
-        onPointerMove={handlePanMove}
-        onPointerUp={handlePanEnd}
-        onPointerCancel={handlePanEnd}
-      />
-      {localDeckOpen && localDeckContent ? (
-        <div className="w-full h-full overflow-auto bg-background touch-pan-y">
-          {localDeckContent}
-        </div>
-      ) : (
-        <>
-          {isVideoOff && (
-            <div className="absolute inset-0 bg-muted flex items-center justify-center">
-              <VideoOff className="w-8 h-8 sm:w-10 sm:h-10 text-muted-foreground" />
-              <p className="text-xs sm:text-sm text-muted-foreground mt-2 absolute bottom-4">Câmera desligada</p>
+  const renderLocalPanel = () => {
+    // For spectators: show the first remote stream as "Player 1" panel instead of local camera
+    if (isSpectator) {
+      // Spectator's "local panel" actually shows player 1 (creator) stream
+      // We use the first remote peer as player 1
+      const player1PeerId = remotePeerIds[0] || null;
+      return (
+        <div className="relative w-full h-full overflow-hidden bg-black">
+          {player1PeerId ? (
+            <video
+              ref={(el) => setRemoteVideoRef(player1PeerId, el)}
+              autoPlay
+              playsInline
+              className={`w-full h-full object-contain ${localDeckOpen ? 'hidden' : ''}`}
+            />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+              <div className="text-center space-y-2">
+                <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 mx-auto text-primary animate-spin" />
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Aguardando jogador...</p>
+              </div>
             </div>
           )}
-        </>
-      )}
-      {spectatorLpOverlay && (
-        <div className="absolute top-1 left-1 sm:top-2 sm:left-2 px-2 py-1 rounded bg-black/70 backdrop-blur-sm text-white z-20 flex items-center gap-1.5">
-          <span className="text-[10px] sm:text-xs font-medium truncate max-w-[80px]">{spectatorLpOverlay.localLabel}</span>
-          <span className="text-xs sm:text-sm font-bold text-green-400">{spectatorLpOverlay.localLp}</span>
+          {localDeckOpen && localDeckContent && (
+            <div className="w-full h-full overflow-auto bg-background touch-pan-y">
+              {localDeckContent}
+            </div>
+          )}
+          {spectatorLpOverlay && (
+            <div className="absolute top-1 left-1 sm:top-2 sm:left-2 px-2 py-1 rounded bg-black/70 backdrop-blur-sm text-white z-20 flex items-center gap-1.5">
+              <span className="text-[10px] sm:text-xs font-medium truncate max-w-[80px]">{spectatorLpOverlay.localLabel}</span>
+              <span className="text-xs sm:text-sm font-bold text-green-400">{spectatorLpOverlay.localLp}</span>
+            </div>
+          )}
         </div>
-      )}
-      {!spectatorLpOverlay && (
-        <div className="absolute bottom-1 left-1 sm:bottom-2 sm:left-2 px-1.5 py-0.5 rounded bg-black/60 text-[10px] sm:text-xs text-white z-10">
-          Você
-        </div>
-      )}
-    </div>
-  );
+      );
+    }
+
+    return (
+      <div className="relative w-full h-full overflow-hidden bg-black">
+        {/* Always keep video in DOM so srcObject persists */}
+        <video
+          ref={localVideoCallbackRef}
+          autoPlay
+          playsInline
+          muted
+          className={`w-full h-full object-contain ${localDeckOpen ? 'hidden' : ''} ${zoomLevel > 1 ? 'cursor-grab active:cursor-grabbing' : ''}`}
+          style={{
+            transform: `scaleX(-1) scale(${zoomLevel}) translate(${panOffset.x / zoomLevel}px, ${panOffset.y / zoomLevel}px)`,
+          }}
+          onPointerDown={handlePanStart}
+          onPointerMove={handlePanMove}
+          onPointerUp={handlePanEnd}
+          onPointerCancel={handlePanEnd}
+        />
+        {localDeckOpen && localDeckContent ? (
+          <div className="w-full h-full overflow-auto bg-background touch-pan-y">
+            {localDeckContent}
+          </div>
+        ) : (
+          <>
+            {isVideoOff && (
+              <div className="absolute inset-0 bg-muted flex items-center justify-center">
+                <VideoOff className="w-8 h-8 sm:w-10 sm:h-10 text-muted-foreground" />
+                <p className="text-xs sm:text-sm text-muted-foreground mt-2 absolute bottom-4">Câmera desligada</p>
+              </div>
+            )}
+          </>
+        )}
+        {spectatorLpOverlay && (
+          <div className="absolute top-1 left-1 sm:top-2 sm:left-2 px-2 py-1 rounded bg-black/70 backdrop-blur-sm text-white z-20 flex items-center gap-1.5">
+            <span className="text-[10px] sm:text-xs font-medium truncate max-w-[80px]">{spectatorLpOverlay.localLabel}</span>
+            <span className="text-xs sm:text-sm font-bold text-green-400">{spectatorLpOverlay.localLp}</span>
+          </div>
+        )}
+        {!spectatorLpOverlay && (
+          <div className="absolute bottom-1 left-1 sm:bottom-2 sm:left-2 px-1.5 py-0.5 rounded bg-black/60 text-[10px] sm:text-xs text-white z-10">
+            Você
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const renderRemotePanel = (peerId: string | null, index: number) => {
     // Determine if deck overlay should be shown for this slot
