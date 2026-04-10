@@ -164,7 +164,7 @@ export const NoMonetagAds = () => {
             const el = node as Element;
             const style = el.getAttribute?.('style') || '';
             const id = el.id || '';
-            const className = el.className || '';
+            const className = typeof el.className === 'string' ? el.className : ((el.className as any)?.baseVal || '');
             
             // Check scripts
             if (el.tagName === 'SCRIPT') {
@@ -213,9 +213,7 @@ export const NoMonetagAds = () => {
               id.includes('popunder') ||
               className.includes('quge5') || 
               className.includes('monetag') ||
-              className.includes('popup') ||
-              className.includes('popunder') ||
-              className.includes('overlay');
+              className.includes('popunder');
             
             if (isPopupOrOverlay) {
               el.remove();
