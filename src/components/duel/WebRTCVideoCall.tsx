@@ -567,10 +567,12 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   const totalSlots = maxPlayers;
   const is4Player = totalSlots >= 4;
   const isSideBySide = layout === "side-by-side";
+  const isSpectator = !!spectatorLpOverlay;
 
-  // Build remote slots: fill with connected peers, pad with waiting slots
+  // Build remote slots: for spectators, ALL players are remote (need totalSlots slots)
+  const remoteSlotsCount = isSpectator ? totalSlots : totalSlots - 1;
   const remoteSlots: (string | null)[] = [];
-  for (let i = 0; i < totalSlots - 1; i++) {
+  for (let i = 0; i < remoteSlotsCount; i++) {
     remoteSlots.push(remotePeerIds[i] || null);
   }
 
