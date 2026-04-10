@@ -19,6 +19,7 @@ import { RecordMatchButton } from "@/components/RecordMatchButton";
 import { ElectronRecordButton } from "@/components/ElectronRecordButton";
 import { YouTubeLiveButton } from "@/components/YouTubeLiveButton";
 import { HideElementsButton } from "@/components/HideElementsButton";
+import { NoMonetagAds } from "@/components/NoMonetagAds";
 import { useBanCheck } from "@/hooks/useBanCheck";
 import { DuelDeckViewer } from "@/components/duel/DuelDeckViewer";
 import { FloatingOpponentViewer } from "@/components/duel/FloatingOpponentViewer";
