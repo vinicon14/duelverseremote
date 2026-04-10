@@ -972,7 +972,7 @@ const DuelRoom = () => {
       deckToggleChannelRef.current = null;
       supabase.removeChannel(channel); 
     };
-  }, [id, currentUser]);
+  }, [id, currentUser, duel?.creator_id, duel?.opponent_id]);
 
   // Broadcast my deck state whenever it changes (uses the already-subscribed channel)
   useEffect(() => {
