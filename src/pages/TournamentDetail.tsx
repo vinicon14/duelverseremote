@@ -517,6 +517,9 @@ const TournamentDetail = () => {
                               description: isAlreadyJoined ? "Você já está inscrito neste torneio." : isNoBalance ? "Você não tem DuelCoins suficientes para se inscrever." : message,
                               variant: "destructive",
                             });
+                            if (isNoBalance) {
+                              setTimeout(() => navigate('/buy-duelcoins'), 1500);
+                            }
                             setLoading(false);
                             return;
                           }
@@ -537,6 +540,9 @@ const TournamentDetail = () => {
                             description: isAlreadyJoined ? "Você já está inscrito neste torneio." : isNoBalance ? "Você não tem DuelCoins suficientes para se inscrever." : msg,
                             variant: "destructive",
                           });
+                          if (isNoBalance) {
+                            setTimeout(() => navigate('/buy-duelcoins'), 1500);
+                          }
                         } finally {
                           setLoading(false);
                         }

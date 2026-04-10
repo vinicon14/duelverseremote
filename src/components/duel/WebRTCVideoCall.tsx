@@ -36,6 +36,8 @@ interface WebRTCVideoCallProps {
   };
   /** When true, user is a spectator: receive-only, no local media, no controls */
   isSpectator?: boolean;
+  /** Creator user ID - used by spectators to correctly order peers (creator on left) */
+  creatorId?: string;
 }
 
 const ICE_SERVERS: RTCIceServer[] = [
@@ -83,6 +85,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   remoteDeckOpenSlots,
   spectatorLpOverlay,
   isSpectator = false,
+  creatorId,
 }, ref) => {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
@@ -134,7 +137,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   // Switch device: acquire new stream with chosen device, replace tracks in all peers
   const switchDevice = useCallback(async (audioId?: string, videoId?: string) => {
     const constraints: MediaStreamConstraints = {
-      audio: audioId ? { deviceId: { exact: audioId } } : true,
+      audio: audioId ? { deviceId: { exact: audioId }, echoCancellation: true, noiseSuppression: true, autoGainControl: true } : { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
       video: videoId ? { deviceId: { exact: videoId }, width: { ideal: 640 }, height: { ideal: 480 } } : { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
     };
 
@@ -410,10 +413,15 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       if (isSpectator) return null;
 
       // Try with facingMode for mobile compatibility first
+      const audioConstraints = {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      };
       const constraints = [
-        { video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: true },
-        { video: { facingMode: 'user' }, audio: true },
-        { video: true, audio: true },
+        { video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: audioConstraints },
+        { video: { facingMode: 'user' }, audio: audioConstraints },
+        { video: true, audio: audioConstraints },
         { video: true, audio: false },
       ];
 
@@ -576,12 +584,20 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   const isSideBySide = layout === "side-by-side";
 
   // Build remote slots: fill with connected peers, pad with waiting slots
-  // For spectators: first peer goes to local panel, remaining peers go to remote slots
+  // For spectators: sort peers so creator comes first (local panel = left = creator)
+  const sortedPeerIds = isSpectator && creatorId
+    ? [...remotePeerIds].sort((a, b) => {
+        if (a === creatorId) return -1;
+        if (b === creatorId) return 1;
+        return 0;
+      })
+    : remotePeerIds;
+
   const remoteSlots: (string | null)[] = [];
   if (isSpectator) {
     // Skip first peer (used in local panel), use rest for remote slots
     for (let i = 0; i < totalSlots - 1; i++) {
-      remoteSlots.push(remotePeerIds[i + 1] || null);
+      remoteSlots.push(sortedPeerIds[i + 1] || null);
     }
   } else {
     for (let i = 0; i < totalSlots - 1; i++) {
@@ -601,7 +617,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     if (isSpectator) {
       // Spectator's "local panel" actually shows player 1 (creator) stream
       // We use the first remote peer as player 1
-      const player1PeerId = remotePeerIds[0] || null;
+      const player1PeerId = sortedPeerIds[0] || null;
       return (
         <div className="relative w-full h-full overflow-hidden bg-black">
           {player1PeerId ? (
@@ -609,7 +625,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
               ref={(el) => setRemoteVideoRef(player1PeerId, el)}
               autoPlay
               playsInline
-              className={`w-full h-full object-contain ${localDeckOpen ? 'hidden' : ''}`}
+              className={`w-full h-full object-cover ${localDeckOpen ? 'hidden' : ''}`}
             />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center bg-black/80">
@@ -642,7 +658,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
           autoPlay
           playsInline
           muted
-          className={`w-full h-full object-contain ${localDeckOpen ? 'hidden' : ''} ${zoomLevel > 1 ? 'cursor-grab active:cursor-grabbing' : ''}`}
+          className={`w-full h-full object-cover ${localDeckOpen ? 'hidden' : ''} ${zoomLevel > 1 ? 'cursor-grab active:cursor-grabbing' : ''}`}
           style={{
             transform: `scaleX(-1) scale(${zoomLevel}) translate(${panOffset.x / zoomLevel}px, ${panOffset.y / zoomLevel}px)`,
           }}
@@ -701,7 +717,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
             ref={(el) => setRemoteVideoRef(peerId, el)}
             autoPlay
             playsInline
-            className={`w-full h-full object-contain ${showDeckOverlay ? 'hidden' : ''}`}
+            className={`w-full h-full object-cover ${showDeckOverlay ? 'hidden' : ''}`}
           />
         )}
         {showDeckOverlay ? (
