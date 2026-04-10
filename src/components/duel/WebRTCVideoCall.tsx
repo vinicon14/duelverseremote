@@ -341,7 +341,32 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   };
 
   const zoomIn = () => setZoomLevel(prev => Math.min(prev + ZOOM_STEP, MAX_ZOOM));
-  const zoomOut = () => setZoomLevel(prev => Math.max(prev - ZOOM_STEP, MIN_ZOOM));
+  const zoomOut = () => {
+    setZoomLevel(prev => {
+      const next = Math.max(prev - ZOOM_STEP, MIN_ZOOM);
+      if (next <= 1) setPanOffset({ x: 0, y: 0 });
+      return next;
+    });
+  };
+
+  // Drag handlers for panning zoomed video
+  const handlePanStart = (e: React.PointerEvent) => {
+    if (zoomLevel <= 1) return;
+    isDraggingRef.current = true;
+    dragStartRef.current = { x: e.clientX, y: e.clientY, ox: panOffset.x, oy: panOffset.y };
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  };
+
+  const handlePanMove = (e: React.PointerEvent) => {
+    if (!isDraggingRef.current) return;
+    const dx = e.clientX - dragStartRef.current.x;
+    const dy = e.clientY - dragStartRef.current.y;
+    setPanOffset({ x: dragStartRef.current.ox + dx, y: dragStartRef.current.oy + dy });
+  };
+
+  const handlePanEnd = () => {
+    isDraggingRef.current = false;
+  };
 
   const setRemoteVideoRef = useCallback((peerId: string, el: HTMLVideoElement | null) => {
     if (el) {
