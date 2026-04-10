@@ -23,6 +23,7 @@ import { DuelDeckViewer } from "@/components/duel/DuelDeckViewer";
 import { FloatingOpponentViewer } from "@/components/duel/FloatingOpponentViewer";
 import { MagicDuelViewer } from "@/components/duel/MagicDuelViewer";
 import { PokemonDuelViewer } from "@/components/duel/PokemonDuelViewer";
+import { DailyPrebuiltFrame } from "@/components/duel/DailyPrebuiltFrame";
 import { useDuelDeck } from "@/hooks/useDuelDeck";
 import { useDuelPresence, useDuelCleanup } from "@/hooks/useDuelPresence";
 
