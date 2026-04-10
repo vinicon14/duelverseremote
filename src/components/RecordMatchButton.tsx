@@ -137,32 +137,41 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
     const supportsDisplaySurface = Boolean((navigator.mediaDevices.getSupportedConstraints?.() as any)?.displaySurface);
     const attempts: Array<{ options: any; fallbackWithoutSystemAudio: boolean }> = [];
 
-    if (!isElectron && supportsDisplaySurface) {
+    // For Electron: always try video-only first (most reliable), then with audio
+    if (isElectron) {
+      if (shouldRequestSystemAudio) {
+        attempts.push({
+          options: { video: true, audio: true },
+          fallbackWithoutSystemAudio: false,
+        });
+      }
+      // Always have a video-only fallback for Electron
       attempts.push({
-        options: {
-          video: { displaySurface: "browser" },
-          audio: shouldRequestSystemAudio,
-        },
+        options: { video: true, audio: false },
+        fallbackWithoutSystemAudio: shouldRequestSystemAudio,
+      });
+    } else {
+      if (supportsDisplaySurface) {
+        attempts.push({
+          options: {
+            video: { displaySurface: "browser" },
+            audio: shouldRequestSystemAudio,
+          },
+          fallbackWithoutSystemAudio: false,
+        });
+      }
+
+      attempts.push({
+        options: { video: true, audio: shouldRequestSystemAudio },
         fallbackWithoutSystemAudio: false,
       });
-    }
 
-    attempts.push({
-      options: {
-        video: true,
-        audio: shouldRequestSystemAudio,
-      },
-      fallbackWithoutSystemAudio: false,
-    });
-
-    if (isElectron && shouldRequestSystemAudio) {
-      attempts.push({
-        options: {
-          video: true,
-          audio: false,
-        },
-        fallbackWithoutSystemAudio: true,
-      });
+      if (shouldRequestSystemAudio) {
+        attempts.push({
+          options: { video: true, audio: false },
+          fallbackWithoutSystemAudio: true,
+        });
+      }
     }
 
     let lastError: any = null;
