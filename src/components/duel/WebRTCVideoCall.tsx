@@ -22,6 +22,10 @@ interface WebRTCVideoCallProps {
   remoteDeckOpen?: boolean;
   localDeckContent?: React.ReactNode;
   remoteDeckContent?: React.ReactNode;
+  /** Per-slot remote deck content for 4-player mode (index 0-2 for each remote slot) */
+  remoteDeckContents?: (React.ReactNode | undefined)[];
+  /** Per-slot remote deck open flags for 4-player mode */
+  remoteDeckOpenSlots?: boolean[];
 }
 
 const ICE_SERVERS: RTCIceServer[] = [
@@ -49,6 +53,8 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   remoteDeckOpen = false,
   localDeckContent,
   remoteDeckContent,
+  remoteDeckContents,
+  remoteDeckOpenSlots,
 }, ref) => {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
@@ -438,9 +444,13 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
 
   const renderRemotePanel = (peerId: string | null, index: number) => (
     <div key={peerId || `waiting-${index}`} className="relative w-full h-full overflow-hidden bg-black">
-      {peerId && remoteDeckOpen && remoteDeckContent && index === 0 ? (
+      {peerId && (
+        // Check per-slot content first (4-player), then fallback to single remoteDeckContent
+        (remoteDeckContents?.[index] && (remoteDeckOpenSlots?.[index] ?? false)) ||
+        (remoteDeckOpen && remoteDeckContent && index === 0 && !remoteDeckContents)
+      ) ? (
         <div className="w-full h-full overflow-auto bg-background touch-pan-y">
-          {remoteDeckContent}
+          {remoteDeckContents?.[index] || remoteDeckContent}
         </div>
       ) : peerId ? (
         <video

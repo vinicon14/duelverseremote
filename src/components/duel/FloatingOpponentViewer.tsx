@@ -114,6 +114,10 @@ interface FloatingOpponentViewerProps {
   currentUserId: string;
   opponentUsername?: string;
   embedded?: boolean;
+  /** For 4-player mode: show only the opponent with this userId */
+  filterOpponentId?: string;
+  /** Map of peerId -> username for 4-player labeling */
+  opponentUsernames?: Record<string, string>;
 }
 
 const buildPkmEffectText = (card: OpponentCard): string => {
@@ -148,9 +152,13 @@ export const FloatingOpponentViewer = ({
   duelId, 
   currentUserId, 
   opponentUsername = 'Oponente',
-  embedded = false 
+  embedded = false,
+  filterOpponentId,
+  opponentUsernames,
 }: FloatingOpponentViewerProps) => {
-  const [opponentState, setOpponentState] = useState<OpponentState | null>(null);
+  // Multi-opponent support: store states keyed by opponent userId
+  const [opponentStates, setOpponentStates] = useState<Map<string, OpponentState>>(new Map());
+  const [activeOpponentId, setActiveOpponentId] = useState<string | null>(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMinimized, setIsMinimized] = useState(true);
   const [isVisible, setIsVisible] = useState(true);
@@ -161,6 +169,18 @@ export const FloatingOpponentViewer = ({
     initialPosition: { x: 8, y: 80 },
   });
 
+  // Derive the single opponentState for backward compatibility
+  const opponentState: OpponentState | null = (() => {
+    if (filterOpponentId) return opponentStates.get(filterOpponentId) || null;
+    if (activeOpponentId && opponentStates.has(activeOpponentId)) return opponentStates.get(activeOpponentId)!;
+    // fallback to first
+    const first = opponentStates.entries().next();
+    return first.done ? null : first.value[1];
+  })();
+
+  const opponentIds = Array.from(opponentStates.keys());
+  const isMultiOpponent = opponentIds.length > 1 && !filterOpponentId;
+
   useEffect(() => {
     if (!duelId) return;
 
@@ -169,8 +189,10 @@ export const FloatingOpponentViewer = ({
     channel
       .on('broadcast', { event: 'deck-state' }, ({ payload }) => {
         if (payload.userId && payload.userId !== currentUserId) {
+          const opId = payload.userId as string;
+          let newState: OpponentState;
           if (payload.tcgType === 'magic') {
-            setOpponentState({
+            newState = {
               hand: payload.hand || 0,
               field: [],
               graveyard: payload.graveyard || [],
@@ -186,9 +208,9 @@ export const FloatingOpponentViewer = ({
               phase: payload.phase,
               playmatUrl: payload.playmatUrl || null,
               sleeveUrl: payload.sleeveUrl || null,
-            });
+            };
           } else if (payload.tcgType === 'pokemon') {
-            setOpponentState({
+            newState = {
               hand: payload.handCount || 0,
               field: [],
               graveyard: [],
@@ -232,9 +254,9 @@ export const FloatingOpponentViewer = ({
               pkmDiscard: (payload.discardCards || []).map((c: any) => ({ id: c.id || 0, name: c.name, image: c.image })),
               playmatUrl: payload.playmatUrl || null,
               sleeveUrl: payload.sleeveUrl || null,
-            });
+            };
           } else {
-            setOpponentState({
+            newState = {
               hand: payload.hand || 0,
               field: payload.field || [],
               monsterZones: payload.monsterZones || undefined,
@@ -247,8 +269,15 @@ export const FloatingOpponentViewer = ({
               extraCount: payload.extraCount || 0,
               playmatUrl: payload.playmatUrl || null,
               sleeveUrl: payload.sleeveUrl || null,
-            });
+            };
           }
+          setOpponentStates(prev => {
+            const next = new Map(prev);
+            next.set(opId, newState);
+            return next;
+          });
+          // Auto-select first active opponent
+          setActiveOpponentId(prev => prev || opId);
         }
       })
       .subscribe();
@@ -442,10 +471,16 @@ export const FloatingOpponentViewer = ({
         )}
         {...(embedded ? {} : dragHandlers)}
       >
-        <div className="flex items-center gap-2">
-          {!embedded && <Move className="h-3 w-3 text-muted-foreground" />}
-          <Eye className="h-4 w-4 text-primary" />
-          <span className="text-sm font-semibold">Deck de {opponentUsername}</span>
+        <div className="flex items-center gap-2 min-w-0">
+          {!embedded && <Move className="h-3 w-3 text-muted-foreground flex-shrink-0" />}
+          <Eye className="h-4 w-4 text-primary flex-shrink-0" />
+          <span className="text-sm font-semibold truncate">
+            Deck de {isMultiOpponent 
+              ? (opponentUsernames?.[activeOpponentId || ''] || `Oponente`) 
+              : (filterOpponentId 
+                ? (opponentUsernames?.[filterOpponentId] || opponentUsername)
+                : opponentUsername)}
+          </span>
         </div>
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIsMinimized(true)}>
@@ -456,6 +491,23 @@ export const FloatingOpponentViewer = ({
           </Button>
         </div>
       </div>
+
+      {/* Multi-opponent tabs */}
+      {isMultiOpponent && !isMinimized && (
+        <div className="flex gap-1 px-2 py-1 border-b border-border bg-muted/20 overflow-x-auto">
+          {opponentIds.map((opId, idx) => (
+            <Button
+              key={opId}
+              variant={activeOpponentId === opId ? 'default' : 'ghost'}
+              size="sm"
+              className="h-6 px-2 text-[10px] flex-shrink-0"
+              onClick={() => setActiveOpponentId(opId)}
+            >
+              {opponentUsernames?.[opId] || `Oponente ${idx + 1}`}
+            </Button>
+          ))}
+        </div>
+      )}
 
       {/* Content */}
       <div className={cn("p-2", embedded && "overflow-y-auto max-h-[calc(100%-40px)]")}>
