@@ -309,6 +309,17 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         if (localVideoRef.current) {
           localVideoRef.current.srcObject = stream;
         }
+        // If peer connections were already created before media was ready,
+        // add tracks to all existing peers now
+        peersRef.current.forEach((peerState, peerId) => {
+          const senders = peerState.pc.getSenders();
+          if (senders.length === 0) {
+            console.log("[WebRTC] Adding late tracks to peer:", peerId);
+            stream.getTracks().forEach((track) => {
+              peerState.pc.addTrack(track, stream);
+            });
+          }
+        });
       } else {
         console.error("[WebRTC] Could not acquire any media stream");
       }
