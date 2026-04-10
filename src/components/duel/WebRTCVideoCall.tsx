@@ -533,16 +533,37 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         >
           {isVideoOff ? <VideoOff className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Video className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
         </Button>
+        {/* Zoom controls */}
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={zoomOut}
+          disabled={zoomLevel <= MIN_ZOOM}
+          className="rounded-full w-8 h-8 sm:w-10 sm:h-10 backdrop-blur-sm bg-card/80"
+          title="Diminuir zoom"
+        >
+          <ZoomOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+        </Button>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={zoomIn}
+          disabled={zoomLevel >= MAX_ZOOM}
+          className="rounded-full w-8 h-8 sm:w-10 sm:h-10 backdrop-blur-sm bg-card/80"
+          title="Aumentar zoom"
+        >
+          <ZoomIn className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+        </Button>
         {/* Layout toggle (only for 2 players) */}
         {!is4Player && (
           <Button
             variant="outline"
             size="icon"
             onClick={() => onLayoutChange?.(isSideBySide ? "pip" : "side-by-side")}
-            className="rounded-full w-10 h-10 backdrop-blur-sm bg-card/80"
+            className="rounded-full w-8 h-8 sm:w-10 sm:h-10 backdrop-blur-sm bg-card/80"
             title={isSideBySide ? "Modo PiP" : "Modo lado a lado"}
           >
-            {isSideBySide ? <PictureInPicture2 className="w-4 h-4" /> : <LayoutGrid className="w-4 h-4" />}
+            {isSideBySide ? <PictureInPicture2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <LayoutGrid className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
           </Button>
         )}
       </div>
