@@ -75,13 +75,15 @@ export default function ProfileSelect() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || adminLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary" />
       </div>
     );
   }
+
+  if (isAdmin) return null;
 
   // If only one profile, redirect immediately
   if (profiles.length <= 1) {
