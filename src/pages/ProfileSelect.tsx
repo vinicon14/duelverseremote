@@ -53,7 +53,7 @@ export default function ProfileSelect() {
     setCreating(false);
     if (success) {
       toast.success(`Perfil ${TCG_CONFIG[tcg].name} criado!`);
-      navigate('/');
+      navigate(returnTo);
     } else {
       toast.error('Erro ao criar perfil. Talvez já exista um para esse TCG.');
     }
