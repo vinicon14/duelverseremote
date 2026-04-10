@@ -14,6 +14,7 @@ import { Search, Plus, Minus, Save, Trash2, Loader2, Download, Upload, FolderOpe
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 
 interface ScryfallCard {
   id: string;
