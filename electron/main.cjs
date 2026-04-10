@@ -424,7 +424,28 @@ ipcMain.on('set-selected-source', (_, sourceId) => {
   console.log('[Electron] Selected capture source:', selectedSourceId);
 });
 
-ipcMain.on('sync-auth', async (_, { token, userId }) => {
+ipcMain.handle('save-file-locally', async (_, arrayBuffer, defaultName) => {
+  try {
+    const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+      title: 'Salvar gravação',
+      defaultPath: defaultName || 'gravacao.webm',
+      filters: [
+        { name: 'Vídeo WebM', extensions: ['webm'] },
+        { name: 'Todos os arquivos', extensions: ['*'] },
+      ],
+    });
+
+    if (canceled || !filePath) return { success: false, reason: 'canceled' };
+
+    const buffer = Buffer.from(arrayBuffer);
+    fs.writeFileSync(filePath, buffer);
+    return { success: true, filePath };
+  } catch (error) {
+    console.error('[Electron] Failed to save file:', error);
+    return { success: false, reason: error.message };
+  }
+});
+
   const normalizedToken = token || null;
   const normalizedUserId = userId || null;
   const userChanged = authUserId !== normalizedUserId;
