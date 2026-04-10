@@ -20,6 +20,7 @@ export default function ProDuels() {
   const [duels, setDuels] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     checkAuth();
