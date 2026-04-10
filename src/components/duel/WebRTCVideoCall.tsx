@@ -263,12 +263,17 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     // Monitor ICE connection and auto-recover or remove disconnected peer
     pc.oniceconnectionstatechange = () => {
       console.log(`[WebRTC] ICE state ${remotePeerId}: ${pc.iceConnectionState}`);
+      // Guard: only act if this PC is still the active one for this peer
+      const currentPeer = peersRef.current.get(remotePeerId);
+      if (!currentPeer || currentPeer.pc !== pc) return;
+
       if (pc.iceConnectionState === 'failed') {
         console.warn("[WebRTC] ICE failed for:", remotePeerId);
-        // Remove peer so UI shows "Aguardando jogador" again
         removePeer(remotePeerId);
       } else if (pc.iceConnectionState === 'disconnected') {
         setTimeout(() => {
+          const stillCurrent = peersRef.current.get(remotePeerId);
+          if (!stillCurrent || stillCurrent.pc !== pc) return;
           if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed') {
             console.warn("[WebRTC] Peer disconnected permanently:", remotePeerId);
             removePeer(remotePeerId);
