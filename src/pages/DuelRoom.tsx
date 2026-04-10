@@ -16,6 +16,7 @@ import { Navbar } from "@/components/Navbar";
 import { DuelChat } from "@/components/DuelChat";
 import { FloatingCalculator } from "@/components/FloatingCalculator";
 import { RecordMatchButton } from "@/components/RecordMatchButton";
+import { ElectronRecordButton } from "@/components/ElectronRecordButton";
 import { YouTubeLiveButton } from "@/components/YouTubeLiveButton";
 import { HideElementsButton } from "@/components/HideElementsButton";
 import { useBanCheck } from "@/hooks/useBanCheck";
