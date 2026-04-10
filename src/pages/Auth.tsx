@@ -31,6 +31,7 @@ const Auth = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [selectedTcg, setSelectedTcg] = useState<TcgType>('yugioh');
+  const [lastFailedEmail, setLastFailedEmail] = useState<string | null>(null);
 
   const returnTo = (location.state as any)?.returnTo;
 
