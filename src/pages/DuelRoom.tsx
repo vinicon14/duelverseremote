@@ -43,6 +43,8 @@ const DuelRoom = () => {
   const [showMagicViewer, setShowMagicViewer] = useState(false);
   const [showPokemonViewer, setShowPokemonViewer] = useState(false);
   const [opponentDeckOpen, setOpponentDeckOpen] = useState(false);
+  // Per-opponent deck open states for 4-player mode (keyed by peerId)
+  const [opponentDeckOpenMap, setOpponentDeckOpenMap] = useState<Record<string, boolean>>({});
   const [callDuration, setCallDuration] = useState(0);
   const [videoReady, setVideoReady] = useState(false);
   const [videoLayout, setVideoLayout] = useState<VideoLayout>("side-by-side");
