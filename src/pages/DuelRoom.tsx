@@ -1234,7 +1234,7 @@ const DuelRoom = () => {
               {/* Spectator: only Gravar and Sair */}
               {isSpectator && !isJudge ? (
                 <>
-                  <RecordMatchButton duelId={id!} />
+                  {!(window as any).electronAPI?.isElectron && <RecordMatchButton duelId={id!} />}
                   <ElectronRecordButton duelId={id!} />
                   <Button
                     onClick={handleLeave}
@@ -1252,7 +1252,7 @@ const DuelRoom = () => {
                   {!isJudge && (
                     <>
                       <HideElementsButton onToggle={() => setHideControls(!hideControls)} isHidden={hideControls} />
-                      <RecordMatchButton duelId={id!} />
+                      {!(window as any).electronAPI?.isElectron && <RecordMatchButton duelId={id!} />}
                       <ElectronRecordButton duelId={id!} />
                       {isParticipant && (
                         <span className="hidden sm:inline-flex">

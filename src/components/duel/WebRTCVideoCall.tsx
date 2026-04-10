@@ -122,13 +122,14 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   }, []);
 
   useEffect(() => {
+    // Spectators don't need device enumeration
+    if (isSpectator) return;
     enumerateDevices();
-    // Re-enumerate when devices change (plug/unplug)
     navigator.mediaDevices?.addEventListener?.('devicechange', enumerateDevices);
     return () => {
       navigator.mediaDevices?.removeEventListener?.('devicechange', enumerateDevices);
     };
-  }, [enumerateDevices]);
+  }, [enumerateDevices, isSpectator]);
 
   // Switch device: acquire new stream with chosen device, replace tracks in all peers
   const switchDevice = useCallback(async (audioId?: string, videoId?: string) => {
