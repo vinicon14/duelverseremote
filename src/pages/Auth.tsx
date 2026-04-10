@@ -45,8 +45,7 @@ const Auth = () => {
             const { data: tcgProfiles } = await supabase
               .from('tcg_profiles')
               .select('id, tcg_type')
-              .eq('user_id', session.user.id)
-              .limit(1);
+              .eq('user_id', session.user.id);
             
             if (!tcgProfiles || tcgProfiles.length === 0) {
               // Auto-create TCG profile from signup metadata
@@ -71,8 +70,12 @@ const Auth = () => {
               localStorage.setItem('activeTcg', tcgToCreate);
               navigate(defaultRedirect, { replace: true });
             } else {
-              // Set active TCG from existing profile
-              localStorage.setItem('activeTcg', tcgProfiles[0].tcg_type);
+              // Restore last active TCG from localStorage, fallback to first profile
+              const savedTcg = localStorage.getItem('activeTcg');
+              const hasMatchingProfile = tcgProfiles.some(p => p.tcg_type === savedTcg);
+              if (!savedTcg || !hasMatchingProfile) {
+                localStorage.setItem('activeTcg', tcgProfiles[0].tcg_type);
+              }
               navigate(defaultRedirect, { replace: true });
             }
           } else {
