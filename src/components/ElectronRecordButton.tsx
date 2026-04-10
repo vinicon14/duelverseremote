@@ -52,9 +52,6 @@ export const ElectronRecordButton = ({ duelId }: { duelId: string }) => {
   const electronAPI = (window as any).electronAPI;
   const isElectron = !!electronAPI?.isElectron;
 
-  // Don't render at all if not Electron
-  if (!isElectron) return null;
-
   const loadSources = useCallback(async () => {
     if (!electronAPI?.getDesktopSources) return;
     try {
