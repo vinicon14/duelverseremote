@@ -468,7 +468,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
             ) : (
               <>
                 <video
-                  ref={localVideoRef}
+                  ref={localVideoCallbackRef}
                   autoPlay
                   playsInline
                   muted
