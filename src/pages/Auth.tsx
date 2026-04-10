@@ -34,64 +34,68 @@ const Auth = () => {
 
   const returnTo = (location.state as any)?.returnTo;
 
+  const routeAuthenticatedUser = async (user: NonNullable<Awaited<ReturnType<typeof supabase.auth.getSession>>['data']['session']>['user']) => {
+    const defaultRedirect = returnTo || '/duels';
+
+    const { data: tcgProfiles, error: tcgProfilesError } = await supabase
+      .from('tcg_profiles')
+      .select('id, tcg_type')
+      .eq('user_id', user.id);
+
+    if (tcgProfilesError) throw tcgProfilesError;
+
+    if (!tcgProfiles || tcgProfiles.length === 0) {
+      const metaTcg = user.user_metadata?.selected_tcg as TcgType | undefined;
+      const tcgToCreate = metaTcg || 'yugioh';
+
+      const { data: mainProfile } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      const username = mainProfile?.username || user.user_metadata?.username || user.email?.split('@')[0] || 'Duelista';
+
+      const { error: insertError } = await supabase.from('tcg_profiles').insert({
+        user_id: user.id,
+        tcg_type: tcgToCreate,
+        username,
+      });
+
+      if (insertError) throw insertError;
+
+      localStorage.setItem('activeTcg', tcgToCreate);
+      navigate(defaultRedirect, { replace: true });
+      return;
+    }
+
+    if (tcgProfiles.length > 1) {
+      navigate('/profile-select', { replace: true });
+      return;
+    }
+
+    localStorage.setItem('activeTcg', tcgProfiles[0].tcg_type);
+    navigate(defaultRedirect, { replace: true });
+  };
+
   // Verificar se usuário já está logado e redirecionar
   useEffect(() => {
-    const defaultRedirect = returnTo || '/duels';
-    
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (session?.user) {
-          if (event === 'SIGNED_IN') {
-            const { data: tcgProfiles } = await supabase
-              .from('tcg_profiles')
-              .select('id, tcg_type')
-              .eq('user_id', session.user.id);
-            
-            if (!tcgProfiles || tcgProfiles.length === 0) {
-              // Auto-create TCG profile from signup metadata
-              const metaTcg = session.user.user_metadata?.selected_tcg as TcgType | undefined;
-              const tcgToCreate = metaTcg || 'yugioh';
-              
-              // Get username from profile or metadata
-              const { data: mainProfile } = await supabase
-                .from('profiles')
-                .select('username')
-                .eq('user_id', session.user.id)
-                .maybeSingle();
-              const username = mainProfile?.username || session.user.user_metadata?.username || session.user.email?.split('@')[0] || 'Duelista';
-
-              await supabase.from('tcg_profiles').insert({
-                user_id: session.user.id,
-                tcg_type: tcgToCreate,
-                username,
-              });
-
-              // Set active TCG in localStorage
-              localStorage.setItem('activeTcg', tcgToCreate);
-              navigate(defaultRedirect, { replace: true });
-            } else if (tcgProfiles.length > 1) {
-              // Multiple profiles exist — user must choose one (others will be deleted)
-              navigate('/profile-select', { replace: true });
-            } else {
-              // Single profile — set it and go
-              localStorage.setItem('activeTcg', tcgProfiles[0].tcg_type);
-              navigate(defaultRedirect, { replace: true });
-            }
-          } else {
-            navigate(defaultRedirect, { replace: true });
-          }
-        }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        window.setTimeout(() => {
+          void routeAuthenticatedUser(session.user);
+        }, 0);
       }
-    );
+    });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        navigate(defaultRedirect, { replace: true });
+        void routeAuthenticatedUser(session.user);
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, returnTo]);
 
   const handleGoogleSignIn = async () => {
     try {
