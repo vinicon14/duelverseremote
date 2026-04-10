@@ -137,7 +137,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   // Switch device: acquire new stream with chosen device, replace tracks in all peers
   const switchDevice = useCallback(async (audioId?: string, videoId?: string) => {
     const constraints: MediaStreamConstraints = {
-      audio: audioId ? { deviceId: { exact: audioId } } : true,
+      audio: audioId ? { deviceId: { exact: audioId }, echoCancellation: true, noiseSuppression: true, autoGainControl: true } : { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
       video: videoId ? { deviceId: { exact: videoId }, width: { ideal: 640 }, height: { ideal: 480 } } : { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
     };
 
@@ -413,10 +413,15 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       if (isSpectator) return null;
 
       // Try with facingMode for mobile compatibility first
+      const audioConstraints = {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      };
       const constraints = [
-        { video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: true },
-        { video: { facingMode: 'user' }, audio: true },
-        { video: true, audio: true },
+        { video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: audioConstraints },
+        { video: { facingMode: 'user' }, audio: audioConstraints },
+        { video: true, audio: audioConstraints },
         { video: true, audio: false },
       ];
 
