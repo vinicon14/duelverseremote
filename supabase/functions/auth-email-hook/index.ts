@@ -41,6 +41,7 @@ const SITE_NAME = "DuelVerse"
 const SENDER_DOMAIN = "notify.duelverse.site"
 const ROOT_DOMAIN = "duelverse.site"
 const FROM_DOMAIN = "duelverse.site"
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || 'https://xxttwzewtqxvpgefggah.supabase.co'
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
