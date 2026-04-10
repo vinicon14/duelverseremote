@@ -103,7 +103,7 @@ export const NoMonetagAds = () => {
       document.querySelectorAll('iframe').forEach((iframe) => {
         const src = iframe.getAttribute('src') || '';
         const id = iframe.id || '';
-        const className = iframe.className || '';
+        const className = typeof iframe.className === 'string' ? iframe.className : '';
         // Allow Daily.co iframes
         if (src.includes('daily.co') || src.includes('duelverse')) {
           return; // Skip removal for Daily.co
@@ -126,7 +126,7 @@ export const NoMonetagAds = () => {
       // Remove popup/overlay elements (fixed position, high z-index)
       document.querySelectorAll('*').forEach((el) => {
         const id = el.id || '';
-        const className = el.className || '';
+        const className = typeof el.className === 'string' ? el.className : (el.className?.baseVal || '');
         const style = el.getAttribute('style') || '';
         
         // Block popup/overlay ads (fixed position, high z-index, or Monetag related)
@@ -138,9 +138,7 @@ export const NoMonetagAds = () => {
           id.includes('popunder') ||
           className.includes('quge5') || 
           className.includes('monetag') ||
-          className.includes('popup') ||
-          className.includes('popunder') ||
-          className.includes('overlay');
+          className.includes('popunder');
         
         if (isPopupOrOverlay) {
           el.remove();
