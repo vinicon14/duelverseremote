@@ -356,9 +356,9 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   }
 
   const renderLocalPanel = () => (
-    <div className="relative w-full h-full rounded-lg overflow-hidden bg-black">
+    <div className="relative w-full h-full overflow-hidden bg-black">
       {localDeckOpen && localDeckContent ? (
-        <div className="w-full h-full overflow-auto bg-background">
+        <div className="w-full h-full overflow-auto bg-background touch-pan-y">
           {localDeckContent}
         </div>
       ) : (
@@ -373,22 +373,22 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
           />
           {isVideoOff && (
             <div className="absolute inset-0 bg-muted flex items-center justify-center">
-              <VideoOff className="w-10 h-10 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground mt-2 absolute bottom-4">Câmera desligada</p>
+              <VideoOff className="w-8 h-8 sm:w-10 sm:h-10 text-muted-foreground" />
+              <p className="text-xs sm:text-sm text-muted-foreground mt-2 absolute bottom-4">Câmera desligada</p>
             </div>
           )}
         </>
       )}
-      <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-black/60 text-xs text-white z-10">
+      <div className="absolute bottom-1 left-1 sm:bottom-2 sm:left-2 px-1.5 py-0.5 rounded bg-black/60 text-[10px] sm:text-xs text-white z-10">
         Você
       </div>
     </div>
   );
 
   const renderRemotePanel = (peerId: string | null, index: number) => (
-    <div key={peerId || `waiting-${index}`} className="relative w-full h-full rounded-lg overflow-hidden bg-black">
+    <div key={peerId || `waiting-${index}`} className="relative w-full h-full overflow-hidden bg-black">
       {peerId && remoteDeckOpen && remoteDeckContent && index === 0 ? (
-        <div className="w-full h-full overflow-auto bg-background">
+        <div className="w-full h-full overflow-auto bg-background touch-pan-y">
           {remoteDeckContent}
         </div>
       ) : peerId ? (
@@ -400,13 +400,13 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         />
       ) : (
         <div className="absolute inset-0 flex items-center justify-center bg-black/80">
-          <div className="text-center space-y-3">
-            <Loader2 className="w-8 h-8 mx-auto text-primary animate-spin" />
-            <p className="text-xs text-muted-foreground">Aguardando jogador...</p>
+          <div className="text-center space-y-2">
+            <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 mx-auto text-primary animate-spin" />
+            <p className="text-[10px] sm:text-xs text-muted-foreground">Aguardando jogador...</p>
           </div>
         </div>
       )}
-      <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-black/60 text-xs text-white z-10">
+      <div className="absolute bottom-1 left-1 sm:bottom-2 sm:left-2 px-1.5 py-0.5 rounded bg-black/60 text-[10px] sm:text-xs text-white z-10">
         {peerId ? `Oponente ${remoteSlots.length > 1 ? index + 1 : ''}` : `Jogador ${index + 2}`}
       </div>
     </div>
@@ -435,12 +435,12 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
           </div>
         </div>
       ) : isSideBySide ? (
-        /* ===== SIDE-BY-SIDE LAYOUT (Discord-style, 2 players) ===== */
-        <div className="flex w-full h-full">
-          <div className="relative flex-1">
+        /* ===== SIDE-BY-SIDE (desktop) / STACKED (mobile) ===== */
+        <div className="flex flex-col sm:flex-row w-full h-full">
+          <div className="relative flex-1 min-h-0">
             {renderLocalPanel()}
           </div>
-          <div className="relative flex-1">
+          <div className="relative flex-1 min-h-0">
             {renderRemotePanel(remoteSlots[0], 0)}
           </div>
         </div>
@@ -479,22 +479,22 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       )}
 
       {/* Controls bar */}
-      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2 z-20">
+      <div className="absolute bottom-1.5 sm:bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 sm:gap-2 z-20">
         <Button
           variant="outline"
           size="icon"
           onClick={toggleMute}
-          className={`rounded-full w-10 h-10 backdrop-blur-sm ${isMuted ? "bg-destructive/80 text-destructive-foreground" : "bg-card/80"}`}
+          className={`rounded-full w-8 h-8 sm:w-10 sm:h-10 backdrop-blur-sm ${isMuted ? "bg-destructive/80 text-destructive-foreground" : "bg-card/80"}`}
         >
-          {isMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+          {isMuted ? <MicOff className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Mic className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
         </Button>
         <Button
           variant="outline"
           size="icon"
           onClick={toggleVideo}
-          className={`rounded-full w-10 h-10 backdrop-blur-sm ${isVideoOff ? "bg-destructive/80 text-destructive-foreground" : "bg-card/80"}`}
+          className={`rounded-full w-8 h-8 sm:w-10 sm:h-10 backdrop-blur-sm ${isVideoOff ? "bg-destructive/80 text-destructive-foreground" : "bg-card/80"}`}
         >
-          {isVideoOff ? <VideoOff className="w-4 h-4" /> : <Video className="w-4 h-4" />}
+          {isVideoOff ? <VideoOff className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Video className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
         </Button>
         {/* Layout toggle (only for 2 players) */}
         {!is4Player && (
