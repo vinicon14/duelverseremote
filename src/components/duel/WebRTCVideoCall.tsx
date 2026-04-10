@@ -261,22 +261,40 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   useEffect(() => {
     let disposed = false;
 
-    const init = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: true,
-        });
-        if (disposed) {
-          stream.getTracks().forEach((t) => t.stop());
-          return;
+    const acquireMedia = async (): Promise<MediaStream | null> => {
+      // Try with facingMode for mobile compatibility first
+      const constraints = [
+        { video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: true },
+        { video: { facingMode: 'user' }, audio: true },
+        { video: true, audio: true },
+        { video: true, audio: false },
+      ];
+
+      for (const constraint of constraints) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia(constraint);
+          console.log("[WebRTC] Media acquired with:", JSON.stringify(constraint));
+          return stream;
+        } catch (err) {
+          console.warn("[WebRTC] Failed constraint:", JSON.stringify(constraint), err);
         }
+      }
+      return null;
+    };
+
+    const init = async () => {
+      const stream = await acquireMedia();
+      if (disposed) {
+        stream?.getTracks().forEach((t) => t.stop());
+        return;
+      }
+      if (stream) {
         localStreamRef.current = stream;
         if (localVideoRef.current) {
           localVideoRef.current.srcObject = stream;
         }
-      } catch (err) {
-        console.error("[WebRTC] Failed to get media:", err);
+      } else {
+        console.error("[WebRTC] Could not acquire any media stream");
       }
 
       const channel = supabase.channel(`webrtc-signal-${duelId}`, {
