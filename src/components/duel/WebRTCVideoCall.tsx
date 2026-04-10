@@ -649,14 +649,23 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   );
 
   const renderRemotePanel = (peerId: string | null, index: number) => {
-    // Always show opponent deck overlay if available (no need to wait for remoteDeckOpen)
     const hasPerSlotContent = remoteDeckContents?.[index];
     const hasSingleContent = remoteDeckContent && index === 0 && !remoteDeckContents;
-    const showOverlay = peerId && (hasPerSlotContent || hasSingleContent);
+    const hasDeckContent = peerId && (hasPerSlotContent || hasSingleContent);
+    // Camera takes priority: only show deck overlay when remote camera is OFF
+    const peerHasActiveVideo = peerId ? (remoteVideoActive.get(peerId) ?? false) : false;
+    const showOverlay = hasDeckContent && !peerHasActiveVideo;
 
     return (
       <div key={peerId || `waiting-${index}`} className="relative w-full h-full overflow-hidden bg-black">
-        {showOverlay ? (
+        {peerId && peerHasActiveVideo ? (
+          <video
+            ref={(el) => setRemoteVideoRef(peerId, el)}
+            autoPlay
+            playsInline
+            className="w-full h-full object-contain"
+          />
+        ) : showOverlay ? (
           <div className="w-full h-full overflow-auto bg-background touch-pan-y">
             {remoteDeckContents?.[index] || remoteDeckContent}
           </div>
