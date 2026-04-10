@@ -292,11 +292,34 @@ export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId }: Magi
     });
   }, []);
 
-  // Broadcast visible field state to opponents via shared channel
+  // Stable channel for broadcasting
+  const [broadcastChannel, setBroadcastChannel] = useState<ReturnType<typeof supabase.channel> | null>(null);
+  const [channelReady, setChannelReady] = useState(false);
+
+  // Create channel once
   useEffect(() => {
     if (!duelId || !currentUserId) return;
 
-    const channel = supabase.channel(`deck-sync-${duelId}`);
+    const channel = supabase.channel(`deck-sync-${duelId}`, {
+      config: { broadcast: { self: false } },
+    });
+    channel.subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        setBroadcastChannel(channel);
+        setChannelReady(true);
+      }
+    });
+
+    return () => {
+      setChannelReady(false);
+      setBroadcastChannel(null);
+      supabase.removeChannel(channel);
+    };
+  }, [duelId, currentUserId]);
+
+  // Broadcast state changes
+  useEffect(() => {
+    if (!broadcastChannel || !channelReady || !currentUserId) return;
 
     const serializeCard = (c: MagicCard) => ({
       id: typeof c.id === 'string' ? c.id : c.id,
@@ -312,38 +335,27 @@ export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId }: Magi
       mana_cost: c.mana_cost || undefined,
     });
 
-    // Only broadcast after subscription is ready
-    channel
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          channel.send({
-            type: 'broadcast',
-            event: 'deck-state',
-            payload: {
-              userId: currentUserId,
-              tcgType: 'magic',
-              hand: fieldState.hand.length,
-              deckCount: fieldState.library.length,
-              extraCount: 0,
-              phase: currentPhase,
-              // Public zones - cards visible to opponents
-              battlefield: fieldState.battlefield.map(serializeCard),
-              lands: fieldState.lands.map(serializeCard),
-              graveyard: fieldState.graveyard.map(serializeCard),
-              exile: fieldState.exile.map(serializeCard),
-              stack: fieldState.stack.map(serializeCard),
-              commandZone: fieldState.commandZone?.map(serializeCard) || [],
-              playmatUrl: localStorage.getItem('activePlaymatUrl') || null,
-              sleeveUrl: localStorage.getItem('activeSleeveUrl') || null,
-            },
-          });
-        }
-      });
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [fieldState, currentPhase, duelId, currentUserId]);
+    broadcastChannel.send({
+      type: 'broadcast',
+      event: 'deck-state',
+      payload: {
+        userId: currentUserId,
+        tcgType: 'magic',
+        hand: fieldState.hand.length,
+        deckCount: fieldState.library.length,
+        extraCount: 0,
+        phase: currentPhase,
+        battlefield: fieldState.battlefield.map(serializeCard),
+        lands: fieldState.lands.map(serializeCard),
+        graveyard: fieldState.graveyard.map(serializeCard),
+        exile: fieldState.exile.map(serializeCard),
+        stack: fieldState.stack.map(serializeCard),
+        commandZone: fieldState.commandZone?.map(serializeCard) || [],
+        playmatUrl: localStorage.getItem('activePlaymatUrl') || null,
+        sleeveUrl: localStorage.getItem('activeSleeveUrl') || null,
+      },
+    });
+  }, [fieldState, currentPhase, broadcastChannel, channelReady, currentUserId]);
 
   const ZONE_LABELS: Record<string, string> = {
     hand: 'Mão',
