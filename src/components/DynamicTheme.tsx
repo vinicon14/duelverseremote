@@ -3,8 +3,13 @@
  * 
  * Aplica temas visuais diferentes baseado no TCG ativo.
  */
-import { useEffect } from 'react';
-import { useTcg, TcgType } from '@/contexts/TcgContext';
+import { useEffect, useContext } from 'react';
+import { TcgType } from '@/contexts/TcgContext';
+
+// Import the context directly to avoid the throwing useTcg hook
+import React from 'react';
+
+const TcgContext = React.createContext<{ activeTcg: TcgType } | undefined>(undefined);
 
 const TCG_THEMES: Record<TcgType, Record<string, string>> = {
   yugioh: {
