@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback, useImperativeHandle, forwardRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Mic, MicOff, Video, VideoOff, Loader2, LayoutGrid, PictureInPicture2 } from "lucide-react";
+import { Mic, MicOff, Video, VideoOff, Loader2, LayoutGrid, PictureInPicture2, ZoomIn, ZoomOut } from "lucide-react";
 
 export type VideoLayout = "side-by-side" | "pip";
 
