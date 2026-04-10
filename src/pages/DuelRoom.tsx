@@ -1002,15 +1002,11 @@ const DuelRoom = () => {
         <div className="h-[calc(100vh-80px)] sm:h-[calc(100vh-100px)] relative">
           {/* Video Call - Daily.co with split overlay support */}
           <div className="h-full w-full rounded-lg overflow-hidden bg-card shadow-2xl border border-primary/20 relative">
-            {/* Daily.co iframe always rendered underneath */}
+            {/* Daily.co prebuilt controlled by daily-js to force grid mode */}
             {roomUrl ? (
-              <iframe
-                src={roomUrl}
-                allow="camera; microphone; fullscreen; speaker; display-capture; autoplay"
+              <DailyPrebuiltFrame
+                roomUrl={roomUrl}
                 className="w-full h-full absolute inset-0"
-                title="Daily.co Video Call"
-                onLoad={() => console.log('Iframe loaded')}
-                onError={(e) => console.error('Iframe error:', e)}
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
