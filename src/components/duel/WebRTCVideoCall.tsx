@@ -406,8 +406,14 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         autoPlay
         playsInline
         muted
-        className={`w-full h-full object-contain ${localDeckOpen ? 'hidden' : ''}`}
-        style={{ transform: `scaleX(-1) scale(${zoomLevel})` }}
+        className={`w-full h-full object-contain ${localDeckOpen ? 'hidden' : ''} ${zoomLevel > 1 ? 'cursor-grab active:cursor-grabbing' : ''}`}
+        style={{
+          transform: `scaleX(-1) scale(${zoomLevel}) translate(${panOffset.x / zoomLevel}px, ${panOffset.y / zoomLevel}px)`,
+        }}
+        onPointerDown={handlePanStart}
+        onPointerMove={handlePanMove}
+        onPointerUp={handlePanEnd}
+        onPointerCancel={handlePanEnd}
       />
       {localDeckOpen && localDeckContent ? (
         <div className="w-full h-full overflow-auto bg-background touch-pan-y">
