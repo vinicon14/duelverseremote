@@ -103,6 +103,9 @@ export const ElectronRecordButton = ({ duelId }: { duelId: string }) => {
     };
   }, [stopMicMonitor]);
 
+  // Don't render at all if not Electron
+  if (!isElectron) return null;
+
   const startRecording = async (src: AudioSource) => {
     if (!isPro) {
       toast({ title: "Recurso PRO", description: "Apenas usuários PRO podem gravar.", variant: "destructive" });
