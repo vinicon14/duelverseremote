@@ -656,20 +656,56 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
 
       {/* Dialog de configuração (fonte de áudio) */}
       <Dialog open={showSetupDialog} onOpenChange={setShowSetupDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Configurar gravação</DialogTitle>
             <DialogDescription>
-              Escolha o áudio que será gravado. (Dica: para “som do jogo”, compartilhe uma aba e ative “compartilhar áudio”.)
+              {!!(window as any).electronAPI?.isElectron
+                ? 'Escolha a tela ou janela que deseja gravar e a fonte de áudio.'
+                : 'Escolha o áudio que será gravado. (Dica: para “som do jogo”, compartilhe uma aba e ative “compartilhar áudio”.)'}
             </DialogDescription>
           </DialogHeader>
+
+          {/* Source picker - Electron only */}
+          {!!(window as any).electronAPI?.isElectron && desktopSources.length > 0 && (
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Fonte de captura</Label>
+              <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-1">
+                {desktopSources.map((source) => (
+                  <div
+                    key={source.id}
+                    onClick={() => setSelectedSourceId(source.id)}
+                    className={`cursor-pointer rounded-lg border-2 p-1.5 transition-colors ${
+                      selectedSourceId === source.id
+                        ? 'border-primary bg-primary/10'
+                        : 'border-border hover:border-primary/50'
+                    }`}
+                  >
+                    <img
+                      src={source.thumbnail}
+                      alt={source.name}
+                      className="w-full h-20 object-contain rounded bg-black"
+                    />
+                    <p className="text-[10px] text-center mt-1 truncate text-foreground">{source.name}</p>
+                  </div>
+                ))}
+              </div>
+              <Button variant="ghost" size="sm" className="w-full text-xs" onClick={loadDesktopSources}>
+                🔄 Atualizar fontes
+              </Button>
+            </div>
+          )}
 
           <RadioGroup value={audioSource} onValueChange={(v) => setAudioSource(v as RecordingAudioSource)}>
             <div className="flex items-start gap-3 rounded-lg border p-3">
               <RadioGroupItem id="audio-system" value="system" className="mt-1" />
               <div className="grid gap-1">
-                <Label htmlFor="audio-system">Som do jogo (aba)</Label>
-                <p className="text-xs text-muted-foreground">Grava apenas o áudio do compartilhamento (quando disponível).</p>
+                <Label htmlFor="audio-system">Som do jogo {!!(window as any).electronAPI?.isElectron ? '(sistema)' : '(aba)'}</Label>
+                <p className="text-xs text-muted-foreground">
+                  {!!(window as any).electronAPI?.isElectron
+                    ? 'Grava o áudio do sistema (loopback, quando suportado).'
+                    : 'Grava apenas o áudio do compartilhamento (quando disponível).'}
+                </p>
               </div>
             </div>
 
