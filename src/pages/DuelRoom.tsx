@@ -968,7 +968,7 @@ const DuelRoom = () => {
       <main className="px-2 sm:px-4 pt-16 sm:pt-20 pb-2 sm:pb-4">
         <div className="h-[calc(100vh-80px)] sm:h-[calc(100vh-100px)] relative">
           {/* Video Call - Daily.co - SEMPRE VISÍVEL */}
-          <div className="h-full w-full rounded-lg overflow-hidden bg-card shadow-2xl border border-primary/20">
+          <div className="h-full w-full rounded-lg overflow-hidden bg-card shadow-2xl border border-primary/20 relative">
             {roomUrl ? (
               <iframe
                 src={roomUrl}
@@ -988,6 +988,20 @@ const DuelRoom = () => {
                   </div>
                 </div>
               </div>
+            )}
+
+            {/* Opponent Viewer - Embedded inside video area */}
+            {isParticipant && !isJudge && currentUser && id && duel && (
+              <FloatingOpponentViewer
+                duelId={id}
+                currentUserId={currentUser.id}
+                opponentUsername={
+                  currentUser.id === duel.creator_id 
+                    ? duel.opponent?.username 
+                    : duel.creator?.username
+                }
+                embedded
+              />
             )}
           </div>
 
