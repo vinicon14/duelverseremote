@@ -6,27 +6,25 @@
  * Atualiza em tempo real com dados do Supabase.
  */
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Navbar } from "@/components/Navbar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Trophy, Medal, Award, TrendingUp } from "lucide-react";
 import { useTcg } from "@/contexts/TcgContext";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const TCG_LABELS: Record<string, string> = { yugioh: 'YGO', magic: 'MTG', pokemon: 'PKM' };
 
 const Ranking = () => {
   const { toast } = useToast();
   const { activeTcg } = useTcg();
-  const [selectedTcg, setSelectedTcg] = useState<string>(activeTcg);
   const [rankings, setRankings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchRankings(selectedTcg);
-  }, [selectedTcg]);
+    fetchRankings(activeTcg);
+  }, [activeTcg]);
 
   const fetchRankings = async (tcg: string) => {
     setLoading(true);
@@ -67,18 +65,11 @@ const Ranking = () => {
       <main className="container mx-auto px-4 pt-20 sm:pt-24 pb-12">
         <div className="mb-6 sm:mb-8">
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gradient-mystic mb-2">
-            Ranking — {TCG_LABELS[selectedTcg]}
+            Ranking — {TCG_LABELS[activeTcg]}
           </h1>
           <p className="text-sm sm:text-base text-muted-foreground">
-            Os melhores duelistas de {TCG_LABELS[selectedTcg]}
+            Os melhores duelistas de {TCG_LABELS[activeTcg]}
           </p>
-          <Tabs value={selectedTcg} onValueChange={setSelectedTcg} className="mt-4">
-            <TabsList>
-              <TabsTrigger value="yugioh">YGO</TabsTrigger>
-              <TabsTrigger value="magic">MTG</TabsTrigger>
-              <TabsTrigger value="pokemon">PKM</TabsTrigger>
-            </TabsList>
-          </Tabs>
         </div>
 
         {loading ? (
@@ -112,12 +103,10 @@ const Ranking = () => {
                 >
                   <CardContent className="py-4 sm:py-6">
                     <div className="flex items-center gap-3 sm:gap-6">
-                      {/* Position */}
                       <div className="w-8 sm:w-12 flex items-center justify-center flex-shrink-0">
                         {getRankIcon(position)}
                       </div>
 
-                      {/* Avatar */}
                       <Avatar className={`flex-shrink-0 ${isTopThree ? 'w-12 h-12 sm:w-16 sm:h-16 border-2 border-primary' : 'w-10 h-10 sm:w-14 sm:h-14'}`}>
                         <AvatarImage src={player.avatar_url || ""} />
                         <AvatarFallback className="bg-primary/20 text-sm sm:text-lg">
@@ -125,7 +114,6 @@ const Ranking = () => {
                         </AvatarFallback>
                       </Avatar>
 
-                      {/* Info */}
                       <div className="flex-1 min-w-0">
                         <h3 className={`font-semibold truncate ${isTopThree ? 'text-base sm:text-lg text-gradient-mystic' : 'text-sm sm:text-base'}`}>
                           {player.username}
@@ -141,7 +129,6 @@ const Ranking = () => {
                         </div>
                       </div>
 
-                      {/* Pontos */}
                       <div className="text-right flex-shrink-0">
                         <div className="text-lg sm:text-2xl font-bold text-primary">
                           {player.points || 0}
