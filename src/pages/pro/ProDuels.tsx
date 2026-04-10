@@ -11,7 +11,8 @@ import { Button } from "@/components/ui/button";
 import { ProNavbar } from "@/components/ProNavbar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Users, Clock, Trophy, Swords, Crown } from "lucide-react";
+import { Plus, Users, Clock, Trophy, Swords, Crown, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 export default function ProDuels() {
   const navigate = useNavigate();
