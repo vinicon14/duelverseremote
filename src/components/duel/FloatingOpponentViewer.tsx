@@ -263,7 +263,10 @@ export const FloatingOpponentViewer = ({
       <Button
         variant="secondary"
         size="sm"
-        className="fixed left-2 top-20 z-40 gap-2"
+        className={cn(
+          "z-40 gap-2",
+          embedded ? "absolute left-2 top-2" : "fixed left-2 top-20"
+        )}
         onClick={() => setIsVisible(true)}
       >
         <Eye className="h-4 w-4" />
@@ -278,11 +281,12 @@ export const FloatingOpponentViewer = ({
         ref={elementRef}
         onClick={() => !isDragging && setIsMinimized(false)}
         className={cn(
-          "fixed z-40 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-lg flex items-center gap-2 px-3 py-2 hover:bg-muted/50 transition-colors cursor-pointer",
+          "z-40 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-lg flex items-center gap-2 px-3 py-2 hover:bg-muted/50 transition-colors cursor-pointer",
+          embedded ? "absolute left-2 bottom-2" : "fixed",
           isDragging && "cursor-grabbing"
         )}
-        style={{ left: position.x, top: position.y }}
-        {...dragHandlers}
+        style={embedded ? undefined : { left: position.x, top: position.y }}
+        {...(embedded ? {} : dragHandlers)}
       >
         <Eye className="h-5 w-5 text-primary" />
         <span className="text-sm font-medium whitespace-nowrap">Ver deck do oponente</span>
@@ -422,10 +426,13 @@ export const FloatingOpponentViewer = ({
     <div 
       ref={elementRef}
       className={cn(
-        "fixed z-40 w-80 sm:w-96 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-2xl overflow-hidden",
+        "z-40 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-2xl overflow-hidden",
+        embedded 
+          ? "absolute left-2 bottom-2 w-72 sm:w-80 max-h-[60%]" 
+          : "fixed w-80 sm:w-96",
         isDragging && "cursor-grabbing"
       )}
-      style={{ left: position.x, top: position.y }}
+      style={embedded ? undefined : { left: position.x, top: position.y }}
     >
       {/* Draggable Header */}
       <div 
