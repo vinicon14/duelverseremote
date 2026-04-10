@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Tray, Menu, Notification, ipcMain, shell, nativeImage, desktopCapturer, session } = require('electron');
+const { app, BrowserWindow, Tray, Menu, Notification, ipcMain, shell, nativeImage, desktopCapturer, session, dialog } = require('electron');
 const fs = require('fs');
 const path = require('path');
 
@@ -268,22 +268,20 @@ function createWindow() {
   mainWindow.loadURL(REMOTE_URL);
   setupZoomShortcuts();
 
-  // Auto-grant camera/microphone permissions for WebRTC
+  // Auto-grant camera/microphone/display-capture permissions for WebRTC & recording
   mainWindow.webContents.session.setPermissionRequestHandler((webContents, permission, callback) => {
-    const allowedPermissions = ['media', 'mediaKeySystem', 'notifications', 'fullscreen'];
+    const allowedPermissions = ['media', 'mediaKeySystem', 'notifications', 'fullscreen', 'display-capture'];
     callback(allowedPermissions.includes(permission));
   });
 
   mainWindow.webContents.session.setPermissionCheckHandler((webContents, permission) => {
-    const allowedPermissions = ['media', 'mediaKeySystem', 'notifications', 'fullscreen'];
+    const allowedPermissions = ['media', 'mediaKeySystem', 'notifications', 'fullscreen', 'display-capture'];
     return allowedPermissions.includes(permission);
   });
 
   // Allow getDisplayMedia to work with remote content by providing desktop sources
-  mainWindow.webContents.session.setDisplayMediaRequestHandler(async (request, callback) => {
-    try {
-      const sources = await desktopCapturer.getSources({ types: ['screen', 'window'] });
-      
+  mainWindow.webContents.session.setDisplayMediaRequestHandler((request, callback) => {
+    desktopCapturer.getSources({ types: ['screen', 'window'] }).then((sources) => {
       // Use user-selected source if available, otherwise fall back to first screen
       let preferredSource = null;
       if (selectedSourceId) {
@@ -300,24 +298,18 @@ function createWindow() {
         return;
       }
 
-      const result = {
-        video: request.videoRequested ? preferredSource : undefined,
-      };
+      const result = { video: preferredSource };
 
       if (request.audioRequested) {
-        try {
-          result.audio = 'loopback';
-        } catch (e) {
-          console.warn('[Electron] Loopback audio not available:', e);
-        }
+        result.audio = 'loopback';
       }
 
       callback(result);
-    } catch (error) {
+    }).catch((error) => {
       console.error('[Electron] Failed to resolve display media request:', error);
       callback({});
-    }
-  });
+    });
+  }, { useSystemPicker: false });
 
   // Force taskbar icon on Windows
   const appIcon = getAppIcon();
@@ -432,7 +424,28 @@ ipcMain.on('set-selected-source', (_, sourceId) => {
   console.log('[Electron] Selected capture source:', selectedSourceId);
 });
 
-ipcMain.on('sync-auth', async (_, { token, userId }) => {
+ipcMain.handle('save-file-locally', async (_, arrayBuffer, defaultName) => {
+  try {
+    const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+      title: 'Salvar gravação',
+      defaultPath: defaultName || 'gravacao.webm',
+      filters: [
+        { name: 'Vídeo WebM', extensions: ['webm'] },
+        { name: 'Todos os arquivos', extensions: ['*'] },
+      ],
+    });
+
+    if (canceled || !filePath) return { success: false, reason: 'canceled' };
+
+    const buffer = Buffer.from(arrayBuffer);
+    fs.writeFileSync(filePath, buffer);
+    return { success: true, filePath };
+  } catch (error) {
+    console.error('[Electron] Failed to save file:', error);
+    return { success: false, reason: error.message };
+  }
+});
+
   const normalizedToken = token || null;
   const normalizedUserId = userId || null;
   const userChanged = authUserId !== normalizedUserId;
