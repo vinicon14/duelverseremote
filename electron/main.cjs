@@ -267,6 +267,17 @@ function createWindow() {
   mainWindow.loadURL(REMOTE_URL);
   setupZoomShortcuts();
 
+  // Auto-grant camera/microphone permissions for WebRTC
+  mainWindow.webContents.session.setPermissionRequestHandler((webContents, permission, callback) => {
+    const allowedPermissions = ['media', 'mediaKeySystem', 'notifications', 'fullscreen'];
+    callback(allowedPermissions.includes(permission));
+  });
+
+  mainWindow.webContents.session.setPermissionCheckHandler((webContents, permission) => {
+    const allowedPermissions = ['media', 'mediaKeySystem', 'notifications', 'fullscreen'];
+    return allowedPermissions.includes(permission);
+  });
+
   // Allow getDisplayMedia to work with remote content by providing desktop sources
   mainWindow.webContents.session.setDisplayMediaRequestHandler(async (request, callback) => {
     try {
