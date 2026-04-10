@@ -37,12 +37,14 @@ const TCG_CONFIG: Record<TcgType, { name: string; icon: React.ReactNode; color: 
 
 export default function ProfileSelect() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { profiles, switchProfile, createProfile, isLoading } = useTcg();
   const [creating, setCreating] = useState(false);
+  const returnTo = (location.state as any)?.returnTo || '/';
 
   const handleSelectProfile = (profileId: string) => {
     switchProfile(profileId);
-    navigate('/');
+    navigate(returnTo);
   };
 
   const handleCreateDirect = async (tcg: TcgType) => {
