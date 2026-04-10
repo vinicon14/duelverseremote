@@ -279,6 +279,27 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
           if (!prev.includes(remotePeerId)) return [...prev, remotePeerId];
           return prev;
         });
+
+        // Track remote video track enabled state
+        const videoTrack = event.streams[0].getVideoTracks()[0];
+        if (videoTrack) {
+          setRemoteVideoActive(prev => {
+            const next = new Map(prev);
+            next.set(remotePeerId, videoTrack.enabled && !videoTrack.muted);
+            return next;
+          });
+          // Listen for track mute/unmute and ended events
+          const updateVideoState = () => {
+            setRemoteVideoActive(prev => {
+              const next = new Map(prev);
+              next.set(remotePeerId, videoTrack.enabled && !videoTrack.muted && videoTrack.readyState === 'live');
+              return next;
+            });
+          };
+          videoTrack.addEventListener('mute', updateVideoState);
+          videoTrack.addEventListener('unmute', updateVideoState);
+          videoTrack.addEventListener('ended', updateVideoState);
+        }
       }
     };
 
