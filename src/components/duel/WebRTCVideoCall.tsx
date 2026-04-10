@@ -537,6 +537,8 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       const el = remoteVideoRefs.current.get(peerId);
       if (el && el.srcObject !== stream) {
         el.srcObject = stream;
+        // Force play on mobile WebView where autoplay may be blocked
+        el.play().catch(() => {});
       }
     });
   }, [remoteStreams, remotePeerIds]);
