@@ -61,6 +61,10 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(new Map());
   const [remotePeerIds, setRemotePeerIds] = useState<string[]>([]);
   const [pipSwapped, setPipSwapped] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const MAX_ZOOM = 4;
+  const MIN_ZOOM = 1;
+  const ZOOM_STEP = 0.5;
 
   useImperativeHandle(ref, () => ({
     setVideoEnabled: (enabled: boolean) => {
