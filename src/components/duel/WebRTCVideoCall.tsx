@@ -829,119 +829,121 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         </>
       )}
 
-      {/* Controls bar */}
-      <div className="absolute bottom-1.5 sm:bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 sm:gap-2 z-20">
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={toggleMute}
-          className={`rounded-full w-8 h-8 sm:w-10 sm:h-10 backdrop-blur-sm ${isMuted ? "bg-destructive/80 text-destructive-foreground" : "bg-card/80"}`}
-        >
-          {isMuted ? <MicOff className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Mic className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-        </Button>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={toggleVideo}
-          className={`rounded-full w-8 h-8 sm:w-10 sm:h-10 backdrop-blur-sm ${isVideoOff ? "bg-destructive/80 text-destructive-foreground" : "bg-card/80"}`}
-        >
-          {isVideoOff ? <VideoOff className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Video className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-        </Button>
-        {/* Zoom controls */}
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={zoomOut}
-          disabled={zoomLevel <= MIN_ZOOM}
-          className="rounded-full w-8 h-8 sm:w-10 sm:h-10 backdrop-blur-sm bg-card/80"
-          title="Diminuir zoom"
-        >
-          <ZoomOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-        </Button>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={zoomIn}
-          disabled={zoomLevel >= MAX_ZOOM}
-          className="rounded-full w-8 h-8 sm:w-10 sm:h-10 backdrop-blur-sm bg-card/80"
-          title="Aumentar zoom"
-        >
-          <ZoomIn className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-        </Button>
-        {/* Device selector */}
-        <Popover open={showDeviceMenu} onOpenChange={setShowDeviceMenu}>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              size="icon"
-              className="rounded-full w-8 h-8 sm:w-10 sm:h-10 backdrop-blur-sm bg-card/80"
-              title="Configurar câmera e microfone"
-            >
-              <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent side="top" align="center" className="w-72 p-3 space-y-3">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium flex items-center gap-1.5">
-                <Video className="w-3 h-3" /> Câmera
-              </label>
-              <Select
-                value={selectedVideoId}
-                onValueChange={(val) => {
-                  setSelectedVideoId(val);
-                  switchDevice(selectedAudioId || undefined, val);
-                }}
-              >
-                <SelectTrigger className="h-8 text-xs">
-                  <SelectValue placeholder="Selecionar câmera" />
-                </SelectTrigger>
-                <SelectContent>
-                  {videoDevices.map((d, i) => (
-                    <SelectItem key={d.deviceId} value={d.deviceId} className="text-xs">
-                      {d.label || `Câmera ${i + 1}`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium flex items-center gap-1.5">
-                <Mic className="w-3 h-3" /> Microfone
-              </label>
-              <Select
-                value={selectedAudioId}
-                onValueChange={(val) => {
-                  setSelectedAudioId(val);
-                  switchDevice(val, selectedVideoId || undefined);
-                }}
-              >
-                <SelectTrigger className="h-8 text-xs">
-                  <SelectValue placeholder="Selecionar microfone" />
-                </SelectTrigger>
-                <SelectContent>
-                  {audioDevices.map((d, i) => (
-                    <SelectItem key={d.deviceId} value={d.deviceId} className="text-xs">
-                      {d.label || `Microfone ${i + 1}`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </PopoverContent>
-        </Popover>
-        {/* Layout toggle (only for 2 players) */}
-        {!is4Player && (
+      {/* Controls bar — hidden for spectators */}
+      {!isSpectator && (
+        <div className="absolute bottom-1.5 sm:bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 sm:gap-2 z-20">
           <Button
             variant="outline"
             size="icon"
-            onClick={() => onLayoutChange?.(isSideBySide ? "pip" : "side-by-side")}
-            className="rounded-full w-8 h-8 sm:w-10 sm:h-10 backdrop-blur-sm bg-card/80"
-            title={isSideBySide ? "Modo PiP" : "Modo lado a lado"}
+            onClick={toggleMute}
+            className={`rounded-full w-8 h-8 sm:w-10 sm:h-10 backdrop-blur-sm ${isMuted ? "bg-destructive/80 text-destructive-foreground" : "bg-card/80"}`}
           >
-            {isSideBySide ? <PictureInPicture2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <LayoutGrid className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+            {isMuted ? <MicOff className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Mic className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
           </Button>
-        )}
-      </div>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={toggleVideo}
+            className={`rounded-full w-8 h-8 sm:w-10 sm:h-10 backdrop-blur-sm ${isVideoOff ? "bg-destructive/80 text-destructive-foreground" : "bg-card/80"}`}
+          >
+            {isVideoOff ? <VideoOff className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Video className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+          </Button>
+          {/* Zoom controls */}
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={zoomOut}
+            disabled={zoomLevel <= MIN_ZOOM}
+            className="rounded-full w-8 h-8 sm:w-10 sm:h-10 backdrop-blur-sm bg-card/80"
+            title="Diminuir zoom"
+          >
+            <ZoomOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={zoomIn}
+            disabled={zoomLevel >= MAX_ZOOM}
+            className="rounded-full w-8 h-8 sm:w-10 sm:h-10 backdrop-blur-sm bg-card/80"
+            title="Aumentar zoom"
+          >
+            <ZoomIn className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          </Button>
+          {/* Device selector */}
+          <Popover open={showDeviceMenu} onOpenChange={setShowDeviceMenu}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                className="rounded-full w-8 h-8 sm:w-10 sm:h-10 backdrop-blur-sm bg-card/80"
+                title="Configurar câmera e microfone"
+              >
+                <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent side="top" align="center" className="w-72 p-3 space-y-3">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium flex items-center gap-1.5">
+                  <Video className="w-3 h-3" /> Câmera
+                </label>
+                <Select
+                  value={selectedVideoId}
+                  onValueChange={(val) => {
+                    setSelectedVideoId(val);
+                    switchDevice(selectedAudioId || undefined, val);
+                  }}
+                >
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue placeholder="Selecionar câmera" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {videoDevices.map((d, i) => (
+                      <SelectItem key={d.deviceId} value={d.deviceId} className="text-xs">
+                        {d.label || `Câmera ${i + 1}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium flex items-center gap-1.5">
+                  <Mic className="w-3 h-3" /> Microfone
+                </label>
+                <Select
+                  value={selectedAudioId}
+                  onValueChange={(val) => {
+                    setSelectedAudioId(val);
+                    switchDevice(val, selectedVideoId || undefined);
+                  }}
+                >
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue placeholder="Selecionar microfone" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {audioDevices.map((d, i) => (
+                      <SelectItem key={d.deviceId} value={d.deviceId} className="text-xs">
+                        {d.label || `Microfone ${i + 1}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </PopoverContent>
+          </Popover>
+          {/* Layout toggle (only for 2 players) */}
+          {!is4Player && (
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => onLayoutChange?.(isSideBySide ? "pip" : "side-by-side")}
+              className="rounded-full w-8 h-8 sm:w-10 sm:h-10 backdrop-blur-sm bg-card/80"
+              title={isSideBySide ? "Modo PiP" : "Modo lado a lado"}
+            >
+              {isSideBySide ? <PictureInPicture2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <LayoutGrid className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+            </Button>
+          )}
+        </div>
+      )}
     </div>
   );
 });
