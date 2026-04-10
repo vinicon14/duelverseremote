@@ -69,12 +69,34 @@ const Auth = () => {
               // Set active TCG in localStorage
               localStorage.setItem('activeTcg', tcgToCreate);
               navigate(defaultRedirect, { replace: true });
-            } else if (tcgProfiles.length > 1) {
-              // Multiple profiles exist — user must choose one (others will be deleted)
-              navigate('/profile-select', { replace: true });
             } else {
-              // Single profile — set it and go
-              localStorage.setItem('activeTcg', tcgProfiles[0].tcg_type);
+              // Auto-delete magic and pokemon profiles, keep only yugioh
+              const nonYugiohProfiles = tcgProfiles.filter(p => p.tcg_type !== 'yugioh');
+              if (nonYugiohProfiles.length > 0) {
+                await supabase
+                  .from('tcg_profiles')
+                  .delete()
+                  .eq('user_id', session.user.id)
+                  .in('tcg_type', ['magic', 'pokemon']);
+              }
+
+              // Ensure yugioh profile exists; if not, create one
+              const yugiohProfile = tcgProfiles.find(p => p.tcg_type === 'yugioh');
+              if (!yugiohProfile) {
+                const { data: mainProfile } = await supabase
+                  .from('profiles')
+                  .select('username')
+                  .eq('user_id', session.user.id)
+                  .maybeSingle();
+                const username = mainProfile?.username || session.user.email?.split('@')[0] || 'Duelista';
+                await supabase.from('tcg_profiles').insert({
+                  user_id: session.user.id,
+                  tcg_type: 'yugioh',
+                  username,
+                });
+              }
+
+              localStorage.setItem('activeTcg', 'yugioh');
               navigate(defaultRedirect, { replace: true });
             }
           } else {
