@@ -452,10 +452,10 @@ export const FloatingOpponentViewer = ({
     <div 
       ref={elementRef}
       className={cn(
-        "z-40 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-2xl overflow-hidden",
+        "z-40 overflow-hidden",
         embedded 
-          ? "absolute left-2 bottom-2 w-72 sm:w-80 max-h-[60%]" 
-          : "fixed w-80 sm:w-96",
+          ? "w-full h-full bg-card" 
+          : "fixed w-80 sm:w-96 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-2xl",
         isDragging && "cursor-grabbing"
       )}
       style={embedded ? undefined : { left: position.x, top: position.y }}
