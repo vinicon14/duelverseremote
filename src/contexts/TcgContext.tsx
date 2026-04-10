@@ -34,6 +34,10 @@ interface TcgContextType {
 
 const TcgContext = createContext<TcgContextType | undefined>(undefined);
 
+export const useTcgSafe = () => {
+  return useContext(TcgContext);
+};
+
 export const useTcg = () => {
   const ctx = useContext(TcgContext);
   if (!ctx) throw new Error('useTcg must be used within TcgProvider');
