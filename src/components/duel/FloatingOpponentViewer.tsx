@@ -443,7 +443,7 @@ export const FloatingOpponentViewer = ({
         {...(embedded ? {} : dragHandlers)}
       >
         <div className="flex items-center gap-2">
-          <Move className="h-3 w-3 text-muted-foreground" />
+          {!embedded && <Move className="h-3 w-3 text-muted-foreground" />}
           <Eye className="h-4 w-4 text-primary" />
           <span className="text-sm font-semibold">Deck de {opponentUsername}</span>
         </div>
@@ -458,7 +458,7 @@ export const FloatingOpponentViewer = ({
       </div>
 
       {/* Content */}
-      <div className="p-2">
+      <div className={cn("p-2", embedded && "overflow-y-auto max-h-[calc(100%-40px)]")}>
         {!opponentState ? (
           <div className="text-center text-sm text-muted-foreground py-4">
             <Eye className="h-6 w-6 mx-auto mb-2 opacity-50" />
