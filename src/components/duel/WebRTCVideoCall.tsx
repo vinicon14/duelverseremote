@@ -355,22 +355,30 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     remoteSlots.push(remotePeerIds[i] || null);
   }
 
+  const localVideoCallbackRef = useCallback((el: HTMLVideoElement | null) => {
+    (localVideoRef as React.MutableRefObject<HTMLVideoElement | null>).current = el;
+    if (el && localStreamRef.current && el.srcObject !== localStreamRef.current) {
+      el.srcObject = localStreamRef.current;
+    }
+  }, []);
+
   const renderLocalPanel = () => (
     <div className="relative w-full h-full overflow-hidden bg-black">
+      {/* Always keep video in DOM so srcObject persists */}
+      <video
+        ref={localVideoCallbackRef}
+        autoPlay
+        playsInline
+        muted
+        className={`w-full h-full object-contain ${localDeckOpen ? 'hidden' : ''}`}
+        style={{ transform: "scaleX(-1)" }}
+      />
       {localDeckOpen && localDeckContent ? (
         <div className="w-full h-full overflow-auto bg-background touch-pan-y">
           {localDeckContent}
         </div>
       ) : (
         <>
-          <video
-            ref={localVideoRef}
-            autoPlay
-            playsInline
-            muted
-            className="w-full h-full object-contain"
-            style={{ transform: "scaleX(-1)" }}
-          />
           {isVideoOff && (
             <div className="absolute inset-0 bg-muted flex items-center justify-center">
               <VideoOff className="w-8 h-8 sm:w-10 sm:h-10 text-muted-foreground" />
