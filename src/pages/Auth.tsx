@@ -71,8 +71,12 @@ const Auth = () => {
               localStorage.setItem('activeTcg', tcgToCreate);
               navigate(defaultRedirect, { replace: true });
             } else {
-              // Set active TCG from existing profile
-              localStorage.setItem('activeTcg', tcgProfiles[0].tcg_type);
+              // Restore last active TCG from localStorage, fallback to first profile
+              const savedTcg = localStorage.getItem('activeTcg');
+              const hasMatchingProfile = tcgProfiles.some(p => p.tcg_type === savedTcg);
+              if (!savedTcg || !hasMatchingProfile) {
+                localStorage.setItem('activeTcg', tcgProfiles[0].tcg_type);
+              }
               navigate(defaultRedirect, { replace: true });
             }
           } else {
