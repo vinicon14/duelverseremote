@@ -255,7 +255,8 @@ export default function ProDuels() {
               </Card>
             ))}
           </div>
-        )}
+          );
+        })()}
       </main>
     </div>
   );
