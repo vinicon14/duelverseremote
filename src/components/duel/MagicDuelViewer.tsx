@@ -34,6 +34,7 @@ interface MagicDuelViewerProps {
   onClose: () => void;
   duelId?: string;
   currentUserId?: string;
+  embedded?: boolean;
 }
 
 export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId }: MagicDuelViewerProps) => {

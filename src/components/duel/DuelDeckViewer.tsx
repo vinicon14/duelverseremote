@@ -44,6 +44,7 @@ interface DuelDeckViewerProps {
   duelId?: string;
   currentUserId?: string;
   opponentUsername?: string;
+  embedded?: boolean;
 }
 
 const EXTRA_DECK_TYPES = ['Fusion', 'Synchro', 'XYZ', 'Link'];

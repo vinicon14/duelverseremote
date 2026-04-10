@@ -52,6 +52,7 @@ interface PokemonFieldState {
 interface PokemonDuelViewerProps {
   duelId: string;
   currentUserId: string;
+  embedded?: boolean;
 }
 
 export const PokemonDuelViewer = ({ duelId, currentUserId }: PokemonDuelViewerProps) => {
