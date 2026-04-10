@@ -1088,7 +1088,7 @@ const DuelRoom = () => {
                 }
                 // 4-player mode: per-slot opponent viewers
                 remoteDeckContents={
-                  ((duel as any)?.max_players || 2) >= 4 && isParticipant && !isJudge && currentUser && id && duel
+                  ((duel as any)?.max_players || 2) >= 4 && !isJudge && currentUser && id && duel
                     ? [0, 1, 2].map((_slotIdx) => (
                         <FloatingOpponentViewer
                           key={`opponent-slot-${_slotIdx}`}
