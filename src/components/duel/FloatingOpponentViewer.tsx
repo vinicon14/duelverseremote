@@ -287,15 +287,13 @@ export const FloatingOpponentViewer = ({
     };
   }, [duelId, currentUserId]);
 
-  if (!isVisible) {
+  // When embedded, always show expanded — skip minimized/hidden states
+  if (!embedded && !isVisible) {
     return (
       <Button
         variant="secondary"
         size="sm"
-        className={cn(
-          "z-40 gap-2",
-          embedded ? "absolute left-2 top-2" : "fixed left-2 top-20"
-        )}
+        className="z-40 gap-2 fixed left-2 top-20"
         onClick={() => setIsVisible(true)}
       >
         <Eye className="h-4 w-4" />
@@ -304,18 +302,17 @@ export const FloatingOpponentViewer = ({
     );
   }
 
-  if (isMinimized) {
+  if (!embedded && isMinimized) {
     return (
       <div
         ref={elementRef}
         onClick={() => !isDragging && setIsMinimized(false)}
         className={cn(
-          "z-40 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-lg flex items-center gap-2 px-3 py-2 hover:bg-muted/50 transition-colors cursor-pointer",
-          embedded ? "absolute left-2 bottom-2" : "fixed",
+          "z-40 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-lg flex items-center gap-2 px-3 py-2 hover:bg-muted/50 transition-colors cursor-pointer fixed",
           isDragging && "cursor-grabbing"
         )}
-        style={embedded ? undefined : { left: position.x, top: position.y }}
-        {...(embedded ? {} : dragHandlers)}
+        style={{ left: position.x, top: position.y }}
+        {...dragHandlers}
       >
         <Eye className="h-5 w-5 text-primary" />
         <span className="text-sm font-medium whitespace-nowrap">Ver deck do oponente</span>
