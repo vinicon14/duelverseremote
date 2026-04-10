@@ -15,14 +15,15 @@ export const NoMonetagAds = () => {
   const cleanupDoneRef = useRef(false);
 
   const isElectron = !!(window as any).electronAPI?.isElectron;
+  const isNativeApp = /DuelVerseApp/i.test(navigator.userAgent);
 
   useEffect(() => {
     // Don't run while loading
     if (loading) return;
 
-    // For PRO users or Electron app - block all ads immediately
-    if (isPro || isElectron) {
-      console.log('Bloqueando Monetag completamente - PRO ou Electron');
+    // For PRO users, Electron, or native mobile app - block all ads immediately
+    if (isPro || isElectron || isNativeApp) {
+      console.log('Bloqueando Monetag completamente - PRO/Electron/NativeApp');
       window._monetagBlocked = true;
       enableBlocking();
       return;

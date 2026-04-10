@@ -33,7 +33,8 @@ export const ConditionalMonetagLoader = (): null => {
     if (isNativeApp || isElectron) {
       console.log('Monetag BLOQUEADO - app nativo (APK/Electron)');
       removeExistingMonetagAssets();
-      return;
+      const nativeCleanupInterval = setInterval(removeExistingMonetagAssets, 1000);
+      return () => clearInterval(nativeCleanupInterval);
     }
 
     // PRO users: No Monetag - block AND remove existing + continuous cleanup
