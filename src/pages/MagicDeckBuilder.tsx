@@ -14,6 +14,7 @@ import { Search, Plus, Minus, Save, Trash2, Loader2, Download, Upload, FolderOpe
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 
 interface ScryfallCard {
   id: string;
@@ -62,6 +63,10 @@ export default function MagicDeckBuilder() {
   const [selectedCard, setSelectedCard] = useState<ScryfallCard | null>(null);
   const [saveOpen, setSaveOpen] = useState(false);
   const [loadOpen, setLoadOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importText, setImportText] = useState('');
+  const [importing, setImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState('');
   const [deckName, setDeckName] = useState('');
   const [saving, setSaving] = useState(false);
   const [savedDecks, setSavedDecks] = useState<any[]>([]);
@@ -252,36 +257,89 @@ export default function MagicDeckBuilder() {
     toast.success('Deck exportado!');
   };
 
-  const importDeck = () => {
+  const parseDeckList = (text: string): { main: { qty: number; name: string }[]; side: { qty: number; name: string }[] } => {
+    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+    const main: { qty: number; name: string }[] = [];
+    const side: { qty: number; name: string }[] = [];
+    let target: 'main' | 'side' = 'main';
+
+    for (const line of lines) {
+      const lower = line.toLowerCase();
+      if (lower.startsWith('//') || lower.startsWith('#')) continue;
+      if (lower === 'sideboard' || lower === 'sideboard:' || lower.includes('sideboard')) {
+        target = 'side';
+        continue;
+      }
+      if (lower === 'deck' || lower === 'deck:' || lower === 'main deck' || lower === 'main deck:' || lower === 'companion' || lower === 'commander') continue;
+      // Formats: "4 Lightning Bolt", "4x Lightning Bolt", "Lightning Bolt x4"
+      let match = line.match(/^(\d+)x?\s+(.+)$/);
+      if (!match) match = line.match(/^(.+?)\s+x(\d+)$/);
+      if (match) {
+        const idx = line.match(/^(\d+)/) ? 1 : 2;
+        const nameIdx = idx === 1 ? 2 : 1;
+        const qty = parseInt(match[idx]);
+        // Strip set/collector info like "(RNA)" or "[RNA:123]"
+        const name = match[nameIdx].replace(/\s*[\(\[][A-Z0-9]+[\)\]]\s*/g, '').replace(/\s*\/\/.*$/, '').trim();
+        if (name && qty > 0) (target === 'main' ? main : side).push({ qty, name });
+      }
+    }
+    return { main, side };
+  };
+
+  const importFromText = async (text: string) => {
+    const { main, side } = parseDeckList(text);
+    const total = main.length + side.length;
+    if (total === 0) {
+      toast.error('Nenhuma carta encontrada na lista. Use o formato: "4 Lightning Bolt"');
+      return;
+    }
+    setImporting(true);
+    const newMain: DeckCard[] = [];
+    const newSide: DeckCard[] = [];
+    let loaded = 0;
+    let failed = 0;
+
+    const fetchCard = async (name: string): Promise<ScryfallCard | null> => {
+      try {
+        const res = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(name)}`);
+        if (!res.ok) return null;
+        return await res.json();
+      } catch { return null; }
+    };
+
+    for (const entry of main) {
+      setImportProgress(`Importando ${++loaded}/${total}: ${entry.name}`);
+      const card = await fetchCard(entry.name);
+      if (card) newMain.push({ card, quantity: entry.qty });
+      else failed++;
+      await new Promise(r => setTimeout(r, 80)); // Scryfall rate limit
+    }
+    for (const entry of side) {
+      setImportProgress(`Importando ${++loaded}/${total}: ${entry.name}`);
+      const card = await fetchCard(entry.name);
+      if (card) newSide.push({ card, quantity: entry.qty });
+      else failed++;
+      await new Promise(r => setTimeout(r, 80));
+    }
+
+    setMainDeck(newMain);
+    setSideboard(newSide);
+    setImporting(false);
+    setImportOpen(false);
+    setImportText('');
+    setImportProgress('');
+    toast.success(`Deck importado! ${loaded - failed} cartas carregadas${failed ? `, ${failed} não encontradas` : ''}`);
+  };
+
+  const importDeckFromFile = () => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.txt';
+    input.accept = '.txt,.dec,.dek,.mwDeck';
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
       const text = await file.text();
-      const lines = text.split('\n').filter(l => l.trim() && !l.startsWith('//'));
-      let target: 'main' | 'side' = 'main';
-      const newMain: DeckCard[] = [];
-      const newSide: DeckCard[] = [];
-
-      for (const line of lines) {
-        if (line.toLowerCase().includes('sideboard')) { target = 'side'; continue; }
-        const match = line.match(/^(\d+)\s+(.+)$/);
-        if (!match) continue;
-        const qty = parseInt(match[1]);
-        const name = match[2].trim();
-        try {
-          const res = await fetch(`https://api.scryfall.com/cards/named?exact=${encodeURIComponent(name)}`);
-          if (!res.ok) continue;
-          const card: ScryfallCard = await res.json();
-          const arr = target === 'main' ? newMain : newSide;
-          arr.push({ card, quantity: qty });
-        } catch { /* skip */ }
-      }
-      setMainDeck(newMain);
-      setSideboard(newSide);
-      toast.success('Deck importado!');
+      await importFromText(text);
     };
     input.click();
   };
@@ -298,7 +356,7 @@ export default function MagicDeckBuilder() {
             <Button variant="outline" size="sm" onClick={exportDeck} className="gap-1">
               <Download className="w-4 h-4" /> Exportar
             </Button>
-            <Button variant="outline" size="sm" onClick={importDeck} className="gap-1">
+            <Button variant="outline" size="sm" onClick={() => setImportOpen(true)} className="gap-1">
               <Upload className="w-4 h-4" /> Importar
             </Button>
             <Button variant="outline" size="sm" onClick={loadSavedDecks} className="gap-1">
@@ -512,6 +570,46 @@ export default function MagicDeckBuilder() {
                 </div>
               )}
             </ScrollArea>
+          </DialogContent>
+        </Dialog>
+
+        {/* Import Dialog */}
+        <Dialog open={importOpen} onOpenChange={v => { if (!importing) setImportOpen(v); }}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Importar Lista de Deck</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground">
+              Cole sua lista no formato: <code className="bg-muted px-1 rounded">4 Lightning Bolt</code>. 
+              Suporta formatos MTGA, MTGO e listas comuns. Separe o sideboard com uma linha "Sideboard".
+            </p>
+            <Textarea
+              value={importText}
+              onChange={e => setImportText(e.target.value)}
+              placeholder={`4 Lightning Bolt\n4 Counterspell\n2 Island\n\nSideboard\n2 Negate`}
+              rows={12}
+              disabled={importing}
+              className="font-mono text-sm"
+            />
+            {importing && importProgress && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                {importProgress}
+              </div>
+            )}
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <Button variant="outline" onClick={importDeckFromFile} disabled={importing} className="gap-1">
+                <Upload className="w-4 h-4" /> Importar Arquivo .txt
+              </Button>
+              <div className="flex gap-2">
+                <Button variant="ghost" onClick={() => { setImportOpen(false); setImportText(''); }} disabled={importing}>
+                  Cancelar
+                </Button>
+                <Button onClick={() => importFromText(importText)} disabled={importing || !importText.trim()}>
+                  {importing ? <><Loader2 className="w-4 h-4 animate-spin mr-1" /> Importando...</> : 'Importar Lista'}
+                </Button>
+              </div>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </main>
