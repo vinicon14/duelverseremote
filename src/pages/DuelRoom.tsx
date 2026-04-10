@@ -61,7 +61,7 @@ const DuelRoom = () => {
   const deckToggleChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   
   const isJudge = searchParams.get('role') === 'judge';
-  const [hideControls, setHideControls] = useState(true);
+  const [hideControls, setHideControls] = useState(false);
   const [judgeTimerSeconds, setJudgeTimerSeconds] = useState<number | null>(null);
   const [judgeRewarded, setJudgeRewarded] = useState(false);
   const judgeLogIdRef = useRef<string | null>(null);
@@ -1175,14 +1175,16 @@ const DuelRoom = () => {
             )}
             
             <div className="flex gap-1 sm:gap-2">
-              {/* O botão de Ocultar e Gravar ficam sempre visíveis para participantes */}
-              {isParticipant && !isJudge && (
+              {/* O botão de Ocultar e Gravar ficam sempre visíveis */}
+              {!isJudge && (
                 <>
                   <HideElementsButton onToggle={() => setHideControls(!hideControls)} isHidden={hideControls} />
                   <RecordMatchButton duelId={id!} />
-                  <span className="hidden sm:inline-flex">
-                    <YouTubeLiveButton duelId={id!} />
-                  </span>
+                  {isParticipant && (
+                    <span className="hidden sm:inline-flex">
+                      <YouTubeLiveButton duelId={id!} />
+                    </span>
+                  )}
                 </>
               )}
 
