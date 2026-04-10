@@ -963,6 +963,16 @@ const DuelRoom = () => {
     });
   }, [id, currentUser, myDeckIsOpen]);
 
+  // Auto-disable camera when deck opens, re-enable when it closes
+  useEffect(() => {
+    if (!webrtcRef.current) return;
+    if (myDeckIsOpen) {
+      webrtcRef.current.setVideoEnabled(false);
+    } else {
+      webrtcRef.current.setVideoEnabled(true);
+    }
+  }, [myDeckIsOpen]);
+
   return (
     <div className="min-h-screen bg-background">
       {!hideControls && <Navbar />}
