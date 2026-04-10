@@ -6,85 +6,103 @@ interface DailyPrebuiltFrameProps {
   className?: string;
 }
 
+type DailyFrameInstance = ReturnType<typeof DailyIframe.createFrame>;
+
+let activeFrame: DailyFrameInstance | null = null;
+let activeFrameCleanup: Promise<void> = Promise.resolve();
+
+const destroyFrame = async (
+  frame: DailyFrameInstance | null | undefined,
+  container?: HTMLDivElement | null,
+) => {
+  if (!frame) {
+    container?.replaceChildren();
+    return;
+  }
+
+  try {
+    if (!frame.isDestroyed()) {
+      await frame.destroy();
+    }
+  } catch (error) {
+    console.warn("[DailyPrebuiltFrame] destroy error:", error);
+  } finally {
+    if (activeFrame === frame) {
+      activeFrame = null;
+    }
+
+    if (container?.isConnected) {
+      container.replaceChildren();
+    }
+  }
+};
+
 export const DailyPrebuiltFrame = ({ roomUrl, className }: DailyPrebuiltFrameProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const frameRef = useRef<ReturnType<typeof DailyIframe.createFrame> | null>(null);
+  const frameRef = useRef<DailyFrameInstance | null>(null);
 
   useEffect(() => {
     if (!roomUrl || !containerRef.current) return;
 
     const container = containerRef.current;
-    let cancelled = false;
+    let disposed = false;
 
     const init = async () => {
-      // Destroy any existing instance first
-      if (frameRef.current) {
-        try {
-          await frameRef.current.destroy();
-        } catch (e) {
-          console.warn("[DailyPrebuiltFrame] destroy error:", e);
-        }
-        frameRef.current = null;
-        container.innerHTML = "";
+      await activeFrameCleanup;
+
+      const existingFrame = activeFrame ?? DailyIframe.getCallInstance();
+      if (existingFrame && !existingFrame.isDestroyed()) {
+        activeFrameCleanup = destroyFrame(existingFrame, container);
+        await activeFrameCleanup;
       }
 
-      // Also check for any global orphaned instance
-      try {
-        const existing = DailyIframe.getCallInstance();
-        if (existing) {
-          await existing.destroy();
-        }
-      } catch {
-        // no existing instance, that's fine
+      if (disposed || !container.isConnected) return;
+
+      const frame = DailyIframe.createFrame(container, {
+        url: roomUrl,
+        activeSpeakerMode: false,
+        allowMultipleCallInstances: true,
+        showLeaveButton: true,
+        showFullscreenButton: true,
+        iframeStyle: {
+          position: "absolute",
+          inset: "0px",
+          width: "100%",
+          height: "100%",
+          border: "0",
+        },
+      });
+
+      if (disposed) {
+        await destroyFrame(frame, container);
+        return;
       }
 
-      if (cancelled) return;
+      activeFrame = frame;
+      frameRef.current = frame;
 
-      try {
-        const frame = DailyIframe.createFrame(container, {
-          url: roomUrl,
-          activeSpeakerMode: false,
-          showLeaveButton: true,
-          showFullscreenButton: true,
-          iframeStyle: {
-            position: "absolute",
-            top: "0px",
-            left: "0px",
-            width: "100%",
-            height: "100%",
-            border: "0",
-          },
-        });
+      frame.on("joined-meeting", () => {
+        frame.setActiveSpeakerMode(false);
+      });
 
-        if (cancelled) {
-          frame.destroy();
-          return;
-        }
-
-        frameRef.current = frame;
-
-        frame.on("joined-meeting", () => {
-          console.log("[DailyPrebuiltFrame] forcing grid view");
-          frame.setActiveSpeakerMode(false);
-        });
-
-        frame.on("error", (event: unknown) => {
-          console.error("[DailyPrebuiltFrame] Daily error", event);
-        });
-      } catch (e) {
-        console.error("[DailyPrebuiltFrame] createFrame error:", e);
-      }
+      frame.on("error", (event: unknown) => {
+        console.error("[DailyPrebuiltFrame] Daily error", event);
+      });
     };
 
-    init();
+    void init();
 
     return () => {
-      cancelled = true;
-      if (frameRef.current) {
-        frameRef.current.destroy().catch(() => {});
-        frameRef.current = null;
+      disposed = true;
+
+      const currentFrame = frameRef.current;
+      frameRef.current = null;
+
+      if (currentFrame) {
+        activeFrameCleanup = destroyFrame(currentFrame, container);
+      } else {
+        container.replaceChildren();
       }
-      container.innerHTML = "";
     };
   }, [roomUrl]);
 
