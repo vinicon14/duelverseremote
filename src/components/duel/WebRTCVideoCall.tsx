@@ -217,6 +217,12 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   const createPeerConnection = useCallback((remotePeerId: string) => {
     const existing = peersRef.current.get(remotePeerId);
     if (existing) {
+      // Nullify event handlers BEFORE closing to prevent the old PC's
+      // 'closed' event from removing the NEW peer connection from state
+      existing.pc.oniceconnectionstatechange = null;
+      existing.pc.ontrack = null;
+      existing.pc.onnegotiationneeded = null;
+      existing.pc.onicecandidate = null;
       existing.pc.close();
     }
 
