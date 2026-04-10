@@ -223,6 +223,20 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
     return preferredMimeTypes.find((candidate) => MediaRecorder.isTypeSupported(candidate));
   }, []);
 
+  const loadDesktopSources = useCallback(async () => {
+    const electronAPI = (window as any).electronAPI;
+    if (!electronAPI?.getDesktopSources) return;
+    try {
+      const sources = await electronAPI.getDesktopSources();
+      setDesktopSources(sources || []);
+      if (sources?.length > 0 && !selectedSourceId) {
+        setSelectedSourceId(sources[0].id);
+      }
+    } catch (err) {
+      console.warn('Failed to load desktop sources:', err);
+    }
+  }, [selectedSourceId]);
+
   const startRecording = async (source: RecordingAudioSource) => {
     if (!isPro) {
       toast({
@@ -236,6 +250,11 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
     // Detectar se é mobile (fallback; o botão já é ocultado no mobile)
     const isDeviceMobileUA = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     const isElectron = !!(window as any).electronAPI?.isElectron;
+
+    // No Electron, enviar source selecionada antes de iniciar captura
+    if (isElectron && selectedSourceId) {
+      (window as any).electronAPI.setSelectedSource(selectedSourceId);
+    }
 
     // Verificar se a API de gravação está disponível
     // No Electron, getDisplayMedia é habilitado via setDisplayMediaRequestHandler no main process
