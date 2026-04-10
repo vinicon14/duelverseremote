@@ -361,7 +361,8 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     if (!isDraggingRef.current) return;
     const dx = e.clientX - dragStartRef.current.x;
     const dy = e.clientY - dragStartRef.current.y;
-    setPanOffset({ x: dragStartRef.current.ox + dx, y: dragStartRef.current.oy + dy });
+    // Negate dx because scaleX(-1) mirrors the X axis
+    setPanOffset({ x: dragStartRef.current.ox - dx, y: dragStartRef.current.oy + dy });
   };
 
   const handlePanEnd = () => {
