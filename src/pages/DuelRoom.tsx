@@ -1101,7 +1101,7 @@ const DuelRoom = () => {
                 }
                 remoteDeckOpenSlots={
                   ((duel as any)?.max_players || 2) >= 4
-                    ? [0, 1, 2].map(() => Object.values(opponentDeckOpenMap).some(Boolean) && isParticipant && !isJudge)
+                    ? [0, 1, 2].map(() => Object.values(opponentDeckOpenMap).some(Boolean) && !isJudge)
                     : undefined
                 }
               />
