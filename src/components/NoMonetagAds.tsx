@@ -103,7 +103,7 @@ export const NoMonetagAds = () => {
       document.querySelectorAll('iframe').forEach((iframe) => {
         const src = iframe.getAttribute('src') || '';
         const id = iframe.id || '';
-        const className = typeof iframe.className === 'string' ? iframe.className : '';
+        const className = iframe.className || '';
         // Allow Daily.co iframes
         if (src.includes('daily.co') || src.includes('duelverse')) {
           return; // Skip removal for Daily.co
@@ -126,7 +126,7 @@ export const NoMonetagAds = () => {
       // Remove popup/overlay elements (fixed position, high z-index)
       document.querySelectorAll('*').forEach((el) => {
         const id = el.id || '';
-        const className = typeof el.className === 'string' ? el.className : ((el.className as any)?.baseVal || '');
+        const className = el.className || '';
         const style = el.getAttribute('style') || '';
         
         // Block popup/overlay ads (fixed position, high z-index, or Monetag related)
@@ -138,7 +138,9 @@ export const NoMonetagAds = () => {
           id.includes('popunder') ||
           className.includes('quge5') || 
           className.includes('monetag') ||
-          className.includes('popunder');
+          className.includes('popup') ||
+          className.includes('popunder') ||
+          className.includes('overlay');
         
         if (isPopupOrOverlay) {
           el.remove();
@@ -164,7 +166,7 @@ export const NoMonetagAds = () => {
             const el = node as Element;
             const style = el.getAttribute?.('style') || '';
             const id = el.id || '';
-            const className = typeof el.className === 'string' ? el.className : ((el.className as any)?.baseVal || '');
+            const className = el.className || '';
             
             // Check scripts
             if (el.tagName === 'SCRIPT') {
@@ -213,7 +215,9 @@ export const NoMonetagAds = () => {
               id.includes('popunder') ||
               className.includes('quge5') || 
               className.includes('monetag') ||
-              className.includes('popunder');
+              className.includes('popup') ||
+              className.includes('popunder') ||
+              className.includes('overlay');
             
             if (isPopupOrOverlay) {
               el.remove();

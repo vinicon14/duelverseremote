@@ -567,12 +567,10 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   const totalSlots = maxPlayers;
   const is4Player = totalSlots >= 4;
   const isSideBySide = layout === "side-by-side";
-  const isSpectator = !!spectatorLpOverlay;
 
-  // Build remote slots: for spectators, ALL players are remote (need totalSlots slots)
-  const remoteSlotsCount = isSpectator ? totalSlots : totalSlots - 1;
+  // Build remote slots: fill with connected peers, pad with waiting slots
   const remoteSlots: (string | null)[] = [];
-  for (let i = 0; i < remoteSlotsCount; i++) {
+  for (let i = 0; i < totalSlots - 1; i++) {
     remoteSlots.push(remotePeerIds[i] || null);
   }
 
@@ -705,22 +703,22 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         /* ===== SIDE-BY-SIDE (desktop) / STACKED (mobile) ===== */
         <div className="flex flex-col sm:flex-row w-full h-full">
           <div className="relative flex-1 min-h-0">
-            {isSpectator ? renderRemotePanel(remoteSlots[0], 0) : renderLocalPanel()}
+            {renderLocalPanel()}
           </div>
           <div className="relative flex-1 min-h-0">
-            {isSpectator ? renderRemotePanel(remoteSlots[1], 1) : renderRemotePanel(remoteSlots[0], 0)}
+            {renderRemotePanel(remoteSlots[0], 0)}
           </div>
         </div>
       ) : (
         /* ===== PIP LAYOUT (2 players) — click small to swap ===== */
         <>
-          {/* Big panel */}
+          {/* Big panel — always show deck viewers here regardless of swap */}
           <div className="w-full h-full">
-            {isSpectator ? (
-              pipSwapped ? renderRemotePanel(remoteSlots[1], 1) : renderRemotePanel(remoteSlots[0], 0)
-            ) : pipSwapped ? (
+            {pipSwapped ? (
+              /* Local is big — show local deck or local video */
               renderLocalPanel()
             ) : (
+              /* Remote is big — show remote deck overlay or remote video */
               renderRemotePanel(remoteSlots[0], 0)
             )}
           </div>
@@ -730,27 +728,22 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
             onClick={() => setPipSwapped(prev => !prev)}
             title="Clique para alternar"
           >
-            {isSpectator ? (
-              pipSwapped ? (
-                remoteSlots[0] ? (
-                  <video ref={(el) => setRemoteVideoRef(remoteSlots[0]!, el)} autoPlay playsInline className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-black/80"><Loader2 className="w-4 h-4 text-primary animate-spin" /></div>
-                )
-              ) : (
-                remoteSlots[1] ? (
-                  <video ref={(el) => setRemoteVideoRef(remoteSlots[1]!, el)} autoPlay playsInline className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-black/80"><Loader2 className="w-4 h-4 text-primary animate-spin" /></div>
-                )
-              )
-            ) : pipSwapped ? (
+            {pipSwapped ? (
+              /* Show remote in small — just video, no deck overlay */
               remoteSlots[0] ? (
-                <video ref={(el) => setRemoteVideoRef(remoteSlots[0]!, el)} autoPlay playsInline className="w-full h-full object-cover" />
+                <video
+                  ref={(el) => setRemoteVideoRef(remoteSlots[0]!, el)}
+                  autoPlay
+                  playsInline
+                  className="w-full h-full object-cover"
+                />
               ) : (
-                <div className="w-full h-full flex items-center justify-center bg-black/80"><Loader2 className="w-4 h-4 text-primary animate-spin" /></div>
+                <div className="w-full h-full flex items-center justify-center bg-black/80">
+                  <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                </div>
               )
             ) : (
+              /* Show local in small */
               localDeckOpen && localDeckContent ? (
                 <div className="w-full h-full overflow-hidden bg-background flex items-center justify-center">
                   <span className="text-[10px] text-muted-foreground">Deck aberto</span>
@@ -759,10 +752,17 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
                 <>
                   <video
                     ref={localVideoCallbackRef}
-                    autoPlay playsInline muted
+                    autoPlay
+                    playsInline
+                    muted
                     className={`w-full h-full object-cover ${zoomLevel > 1 ? 'cursor-grab active:cursor-grabbing' : ''}`}
-                    style={{ transform: `scaleX(-1) scale(${zoomLevel}) translate(${panOffset.x / zoomLevel}px, ${panOffset.y / zoomLevel}px)` }}
-                    onPointerDown={handlePanStart} onPointerMove={handlePanMove} onPointerUp={handlePanEnd} onPointerCancel={handlePanEnd}
+                    style={{
+                      transform: `scaleX(-1) scale(${zoomLevel}) translate(${panOffset.x / zoomLevel}px, ${panOffset.y / zoomLevel}px)`,
+                    }}
+                    onPointerDown={handlePanStart}
+                    onPointerMove={handlePanMove}
+                    onPointerUp={handlePanEnd}
+                    onPointerCancel={handlePanEnd}
                   />
                   {isVideoOff && (
                     <div className="absolute inset-0 bg-muted flex items-center justify-center">
@@ -776,114 +776,106 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         </>
       )}
 
-      {/* Controls bar - hide participant controls for spectators */}
+      {/* Controls bar */}
       <div className="absolute bottom-1.5 sm:bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 sm:gap-2 z-20">
-        {!isSpectator && (
-          <>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={toggleMute}
-              className={`rounded-full w-8 h-8 sm:w-10 sm:h-10 backdrop-blur-sm ${isMuted ? "bg-destructive/80 text-destructive-foreground" : "bg-card/80"}`}
-            >
-              {isMuted ? <MicOff className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Mic className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={toggleVideo}
-              className={`rounded-full w-8 h-8 sm:w-10 sm:h-10 backdrop-blur-sm ${isVideoOff ? "bg-destructive/80 text-destructive-foreground" : "bg-card/80"}`}
-            >
-              {isVideoOff ? <VideoOff className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Video className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-            </Button>
-          </>
-        )}
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={toggleMute}
+          className={`rounded-full w-8 h-8 sm:w-10 sm:h-10 backdrop-blur-sm ${isMuted ? "bg-destructive/80 text-destructive-foreground" : "bg-card/80"}`}
+        >
+          {isMuted ? <MicOff className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Mic className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+        </Button>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={toggleVideo}
+          className={`rounded-full w-8 h-8 sm:w-10 sm:h-10 backdrop-blur-sm ${isVideoOff ? "bg-destructive/80 text-destructive-foreground" : "bg-card/80"}`}
+        >
+          {isVideoOff ? <VideoOff className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Video className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+        </Button>
         {/* Zoom controls */}
-        {!isSpectator && (
-          <>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={zoomOut}
+          disabled={zoomLevel <= MIN_ZOOM}
+          className="rounded-full w-8 h-8 sm:w-10 sm:h-10 backdrop-blur-sm bg-card/80"
+          title="Diminuir zoom"
+        >
+          <ZoomOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+        </Button>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={zoomIn}
+          disabled={zoomLevel >= MAX_ZOOM}
+          className="rounded-full w-8 h-8 sm:w-10 sm:h-10 backdrop-blur-sm bg-card/80"
+          title="Aumentar zoom"
+        >
+          <ZoomIn className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+        </Button>
+        {/* Device selector */}
+        <Popover open={showDeviceMenu} onOpenChange={setShowDeviceMenu}>
+          <PopoverTrigger asChild>
             <Button
               variant="outline"
               size="icon"
-              onClick={zoomOut}
-              disabled={zoomLevel <= MIN_ZOOM}
               className="rounded-full w-8 h-8 sm:w-10 sm:h-10 backdrop-blur-sm bg-card/80"
-              title="Diminuir zoom"
+              title="Configurar câmera e microfone"
             >
-              <ZoomOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={zoomIn}
-              disabled={zoomLevel >= MAX_ZOOM}
-              className="rounded-full w-8 h-8 sm:w-10 sm:h-10 backdrop-blur-sm bg-card/80"
-              title="Aumentar zoom"
-            >
-              <ZoomIn className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            </Button>
-            {/* Device selector */}
-            <Popover open={showDeviceMenu} onOpenChange={setShowDeviceMenu}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="rounded-full w-8 h-8 sm:w-10 sm:h-10 backdrop-blur-sm bg-card/80"
-                  title="Configurar câmera e microfone"
-                >
-                  <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent side="top" align="center" className="w-72 p-3 space-y-3">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium flex items-center gap-1.5">
-                    <Video className="w-3 h-3" /> Câmera
-                  </label>
-                  <Select
-                    value={selectedVideoId}
-                    onValueChange={(val) => {
-                      setSelectedVideoId(val);
-                      switchDevice(selectedAudioId || undefined, val);
-                    }}
-                  >
-                    <SelectTrigger className="h-8 text-xs">
-                      <SelectValue placeholder="Selecionar câmera" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {videoDevices.map((d, i) => (
-                        <SelectItem key={d.deviceId} value={d.deviceId} className="text-xs">
-                          {d.label || `Câmera ${i + 1}`}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium flex items-center gap-1.5">
-                    <Mic className="w-3 h-3" /> Microfone
-                  </label>
-                  <Select
-                    value={selectedAudioId}
-                    onValueChange={(val) => {
-                      setSelectedAudioId(val);
-                      switchDevice(val, selectedVideoId || undefined);
-                    }}
-                  >
-                    <SelectTrigger className="h-8 text-xs">
-                      <SelectValue placeholder="Selecionar microfone" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {audioDevices.map((d, i) => (
-                        <SelectItem key={d.deviceId} value={d.deviceId} className="text-xs">
-                          {d.label || `Microfone ${i + 1}`}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </PopoverContent>
-            </Popover>
-          </>
-        )}
+          </PopoverTrigger>
+          <PopoverContent side="top" align="center" className="w-72 p-3 space-y-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium flex items-center gap-1.5">
+                <Video className="w-3 h-3" /> Câmera
+              </label>
+              <Select
+                value={selectedVideoId}
+                onValueChange={(val) => {
+                  setSelectedVideoId(val);
+                  switchDevice(selectedAudioId || undefined, val);
+                }}
+              >
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="Selecionar câmera" />
+                </SelectTrigger>
+                <SelectContent>
+                  {videoDevices.map((d, i) => (
+                    <SelectItem key={d.deviceId} value={d.deviceId} className="text-xs">
+                      {d.label || `Câmera ${i + 1}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium flex items-center gap-1.5">
+                <Mic className="w-3 h-3" /> Microfone
+              </label>
+              <Select
+                value={selectedAudioId}
+                onValueChange={(val) => {
+                  setSelectedAudioId(val);
+                  switchDevice(val, selectedVideoId || undefined);
+                }}
+              >
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="Selecionar microfone" />
+                </SelectTrigger>
+                <SelectContent>
+                  {audioDevices.map((d, i) => (
+                    <SelectItem key={d.deviceId} value={d.deviceId} className="text-xs">
+                      {d.label || `Microfone ${i + 1}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </PopoverContent>
+        </Popover>
         {/* Layout toggle (only for 2 players) */}
         {!is4Player && (
           <Button

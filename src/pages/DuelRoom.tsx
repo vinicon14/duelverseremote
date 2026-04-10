@@ -1029,23 +1029,34 @@ const DuelRoom = () => {
                 maxPlayers={(duel as any)?.max_players || 2}
                 onLayoutChange={setVideoLayout}
                 spectatorLpOverlay={isSpectator && !isJudge ? {
-                  localLabel: '', // Not used for spectators (all panels are remote)
-                  localLp: 0,
+                  localLabel: duel.creator?.username || 'Player 1',
+                  localLp: player1LP,
                   remotePlayers: [
-                    { label: duel.creator?.username || 'Player 1', lp: player1LP },
                     { label: duel.opponent?.username || 'Player 2', lp: player2LP },
                     ...((duel as any)?.max_players >= 3 ? [{ label: 'Player 3', lp: player3LP }] : []),
                     ...((duel as any)?.max_players >= 4 ? [{ label: 'Player 4', lp: player4LP }] : []),
                   ]
                 } : undefined}
                 localDeckOpen={
-                  !isSpectator && myDeckIsOpen && isParticipant && !isJudge
+                  isSpectator && !isJudge
+                    ? creatorDeckOpen
+                    : myDeckIsOpen && isParticipant && !isJudge
                 }
                 remoteDeckOpen={
-                  !isSpectator && opponentDeckOpen && isParticipant && !isJudge
+                  isSpectator && !isJudge
+                    ? opponentPlayerDeckOpen
+                    : opponentDeckOpen && isParticipant && !isJudge
                 }
                 localDeckContent={
-                  myDeckIsOpen && isParticipant && !isJudge ? (
+                  isSpectator && !isJudge && currentUser && id && duel && ((duel as any)?.max_players || 2) <= 2 ? (
+                    <FloatingOpponentViewer
+                      duelId={id}
+                      currentUserId={currentUser.id}
+                      opponentUsername={duel.creator?.username || 'Jogador 1'}
+                      filterOpponentId={duel.creator_id || undefined}
+                      embedded
+                    />
+                  ) : myDeckIsOpen && isParticipant && !isJudge ? (
                     <>
                       {duel?.tcg_type === 'yugioh' && showDeckViewer && (
                         <>
@@ -1098,56 +1109,39 @@ const DuelRoom = () => {
                   ) : undefined
                 }
                 remoteDeckContent={
-                  !isSpectator && !isJudge && currentUser && id && duel && ((duel as any)?.max_players || 2) <= 2 ? (
+                  !isJudge && currentUser && id && duel && ((duel as any)?.max_players || 2) <= 2 ? (
                     <FloatingOpponentViewer
                       duelId={id}
                       currentUserId={currentUser.id}
                       opponentUsername={
-                        currentUser.id === duel.creator_id 
-                          ? duel.opponent?.username 
-                          : duel.creator?.username
+                        isSpectator
+                          ? (duel.opponent?.username || 'Jogador 2')
+                          : currentUser.id === duel.creator_id 
+                            ? duel.opponent?.username 
+                            : duel.creator?.username
                       }
+                      filterOpponentId={isSpectator ? (duel.opponent_id || undefined) : undefined}
                       embedded
                     />
                   ) : undefined
                 }
+                // 4-player mode: per-slot opponent viewers
                 remoteDeckContents={
-                  isSpectator && !isJudge && currentUser && id && duel && ((duel as any)?.max_players || 2) <= 2
-                    ? [
+                  ((duel as any)?.max_players || 2) >= 4 && !isJudge && currentUser && id && duel
+                    ? [0, 1, 2].map((_slotIdx) => (
                         <FloatingOpponentViewer
-                          key="spectator-creator"
+                          key={`opponent-slot-${_slotIdx}`}
                           duelId={id}
                           currentUserId={currentUser.id}
-                          opponentUsername={duel.creator?.username || 'Jogador 1'}
-                          filterOpponentId={duel.creator_id || undefined}
                           embedded
-                        />,
-                        <FloatingOpponentViewer
-                          key="spectator-opponent"
-                          duelId={id}
-                          currentUserId={currentUser.id}
-                          opponentUsername={duel.opponent?.username || 'Jogador 2'}
-                          filterOpponentId={duel.opponent_id || undefined}
-                          embedded
-                        />,
-                      ]
-                    : ((duel as any)?.max_players || 2) >= 4 && !isJudge && currentUser && id && duel
-                      ? [0, 1, 2].map((_slotIdx) => (
-                          <FloatingOpponentViewer
-                            key={`opponent-slot-${_slotIdx}`}
-                            duelId={id}
-                            currentUserId={currentUser.id}
-                            embedded
-                          />
-                        ))
-                      : undefined
+                        />
+                      ))
+                    : undefined
                 }
                 remoteDeckOpenSlots={
-                  isSpectator && !isJudge
-                    ? [creatorDeckOpen, opponentPlayerDeckOpen]
-                    : ((duel as any)?.max_players || 2) >= 4
-                      ? [0, 1, 2].map(() => Object.values(opponentDeckOpenMap).some(Boolean) && !isJudge)
-                      : undefined
+                  ((duel as any)?.max_players || 2) >= 4
+                    ? [0, 1, 2].map(() => Object.values(opponentDeckOpenMap).some(Boolean) && !isJudge)
+                    : undefined
                 }
               />
             ) : (
