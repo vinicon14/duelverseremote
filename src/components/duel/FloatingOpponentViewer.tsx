@@ -509,7 +509,7 @@ export const FloatingOpponentViewer = ({
       )}
 
       {/* Content */}
-      <div className={cn("p-2", embedded ? "overflow-y-auto flex-1" : "overflow-y-auto max-h-[calc(100%-40px)]")}>
+      <div className={cn("p-2", embedded ? "overflow-y-auto flex-1 flex flex-col items-center justify-center" : "overflow-y-auto max-h-[calc(100%-40px)]")}>
         {!opponentState ? (
           <div className="text-center text-sm text-muted-foreground py-4">
             <Eye className="h-6 w-6 mx-auto mb-2 opacity-50" />
@@ -517,7 +517,7 @@ export const FloatingOpponentViewer = ({
             <p className="text-xs mt-1">O oponente precisa abrir a Arena Digital</p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className={cn("space-y-2", embedded && "w-full max-w-md")}>
             {/* Stats Bar */}
             <div className="flex items-center justify-between gap-2 p-2 bg-muted/50 rounded-lg">
               <div className="flex items-center gap-1">
