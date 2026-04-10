@@ -999,37 +999,34 @@ const DuelRoom = () => {
       
       <main className="px-2 sm:px-4 pt-16 sm:pt-20 pb-2 sm:pb-4">
         <div className="h-[calc(100vh-80px)] sm:h-[calc(100vh-100px)] relative">
-          {/* Video Call - Daily.co */}
+          {/* Video Call - Daily.co with split overlay support */}
           <div className="h-full w-full rounded-lg overflow-hidden bg-card shadow-2xl border border-primary/20 relative">
-            {/* Hide iframe when deck viewer is open */}
-            {!(showDeckViewer || showMagicViewer || showPokemonViewer) ? (
-              <>
-                {roomUrl ? (
-                  <iframe
-                    src={roomUrl}
-                    allow="camera; microphone; fullscreen; speaker; display-capture; autoplay"
-                    className="w-full h-full"
-                    title="Daily.co Video Call"
-                    onLoad={() => console.log('Iframe loaded')}
-                    onError={(e) => console.error('Iframe error:', e)}
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <div className="text-center space-y-4">
-                      <Loader2 className="w-12 h-12 mx-auto text-primary animate-spin" />
-                      <div>
-                        <p className="text-muted-foreground mb-2">Carregando sala de vídeo...</p>
-                        <p className="text-xs text-muted-foreground">ID: {id}</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </>
+            {/* Daily.co iframe always rendered underneath */}
+            {roomUrl ? (
+              <iframe
+                src={roomUrl}
+                allow="camera; microphone; fullscreen; speaker; display-capture; autoplay"
+                className="w-full h-full absolute inset-0"
+                title="Daily.co Video Call"
+                onLoad={() => console.log('Iframe loaded')}
+                onError={(e) => console.error('Iframe error:', e)}
+              />
             ) : (
-              /* Deck viewer rendered in place of camera */
-              <div className="w-full h-full relative">
-                {/* YGO Deck Viewer */}
-                {isParticipant && !isJudge && duel?.tcg_type === 'yugioh' && showDeckViewer && (
+              <div className="w-full h-full flex items-center justify-center">
+                <div className="text-center space-y-4">
+                  <Loader2 className="w-12 h-12 mx-auto text-primary animate-spin" />
+                  <div>
+                    <p className="text-muted-foreground mb-2">Carregando sala de vídeo...</p>
+                    <p className="text-xs text-muted-foreground">ID: {id}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* My deck overlay - covers LEFT half (my camera tile in grid view) */}
+            {myDeckIsOpen && isParticipant && !isJudge && (
+              <div className="absolute top-0 left-0 w-1/2 h-full z-10 bg-background">
+                {duel?.tcg_type === 'yugioh' && showDeckViewer && (
                   <>
                     <input
                       ref={fileInputRef}
@@ -1038,9 +1035,7 @@ const DuelRoom = () => {
                       className="hidden"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
-                        if (file) {
-                          importDeckFromYDK(file);
-                        }
+                        if (file) importDeckFromYDK(file);
                         e.target.value = '';
                       }}
                     />
@@ -1062,9 +1057,7 @@ const DuelRoom = () => {
                     />
                   </>
                 )}
-
-                {/* Magic Arena Viewer */}
-                {isParticipant && !isJudge && duel?.tcg_type === 'magic' && showMagicViewer && (
+                {duel?.tcg_type === 'magic' && showMagicViewer && (
                   <MagicDuelViewer
                     isOpen={showMagicViewer}
                     onClose={() => setShowMagicViewer(false)}
@@ -1073,9 +1066,7 @@ const DuelRoom = () => {
                     embedded
                   />
                 )}
-
-                {/* Pokemon Arena Viewer */}
-                {isParticipant && !isJudge && duel?.tcg_type === 'pokemon' && showPokemonViewer && currentUser && id && (
+                {duel?.tcg_type === 'pokemon' && showPokemonViewer && currentUser && id && (
                   <PokemonDuelViewer
                     duelId={id}
                     currentUserId={currentUser.id}
@@ -1085,18 +1076,20 @@ const DuelRoom = () => {
               </div>
             )}
 
-            {/* Opponent Viewer - Embedded inside video area */}
-            {isParticipant && !isJudge && currentUser && id && duel && (
-              <FloatingOpponentViewer
-                duelId={id}
-                currentUserId={currentUser.id}
-                opponentUsername={
-                  currentUser.id === duel.creator_id 
-                    ? duel.opponent?.username 
-                    : duel.creator?.username
-                }
-                embedded
-              />
+            {/* Opponent deck overlay - covers RIGHT half (opponent camera tile) - auto-shown when opponent opens deck */}
+            {opponentDeckOpen && isParticipant && !isJudge && currentUser && id && duel && (
+              <div className="absolute top-0 right-0 w-1/2 h-full z-10 bg-background overflow-auto">
+                <FloatingOpponentViewer
+                  duelId={id}
+                  currentUserId={currentUser.id}
+                  opponentUsername={
+                    currentUser.id === duel.creator_id 
+                      ? duel.opponent?.username 
+                      : duel.creator?.username
+                  }
+                  embedded
+                />
+              </div>
             )}
           </div>
 
