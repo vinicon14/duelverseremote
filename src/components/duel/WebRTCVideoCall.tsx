@@ -28,6 +28,12 @@ interface WebRTCVideoCallProps {
   remoteDeckContents?: (React.ReactNode | undefined)[];
   /** Per-slot remote deck open flags for 4-player mode */
   remoteDeckOpenSlots?: boolean[];
+  /** Spectator LP overlay: labels & values for local panel and remote panels */
+  spectatorLpOverlay?: {
+    localLabel: string;
+    localLp: number;
+    remotePlayers: { label: string; lp: number }[];
+  };
 }
 
 const ICE_SERVERS: RTCIceServer[] = [
@@ -73,6 +79,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   remoteDeckContent,
   remoteDeckContents,
   remoteDeckOpenSlots,
+  spectatorLpOverlay,
 }, ref) => {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
@@ -605,6 +612,12 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
           )}
         </>
       )}
+      {spectatorLpOverlay && (
+        <div className="absolute top-1 left-1 sm:top-2 sm:left-2 px-2 py-1 rounded bg-black/70 backdrop-blur-sm text-white z-20 flex items-center gap-1.5">
+          <span className="text-[10px] sm:text-xs font-medium truncate max-w-[80px]">{spectatorLpOverlay.localLabel}</span>
+          <span className="text-xs sm:text-sm font-bold text-green-400">{spectatorLpOverlay.localLp}</span>
+        </div>
+      )}
       <div className="absolute bottom-1 left-1 sm:bottom-2 sm:left-2 px-1.5 py-0.5 rounded bg-black/60 text-[10px] sm:text-xs text-white z-10">
         Você
       </div>
@@ -636,6 +649,12 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
               <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 mx-auto text-primary animate-spin" />
               <p className="text-[10px] sm:text-xs text-muted-foreground">Aguardando jogador...</p>
             </div>
+          </div>
+        )}
+        {spectatorLpOverlay?.remotePlayers?.[index] && (
+          <div className="absolute top-1 left-1 sm:top-2 sm:left-2 px-2 py-1 rounded bg-black/70 backdrop-blur-sm text-white z-20 flex items-center gap-1.5">
+            <span className="text-[10px] sm:text-xs font-medium truncate max-w-[80px]">{spectatorLpOverlay.remotePlayers[index].label}</span>
+            <span className="text-xs sm:text-sm font-bold text-green-400">{spectatorLpOverlay.remotePlayers[index].lp}</span>
           </div>
         )}
         <div className="absolute bottom-1 left-1 sm:bottom-2 sm:left-2 px-1.5 py-0.5 rounded bg-black/60 text-[10px] sm:text-xs text-white z-10">
