@@ -379,7 +379,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         playsInline
         muted
         className={`w-full h-full object-contain ${localDeckOpen ? 'hidden' : ''}`}
-        style={{ transform: "scaleX(-1)" }}
+        style={{ transform: `scaleX(-1) scale(${zoomLevel})` }}
       />
       {localDeckOpen && localDeckContent ? (
         <div className="w-full h-full overflow-auto bg-background touch-pan-y">
@@ -501,7 +501,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
                     playsInline
                     muted
                     className="w-full h-full object-cover"
-                    style={{ transform: "scaleX(-1)" }}
+                    style={{ transform: `scaleX(-1) scale(${zoomLevel})` }}
                   />
                   {isVideoOff && (
                     <div className="absolute inset-0 bg-muted flex items-center justify-center">
