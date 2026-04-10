@@ -4,9 +4,10 @@
  * Tela exibida quando o usuário tem mais de um perfil TCG.
  * O usuário escolhe UM perfil e os demais são excluídos permanentemente.
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTcg, TcgType } from '@/contexts/TcgContext';
+import { useAdmin } from '@/hooks/useAdmin';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -34,7 +35,18 @@ const TCG_CONFIG: Record<TcgType, { name: string; icon: React.ReactNode; color: 
 export default function ProfileSelect() {
   const navigate = useNavigate();
   const { profiles, isLoading, refreshProfiles } = useTcg();
+  const { isAdmin, loading: adminLoading } = useAdmin();
   const [selecting, setSelecting] = useState(false);
+
+  // Admins should never be on this page — they keep all profiles
+  useEffect(() => {
+    if (!adminLoading && isAdmin) {
+      if (!localStorage.getItem('activeTcg')) {
+        localStorage.setItem('activeTcg', 'yugioh');
+      }
+      navigate('/duels', { replace: true });
+    }
+  }, [isAdmin, adminLoading, navigate]);
 
   const handleSelectProfile = async (profileId: string, tcgType: TcgType) => {
     setSelecting(true);
@@ -63,13 +75,15 @@ export default function ProfileSelect() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || adminLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary" />
       </div>
     );
   }
+
+  if (isAdmin) return null;
 
   // If only one profile, redirect immediately
   if (profiles.length <= 1) {
