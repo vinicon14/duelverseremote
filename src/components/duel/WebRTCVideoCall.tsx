@@ -386,9 +386,9 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   );
 
   const renderRemotePanel = (peerId: string | null, index: number) => (
-    <div key={peerId || `waiting-${index}`} className="relative w-full h-full rounded-lg overflow-hidden bg-black">
+    <div key={peerId || `waiting-${index}`} className="relative w-full h-full overflow-hidden bg-black">
       {peerId && remoteDeckOpen && remoteDeckContent && index === 0 ? (
-        <div className="w-full h-full overflow-auto bg-background">
+        <div className="w-full h-full overflow-auto bg-background touch-pan-y">
           {remoteDeckContent}
         </div>
       ) : peerId ? (
@@ -400,13 +400,13 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         />
       ) : (
         <div className="absolute inset-0 flex items-center justify-center bg-black/80">
-          <div className="text-center space-y-3">
-            <Loader2 className="w-8 h-8 mx-auto text-primary animate-spin" />
-            <p className="text-xs text-muted-foreground">Aguardando jogador...</p>
+          <div className="text-center space-y-2">
+            <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 mx-auto text-primary animate-spin" />
+            <p className="text-[10px] sm:text-xs text-muted-foreground">Aguardando jogador...</p>
           </div>
         </div>
       )}
-      <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-black/60 text-xs text-white z-10">
+      <div className="absolute bottom-1 left-1 sm:bottom-2 sm:left-2 px-1.5 py-0.5 rounded bg-black/60 text-[10px] sm:text-xs text-white z-10">
         {peerId ? `Oponente ${remoteSlots.length > 1 ? index + 1 : ''}` : `Jogador ${index + 2}`}
       </div>
     </div>
