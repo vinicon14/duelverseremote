@@ -534,8 +534,14 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
                     autoPlay
                     playsInline
                     muted
-                    className="w-full h-full object-cover"
-                    style={{ transform: `scaleX(-1) scale(${zoomLevel})` }}
+                    className={`w-full h-full object-cover ${zoomLevel > 1 ? 'cursor-grab active:cursor-grabbing' : ''}`}
+                    style={{
+                      transform: `scaleX(-1) scale(${zoomLevel}) translate(${panOffset.x / zoomLevel}px, ${panOffset.y / zoomLevel}px)`,
+                    }}
+                    onPointerDown={handlePanStart}
+                    onPointerMove={handlePanMove}
+                    onPointerUp={handlePanEnd}
+                    onPointerCancel={handlePanEnd}
                   />
                   {isVideoOff && (
                     <div className="absolute inset-0 bg-muted flex items-center justify-center">
