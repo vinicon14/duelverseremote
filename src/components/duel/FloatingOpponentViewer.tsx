@@ -463,7 +463,7 @@ export const FloatingOpponentViewer = ({
       {/* Header */}
       <div 
         className={cn(
-          "flex items-center justify-between p-2 border-b border-border bg-muted/30",
+          "flex items-center justify-between p-2 border-b border-border bg-muted/30 flex-shrink-0",
           !embedded && "cursor-grab hover:bg-muted/50"
         )}
         {...(embedded ? {} : dragHandlers)}
@@ -509,7 +509,7 @@ export const FloatingOpponentViewer = ({
       )}
 
       {/* Content */}
-      <div className={cn("p-2", embedded ? "overflow-y-auto flex-1 flex flex-col items-center justify-center" : "overflow-y-auto max-h-[calc(100%-40px)]")}>
+      <div className={cn("p-2", embedded ? "overflow-y-auto flex-1 flex flex-col items-center justify-center min-h-0" : "overflow-y-auto max-h-[calc(100%-40px)]")}>
         {!opponentState ? (
           <div className="text-center text-sm text-muted-foreground py-4">
             <Eye className="h-6 w-6 mx-auto mb-2 opacity-50" />
