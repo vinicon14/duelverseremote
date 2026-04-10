@@ -417,7 +417,7 @@ const DuelRoom = () => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const getDailyRoomUrl = (duelId: string) => `https://duelverse.daily.co/duelverse-${duelId}`;
+  const getDailyRoomUrl = (duelId: string) => `https://duelverse.daily.co/duelverse-${duelId}?layout=grid`;
 
 
   const checkAuth = async () => {
@@ -572,7 +572,9 @@ const DuelRoom = () => {
           throw roomError;
         }
 
-        const resolvedRoomUrl = roomData?.url || (roomData?.name ? `https://duelverse.daily.co/${roomData.name}` : fallbackRoomUrl);
+        const resolvedRoomUrl = roomData?.url 
+          ? `${roomData.url}${roomData.url.includes('?') ? '&' : '?'}layout=grid` 
+          : (roomData?.name ? `https://duelverse.daily.co/${roomData.name}?layout=grid` : fallbackRoomUrl);
 
         if (resolvedRoomUrl) {
           setRoomUrl(resolvedRoomUrl);
