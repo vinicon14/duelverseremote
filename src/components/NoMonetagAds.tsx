@@ -1,7 +1,11 @@
 import { useEffect, useRef } from "react";
-import { useAccountType } from "@/hooks/useAccountType";
 
-// Extend Window interface for our custom properties
+/**
+ * NoMonetagAds - Safe ad cleanup for DuelRoom
+ * ONLY removes elements with explicit Monetag/ad signatures.
+ * NEVER touches #root or any React portal.
+ */
+
 declare global {
   interface Window {
     _monetagBlocked?: boolean;
@@ -10,264 +14,116 @@ declare global {
   }
 }
 
-export const NoMonetagAds = () => {
-  const { isPro, loading } = useAccountType();
-  const cleanupDoneRef = useRef(false);
+const AD_SRC_PATTERNS = [
+  'monetag', 'quge5', '3nbf4.com', 'nap5k.com', 'onclicka',
+  'adsterra', 'popunder', 'al5sm.com', 'popcash', 'propellerads',
+  'vignette', 'tag.min.js', 'adsbygoogle', 'pagead2.googlesyndication',
+];
 
-  const isElectron = !!(window as any).electronAPI?.isElectron;
-  const isNativeApp = /DuelVerseApp/i.test(navigator.userAgent);
+const AD_TEXT_PATTERNS = [
+  'monetag', 'quge5', '10601960', '10601962', 'nap5k', '3nbf4',
+];
+
+function isAdScript(src: string, text: string): boolean {
+  const s = src.toLowerCase();
+  const t = text.toLowerCase();
+  return AD_SRC_PATTERNS.some(p => s.includes(p)) ||
+         AD_TEXT_PATTERNS.some(p => t.includes(p));
+}
+
+function isAdIframe(src: string): boolean {
+  if (!src) return false;
+  // Never touch app-owned iframes
+  if (src.includes('daily.co') || src.includes('duelverse')) return false;
+  return AD_SRC_PATTERNS.some(p => src.includes(p));
+}
+
+function safeCleanup() {
+  const root = document.getElementById('root');
+
+  // Remove ad scripts outside React
+  document.querySelectorAll('script').forEach(script => {
+    if (root?.contains(script)) return;
+    const src = script.getAttribute('src') || '';
+    const text = script.textContent || '';
+    if (isAdScript(src, text)) script.remove();
+  });
+
+  // Remove ad iframes outside React
+  document.querySelectorAll('iframe').forEach(iframe => {
+    if (root?.contains(iframe)) return;
+    const src = iframe.getAttribute('src') || '';
+    if (isAdIframe(src)) iframe.remove();
+  });
+
+  // Remove Monetag-identified divs outside React
+  document.querySelectorAll('body > div, body > section, body > aside').forEach(el => {
+    if (root?.contains(el)) return;
+    if (el === root) return;
+    const id = el.id || '';
+    const cn = typeof el.className === 'string' ? el.className : '';
+    if (id.includes('monetag') || id.includes('quge5') || cn.includes('monetag') || cn.includes('quge5')) {
+      el.remove();
+    }
+  });
+
+  // Remove Monetag data-attributed elements
+  document.querySelectorAll('[data-quge5], [data-monetag], [data-popunder], [data-onclicka]').forEach(el => {
+    if (root?.contains(el)) return;
+    el.remove();
+  });
+
+  // Remove container-* divs outside React (Monetag pattern)
+  document.querySelectorAll('div[id^="container-"]').forEach(el => {
+    if (root?.contains(el)) return;
+    el.remove();
+  });
+}
+
+export const NoMonetagAds = () => {
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const observerRef = useRef<MutationObserver | null>(null);
 
   useEffect(() => {
-    // Don't run while loading
-    if (loading) return;
+    // Immediate cleanup on mount (entering DuelRoom)
+    safeCleanup();
 
-    // For PRO users, Electron, or native mobile app - block all ads immediately
-    if (isPro || isElectron || isNativeApp) {
-      console.log('Bloqueando Monetag completamente - PRO/Electron/NativeApp');
-      window._monetagBlocked = true;
-      enableBlocking();
-      return;
-    }
+    // Periodic safe cleanup
+    intervalRef.current = setInterval(safeCleanup, 3000);
 
-    // For FREE users - block popup/overlay ads (new tab ads) but allow page to load normally
-    console.log('Usuário FREE - bloqueando popup/overlay ads (novas guias)');
-    window._monetagBlocked = true;
-    
-    // Enable blocking but with less aggressive cleanup
-    enableBlocking();
+    // MutationObserver to catch dynamically injected ads
+    const root = document.getElementById('root');
+    const observer = new MutationObserver(mutations => {
+      for (const mutation of mutations) {
+        for (const node of mutation.addedNodes) {
+          if (node.nodeType !== 1) continue;
+          const el = node as Element;
+          if (root?.contains(el)) continue;
 
-    // For free users, we DON'T disable blocking after 60 seconds
-    // We keep blocking popup/overlay ads (new tab ads) forever
-    // This is the key change - previously it was disabling blocking after 60s
-
-    return () => {
-      window._monetagBlocked = false;
-      disableBlocking();
-    };
-  }, [isPro, loading]);
-
-  // Function to enable blocking (for PRO users AND free users)
-  const enableBlocking = () => {
-    // Override window.open to block popups (new tab ads)
-    const originalOpen = window.open;
-    window.open = function(...args: Parameters<typeof window.open>): Window | null {
-      const url = args[0];
-      const target = args[1] || '';
-      
-      // Convert URL to string if needed
-      const urlString = typeof url === 'string' ? url : url?.toString() || '';
-      
-      // Block if it's Monetag related (new tab ads)
-      if (
-        urlString.includes('quge5') || 
-        urlString.includes('monetag') || 
-        urlString.includes('pop') ||
-        urlString.includes('onclicka') ||
-        urlString.includes('vignette')
-      ) {
-        console.log('Bloqueado popup Monetag (nova guia):', urlString);
-        return null;
-      }
-      
-      // Block suspicious popup windows
-      if (target === '_blank' && urlString && !urlString.startsWith('http')) {
-        console.log('Bloqueado popup suspeito:', urlString);
-        return null;
-      }
-      
-      return originalOpen.apply(window, args);
-    };
-    window._originalOpen = originalOpen;
-
-    // Cleanup function - removes injected Monetag elements
-    const cleanup = () => {
-      // Remove Monetag scripts
-      document.querySelectorAll('script').forEach((script) => {
-        const src = script.getAttribute('src') || '';
-        const textContent = script.textContent || '';
-        if (
-          src.includes('quge5') || 
-          src.includes('monetag') || 
-          src.includes('adsterra') ||
-          src.includes('popunder') ||
-          src.includes('onclicka') ||
-          src.includes('vignette') ||
-          textContent.includes('quge5') ||
-          textContent.includes('monetag')
-        ) {
-          script.remove();
-          console.log('Removido script Monetag:', src);
-        }
-      });
-
-      // Remove Monetag iframes (popup/overlay ads) - ALLOW Daily.co
-      document.querySelectorAll('iframe').forEach((iframe) => {
-        const src = iframe.getAttribute('src') || '';
-        const id = iframe.id || '';
-        const className = iframe.className || '';
-        // Allow Daily.co iframes
-        if (src.includes('daily.co') || src.includes('duelverse')) {
-          return; // Skip removal for Daily.co
-        }
-        if (
-          src.includes('quge5') || 
-          src.includes('monetag') ||
-          src.includes('onclicka') ||
-          src.includes('vignette') ||
-          id.includes('quge5') ||
-          id.includes('monetag') ||
-          className.includes('quge5') ||
-          className.includes('monetag')
-        ) {
-          iframe.remove();
-          console.log('Removido iframe Monetag:', src);
-        }
-      });
-
-      // Remove Monetag-specific overlay elements (NOT generic overlays)
-      const rootEl = document.getElementById('root');
-      document.querySelectorAll('body > div, body > section, body > aside').forEach((el) => {
-        if (rootEl?.contains(el)) return; // Never touch React tree
-        const id = el.id || '';
-        const elClassName = typeof el.className === 'string' ? el.className : '';
-        const style = el.getAttribute('style') || '';
-        
-        const isMonetagOverlay = 
-          id.includes('quge5') || 
-          id.includes('monetag') ||
-          elClassName.includes('quge5') || 
-          elClassName.includes('monetag');
-        
-        const isSuspiciousHighZIndex = 
-          (style.includes('fixed') && style.includes('z-index') && (style.includes('2147483647') || style.includes('999999')));
-        
-        if (isMonetagOverlay || isSuspiciousHighZIndex) {
-          el.remove();
-        }
-      });
-
-      // Remove any element with Monetag-related attributes
-      document.querySelectorAll('[data-quge5], [data-monetag], [data-popunder], [data-onclicka]').forEach(el => {
-        el.remove();
-      });
-    };
-
-    // Initial cleanup
-    cleanup();
-    cleanupDoneRef.current = true;
-
-    // MutationObserver para bloquear novos elementos popup/overlay
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        mutation.addedNodes.forEach((node) => {
-          if (node.nodeType === 1) {
-            const el = node as Element;
-            const style = el.getAttribute?.('style') || '';
-            const id = el.id || '';
-            const className = el.className || '';
-            
-            // Check scripts
-            if (el.tagName === 'SCRIPT') {
-              const src = el.getAttribute('src') || '';
-              const textContent = el.textContent || '';
-              if (
-                src.includes('quge5') || 
-                src.includes('monetag') ||
-                src.includes('adsterra') ||
-                src.includes('popunder') ||
-                src.includes('onclicka') ||
-                src.includes('vignette') ||
-                textContent.includes('quge5') ||
-                textContent.includes('monetag')
-              ) {
-                el.remove();
-                console.log('Bloqueado script injetado:', src);
-              }
-            }
-            
-            // Check iframes (popup/overlay ads) - ALLOW Daily.co
-            if (el.tagName === 'IFRAME') {
-              const src = el.getAttribute('src') || '';
-              // Allow Daily.co iframes
-              if (src.includes('daily.co') || src.includes('duelverse')) {
-                return; // Skip blocking for Daily.co
-              }
-              if (
-                src.includes('quge5') || 
-                src.includes('monetag') ||
-                src.includes('adsterra') ||
-                src.includes('onclicka') ||
-                src.includes('vignette')
-              ) {
-                el.remove();
-                console.log('Bloqueado iframe injetado:', src);
-              }
-            }
-
-            // Check Monetag-specific elements only (not generic overlay/popup)
-            const rootEl = document.getElementById('root');
-            if (rootEl?.contains(el)) return; // Never touch React tree
-            const elClassName = typeof className === 'string' ? className : '';
-            const isMonetagOverlay = 
-              id.includes('quge5') || 
-              id.includes('monetag') ||
-              elClassName.includes('quge5') || 
-              elClassName.includes('monetag');
-            
-            const isSuspiciousHighZIndex = 
-              (style.includes('fixed') && style.includes('z-index') && (style.includes('2147483647') || style.includes('999999')));
-            
-            if (isMonetagOverlay || isSuspiciousHighZIndex) {
-              el.remove();
-            }
+          if (el.tagName === 'SCRIPT') {
+            const src = el.getAttribute('src') || '';
+            const text = el.textContent || '';
+            if (isAdScript(src, text)) el.remove();
           }
-        });
-      });
+
+          if (el.tagName === 'IFRAME') {
+            const src = el.getAttribute('src') || '';
+            if (isAdIframe(src)) el.remove();
+          }
+        }
+      }
     });
 
-    observer.observe(document.body, { childList: true, subtree: true });
-    
-    // Store observer for cleanup
-    (window as Window & { _monetagObserver?: MutationObserver })._monetagObserver = observer;
-    
-    // Use longer interval for cleanup (every 5 seconds instead of 500ms) to improve performance
-    const interval = setInterval(cleanup, 5000);
-    (window as Window & { _monetagInterval?: number })._monetagInterval = interval as unknown as number;
+    observer.observe(document.body, { childList: true, subtree: false });
+    // Also observe head for scripts
+    observer.observe(document.head, { childList: true });
+    observerRef.current = observer;
 
     return () => {
-      console.log('Desativando bloqueador Monetag');
-      observer.disconnect();
-      clearInterval(interval);
-      window._monetagBlocked = false;
-      
-      // Restore window.open
-      if (window._originalOpen) {
-        window.open = window._originalOpen;
-      }
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (observerRef.current) observerRef.current.disconnect();
     };
-  };
-
-  // Function to disable blocking
-  const disableBlocking = () => {
-    console.log('Desativando bloqueador Monetag');
-    
-    // Restore window.open
-    if (window._originalOpen) {
-      window.open = window._originalOpen;
-    }
-    
-    // Disconnect observer
-    const observer = (window as Window & { _monetagObserver?: MutationObserver })._monetagObserver;
-    if (observer) {
-      observer.disconnect();
-    }
-    
-    // Clear interval
-    const interval = (window as Window & { _monetagInterval?: number })._monetagInterval;
-    if (interval) {
-      clearInterval(interval);
-    }
-  };
+  }, []);
 
   return null;
 };

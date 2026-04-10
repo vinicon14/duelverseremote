@@ -2,16 +2,19 @@ import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Camera, Bell } from "lucide-react";
+import { useLocation } from "react-router-dom";
 
 const STORAGE_KEY = 'native-permissions-prompted';
 
 /**
  * NativePermissionPrompt - Solicita permissões de câmera/microfone e notificações
- * Aparece apenas no APK (User Agent contém DuelVerseApp) após login
+ * Aparece apenas no APK (User Agent contém DuelVerseApp) 
+ * Agora: só dispara quando o usuário entra em uma DuelRoom (sob demanda)
  */
 export const NativePermissionPrompt = ({ userId }: { userId?: string }) => {
   const [step, setStep] = useState<'camera' | 'notification' | null>(null);
   const isNativeApp = /DuelVerseApp/i.test(navigator.userAgent);
+  const location = useLocation();
 
   useEffect(() => {
     if (!isNativeApp || !userId) return;
@@ -19,10 +22,12 @@ export const NativePermissionPrompt = ({ userId }: { userId?: string }) => {
     const alreadyPrompted = localStorage.getItem(STORAGE_KEY);
     if (alreadyPrompted) return;
 
-    // Start permission flow after short delay
-    const timer = setTimeout(() => setStep('camera'), 1500);
+    // Only prompt when entering a duel room (on-demand)
+    if (!location.pathname.startsWith('/duel/')) return;
+
+    const timer = setTimeout(() => setStep('camera'), 1000);
     return () => clearTimeout(timer);
-  }, [isNativeApp, userId]);
+  }, [isNativeApp, userId, location.pathname]);
 
   const requestCamera = async () => {
     try {
