@@ -416,7 +416,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     <div className={`relative ${className || ""}`}>
       {is4Player ? (
         /* ===== 4-PLAYER GRID (2x2 quadrants) ===== */
-        <div className="grid grid-cols-2 grid-rows-2 w-full h-full gap-1">
+        <div className="grid grid-cols-2 grid-rows-2 w-full h-full">
           {/* Top-left: Local (you) */}
           <div className="relative overflow-hidden">
             {renderLocalPanel()}
@@ -436,7 +436,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         </div>
       ) : isSideBySide ? (
         /* ===== SIDE-BY-SIDE LAYOUT (Discord-style, 2 players) ===== */
-        <div className="flex w-full h-full gap-1">
+        <div className="flex w-full h-full">
           <div className="relative flex-1">
             {renderLocalPanel()}
           </div>
