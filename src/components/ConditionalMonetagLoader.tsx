@@ -5,14 +5,17 @@ import { useAccountType } from '@/hooks/useAccountType';
 /**
  * Conditional Monetag Loader
  * 
- * Strategy:
- * - PRO users: NO Monetag (completely blocked)
- * - FREE users: Only notification ads
- *   - Popunder and popup/click ads are blocked
- *   - Only notification scripts are allowed
- * 
- * This allows monetization while preventing intrusive ads
+ * - PRO / Native / Electron: NO ads at all
+ * - FREE on /duel/*, /pro/*, /auth, /landing, /: NO ads
+ * - FREE on other pages: notification ads only (no popunder/popup)
  */
+
+declare global {
+  interface Window {
+    _originalOpen?: typeof window.open;
+  }
+}
+
 export const ConditionalMonetagLoader = (): null => {
   const location = useLocation();
   const { isPro, loading } = useAccountType();
@@ -20,173 +23,133 @@ export const ConditionalMonetagLoader = (): null => {
   const isElectron = !!(window as any).electronAPI?.isElectron;
 
   useEffect(() => {
-    // Apply popup blocking immediately regardless of loading state
     applyPopupBlocking();
+  }, []);
 
-    // CRITICAL: Don't inject ANY scripts while loading - wait for PRO check
+  useEffect(() => {
+    // While loading PRO status, don't inject anything
     if (loading) {
-      // While loading, proactively remove any existing Monetag assets
       removeExistingMonetagAssets();
       return;
     }
 
+    // Block for native apps
     if (isNativeApp || isElectron) {
-      console.log('Monetag BLOQUEADO - app nativo (APK/Electron)');
       removeExistingMonetagAssets();
-      const nativeCleanupInterval = setInterval(removeExistingMonetagAssets, 1000);
-      return () => clearInterval(nativeCleanupInterval);
+      const interval = setInterval(removeExistingMonetagAssets, 2000);
+      return () => clearInterval(interval);
     }
 
-    // PRO users: No Monetag - block AND remove existing + continuous cleanup
+    // Block for PRO users
     if (isPro) {
-      console.log('Monetag BLOQUEADO - usuário PRO');
       removeExistingMonetagAssets();
-      const proCleanupInterval = setInterval(removeExistingMonetagAssets, 1000);
-      return () => clearInterval(proCleanupInterval);
+      const interval = setInterval(removeExistingMonetagAssets, 2000);
+      return () => clearInterval(interval);
     }
 
-    if (location.pathname.startsWith('/pro/') || location.pathname === '/auth' || location.pathname === '/landing' || location.pathname === '/') {
-      console.log('Monetag BLOQUEADO - rota PRO/auth/landing:', location.pathname);
+    // Block on specific routes (duel rooms, auth, landing, pro routes)
+    const blockedPrefixes = ['/duel/', '/pro/', '/auth', '/landing', '/'];
+    const isBlockedRoute = location.pathname === '/' || 
+      location.pathname === '/auth' || 
+      location.pathname === '/landing' ||
+      location.pathname.startsWith('/duel/') || 
+      location.pathname.startsWith('/pro/');
+
+    if (isBlockedRoute) {
       removeExistingMonetagAssets();
       return;
     }
 
-    // FREE users: Only notification ads (NO popunder, NO popup/click)
+    // Additional excluded pages
     const excludedPages = [
-      '/duel/', '/duel-room', '/duelcoins', '/profile', '/friends', '/chat',
+      '/duel-room', '/duelcoins', '/profile', '/friends', '/chat',
       '/admin', '/judge-panel', '/create-', '/tournament-',
       '/deck-builder', '/install'
     ];
-    
-    const isExcluded = excludedPages.some(page => location.pathname.includes(page));
-    if (isExcluded) {
-      console.log('Monetag BLOQUEADO - página restrita:', location.pathname);
+    if (excludedPages.some(page => location.pathname.includes(page))) {
       return;
     }
 
-    console.log('Carregando notification ads:', location.pathname);
-    
-    // Double-check PRO status before injecting (safety net)
-    if (isPro) {
-      console.log('Monetag BLOQUEADO - verificação dupla PRO');
-      return;
-    }
+    // FREE users on allowed pages: inject notification ads only
+    const notif1 = document.createElement('script');
+    notif1.src = 'https://3nbf4.com/act/files/tag.min.js?z=10601960';
+    notif1.setAttribute('data-cfasync', 'false');
+    notif1.async = true;
+    notif1.id = 'monetag-notification-1';
+    document.head.appendChild(notif1);
 
-    // Notification script 1 (zone 10601960)
-    const notificationScript1 = document.createElement('script');
-    notificationScript1.src = 'https://3nbf4.com/act/files/tag.min.js?z=10601960';
-    notificationScript1.setAttribute('data-cfasync', 'false');
-    notificationScript1.async = true;
-    notificationScript1.id = 'monetag-notification-1';
-    document.head.appendChild(notificationScript1);
-
-    // Notification script 2 (zone 10601962)
-    const notificationScript2 = document.createElement('script');
-    notificationScript2.innerHTML = `(function(s){s.dataset.zone='10601962',s.src='https://nap5k.com/tag.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))`;
-    notificationScript2.id = 'monetag-notification-2';
-    document.head.appendChild(notificationScript2);
+    const notif2 = document.createElement('script');
+    notif2.innerHTML = `(function(s){s.dataset.zone='10601962',s.src='https://nap5k.com/tag.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))`;
+    notif2.id = 'monetag-notification-2';
+    document.head.appendChild(notif2);
 
     return () => {
-      const scripts = ['monetag-notification-1', 'monetag-notification-2'];
-      scripts.forEach(id => {
-        const script = document.getElementById(id);
-        if (script) script.remove();
+      ['monetag-notification-1', 'monetag-notification-2'].forEach(id => {
+        document.getElementById(id)?.remove();
       });
     };
   }, [location.pathname, isPro, loading, isNativeApp, isElectron]);
 
-  useEffect(() => {
-    applyPopupBlocking();
-  }, []);
-
   return null;
 };
 
-// Blocking function - blocks popunder and popup/click ads but allows notification
-const applyPopupBlocking = () => {
+function applyPopupBlocking() {
   if (window._originalOpen) return;
 
-  console.log('🚫 BLOQUEIO DE POPUNDER/POPUP/CLIQUE ATIVADO');
-  
   window._originalOpen = window.open;
   
   window.open = function(...args: Parameters<typeof window.open>): Window | null {
     const url = args[0];
-    const target = args[1] || '';
     const urlString = typeof url === 'string' ? url : url?.toString() || '';
     
-    // BLOCK popunder and popup/click patterns
     const blockedPatterns = [
       'popunder', 'popup', 'onclicka', 'vignette', 'tabunder',
-      'popcash', 'propellerads', 'quge5.com/88', 'al5sm.com'
+      'popcash', 'propellerads', 'quge5.com', 'al5sm.com'
     ];
     
-    const isBlocked = blockedPatterns.some(pattern => urlString.includes(pattern));
+    if (blockedPatterns.some(p => urlString.includes(p))) return null;
     
-    // Allow notification scripts
-    const allowedPatterns = [
-      '3nbf4.com',    // notification
-      'nap5k.com',    // notification
-      'tag.min.js'     // general ad script
-    ];
-    
-    const isAllowed = allowedPatterns.some(pattern => urlString.includes(pattern));
-    
-    if (isBlocked && !isAllowed) {
-      console.log('🚫 BLOQUEADO - popunder/popup/click:', urlString);
-      return null;
-    }
-    
-    // Allow only safe domains
     const safeDomains = [
       'discord.com', 'discord.gg', 'youtube.com', 'youtu.be',
       'twitter.com', 'x.com', 'github.com', 'stackoverflow.com', 'reddit.com',
-      'google.com', 'facebook.com', 'instagram.com'
+      'google.com', 'facebook.com', 'instagram.com', 'duelverse'
     ];
     
-    const isSafeDomain = safeDomains.some(domain => urlString.includes(domain));
+    const allowedPatterns = ['3nbf4.com', 'nap5k.com', 'tag.min.js'];
+    const isAllowed = allowedPatterns.some(p => urlString.includes(p));
+    const isSafe = safeDomains.some(d => urlString.includes(d));
     
-    if (!isSafeDomain && !isAllowed && urlString.startsWith('http')) {
-      console.log('🚫 BLOQUEADO - domínio não permitido:', urlString);
-      return null;
-    }
+    if (!isSafe && !isAllowed && urlString.startsWith('http')) return null;
     
-    return window._originalOpen?.apply(window, args);
+    return window._originalOpen?.apply(window, args) ?? null;
   };
-};
+}
 
-const removeExistingMonetagAssets = () => {
+function removeExistingMonetagAssets() {
+  const root = document.getElementById('root');
+  
   document.querySelectorAll('script').forEach(script => {
+    if (root?.contains(script)) return;
     const src = script.getAttribute('src') || '';
     const text = script.textContent || '';
-
     if (
-      src.includes('monetag') ||
-      src.includes('3nbf4.com') ||
-      src.includes('nap5k.com') ||
-      src.includes('quge5') ||
-      src.includes('onclicka') ||
-      text.includes('10601960') ||
-      text.includes('10601962') ||
-      text.includes('monetag')
+      src.includes('monetag') || src.includes('3nbf4.com') || src.includes('nap5k.com') ||
+      src.includes('quge5') || src.includes('onclicka') ||
+      text.includes('10601960') || text.includes('10601962') || text.includes('monetag')
     ) {
       script.remove();
     }
   });
 
   document.querySelectorAll('div[id^="container-"], iframe').forEach(el => {
+    if (root?.contains(el)) return;
     const src = el.getAttribute('src') || '';
     const id = el.getAttribute('id') || '';
-
     if (
-      id.startsWith('container-') ||
-      src.includes('monetag') ||
-      src.includes('quge5') ||
-      src.includes('onclicka') ||
-      src.includes('3nbf4.com') ||
-      src.includes('nap5k.com')
+      id.startsWith('container-') || src.includes('monetag') || src.includes('quge5') ||
+      src.includes('onclicka') || src.includes('3nbf4.com') || src.includes('nap5k.com')
     ) {
       el.remove();
     }
   });
-};
+}
