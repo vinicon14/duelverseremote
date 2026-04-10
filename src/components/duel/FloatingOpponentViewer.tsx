@@ -114,6 +114,10 @@ interface FloatingOpponentViewerProps {
   currentUserId: string;
   opponentUsername?: string;
   embedded?: boolean;
+  /** For 4-player mode: show only the opponent with this userId */
+  filterOpponentId?: string;
+  /** Map of peerId -> username for 4-player labeling */
+  opponentUsernames?: Record<string, string>;
 }
 
 const buildPkmEffectText = (card: OpponentCard): string => {
@@ -148,9 +152,13 @@ export const FloatingOpponentViewer = ({
   duelId, 
   currentUserId, 
   opponentUsername = 'Oponente',
-  embedded = false 
+  embedded = false,
+  filterOpponentId,
+  opponentUsernames,
 }: FloatingOpponentViewerProps) => {
-  const [opponentState, setOpponentState] = useState<OpponentState | null>(null);
+  // Multi-opponent support: store states keyed by opponent userId
+  const [opponentStates, setOpponentStates] = useState<Map<string, OpponentState>>(new Map());
+  const [activeOpponentId, setActiveOpponentId] = useState<string | null>(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMinimized, setIsMinimized] = useState(true);
   const [isVisible, setIsVisible] = useState(true);
@@ -160,6 +168,18 @@ export const FloatingOpponentViewer = ({
   const { position, isDragging, elementRef, dragHandlers } = useDraggable({
     initialPosition: { x: 8, y: 80 },
   });
+
+  // Derive the single opponentState for backward compatibility
+  const opponentState: OpponentState | null = (() => {
+    if (filterOpponentId) return opponentStates.get(filterOpponentId) || null;
+    if (activeOpponentId && opponentStates.has(activeOpponentId)) return opponentStates.get(activeOpponentId)!;
+    // fallback to first
+    const first = opponentStates.entries().next();
+    return first.done ? null : first.value[1];
+  })();
+
+  const opponentIds = Array.from(opponentStates.keys());
+  const isMultiOpponent = opponentIds.length > 1 && !filterOpponentId;
 
   useEffect(() => {
     if (!duelId) return;
