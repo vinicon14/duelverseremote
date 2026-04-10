@@ -23,7 +23,7 @@ import { DuelDeckViewer } from "@/components/duel/DuelDeckViewer";
 import { FloatingOpponentViewer } from "@/components/duel/FloatingOpponentViewer";
 import { MagicDuelViewer } from "@/components/duel/MagicDuelViewer";
 import { PokemonDuelViewer } from "@/components/duel/PokemonDuelViewer";
-import { DailyPrebuiltFrame } from "@/components/duel/DailyPrebuiltFrame";
+import { WebRTCVideoCall } from "@/components/duel/WebRTCVideoCall";
 import { useDuelDeck } from "@/hooks/useDuelDeck";
 import { useDuelPresence, useDuelCleanup } from "@/hooks/useDuelPresence";
 
@@ -44,7 +44,7 @@ const DuelRoom = () => {
   const [showPokemonViewer, setShowPokemonViewer] = useState(false);
   const [opponentDeckOpen, setOpponentDeckOpen] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
-  const [roomUrl, setRoomUrl] = useState<string>('');
+  const [videoReady, setVideoReady] = useState(false);
   const [isTimerPaused, setIsTimerPaused] = useState(false);
   const [judgeCalled, setJudgeCalled] = useState(false);
   const [elementsHidden, setElementsHidden] = useState(false);
@@ -419,7 +419,7 @@ const DuelRoom = () => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const getDailyRoomUrl = (duelId: string) => `https://duelverse.daily.co/duelverse-${duelId}?activeSpeakerMode=false`;
+  
 
 
   const checkAuth = async () => {
@@ -559,41 +559,8 @@ const DuelRoom = () => {
       setIsTimerPaused(isPaused);
       isTimerPausedRef.current = isPaused;
 
-      // Criar sala Daily.co
-      const fallbackRoomUrl = id ? getDailyRoomUrl(id) : '';
-      setRoomUrl('');
-
-      try {
-        const { data: roomData, error: roomError } = await supabase.functions.invoke('create-daily-room', {
-          body: { roomName: `duelverse-${id}` }
-        });
-
-        if (roomError) {
-          throw roomError;
-        }
-
-        const resolvedRoomUrl = roomData?.url 
-          ? `${roomData.url}${roomData.url.includes('?') ? '&' : '?'}activeSpeakerMode=false`
-          : (roomData?.name ? `https://duelverse.daily.co/${roomData.name}?activeSpeakerMode=false` : '');
-
-        if (!resolvedRoomUrl) {
-          throw new Error('Resposta da sala sem URL');
-        }
-
-        setRoomUrl(resolvedRoomUrl);
-      } catch (error) {
-        console.error('[DuelRoom] Erro ao iniciar videochamada:', error);
-
-        if (fallbackRoomUrl) {
-          setRoomUrl(fallbackRoomUrl);
-        } else {
-          toast({
-            title: "Erro ao iniciar videochamada",
-            description: "Erro ao conectar com o servidor de vídeo.",
-            variant: "destructive",
-          });
-        }
-      }
+      // Videochamada WebRTC nativa — basta marcar como pronto
+      setVideoReady(true);
 
       // Garantir que started_at existe SEMPRE (timer inicia na criação)
       let startedAt = data.started_at;
@@ -1000,12 +967,13 @@ const DuelRoom = () => {
       
       <main className="px-2 sm:px-4 pt-16 sm:pt-20 pb-2 sm:pb-4">
         <div className="h-[calc(100vh-80px)] sm:h-[calc(100vh-100px)] relative">
-          {/* Video Call - Daily.co with split overlay support */}
+          {/* Video Call - WebRTC nativo com split overlay support */}
           <div className="h-full w-full rounded-lg overflow-hidden bg-card shadow-2xl border border-primary/20 relative">
-            {/* Daily.co prebuilt controlled by daily-js to force grid mode */}
-            {roomUrl ? (
-              <DailyPrebuiltFrame
-                roomUrl={roomUrl}
+            {videoReady && currentUser && id ? (
+              <WebRTCVideoCall
+                duelId={id}
+                userId={currentUser.id}
+                isCreator={currentUser.id === duel?.creator_id}
                 className="w-full h-full absolute inset-0"
               />
             ) : (

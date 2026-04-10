@@ -9,8 +9,6 @@ project_id = "xxttwzewtqxvpgefggah"
     verify_jwt = false
   [functions.cleanup-orphaned-users]
     verify_jwt = true
-  [functions.create-daily-room]
-    verify_jwt = true
   [functions.create-live-stream]
     verify_jwt = true
   [functions.end-live-stream]
