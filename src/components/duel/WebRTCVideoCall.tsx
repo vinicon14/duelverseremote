@@ -183,6 +183,23 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     isVideoOff,
   }), [isVideoOff]);
 
+  // Remove a disconnected peer from state so UI reverts to "Aguardando jogador"
+  const removePeer = useCallback((peerId: string) => {
+    const peer = peersRef.current.get(peerId);
+    if (peer) {
+      peer.pc.close();
+      peersRef.current.delete(peerId);
+    }
+    remoteVideoRefs.current.delete(peerId);
+    setRemoteStreams(prev => {
+      const next = new Map(prev);
+      next.delete(peerId);
+      return next;
+    });
+    setRemotePeerIds(prev => prev.filter(id => id !== peerId));
+    console.log("[WebRTC] Peer removed:", peerId);
+  }, []);
+
   const createPeerConnection = useCallback((remotePeerId: string) => {
     const existing = peersRef.current.get(remotePeerId);
     if (existing) {
