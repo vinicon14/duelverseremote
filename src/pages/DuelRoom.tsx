@@ -956,6 +956,13 @@ const DuelRoom = () => {
         setOpponentDeckOpen(!!payload.isOpen);
         // Also track per-opponent state for 4-player
         setOpponentDeckOpenMap(prev => ({ ...prev, [payload.userId]: !!payload.isOpen }));
+        // Spectator: track each player's deck state independently
+        if (duel?.creator_id && payload.userId === duel.creator_id) {
+          setCreatorDeckOpen(!!payload.isOpen);
+        }
+        if (duel?.opponent_id && payload.userId === duel.opponent_id) {
+          setOpponentPlayerDeckOpen(!!payload.isOpen);
+        }
       }
     }).subscribe(() => {
       deckToggleChannelRef.current = channel;
@@ -1029,10 +1036,14 @@ const DuelRoom = () => {
                 } : undefined}
                 localDeckOpen={
                   isSpectator && !isJudge
-                    ? true
+                    ? creatorDeckOpen
                     : myDeckIsOpen && isParticipant && !isJudge
                 }
-                remoteDeckOpen={opponentDeckOpen && isParticipant && !isJudge}
+                remoteDeckOpen={
+                  isSpectator && !isJudge
+                    ? opponentPlayerDeckOpen
+                    : opponentDeckOpen && isParticipant && !isJudge
+                }
                 localDeckContent={
                   isSpectator && !isJudge && currentUser && id && duel && ((duel as any)?.max_players || 2) <= 2 ? (
                     <FloatingOpponentViewer
