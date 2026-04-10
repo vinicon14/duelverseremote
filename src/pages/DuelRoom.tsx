@@ -41,6 +41,7 @@ const DuelRoom = () => {
   const [customCounters, setCustomCounters] = useState<{ id: string; name: string; value: number }[]>([]);
   const [showMagicViewer, setShowMagicViewer] = useState(false);
   const [showPokemonViewer, setShowPokemonViewer] = useState(false);
+  const [opponentDeckOpen, setOpponentDeckOpen] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
   const [roomUrl, setRoomUrl] = useState<string>('');
   const [isTimerPaused, setIsTimerPaused] = useState(false);
