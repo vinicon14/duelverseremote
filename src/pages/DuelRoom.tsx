@@ -1257,14 +1257,3 @@ const DuelRoom = () => {
 };
 
 export default DuelRoom;
-
-
-      {/* Chat Component */}
-      {!hideControls && currentUser && (
-        <DuelChat duelId={id!} currentUserId={currentUser.id} />
-      )}
-    </div>
-  );
-};
-
-export default DuelRoom;
