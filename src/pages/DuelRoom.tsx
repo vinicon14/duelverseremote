@@ -561,9 +561,7 @@ const DuelRoom = () => {
 
       // Criar sala Daily.co
       const fallbackRoomUrl = id ? getDailyRoomUrl(id) : '';
-      if (fallbackRoomUrl) {
-        setRoomUrl(fallbackRoomUrl);
-      }
+      setRoomUrl('');
 
       try {
         const { data: roomData, error: roomError } = await supabase.functions.invoke('create-daily-room', {
@@ -575,18 +573,20 @@ const DuelRoom = () => {
         }
 
         const resolvedRoomUrl = roomData?.url 
-          ? `${roomData.url}${roomData.url.includes('?') ? '&' : '?'}activeSpeakerMode=false` 
-          : (roomData?.name ? `https://duelverse.daily.co/${roomData.name}?activeSpeakerMode=false` : fallbackRoomUrl);
+          ? `${roomData.url}${roomData.url.includes('?') ? '&' : '?'}activeSpeakerMode=false`
+          : (roomData?.name ? `https://duelverse.daily.co/${roomData.name}?activeSpeakerMode=false` : '');
 
-        if (resolvedRoomUrl) {
-          setRoomUrl(resolvedRoomUrl);
-        } else {
+        if (!resolvedRoomUrl) {
           throw new Error('Resposta da sala sem URL');
         }
+
+        setRoomUrl(resolvedRoomUrl);
       } catch (error) {
         console.error('[DuelRoom] Erro ao iniciar videochamada:', error);
 
-        if (!fallbackRoomUrl) {
+        if (fallbackRoomUrl) {
+          setRoomUrl(fallbackRoomUrl);
+        } else {
           toast({
             title: "Erro ao iniciar videochamada",
             description: "Erro ao conectar com o servidor de vídeo.",
