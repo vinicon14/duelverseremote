@@ -360,7 +360,7 @@ export const PokemonDuelViewer = ({ duelId, currentUserId, embedded = false }: P
 
   if (showDeckPicker) {
     return (
-      <div className="fixed inset-0 z-50 bg-background/95 flex items-center justify-center p-4">
+      <div className={embedded ? "absolute inset-0 z-10 bg-background/95 flex items-center justify-center p-4" : "fixed inset-0 z-50 bg-background/95 flex items-center justify-center p-4"}>
         <Card className="w-full max-w-lg card-mystic">
           <CardContent className="p-6 space-y-4">
             <h2 className="text-xl font-bold flex items-center gap-2">
@@ -406,7 +406,7 @@ export const PokemonDuelViewer = ({ duelId, currentUserId, embedded = false }: P
   const activeSleeveUrl = typeof window !== 'undefined' ? localStorage.getItem('activeSleeveUrl') : null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border">
+    <div className={embedded ? "absolute inset-0 z-10 bg-card flex flex-col overflow-hidden" : "fixed bottom-0 left-0 right-0 z-40 border-t border-border"}>
       {/* Phase Indicator */}
       <div className="flex items-center justify-center gap-2 py-1.5 border-b border-border/50 bg-muted/30">
         {(['draw', 'main', 'attack', 'end'] as const).map(p => (
