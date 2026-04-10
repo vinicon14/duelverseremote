@@ -31,7 +31,6 @@ const Auth = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [selectedTcg, setSelectedTcg] = useState<TcgType>('yugioh');
-  const [lastFailedEmail, setLastFailedEmail] = useState<string | null>(null);
 
   const returnTo = (location.state as any)?.returnTo;
 
@@ -142,32 +141,6 @@ const Auth = () => {
     }
   };
 
-  const handleResendConfirmation = async (email: string) => {
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.resend({
-        type: 'signup',
-        email,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth`
-        }
-      });
-      if (error) throw error;
-      toast({
-        title: "📧 Email reenviado!",
-        description: "Verifique sua caixa de entrada (e spam) e clique no link de confirmação.",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Erro ao reenviar",
-        description: error.message,
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
@@ -182,33 +155,7 @@ const Auth = () => {
         password
       });
 
-      if (error) {
-        // Check if the error might be due to unconfirmed email
-        const isInvalidCredentials = error.message?.toLowerCase().includes('invalid login credentials');
-        
-        if (isInvalidCredentials) {
-          // Check if this email exists as an unconfirmed user by attempting a signup check
-          const { data: existingProfile } = await supabase
-            .from('profiles')
-            .select('user_id')
-            .eq('username', email)
-            .maybeSingle();
-
-          // Try to detect unconfirmed account - resend signup triggers "user_repeated_signup" 
-          // which sends a new confirmation email
-          toast({
-            title: "Erro ao fazer login",
-            description: "Credenciais inválidas. Se você já se cadastrou mas não confirmou seu email, clique em 'Reenviar confirmação' abaixo.",
-            variant: "destructive",
-            duration: 8000,
-          });
-          setLastFailedEmail(email);
-          setLoading(false);
-          return;
-        }
-        
-        throw error;
-      }
+      if (error) throw error;
 
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
@@ -240,7 +187,6 @@ const Auth = () => {
         description: "Bem-vindo de volta, duelista!"
       });
 
-      setLastFailedEmail(null);
       // Navigation is handled by onAuthStateChange listener above
     } catch (error: any) {
       toast({
@@ -436,17 +382,6 @@ const Auth = () => {
                 <Button type="submit" className="w-full auth-cycle-btn text-white" disabled={loading}>
                   {loading ? "Entrando..." : "Entrar"}
                 </Button>
-                {lastFailedEmail && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full text-sm"
-                    disabled={loading}
-                    onClick={() => handleResendConfirmation(lastFailedEmail)}
-                  >
-                    📧 Reenviar email de confirmação
-                  </Button>
-                )}
               </form>
 
               {!detectPlatform().isNativeApp && (
