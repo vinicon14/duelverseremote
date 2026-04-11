@@ -103,8 +103,8 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   const isDraggingRef = useRef(false);
   const dragStartRef = useRef({ x: 0, y: 0, ox: 0, oy: 0 });
   const MAX_ZOOM = 4;
-  const MIN_ZOOM = 1;
-  const ZOOM_STEP = 0.5;
+  const MIN_ZOOM = 0.25;
+  const ZOOM_STEP = 0.25;
 
   // Device selection
   const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
@@ -771,11 +771,11 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         </div>
       ) : isSideBySide ? (
         /* ===== SIDE-BY-SIDE (desktop) / STACKED (mobile) ===== */
-        <div className="flex flex-col sm:flex-row w-full h-full">
-          <div className="relative flex-1 min-h-0">
+        <div className="flex flex-col sm:flex-row w-full h-full items-center justify-center">
+          <div className="relative sm:max-w-[50%] max-h-full aspect-[4/3] flex items-center justify-center">
             {renderLocalPanel()}
           </div>
-          <div className="relative flex-1 min-h-0">
+          <div className="relative sm:max-w-[50%] max-h-full aspect-[4/3] flex items-center justify-center">
             {renderRemotePanel(remoteSlots[0], 0)}
           </div>
         </div>
@@ -870,7 +870,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
             variant="outline"
             size="icon"
             onClick={zoomOut}
-            disabled={zoomLevel <= MIN_ZOOM}
+            disabled={false}
             className="rounded-full w-8 h-8 sm:w-10 sm:h-10 backdrop-blur-sm bg-card/80"
             title="Diminuir zoom"
           >
