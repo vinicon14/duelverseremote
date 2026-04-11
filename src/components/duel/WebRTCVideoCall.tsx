@@ -621,14 +621,12 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       return (
         <div className="relative w-full h-full overflow-hidden bg-black flex items-center justify-center">
           {player1PeerId ? (
-            <div className={`relative h-full aspect-[4/3] max-w-full overflow-hidden rounded-2xl ${localDeckOpen ? 'hidden' : ''}`}>
-              <video
-                ref={(el) => setRemoteVideoRef(player1PeerId, el)}
-                autoPlay
-                playsInline
-                className="w-full h-full object-cover"
-              />
-            </div>
+            <video
+              ref={(el) => setRemoteVideoRef(player1PeerId, el)}
+              autoPlay
+              playsInline
+              className={`w-full h-full object-contain rounded-2xl ${localDeckOpen ? 'hidden' : ''}`}
+            />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center bg-black/80">
               <div className="text-center space-y-2">
@@ -655,22 +653,20 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     return (
       <div className="relative w-full h-full overflow-hidden bg-black flex items-center justify-center">
         {/* Always keep video in DOM so srcObject persists */}
-        <div className={`relative h-full aspect-[4/3] max-w-full overflow-hidden rounded-2xl ${localDeckOpen ? 'hidden' : ''}`}>
-          <video
-            ref={localVideoCallbackRef}
-            autoPlay
-            playsInline
-            muted
-            className={`w-full h-full object-cover ${zoomLevel > 1 ? 'cursor-grab active:cursor-grabbing' : ''}`}
-            style={{
-              transform: `scaleX(-1) scale(${zoomLevel}) translate(${panOffset.x / zoomLevel}px, ${panOffset.y / zoomLevel}px)`,
-            }}
-            onPointerDown={handlePanStart}
-            onPointerMove={handlePanMove}
-            onPointerUp={handlePanEnd}
-            onPointerCancel={handlePanEnd}
-          />
-        </div>
+        <video
+          ref={localVideoCallbackRef}
+          autoPlay
+          playsInline
+          muted
+          className={`w-full h-full object-contain rounded-2xl ${localDeckOpen ? 'hidden' : ''} ${zoomLevel > 1 ? 'cursor-grab active:cursor-grabbing' : ''}`}
+          style={{
+            transform: `scaleX(-1) scale(${zoomLevel}) translate(${panOffset.x / zoomLevel}px, ${panOffset.y / zoomLevel}px)`,
+          }}
+          onPointerDown={handlePanStart}
+          onPointerMove={handlePanMove}
+          onPointerUp={handlePanEnd}
+          onPointerCancel={handlePanEnd}
+        />
         {localDeckOpen && localDeckContent ? (
           <div className="w-full h-full overflow-auto bg-background touch-pan-y">
             {localDeckContent}
@@ -717,14 +713,12 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       <div key={peerId || `waiting-${index}`} className="relative w-full h-full overflow-hidden bg-black flex items-center justify-center">
         {/* Always keep video mounted so stream persists */}
         {peerId && (
-          <div className={`relative h-full aspect-[4/3] max-w-full overflow-hidden rounded-2xl ${showDeckOverlay ? 'hidden' : ''}`}>
-            <video
-              ref={(el) => setRemoteVideoRef(peerId, el)}
-              autoPlay
-              playsInline
-              className="w-full h-full object-cover"
-            />
-          </div>
+          <video
+            ref={(el) => setRemoteVideoRef(peerId, el)}
+            autoPlay
+            playsInline
+            className={`w-full h-full object-contain rounded-2xl ${showDeckOverlay ? 'hidden' : ''}`}
+          />
         )}
         {showDeckOverlay ? (
           <div className="w-full h-full overflow-auto bg-background touch-pan-y">
