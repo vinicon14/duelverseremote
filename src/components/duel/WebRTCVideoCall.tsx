@@ -103,7 +103,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   const isDraggingRef = useRef(false);
   const dragStartRef = useRef({ x: 0, y: 0, ox: 0, oy: 0 });
   const MAX_ZOOM = 4;
-  const MIN_ZOOM = 0.5;
+  const MIN_ZOOM = 1;
   const ZOOM_STEP = 0.5;
 
   // Device selection
@@ -625,7 +625,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
               ref={(el) => setRemoteVideoRef(player1PeerId, el)}
               autoPlay
               playsInline
-              className={`w-full h-full object-contain ${localDeckOpen ? 'hidden' : ''} ${zoomLevel < 1 ? 'rounded-2xl border-2 border-purple-500' : ''}`}
+              className={`w-full h-full object-contain rounded-2xl ${localDeckOpen ? 'hidden' : ''}`}
             />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center bg-black/80">
@@ -658,7 +658,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
           autoPlay
           playsInline
           muted
-          className={`w-full h-full object-contain ${localDeckOpen ? 'hidden' : ''} ${zoomLevel > 1 ? 'cursor-grab active:cursor-grabbing' : ''} ${zoomLevel < 1 ? 'rounded-2xl border-2 border-purple-500' : ''}`}
+          className={`w-full h-full object-contain rounded-2xl ${localDeckOpen ? 'hidden' : ''} ${zoomLevel > 1 ? 'cursor-grab active:cursor-grabbing' : ''}`}
           style={{
             transform: `scaleX(-1) scale(${zoomLevel}) translate(${panOffset.x / zoomLevel}px, ${panOffset.y / zoomLevel}px)`,
           }}
@@ -717,7 +717,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
             ref={(el) => setRemoteVideoRef(peerId, el)}
             autoPlay
             playsInline
-            className={`w-full h-full object-contain ${showDeckOverlay ? 'hidden' : ''} ${zoomLevel < 1 ? 'rounded-2xl border-2 border-purple-500' : ''}`}
+            className={`w-full h-full object-contain rounded-2xl ${showDeckOverlay ? 'hidden' : ''}`}
           />
         )}
         {showDeckOverlay ? (
