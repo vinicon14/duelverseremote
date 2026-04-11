@@ -103,7 +103,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   const isDraggingRef = useRef(false);
   const dragStartRef = useRef({ x: 0, y: 0, ox: 0, oy: 0 });
   const MAX_ZOOM = 4;
-  const MIN_ZOOM = 1;
+  const MIN_ZOOM = 0.5;
   const ZOOM_STEP = 0.5;
 
   // Device selection
@@ -660,7 +660,9 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
           muted
           className={`w-full h-full object-contain rounded-2xl ${localDeckOpen ? 'hidden' : ''} ${zoomLevel > 1 ? 'cursor-grab active:cursor-grabbing' : ''}`}
           style={{
-            transform: `scaleX(-1) scale(${zoomLevel}) translate(${panOffset.x / zoomLevel}px, ${panOffset.y / zoomLevel}px)`,
+            transform: zoomLevel > 1 
+              ? `scaleX(-1) scale(${zoomLevel}) translate(${panOffset.x / zoomLevel}px, ${panOffset.y / zoomLevel}px)`
+              : 'scaleX(-1)',
           }}
           onPointerDown={handlePanStart}
           onPointerMove={handlePanMove}
@@ -751,7 +753,10 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     <div className={`relative ${className || ""}`}>
       {is4Player ? (
         /* ===== 4-PLAYER GRID (2x2 quadrants) ===== */
-        <div className="grid grid-cols-2 grid-rows-2 w-full h-full">
+        <div 
+          className="grid grid-cols-2 grid-rows-2 w-full h-full transition-transform duration-200 origin-center"
+          style={zoomLevel < 1 ? { transform: `scale(${zoomLevel})` } : undefined}
+        >
           {/* Top-left: Local (you) */}
           <div className="relative overflow-hidden">
             {renderLocalPanel()}
@@ -771,7 +776,10 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         </div>
       ) : isSideBySide ? (
         /* ===== SIDE-BY-SIDE (desktop) / STACKED (mobile) ===== */
-        <div className="flex flex-col sm:flex-row w-full h-full">
+        <div 
+          className="flex flex-col sm:flex-row w-full h-full transition-transform duration-200 origin-center"
+          style={zoomLevel < 1 ? { transform: `scale(${zoomLevel})` } : undefined}
+        >
           <div className="relative flex-1 min-h-0">
             {renderLocalPanel()}
           </div>
@@ -783,7 +791,10 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         /* ===== PIP LAYOUT (2 players) — click small to swap ===== */
         <>
           {/* Big panel — always show deck viewers here regardless of swap */}
-          <div className="w-full h-full">
+          <div 
+            className="w-full h-full transition-transform duration-200 origin-center"
+            style={zoomLevel < 1 ? { transform: `scale(${zoomLevel})` } : undefined}
+          >
             {pipSwapped ? (
               /* Local is big — show local deck or local video */
               renderLocalPanel()
@@ -827,7 +838,9 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
                     muted
                     className={`w-full h-full object-contain ${zoomLevel > 1 ? 'cursor-grab active:cursor-grabbing' : ''}`}
                     style={{
-                      transform: `scaleX(-1) scale(${zoomLevel}) translate(${panOffset.x / zoomLevel}px, ${panOffset.y / zoomLevel}px)`,
+                      transform: zoomLevel > 1 
+                        ? `scaleX(-1) scale(${zoomLevel}) translate(${panOffset.x / zoomLevel}px, ${panOffset.y / zoomLevel}px)`
+                        : 'scaleX(-1)',
                     }}
                     onPointerDown={handlePanStart}
                     onPointerMove={handlePanMove}
