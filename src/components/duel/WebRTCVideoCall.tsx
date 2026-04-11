@@ -103,8 +103,8 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   const isDraggingRef = useRef(false);
   const dragStartRef = useRef({ x: 0, y: 0, ox: 0, oy: 0 });
   const MAX_ZOOM = 4;
-  const MIN_ZOOM = 0.5;
-  const ZOOM_STEP = 0.5;
+  const MIN_ZOOM = 0.7;
+  const ZOOM_STEP = 0.15;
 
   // Device selection
   const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
@@ -754,7 +754,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       {is4Player ? (
         /* ===== 4-PLAYER GRID (2x2 quadrants) ===== */
         <div 
-          className="grid grid-cols-2 grid-rows-2 w-full h-full transition-transform duration-200 origin-center"
+          className={`grid grid-cols-2 grid-rows-2 w-full h-full transition-transform duration-200 origin-center ${zoomLevel < 1 ? 'rounded-2xl border-2 border-purple-500' : ''}`}
           style={zoomLevel < 1 ? { transform: `scale(${zoomLevel})` } : undefined}
         >
           {/* Top-left: Local (you) */}
@@ -777,7 +777,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       ) : isSideBySide ? (
         /* ===== SIDE-BY-SIDE (desktop) / STACKED (mobile) ===== */
         <div 
-          className="flex flex-col sm:flex-row w-full h-full transition-transform duration-200 origin-center"
+          className={`flex flex-col sm:flex-row w-full h-full transition-transform duration-200 origin-center ${zoomLevel < 1 ? 'rounded-2xl border-2 border-purple-500 overflow-hidden' : ''}`}
           style={zoomLevel < 1 ? { transform: `scale(${zoomLevel})` } : undefined}
         >
           <div className="relative flex-1 min-h-0">
@@ -792,7 +792,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         <>
           {/* Big panel — always show deck viewers here regardless of swap */}
           <div 
-            className="w-full h-full transition-transform duration-200 origin-center"
+            className={`w-full h-full transition-transform duration-200 origin-center ${zoomLevel < 1 ? 'rounded-2xl border-2 border-purple-500 overflow-hidden' : ''}`}
             style={zoomLevel < 1 ? { transform: `scale(${zoomLevel})` } : undefined}
           >
             {pipSwapped ? (
