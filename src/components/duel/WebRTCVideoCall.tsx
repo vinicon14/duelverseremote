@@ -753,7 +753,10 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     <div className={`relative ${className || ""}`}>
       {is4Player ? (
         /* ===== 4-PLAYER GRID (2x2 quadrants) ===== */
-        <div className="grid grid-cols-2 grid-rows-2 w-full h-full">
+        <div 
+          className="grid grid-cols-2 grid-rows-2 w-full h-full transition-transform duration-200 origin-center"
+          style={zoomLevel < 1 ? { transform: `scale(${zoomLevel})` } : undefined}
+        >
           {/* Top-left: Local (you) */}
           <div className="relative overflow-hidden">
             {renderLocalPanel()}
@@ -788,7 +791,10 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         /* ===== PIP LAYOUT (2 players) — click small to swap ===== */
         <>
           {/* Big panel — always show deck viewers here regardless of swap */}
-          <div className="w-full h-full">
+          <div 
+            className="w-full h-full transition-transform duration-200 origin-center"
+            style={zoomLevel < 1 ? { transform: `scale(${zoomLevel})` } : undefined}
+          >
             {pipSwapped ? (
               /* Local is big — show local deck or local video */
               renderLocalPanel()
