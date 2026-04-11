@@ -619,13 +619,13 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       // We use the first remote peer as player 1
       const player1PeerId = sortedPeerIds[0] || null;
       return (
-        <div className={`relative w-full h-full overflow-hidden bg-black ${zoomLevel < 1 ? 'rounded-2xl border-2 border-purple-500' : ''}`}>
+        <div className="relative w-full h-full overflow-hidden bg-black flex items-center justify-center">
           {player1PeerId ? (
             <video
               ref={(el) => setRemoteVideoRef(player1PeerId, el)}
               autoPlay
               playsInline
-              className={`w-full h-full object-contain ${localDeckOpen ? 'hidden' : ''}`}
+              className={`w-full h-full object-contain ${localDeckOpen ? 'hidden' : ''} ${zoomLevel < 1 ? 'rounded-2xl border-2 border-purple-500' : ''}`}
             />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center bg-black/80">
@@ -651,14 +651,14 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     }
 
     return (
-      <div className={`relative w-full h-full overflow-hidden bg-black ${zoomLevel < 1 ? 'rounded-2xl border-2 border-purple-500' : ''}`}>
+      <div className="relative w-full h-full overflow-hidden bg-black flex items-center justify-center">
         {/* Always keep video in DOM so srcObject persists */}
         <video
           ref={localVideoCallbackRef}
           autoPlay
           playsInline
           muted
-          className={`w-full h-full object-contain ${localDeckOpen ? 'hidden' : ''} ${zoomLevel > 1 ? 'cursor-grab active:cursor-grabbing' : ''}`}
+          className={`w-full h-full object-contain ${localDeckOpen ? 'hidden' : ''} ${zoomLevel > 1 ? 'cursor-grab active:cursor-grabbing' : ''} ${zoomLevel < 1 ? 'rounded-2xl border-2 border-purple-500' : ''}`}
           style={{
             transform: `scaleX(-1) scale(${zoomLevel}) translate(${panOffset.x / zoomLevel}px, ${panOffset.y / zoomLevel}px)`,
           }}
@@ -710,14 +710,14 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     const showDeckOverlay = isDeckOpenForSlot && deckContentForSlot;
 
     return (
-      <div key={peerId || `waiting-${index}`} className={`relative w-full h-full overflow-hidden bg-black ${zoomLevel < 1 ? 'rounded-2xl border-2 border-purple-500' : ''}`}>
+      <div key={peerId || `waiting-${index}`} className="relative w-full h-full overflow-hidden bg-black flex items-center justify-center">
         {/* Always keep video mounted so stream persists */}
         {peerId && (
           <video
             ref={(el) => setRemoteVideoRef(peerId, el)}
             autoPlay
             playsInline
-            className={`w-full h-full object-contain ${showDeckOverlay ? 'hidden' : ''}`}
+            className={`w-full h-full object-contain ${showDeckOverlay ? 'hidden' : ''} ${zoomLevel < 1 ? 'rounded-2xl border-2 border-purple-500' : ''}`}
           />
         )}
         {showDeckOverlay ? (
