@@ -792,7 +792,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         <>
           {/* Big panel — always show deck viewers here regardless of swap */}
           <div 
-            className="w-full h-full transition-transform duration-200 origin-center"
+            className={`w-full h-full transition-transform duration-200 origin-center ${zoomLevel < 1 ? 'rounded-2xl border-2 border-purple-500 overflow-hidden' : ''}`}
             style={zoomLevel < 1 ? { transform: `scale(${zoomLevel})` } : undefined}
           >
             {pipSwapped ? (
