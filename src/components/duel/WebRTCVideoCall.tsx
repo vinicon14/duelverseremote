@@ -103,7 +103,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   const isDraggingRef = useRef(false);
   const dragStartRef = useRef({ x: 0, y: 0, ox: 0, oy: 0 });
   const MAX_ZOOM = 4;
-  const MIN_ZOOM = 1;
+  const MIN_ZOOM = 0.5;
   const ZOOM_STEP = 0.5;
 
   // Device selection
