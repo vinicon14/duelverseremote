@@ -103,8 +103,8 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   const isDraggingRef = useRef(false);
   const dragStartRef = useRef({ x: 0, y: 0, ox: 0, oy: 0 });
   const MAX_ZOOM = 4;
-  const MIN_ZOOM = 0.25;
-  const ZOOM_STEP = 0.25;
+  const MIN_ZOOM = 1;
+  const ZOOM_STEP = 0.5;
 
   // Device selection
   const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
@@ -625,7 +625,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
               ref={(el) => setRemoteVideoRef(player1PeerId, el)}
               autoPlay
               playsInline
-              className={`w-full h-full object-contain ${localDeckOpen ? 'hidden' : ''}`}
+              className={`w-full h-full object-cover ${localDeckOpen ? 'hidden' : ''}`}
             />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center bg-black/80">
@@ -658,7 +658,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
           autoPlay
           playsInline
           muted
-          className={`w-full h-full object-contain ${localDeckOpen ? 'hidden' : ''} ${zoomLevel > 1 ? 'cursor-grab active:cursor-grabbing' : ''}`}
+          className={`w-full h-full object-cover ${localDeckOpen ? 'hidden' : ''} ${zoomLevel > 1 ? 'cursor-grab active:cursor-grabbing' : ''}`}
           style={{
             transform: `scaleX(-1) scale(${zoomLevel}) translate(${panOffset.x / zoomLevel}px, ${panOffset.y / zoomLevel}px)`,
           }}
@@ -717,7 +717,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
             ref={(el) => setRemoteVideoRef(peerId, el)}
             autoPlay
             playsInline
-            className={`w-full h-full object-contain ${showDeckOverlay ? 'hidden' : ''}`}
+            className={`w-full h-full object-cover ${showDeckOverlay ? 'hidden' : ''}`}
           />
         )}
         {showDeckOverlay ? (
@@ -771,11 +771,11 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         </div>
       ) : isSideBySide ? (
         /* ===== SIDE-BY-SIDE (desktop) / STACKED (mobile) ===== */
-        <div className="flex flex-col sm:flex-row w-full h-full items-center justify-center">
-          <div className="relative sm:max-w-[50%] max-h-full aspect-[4/3] flex items-center justify-center">
+        <div className="flex flex-col sm:flex-row w-full h-full">
+          <div className="relative flex-1 min-h-0">
             {renderLocalPanel()}
           </div>
-          <div className="relative sm:max-w-[50%] max-h-full aspect-[4/3] flex items-center justify-center">
+          <div className="relative flex-1 min-h-0">
             {renderRemotePanel(remoteSlots[0], 0)}
           </div>
         </div>
@@ -805,7 +805,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
                   ref={(el) => setRemoteVideoRef(remoteSlots[0]!, el)}
                   autoPlay
                   playsInline
-                  className="w-full h-full object-contain"
+                  className="w-full h-full object-cover"
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-black/80">
@@ -825,7 +825,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
                     autoPlay
                     playsInline
                     muted
-                    className={`w-full h-full object-contain ${zoomLevel > 1 ? 'cursor-grab active:cursor-grabbing' : ''}`}
+                    className={`w-full h-full object-cover ${zoomLevel > 1 ? 'cursor-grab active:cursor-grabbing' : ''}`}
                     style={{
                       transform: `scaleX(-1) scale(${zoomLevel}) translate(${panOffset.x / zoomLevel}px, ${panOffset.y / zoomLevel}px)`,
                     }}
@@ -870,7 +870,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
             variant="outline"
             size="icon"
             onClick={zoomOut}
-            disabled={false}
+            disabled={zoomLevel <= MIN_ZOOM}
             className="rounded-full w-8 h-8 sm:w-10 sm:h-10 backdrop-blur-sm bg-card/80"
             title="Diminuir zoom"
           >
