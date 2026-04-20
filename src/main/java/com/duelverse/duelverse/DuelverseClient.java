@@ -21,6 +21,7 @@ public class DuelverseClient extends WebSocketClient {
         "- Interface em português\n\n" +
         "🔗 **Adicione ao seu servidor:**\n" +
         INVITE_LINK;
+    private static final String HTTP_API_URL = "https://duelverse.site/api/chat";
     
     private final DiscordBot discordBot;
     private String currentUsername;
@@ -29,6 +30,28 @@ public class DuelverseClient extends WebSocketClient {
     public DuelverseClient(String serverUrl, DiscordBot discordBot) throws URISyntaxException {
         super(new URI(serverUrl));
         this.discordBot = discordBot;
+        registerViaHttp();
+    }
+
+    private void registerViaHttp() {
+        try {
+            JsonObject botData = new JsonObject();
+            botData.addProperty("type", "register");
+            botData.addProperty("botId", "1495723127357833256");
+            botData.addProperty("botName", "duelverse");
+            
+            java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
+            java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+                .uri(java.net.URI.create(HTTP_API_URL))
+                .header("Content-Type", "application/json")
+                .POST(java.net.http.HttpRequest.BodyPublishers.ofString(new com.google.gson.Gson().toJson(botData)))
+                .build();
+            
+            java.net.http.HttpResponse<String> response = client.send(request, java.net.http.HttpResponse.BodyHandlers.ofString());
+            logger.info("Registro HTTP: {} - {}", response.statusCode(), response.body());
+        } catch (Exception e) {
+            logger.warn("Erro no registro HTTP: {}", e.getMessage());
+        }
     }
 
     @Override
