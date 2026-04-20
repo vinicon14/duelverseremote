@@ -35,9 +35,7 @@ export const GlobalChat = () => {
   const [mentionSuggestions, setMentionSuggestions] = useState<{ username: string; user_id: string }[]>([]);
   const [showMentions, setShowMentions] = useState(false);
   const [mentionQuery, setMentionQuery] = useState("");
-  const [discordServers, setDiscordServers] = useState<{ id: string; name: string; channelId: string }[]>([
-    { id: "1495723127357833256", name: "DuelVerse", channelId: "duelverse" }
-  ]);
+  const [discordServers, setDiscordServers] = useState<{ id: string; name: string; channelId: string }[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -369,7 +367,7 @@ export const GlobalChat = () => {
             <MessageCircle className="w-5 h-5" />
             Chat Global
           </CardTitle>
-          {discordServers.length > 0 && (
+          {discordServers.length > 0 ? (
             <Button
               variant="outline"
               size="sm"
@@ -377,9 +375,25 @@ export const GlobalChat = () => {
               asChild
             >
               <a
-                href={discordServers[0].channelId === "duelverse" 
-                  ? "https://discord.com/oauth2/authorize?client_id=1495723127357833256&permissions=8&scope=bot"
-                  : `https://discord.gg/${discordServers[0].channelId}`}
+                href={discordServers[0].channelId && !discordServers[0].channelId.includes("duelverse")
+                  ? `https://discord.gg/${discordServers[0].channelId}`
+                  : "https://discord.gg/JRVG7YK2Wq"}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <ExternalLink className="w-3 h-3 mr-1" />
+                Discord
+              </a>
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs"
+              asChild
+            >
+              <a
+                href="https://discord.gg/JRVG7YK2Wq"
                 target="_blank"
                 rel="noopener noreferrer"
               >
