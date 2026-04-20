@@ -377,7 +377,7 @@ export const GlobalChat = () => {
               <a
                 href={discordServers[0].channelId && !discordServers[0].channelId.includes("duelverse")
                   ? `https://discord.gg/${discordServers[0].channelId}`
-                  : "https://discord.gg/JRVG7YK2Wq"}
+                  : "https://discord.gg/duelverse"}
                 target="_blank"
                 rel="noopener noreferrer"
               >
