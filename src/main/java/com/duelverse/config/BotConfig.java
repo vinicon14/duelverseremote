@@ -1,7 +1,7 @@
 package com.duelverse.config;
 
 public class BotConfig {
-    private static final String DEFAULT_DUELVERSE_URL = "ws://localhost:8080";
+    private static final String DEFAULT_DUELVERSE_API = "https://duelverse.site/api/chat";
     private static final String DEFAULT_DISCORD_CHANNEL = "global-chat";
     
     private String discordToken;
@@ -9,7 +9,7 @@ public class BotConfig {
     private String targetChannel;
     
     public BotConfig() {
-        this.duelverseUrl = DEFAULT_DUELVERSE_URL;
+        this.duelverseUrl = DEFAULT_DUELVERSE_API;
         this.targetChannel = DEFAULT_DISCORD_CHANNEL;
     }
     
