@@ -12,6 +12,7 @@ interface DiscordMessage {
   content: string;
   serverId?: string;
   channelId?: string;
+  webhookUrl?: string;
 }
 
 serve(async (req) => {
@@ -24,11 +25,11 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { type, username, content, serverId, channelId, discordUserId }: DiscordMessage & { discordUserId?: string } = await req.json();
+    const { type, username, content, webhookUrl }: DiscordMessage = await req.json();
 
     if (type === "discord_to_chat") {
       const { error } = await supabase.from("global_chat_messages").insert({
-        user_id: discordUserId || "discord",
+        user_id: "discord",
         username: `[Discord] ${username}`,
         message: content,
         tcg_type: "ygopro",
@@ -46,33 +47,47 @@ serve(async (req) => {
       });
     }
 
-    if (type === "chat_to_discord") {
-      return new Response(JSON.stringify({
-        success: true,
-        serverId,
-        channelId,
-        username,
-        content,
-        message: "Message ready to send to Discord"
-      }), {
+    if (type === "chat_to_discord" && webhookUrl) {
+      const embed = {
+        embeds: [{
+          title: "💬 Nova mensagem no Chat Global",
+          description: content,
+          color: 0x8B5CF6,
+          footer: {
+            text: `Enviado por ${username}`
+          },
+          timestamp: new Date().toISOString()
+        }]
+      };
+
+      const response = await fetch(webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(embed)
+      });
+
+      return new Response(JSON.stringify({ success: response.ok }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    if (type === "get_servers") {
+    if (type === "get_webhook") {
       const { data } = await supabase
         .from("system_settings")
         .select("value")
         .eq("key", "discord_bot_status")
         .maybeSingle();
 
-      let servers: any[] = [];
+      let webhookUrl = "";
       if (data?.value) {
         const parsed = typeof data.value === 'string' ? JSON.parse(data.value) : data.value;
-        servers = parsed.servers?.filter((s: any) => s.enabled) || [];
+        const enabledServers = parsed.servers?.filter((s: any) => s.enabled && s.webhookUrl) || [];
+        if (enabledServers.length > 0) {
+          webhookUrl = enabledServers[0].webhookUrl;
+        }
       }
 
-      return new Response(JSON.stringify({ servers }), {
+      return new Response(JSON.stringify({ webhookUrl }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

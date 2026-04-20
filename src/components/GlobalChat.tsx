@@ -35,7 +35,9 @@ export const GlobalChat = () => {
   const [mentionSuggestions, setMentionSuggestions] = useState<{ username: string; user_id: string }[]>([]);
   const [showMentions, setShowMentions] = useState(false);
   const [mentionQuery, setMentionQuery] = useState("");
-  const [discordServers, setDiscordServers] = useState<{ id: string; name: string; channelId: string }[]>([]);
+  const [discordServers, setDiscordServers] = useState<{ id: string; name: string; channelId: string; inviteLink?: string; webhookUrl?: string }[]>([]);
+  const [webhookUrl, setWebhookUrl] = useState<string>("");
+  const [inviteLink, setInviteLink] = useState<string>("https://discord.gg/A7GqCGNGNn");
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -133,6 +135,14 @@ export const GlobalChat = () => {
         const enabledServers = parsed.servers?.filter((s: any) => s.enabled) || [];
         if (enabledServers.length > 0) {
           setDiscordServers(enabledServers);
+          const serverWithWebhook = enabledServers.find((s: any) => s.webhookUrl);
+          if (serverWithWebhook) {
+            setWebhookUrl(serverWithWebhook.webhookUrl);
+          }
+          const serverWithInvite = enabledServers.find((s: any) => s.inviteLink);
+          if (serverWithInvite) {
+            setInviteLink(serverWithInvite.inviteLink);
+          }
         }
       }
     } catch (err) {
@@ -245,7 +255,7 @@ export const GlobalChat = () => {
       if (error) throw error;
 
       // Enviar para Discord se houver servidores configurados
-      if (discordServers.length > 0 && discordServers[0].channelId !== "duelverse") {
+      if (webhookUrl) {
         try {
           await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/discord-bridge`, {
             method: "POST",
@@ -257,8 +267,7 @@ export const GlobalChat = () => {
               type: "chat_to_discord",
               username: currentUser.username,
               content: newMessage.trim(),
-              serverId: discordServers[0].id,
-              channelId: discordServers[0].channelId,
+              webhookUrl: webhookUrl,
             }),
           });
         } catch (err) {
@@ -375,9 +384,7 @@ export const GlobalChat = () => {
               asChild
             >
               <a
-                href={discordServers[0].channelId && !discordServers[0].channelId.includes("duelverse")
-                  ? `https://discord.gg/${discordServers[0].channelId}`
-                  : "https://discord.gg/duelverse"}
+                href={inviteLink || discordServers[0]?.inviteLink || "https://discord.gg/A7GqCGNGNn"}
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -393,7 +400,7 @@ export const GlobalChat = () => {
               asChild
             >
               <a
-                href="https://discord.gg/JRVG7YK2Wq"
+                href={inviteLink}
                 target="_blank"
                 rel="noopener noreferrer"
               >
