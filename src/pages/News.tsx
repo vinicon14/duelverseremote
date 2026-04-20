@@ -65,7 +65,7 @@ export default function News() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-transparent">
       <SEOHead tKey="news" path="/news" />
       <Navbar />
       
@@ -172,3 +172,4 @@ export default function News() {
     </div>
   );
 }
+

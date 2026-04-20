@@ -8,46 +8,46 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 240 10% 8%;
-    --foreground: 45 100% 95%;
+    --background: 220 30% 6%;
+    --foreground: 220 10% 90%;
 
-    --card: 240 15% 12%;
-    --card-foreground: 45 100% 95%;
+    --card: 220 20% 9%;
+    --card-foreground: 220 10% 90%;
 
-    --popover: 240 15% 10%;
-    --popover-foreground: 45 100% 95%;
+    --popover: 220 20% 9%;
+    --popover-foreground: 220 10% 90%;
 
-    --primary: 270 80% 55%;
+    --primary: 210 100% 50%;
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 270 90% 70%;
+    --primary-glow: 210 100% 60%;
 
-    --secondary: 45 95% 60%;
-    --secondary-foreground: 240 10% 8%;
+    --secondary: 220 15% 15%;
+    --secondary-foreground: 220 10% 90%;
 
-    --muted: 240 10% 20%;
-    --muted-foreground: 240 5% 65%;
+    --muted: 220 15% 15%;
+    --muted-foreground: 220 10% 60%;
 
-    --accent: 315 85% 60%;
+    --accent: 210 100% 50%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 85% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 240 15% 20%;
-    --input: 240 15% 18%;
-    --ring: 270 80% 55%;
+    --border: 220 15% 15%;
+    --input: 220 15% 15%;
+    --ring: 210 100% 50%;
 
-    --radius: 0.75rem;
+    --radius: 0.5rem;
 
-    /* Mystical gradients */
-    --gradient-mystic: linear-gradient(135deg, hsl(270 80% 55%) 0%, hsl(315 85% 60%) 100%);
-    --gradient-gold: linear-gradient(135deg, hsl(45 95% 60%) 0%, hsl(35 100% 55%) 100%);
-    --gradient-dark: linear-gradient(180deg, hsl(240 15% 12%) 0%, hsl(240 10% 8%) 100%);
+    /* Technical / Minimalist Gradients */
+    --gradient-mystic: linear-gradient(135deg, hsl(210 100% 50%) 0%, hsl(190 100% 50%) 100%);
+    --gradient-gold: linear-gradient(135deg, hsl(45 100% 60%) 0%, hsl(35 100% 50%) 100%);
+    --gradient-dark: linear-gradient(180deg, hsl(220 20% 9%) 0%, hsl(220 30% 6%) 100%);
     
-    /* Shadows with glow */
-    --shadow-mystic: 0 10px 40px -10px hsl(270 80% 55% / 0.5);
-    --shadow-gold: 0 8px 32px -8px hsl(45 95% 60% / 0.4);
-    --shadow-elevated: 0 20px 60px -15px hsl(0 0% 0% / 0.7);
+    /* Elegant Shadows */
+    --shadow-mystic: 0 8px 30px -10px hsl(210 100% 50% / 0.15);
+    --shadow-gold: 0 8px 30px -10px hsl(45 100% 60% / 0.15);
+    --shadow-elevated: 0 20px 40px -10px hsl(0 0% 0% / 0.8);
     
     /* Animations */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -225,23 +225,44 @@ All colors MUST be HSL.
   }
   
   .card-mystic {
-    @apply bg-card border border-primary/20;
-    background: linear-gradient(135deg, hsl(240 15% 12%) 0%, hsl(240 10% 10%) 100%);
-    box-shadow: 0 10px 40px -10px hsl(270 80% 55% / 0.5);
+    @apply bg-card/60 border border-white/5 backdrop-blur-md relative overflow-hidden;
+    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .card-mystic::after {
+    content: '';
+    @apply absolute inset-0 opacity-0 transition-opacity duration-300 pointer-events-none;
+    box-shadow: inset 0 0 0 1px hsl(var(--primary) / 0.3);
+    border-radius: inherit;
+  }
+  
+  .card-mystic:hover {
+    @apply border-white/10;
+    box-shadow: 0 8px 30px -2px rgba(0, 0, 0, 0.5);
+  }
+
+  .card-mystic:hover::after {
+    @apply opacity-100;
   }
   
   .btn-mystic {
-    @apply relative overflow-hidden;
-    background: var(--gradient-mystic);
-    box-shadow: 0 10px 40px -10px hsl(270 80% 55% / 0.5);
+    @apply relative overflow-hidden bg-primary text-primary-foreground font-semibold;
+    box-shadow: 0 4px 15px -3px hsl(var(--primary) / 0.4);
+    transition: all 0.3s ease;
   }
   
   .btn-mystic::before {
     content: '';
-    @apply absolute inset-0 opacity-0 transition-opacity;
-    background: linear-gradient(135deg, hsl(270 90% 70%) 0%, hsl(315 90% 70%) 100%);
+    @apply absolute inset-0 opacity-0 transition-opacity duration-300;
+    background: linear-gradient(135deg, hsl(190 100% 60%) 0%, hsl(210 100% 60%) 100%);
   }
   
+  .btn-mystic:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px -4px hsl(var(--primary) / 0.6);
+  }
+
   .btn-mystic:hover::before {
     @apply opacity-100;
   }

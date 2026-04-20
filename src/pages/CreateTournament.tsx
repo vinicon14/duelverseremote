@@ -97,7 +97,7 @@ const CreateTournament = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-transparent">
       <Navbar />
       <main className="container mx-auto px-4 pt-20 sm:pt-24 pb-12">
         <Card className="max-w-2xl mx-auto card-mystic">
@@ -185,3 +185,4 @@ const CreateTournament = () => {
 };
 
 export default CreateTournament;
+

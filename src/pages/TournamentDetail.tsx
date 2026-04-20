@@ -483,7 +483,7 @@ const TournamentDetail = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-transparent">
         <Navbar />
         <main className="container mx-auto px-4 pt-24 pb-12">
           <div className="animate-pulse space-y-4">
@@ -497,7 +497,7 @@ const TournamentDetail = () => {
 
   if (!tournament) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-transparent">
         <Navbar />
         <main className="container mx-auto px-4 pt-24 pb-12">
           <Card className="card-mystic text-center py-12">
@@ -513,7 +513,7 @@ const TournamentDetail = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-transparent">
       <Navbar />
       
       <main className="container mx-auto px-3 sm:px-4 pt-20 sm:pt-24 pb-24 sm:pb-12">
@@ -1077,3 +1077,4 @@ const TournamentDetail = () => {
 };
 
 export default TournamentDetail;
+

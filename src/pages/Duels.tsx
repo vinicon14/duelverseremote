@@ -336,7 +336,7 @@ const Duels = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-transparent">
       <Navbar />
       
       <main className="container mx-auto px-4 pt-20 sm:pt-24 pb-12">
@@ -688,3 +688,4 @@ const Duels = () => {
 };
 
 export default Duels;
+

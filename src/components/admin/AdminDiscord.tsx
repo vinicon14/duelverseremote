@@ -146,24 +146,29 @@ export function AdminDiscord() {
     }
 
     try {
-      const response = await fetch(`https://discord.com/api/v10/channels/${channelId}/webhooks`, {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/discord-bridge`, {
         method: "POST",
         headers: {
-          "Authorization": `Bot ${discordBotToken}`,
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
         body: JSON.stringify({
-          name: "DuelVerse Bridge",
-          avatar: null,
+          type: "create_webhook",
+          channelId: channelId,
+          botToken: discordBotToken
         }),
       });
 
       if (response.ok) {
         const webhook = await response.json();
-        return webhook;
+        if (webhook.id && webhook.token) {
+          return webhook;
+        }
+        return null;
       } else {
         const err = await response.json();
         console.error("Webhook creation error:", err);
+        setError(`Erro da API do Discord: ${err.message || 'Código/Token Inválido'}`);
         return null;
       }
     } catch (err) {

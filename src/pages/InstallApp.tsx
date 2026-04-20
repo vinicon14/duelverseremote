@@ -92,7 +92,7 @@ export default function InstallApp() {
   ].filter((item) => item.visible);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-transparent flex flex-col items-center justify-center p-4">
       <div className="max-w-md w-full space-y-6 text-center">
         <div className="space-y-2">
           <div className="text-6xl">⚔️</div>
@@ -224,3 +224,4 @@ function StepItem({ icon, text }: { icon: React.ReactNode; text: string }) {
     </li>
   );
 }
+

@@ -64,7 +64,7 @@ const Ranking = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-transparent">
       <SEOHead tKey="ranking" path="/ranking" />
       <Navbar />
       
@@ -166,3 +166,4 @@ const Ranking = () => {
 };
 
 export default Ranking;
+

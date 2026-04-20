@@ -186,7 +186,7 @@ const Tournaments = () => {
   const completedTournaments = tournaments.filter(t => t.status === 'completed');
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-transparent">
       <SEOHead tKey="tournaments" path="/tournaments" />
       <Navbar />
       
@@ -357,3 +357,4 @@ const Tournaments = () => {
 };
 
 export default Tournaments;
+

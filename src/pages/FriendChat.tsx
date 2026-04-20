@@ -176,7 +176,7 @@ export default function FriendChat() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-transparent">
         <Navbar />
         <main className="container mx-auto px-4 pt-24">
           <div className="text-center">Carregando...</div>
@@ -186,7 +186,7 @@ export default function FriendChat() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-transparent">
       <Navbar />
       
       <main className="container mx-auto px-4 pt-24 pb-12">
@@ -274,3 +274,4 @@ export default function FriendChat() {
     </div>
   );
 }
+

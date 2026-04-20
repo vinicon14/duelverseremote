@@ -295,7 +295,7 @@ export default function JudgePanel() {
 
   if (judgeLoading || loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-transparent">
         <Navbar />
         <main className="container mx-auto px-4 py-8">
           <div className="text-center">{t('judgePanel.loading')}</div>
@@ -305,7 +305,7 @@ export default function JudgePanel() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-transparent">
       <Navbar />
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto space-y-6">
@@ -386,3 +386,4 @@ export default function JudgePanel() {
     </div>
   );
 }
+

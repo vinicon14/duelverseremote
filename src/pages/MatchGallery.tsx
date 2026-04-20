@@ -225,7 +225,7 @@ export default function MatchGallery() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-transparent">
         <Navbar />
         <main className="container mx-auto px-4 py-8 pt-24">
           <div className="flex items-center justify-center h-64">
@@ -237,7 +237,7 @@ export default function MatchGallery() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-transparent">
       <Navbar />
       
       <main className="container mx-auto px-4 py-8 pt-24">

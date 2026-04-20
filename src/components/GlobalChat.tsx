@@ -35,7 +35,7 @@ export const GlobalChat = () => {
   const [mentionSuggestions, setMentionSuggestions] = useState<{ username: string; user_id: string }[]>([]);
   const [showMentions, setShowMentions] = useState(false);
   const [mentionQuery, setMentionQuery] = useState("");
-  const [webhookUrl, setWebhookUrl] = useState<string>("");
+  const [bridgeEnabled, setBridgeEnabled] = useState<boolean>(false);
   const [inviteLink, setInviteLink] = useState<string>("https://discord.gg/A7GqCGNGNn");
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -136,8 +136,8 @@ export const GlobalChat = () => {
       );
       const config = await response.json();
       
-      if (config.webhookUrl) {
-        setWebhookUrl(config.webhookUrl);
+      if (config.bridgeEnabled) {
+        setBridgeEnabled(true);
       }
       if (config.inviteLink) {
         setInviteLink(config.inviteLink);
@@ -251,8 +251,8 @@ export const GlobalChat = () => {
 
       if (error) throw error;
 
-      // Enviar para Discord se houver servidores configurados
-      if (webhookUrl) {
+      // Enviar para Discord se a ponte estiver ativa
+      if (bridgeEnabled) {
         try {
           await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/discord-bridge`, {
             method: "POST",
@@ -263,8 +263,7 @@ export const GlobalChat = () => {
             body: JSON.stringify({
               type: "chat_to_discord",
               username: currentUser.username,
-              content: newMessage.trim(),
-              webhookUrl: webhookUrl,
+              content: newMessage.trim()
             }),
           });
         } catch (err) {

@@ -200,7 +200,7 @@ export default function DuelCoins() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-transparent">
       <Navbar />
       
       <main className="container mx-auto px-4 py-8 pt-24 pb-24">
@@ -356,3 +356,4 @@ export default function DuelCoins() {
     </div>
   );
 }
+

@@ -137,7 +137,7 @@ export default function VideoShare() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-transparent">
         <Navbar />
         <main className="container mx-auto px-4 py-8">
           <div className="flex items-center justify-center h-64">
@@ -150,7 +150,7 @@ export default function VideoShare() {
 
   if (!recording) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-transparent">
         <Navbar />
         <main className="container mx-auto px-4 py-8">
           <Card className="max-w-2xl mx-auto">
@@ -174,7 +174,7 @@ export default function VideoShare() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-transparent">
       <Navbar />
       
       <main className="container mx-auto px-4 py-8">
@@ -254,3 +254,4 @@ export default function VideoShare() {
     </div>
   );
 }
+

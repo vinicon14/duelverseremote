@@ -347,7 +347,7 @@ export default function MagicDeckBuilder() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-transparent">
       <Navbar />
       <main className="container mx-auto px-4 pt-20 pb-8">
         <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
@@ -618,3 +618,4 @@ export default function MagicDeckBuilder() {
     </div>
   );
 }
+

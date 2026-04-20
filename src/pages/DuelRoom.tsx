@@ -1051,7 +1051,7 @@ const DuelRoom = () => {
   }, [myDeckIsOpen]);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-transparent">
       <NoMonetagAds />
       {!hideControls && <Navbar />}
       
@@ -1404,3 +1404,4 @@ const DuelRoom = () => {
 };
 
 export default DuelRoom;
+

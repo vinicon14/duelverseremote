@@ -276,11 +276,11 @@ export const Navbar = () => {
   };
 
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 backdrop-blur-lg transition-all duration-500 shadow-md shadow-black/20 ${scrolled ? 'bg-background/90' : 'bg-background/85'}`}>
-      <div className="container flex h-16 items-center justify-between px-4">
+    <nav className={`fixed top-0 left-0 right-0 z-50 backdrop-blur-xl transition-all duration-300 border-b border-white/5 ${scrolled ? 'bg-background/80' : 'bg-background/40'}`}>
+      <div className="container flex h-16 items-center justify-between px-4 lg:px-8">
         <Link to="/" className="flex items-center space-x-2">
-          <div className="text-2xl font-bold text-gradient-mystic flex items-center gap-1">
-            {isPro ? <Crown className="w-5 h-5 text-yellow-500 fill-yellow-500" /> : null}
+          <div className="text-xl font-black text-primary tracking-[0.2em] flex items-center gap-2">
+            {isPro ? <Crown className="w-5 h-5 text-yellow-500 fill-yellow-500 drop-shadow-md" /> : <div className="w-2 h-6 bg-primary rounded-sm" />}
             DUELVERSE
           </div>
         </Link>
@@ -300,12 +300,11 @@ export const Navbar = () => {
           {showThumb && (
             <div
               ref={trackRef}
-              className="h-[14px] mt-1 rounded-full cursor-pointer relative"
-              style={{ background: 'hsl(var(--muted) / 0.2)', border: '1px solid hsl(var(--primary) / 0.1)' }}
+              className="h-1.5 mt-3 rounded-full cursor-pointer relative bg-white/5 border border-white/10 hover:h-2 transition-all duration-300 group"
               onClick={handleTrackClick}
             >
               <div
-                className="absolute top-0 h-full rounded-full cursor-grab active:cursor-grabbing nav-scrollbar-thumb"
+                className="absolute top-0 h-full rounded-full cursor-grab active:cursor-grabbing bg-primary/70 shadow-[0_0_8px_hsl(var(--primary))] transition-all duration-300 group-hover:bg-primary group-hover:shadow-[0_0_15px_hsl(var(--primary))] animate-glow-pulse"
                 style={{
                   left: `${thumbLeft}px`,
                   width: `${thumbWidth}px`,

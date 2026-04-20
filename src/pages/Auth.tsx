@@ -52,7 +52,7 @@ const Auth = () => {
 
   // Verificar se usuário já está logado e redirecionar
   useEffect(() => {
-    const defaultRedirect = returnTo || '/duels';
+    const defaultRedirect = returnTo || '/';
     
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
@@ -116,7 +116,7 @@ const Auth = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/duels`
+          redirectTo: `${window.location.origin}/`
         }
       });
 
@@ -178,7 +178,7 @@ const Auth = () => {
         description: t('auth.welcomeBack')
       });
 
-      navigate('/duels');
+      navigate('/');
     } catch (error: any) {
       toast({
         title: t('auth.loginError'),
@@ -482,3 +482,4 @@ const Auth = () => {
 };
 
 export default Auth;
+

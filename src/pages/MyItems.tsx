@@ -551,14 +551,14 @@ export default function MyItems() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-transparent flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-transparent">
       <Navbar />
       <main className="container mx-auto px-4 py-8 pt-24">
         {/* Header */}
@@ -957,3 +957,4 @@ export default function MyItems() {
     </div>
   );
 }
+

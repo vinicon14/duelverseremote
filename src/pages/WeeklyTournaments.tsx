@@ -137,7 +137,7 @@ const WeeklyTournaments = () => {
 
   if (loadingAccountType) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-transparent">
         <Navbar />
         <main className="container mx-auto px-4 pt-24 pb-12">
           <div className="flex items-center justify-center py-12">
@@ -153,7 +153,7 @@ const WeeklyTournaments = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-transparent">
       <Navbar />
       <main className="container mx-auto px-4 pt-20 sm:pt-24 pb-12">
         {/* Header */}
@@ -239,3 +239,4 @@ const WeeklyTournaments = () => {
 };
 
 export default WeeklyTournaments;
+

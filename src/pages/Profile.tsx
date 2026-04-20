@@ -178,7 +178,7 @@ const Profile = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-transparent">
         <Navbar />
         <main className="container mx-auto px-4 pt-24 pb-12">
           <div className="animate-pulse space-y-6">
@@ -195,7 +195,7 @@ const Profile = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-transparent">
       <Navbar />
       
       <main className="container mx-auto px-4 pt-20 sm:pt-24 pb-12">
@@ -439,3 +439,4 @@ const Profile = () => {
 };
 
 export default Profile;
+

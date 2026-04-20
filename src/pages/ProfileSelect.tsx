@@ -63,14 +63,14 @@ export default function ProfileSelect() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-transparent flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-transparent flex flex-col items-center justify-center p-4">
       <div className="text-center mb-10">
         <h1 className="text-4xl font-bold text-gradient-mystic mb-2">DUELVERSE</h1>
         <p className="text-muted-foreground text-lg">Selecione seu perfil de jogo</p>

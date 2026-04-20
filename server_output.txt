@@ -1,0 +1,78 @@
+
+> duelverse-desktop@0.0.0 dev
+> vite --host 127.0.0.1
+
+Port 8080 is in use, trying another one...
+
+  [32m[1mVITE[22m v5.4.21[39m  [2mready in [0m[1m516[22m[2m[0m ms[22m
+
+  [32mÔ×£[39m  [1mLocal[22m:   [36mhttp://127.0.0.1:[1m8081[22m/[39m
+[2m[32m  Ô×£[39m[22m[2m  press [22m[1mh + enter[22m[2m to show help[22m
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+
+PWA v1.1.0
+mode      generateSW
+precache  2 entries (0.12 KiB)
+files generated
+  dev-dist/sw.js
+  dev-dist/workbox-e7681877.js
+[2m16:39:00[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m16:39:34[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/index.css[22m
+[2m16:46:14[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/Navbar.tsx, /src/index.css[22m
+[2m16:46:45[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Home.tsx, /src/index.css[22m
+[2m16:52:41[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/AnimatedBackground.tsx, /src/index.css[22m
+[2m16:53:06[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/AnimatedBackground.css[22m
+[2m16:54:08[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Landing.tsx, /src/index.css[22m
+[2m16:54:36[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/AnimatedBackground.css[22m
+[2m16:56:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Admin.tsx, /src/index.css[22m
+[2m16:56:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Auth.tsx, /src/index.css[22m
+[2m16:56:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/BuyDuelCoins.tsx, /src/index.css[22m
+[2m16:56:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/CreateTournament.tsx, /src/index.css[22m
+[2m16:56:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/CreateWeeklyTournament.tsx, /src/index.css[22m
+[2m16:56:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/DeckBuilder.tsx, /src/index.css[22m
+[2m16:56:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/DuelCoins.tsx, /src/index.css[22m
+[2m16:56:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/DuelRoom.tsx, /src/index.css[22m
+[2m16:56:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Duels.tsx, /src/index.css[22m
+[2m16:56:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/FriendChat.tsx, /src/index.css[22m
+[2m16:56:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Friends.tsx, /src/index.css[22m
+[2m16:56:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Home.tsx, /src/index.css[22m
+[2m16:56:18[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/pages/Index.tsx[22m
+[2m16:56:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/InstallApp.tsx, /src/index.css[22m
+[2m16:56:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/JudgePanel.tsx, /src/index.css[22m
+[2m16:56:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Landing.tsx, /src/index.css[22m
+[2m16:56:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/MagicDeckBuilder.tsx, /src/index.css[22m
+[2m16:56:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Marketplace.tsx, /src/index.css[22m
+[2m16:56:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/MatchGallery.tsx, /src/index.css[22m
+[2m16:56:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Matchmaking.tsx, /src/index.css[22m
+[2m16:56:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/MyItems.tsx, /src/index.css[22m
+[2m16:56:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/MyTournaments.tsx, /src/index.css[22m
+[2m16:56:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/News.tsx, /src/index.css[22m
+[2m16:56:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/NotFound.tsx, /src/index.css[22m
+[2m16:56:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/PokemonDeckBuilder.tsx, /src/index.css[22m
+[2m16:56:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Profile.tsx, /src/index.css[22m
+[2m16:56:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/ProfileSelect.tsx, /src/index.css[22m
+[2m16:56:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Ranking.tsx, /src/index.css[22m
+[2m16:56:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Store.tsx, /src/index.css[22m
+[2m16:56:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/TournamentDetail.tsx, /src/index.css[22m
+[2m16:56:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/TournamentManager.tsx, /src/index.css[22m
+[2m16:56:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Tournaments.tsx, /src/index.css[22m
+[2m16:56:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/TransferHistory.tsx, /src/index.css[22m
+[2m16:56:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/VideoShare.tsx, /src/index.css[22m
+[2m16:56:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/WeeklyTournaments.tsx, /src/index.css[22m
+[2m16:56:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/pro/ProDuels.tsx, /src/index.css[22m
+[2m16:56:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/pro/ProHome.tsx, /src/index.css[22m
+[2m16:56:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/pro/ProTournaments.tsx, /src/index.css[22m
+[2m16:56:44[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/Navbar.tsx, /src/index.css[22m
+[2m16:58:52[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/index.css[22m
+[2m17:01:45[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/AnimatedBackground.tsx, /src/index.css[22m
+[2m17:02:43[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/index.css[22m
+[2m17:05:19[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/PageTransition.css[22m
+[2m17:05:39[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/PageNavigationArrows.tsx, /src/index.css[22m
+[2m17:05:41[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/index.css[22m
+[2m17:07:32[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Landing.tsx, /src/index.css[22m
+[2m17:10:56[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/PageNavigationArrows.tsx, /src/index.css[22m
+[2m17:12:08[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Auth.tsx, /src/index.css[22m
+[2m17:13:47[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/PageNavigationArrows.tsx, /src/index.css[22m
+[2m17:17:50[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/GlobalChat.tsx, /src/index.css[22m
+[2m17:19:06[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/PageNavigationArrows.tsx, /src/index.css[22m
+[2m17:22:09[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/admin/AdminDiscord.tsx, /src/index.css[22m

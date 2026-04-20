@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@1";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -21,7 +21,6 @@ serve(async (req) => {
 
     if (path.endsWith("/webhook") || path.includes("discord-webhook")) {
       const payload = await req.json();
-      
       console.log("Discord webhook received:", JSON.stringify(payload));
       
       if (payload.content || (payload.message && payload.message.content)) {
@@ -36,42 +35,59 @@ serve(async (req) => {
             user_id: "discord",
             username: `${origin} ${username}`.trim(),
             message: content,
-            tcg_type: "ygopro",
+            tcg_type: "yugioh",
           });
 
           if (error) {
             console.error("Error inserting message:", error);
-            return new Response(JSON.stringify({ error: error.message }), {
-              status: 500,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            });
+            return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
           }
-
-          return new Response(JSON.stringify({ success: true }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
+          return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
       }
-
-      return new Response(JSON.stringify({ ok: true }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const body = await req.json();
-    const { type, username, content, webhookUrl } = body;
+    const { type, username, content, channelId, botToken } = body;
+
+    // Permitir criação de webhook sem CORS
+    if (type === "create_webhook") {
+      if (!channelId || !botToken) {
+        return new Response(JSON.stringify({ error: "Missing channelId or botToken" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const response = await fetch(`https://discord.com/api/v10/channels/${channelId}/webhooks`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bot ${botToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name: "DuelVerse Global Chat", avatar: null })
+      });
+      const data = await response.json();
+      return new Response(JSON.stringify(data), { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: response.ok ? 200 : 400 });
+    }
+
+    // Buscar a configuração master do Discord setada no painel de administração
+    const { data } = await supabase
+      .from("system_settings")
+      .select("value")
+      .eq("key", "discord_bot_status")
+      .maybeSingle();
+
+    let botStatus = { status: "", inviteLink: "", servers: [] as any[] };
+    if (data?.value) {
+      if (typeof data.value === 'string') {
+        try { botStatus = JSON.parse(data.value); } catch(e) {}
+      } else {
+        botStatus = data.value;
+      }
+    }
 
     if (type === "chat_to_discord") {
-      const urls: string[] = [];
-      if (Array.isArray((body as any).webhookUrls)) {
-        (body as any).webhookUrls.forEach((u: string) => urls.push(u));
-      } else if (typeof (body as any).webhookUrl === "string") {
-        urls.push((body as any).webhookUrl);
-      }
-      if (urls.length === 0 && typeof webhookUrl === "string") {
-        urls.push(webhookUrl);
-      }
-      
+      const activeServers = (botStatus.servers || []).filter((s: any) => s.enabled && s.webhookUrl);
+      const urls = activeServers.map((s: any) => s.webhookUrl as string);
+
       if (urls.length > 0) {
         const embed = {
           embeds: [{
@@ -83,56 +99,36 @@ serve(async (req) => {
           }]
         };
         const results: Array<{ ok: boolean; url: string }> = [];
-        for (const url of urls) {
+        for (const targetUrl of urls) {
           try {
-            const response = await fetch(url, {
+            const response = await fetch(targetUrl, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify(embed)
             });
-            results.push({ ok: response.ok, url });
+            results.push({ ok: response.ok, url: targetUrl });
           } catch (e) {
-            results.push({ ok: false, url });
+            results.push({ ok: false, url: targetUrl });
           }
         }
-        return new Response(JSON.stringify({ success: results.every(r => r.ok), details: results }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(JSON.stringify({ success: results.every(r => r.ok), details: results }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       } else {
-        return new Response(JSON.stringify({ error: "No webhook URLs configured" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(JSON.stringify({ error: "Nenhum servidor Discord ativo e configurado" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
     }
 
     if (type === "get_config") {
-      const { data } = await supabase
-        .from("system_settings")
-        .select("value")
-        .eq("key", "discord_bridge_config")
-        .maybeSingle();
-
-      let config = { bridges: [] as any[], webhookEndpoint: "" };
-      if (data?.value) {
-        const parsed = typeof data.value === 'string' ? JSON.parse(data.value) : data.value;
-        config.bridges = parsed.bridges || [];
-        config.webhookEndpoint = parsed.webhookEndpoint || `${supabaseUrl}/functions/v1/discord-bridge/webhook`;
+      let inviteLink = botStatus.inviteLink;
+      if (!inviteLink && botStatus.servers?.length > 0) {
+        const sWithLink = botStatus.servers.find((s: any) => s.inviteLink);
+        inviteLink = sWithLink ? sWithLink.inviteLink : inviteLink;
       }
-
-      return new Response(JSON.stringify(config), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      const bridgeEnabled = (botStatus.servers || []).some((s: any) => s.enabled && s.webhookUrl);
+      return new Response(JSON.stringify({ inviteLink, bridgeEnabled }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    return new Response(JSON.stringify({ error: "Invalid request" }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(JSON.stringify({ error: "Invalid request" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  } catch (error: any) {
+    return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });

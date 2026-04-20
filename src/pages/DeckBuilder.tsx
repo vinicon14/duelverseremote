@@ -512,7 +512,7 @@ const DeckBuilder = () => {
   const hasDeck = mainDeck.length > 0 || extraDeck.length > 0 || sideDeck.length > 0;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-transparent">
       <Navbar />
       
       <div className="pt-16 h-screen flex flex-col">

@@ -651,7 +651,7 @@ export default function Marketplace() {
   const categories = ["all", ...Array.from(new Set(products.map(p => p.category)))];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-transparent">
       <Navbar />
       <main className="container mx-auto px-4 py-8 pt-24">
         {/* Tab Navigation */}
@@ -1259,3 +1259,4 @@ export default function Marketplace() {
     </div>
   );
 }
+
