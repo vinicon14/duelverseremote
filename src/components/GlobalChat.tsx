@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { Send, MessageCircle, Trash2 } from "lucide-react";
+import { Send, MessageCircle, Trash2, ExternalLink } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useTcg } from "@/contexts/TcgContext";
@@ -35,6 +35,7 @@ export const GlobalChat = () => {
   const [mentionSuggestions, setMentionSuggestions] = useState<{ username: string; user_id: string }[]>([]);
   const [showMentions, setShowMentions] = useState(false);
   const [mentionQuery, setMentionQuery] = useState("");
+  const [discordServers, setDiscordServers] = useState<{ id: string; name: string; channelId: string }[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -118,6 +119,27 @@ export const GlobalChat = () => {
       supabase.removeChannel(channel);
     };
   }, [activeTcg]);
+
+  const fetchDiscordServers = async () => {
+    try {
+      const { data } = await supabase
+        .from("system_settings")
+        .select("value")
+        .eq("key", "discord_bot_status")
+        .maybeSingle();
+
+      if (data?.value) {
+        const parsed = typeof data.value === 'string' ? JSON.parse(data.value) : data.value;
+        setDiscordServers(parsed.servers?.filter((s: any) => s.enabled) || []);
+      }
+    } catch (err) {
+      console.error("Erro ao buscar servidores Discord:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchDiscordServers();
+  }, []);
 
   const checkAuth = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -316,10 +338,29 @@ export const GlobalChat = () => {
   return (
     <Card className="card-mystic h-full flex flex-col">
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-gradient-mystic">
-          <MessageCircle className="w-5 h-5" />
-          Chat Global
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2 text-gradient-mystic">
+            <MessageCircle className="w-5 h-5" />
+            Chat Global
+          </CardTitle>
+          {discordServers.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs"
+              asChild
+            >
+              <a
+                href={`https://discord.gg/${discordServers[0].channelId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <ExternalLink className="w-3 h-3 mr-1" />
+                Discord
+              </a>
+            </Button>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col gap-3 min-h-0 overflow-hidden">
         <ScrollArea className="flex-1 pr-2 sm:pr-4 min-h-0" ref={scrollRef}>

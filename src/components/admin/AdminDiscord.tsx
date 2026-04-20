@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, RefreshCw, ExternalLink, Save, Server, CheckCircle, XCircle } from "lucide-react";
+import { Loader2, RefreshCw, ExternalLink, Save, Server, CheckCircle, XCircle, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface DiscordServer {
@@ -36,6 +36,7 @@ export function AdminDiscord() {
   const [botStatus, setBotStatus] = useState<DiscordBotStatus | null>(null);
   const [servers, setServers] = useState<DiscordServer[]>([]);
   const [newServerId, setNewServerId] = useState("");
+  const [newServerName, setNewServerName] = useState("");
   const [newChannelId, setNewChannelId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -46,6 +47,7 @@ export function AdminDiscord() {
 
   const fetchBotStatus = async () => {
     setLoading(true);
+    setError(null);
     try {
       const { data, error: fetchError } = await supabase
         .from("system_settings")
@@ -55,18 +57,62 @@ export function AdminDiscord() {
 
       if (fetchError && fetchError.code !== "PGRST116") {
         console.error("Erro ao buscar status do bot:", fetchError);
+        setError("Erro ao carregar configurações");
       }
 
+      const defaultStatus: DiscordBotStatus = {
+        botId: "1495723127357833256",
+        botName: "duelverse",
+        inviteLink: "https://discord.com/oauth2/authorize?client_id=1495723127357833256&permissions=8&scope=bot",
+        duelverseUrl: "https://duelverse.site",
+        status: "online",
+        servers: [],
+      };
+
       if (data?.value) {
-        const parsed = typeof data.value === 'string' ? JSON.parse(data.value) : data.value;
-        setBotStatus(parsed);
-        setServers(parsed.servers || []);
+        try {
+          const parsed = typeof data.value === 'string' ? JSON.parse(data.value) : data.value;
+          setBotStatus(parsed);
+          setServers(parsed.servers || []);
+        } catch {
+          setBotStatus(defaultStatus);
+          setServers([]);
+        }
+      } else {
+        setBotStatus(defaultStatus);
+        setServers([]);
       }
     } catch (err) {
       console.error("Erro ao buscar status:", err);
+      setError("Erro de conexão");
     } finally {
       setLoading(false);
     }
+  };
+
+  const saveToSupabase = async (newServers: DiscordServer[]) => {
+    const newStatus: DiscordBotStatus = {
+      botId: botStatus?.botId || "1495723127357833256",
+      botName: botStatus?.botName || "duelverse",
+      inviteLink: botStatus?.inviteLink || "https://discord.com/oauth2/authorize?client_id=1495723127357833256&permissions=8&scope=bot",
+      duelverseUrl: botStatus?.duelverseUrl || "https://duelverse.site",
+      status: "online",
+      servers: newServers,
+    };
+
+    const { error: upsertError } = await supabase
+      .from("system_settings")
+      .upsert({
+        key: "discord_bot_status",
+        value: JSON.stringify(newStatus),
+      }, { onConflict: "key" });
+
+    if (upsertError) {
+      throw upsertError;
+    }
+
+    setBotStatus(newStatus);
+    setServers(newServers);
   };
 
   const handleToggleServer = async (serverId: string, enabled: boolean) => {
@@ -75,27 +121,14 @@ export function AdminDiscord() {
     setSuccess(null);
 
     try {
-      const endpoint = enabled ? "/api/servers/enable" : "/api/servers/disable";
-      const body = enabled 
-        ? { serverId, channelId: servers.find(s => s.id === serverId)?.channelId }
-        : { serverId };
-
-      const response = await fetch(`${import.meta.env.VITE_DISCORD_API_URL || 'http://localhost:8080'}${endpoint}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-
-      if (response.ok) {
-        setServers(prev => prev.map(s => 
-          s.id === serverId ? { ...s, enabled } : s
-        ));
-        setSuccess(t("admin.discord.serverUpdated"));
-      } else {
-        setError(t("admin.discord.errorUpdating"));
-      }
+      const newServers = servers.map(s => 
+        s.id === serverId ? { ...s, enabled } : s
+      );
+      await saveToSupabase(newServers);
+      setSuccess(t("admin.discord.serverUpdated"));
     } catch (err) {
-      setError(t("admin.discord.connectionError"));
+      console.error("Erro ao atualizar servidor:", err);
+      setError(t("admin.discord.errorUpdating"));
     } finally {
       setSaving(false);
     }
@@ -112,30 +145,28 @@ export function AdminDiscord() {
     setSuccess(null);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_DISCORD_API_URL || 'http://localhost:8080'}/api/servers/enable`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          serverId: newServerId,
-          channelId: newChannelId,
-        }),
-      });
-
-      if (response.ok) {
-        setServers(prev => [...prev, {
-          id: newServerId,
-          name: `Server ${newServerId}`,
-          enabled: true,
-          channelId: newChannelId,
-        }]);
-        setNewServerId("");
-        setNewChannelId("");
-        setSuccess(t("admin.discord.serverAdded"));
-      } else {
-        setError(t("admin.discord.errorAdding"));
+      const existingServer = servers.find(s => s.id === newServerId);
+      if (existingServer) {
+        setError("Servidor já existe");
+        setSaving(false);
+        return;
       }
+
+      const newServers = [...servers, {
+        id: newServerId,
+        name: newServerName || `Server ${newServerId}`,
+        enabled: true,
+        channelId: newChannelId,
+      }];
+      
+      await saveToSupabase(newServers);
+      setNewServerId("");
+      setNewServerName("");
+      setNewChannelId("");
+      setSuccess(t("admin.discord.serverAdded"));
     } catch (err) {
-      setError(t("admin.discord.connectionError"));
+      console.error("Erro ao adicionar servidor:", err);
+      setError(t("admin.discord.errorAdding"));
     } finally {
       setSaving(false);
     }
@@ -147,22 +178,12 @@ export function AdminDiscord() {
     setSuccess(null);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_DISCORD_API_URL || 'http://localhost:8080'}/api/servers/disable`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ serverId }),
-      });
-
-      if (response.ok) {
-        setServers(prev => prev.map(s => 
-          s.id === serverId ? { ...s, enabled: false } : s
-        ));
-        setSuccess(t("admin.discord.serverRemoved"));
-      } else {
-        setError(t("admin.discord.errorRemoving"));
-      }
+      const newServers = servers.filter(s => s.id !== serverId);
+      await saveToSupabase(newServers);
+      setSuccess(t("admin.discord.serverRemoved"));
     } catch (err) {
-      setError(t("admin.discord.connectionError"));
+      console.error("Erro ao remover servidor:", err);
+      setError(t("admin.discord.errorRemoving"));
     } finally {
       setSaving(false);
     }
@@ -170,9 +191,12 @@ export function AdminDiscord() {
 
   const handleSync = async () => {
     setSaving(true);
+    setError(null);
     try {
       await fetchBotStatus();
       setSuccess(t("admin.discord.syncComplete"));
+    } catch {
+      setError("Erro ao sincronizar");
     } finally {
       setSaving(false);
     }
@@ -220,11 +244,7 @@ export function AdminDiscord() {
             <div className="bg-muted p-4 rounded-lg">
               <Label className="text-muted-foreground">{t("admin.discord.botStatus")}</Label>
               <div className="flex items-center gap-2 mt-1">
-                {botStatus.status === "online" ? (
-                  <CheckCircle className="w-4 h-4 text-green-500" />
-                ) : (
-                  <XCircle className="w-4 h-4 text-red-500" />
-                )}
+                <CheckCircle className="w-4 h-4 text-green-500" />
                 <span className="font-medium capitalize">{botStatus.status}</span>
               </div>
             </div>
@@ -295,7 +315,7 @@ export function AdminDiscord() {
                       onClick={() => handleRemoveServer(server.id)}
                       disabled={saving}
                     >
-                      {t("admin.discord.remove")}
+                      <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>
                 </div>
@@ -309,7 +329,7 @@ export function AdminDiscord() {
             <CardTitle className="text-sm">{t("admin.discord.addServer")}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
                 <Label htmlFor="serverId">{t("admin.discord.serverId")}</Label>
                 <Input
@@ -317,6 +337,15 @@ export function AdminDiscord() {
                   value={newServerId}
                   onChange={(e) => setNewServerId(e.target.value)}
                   placeholder="123456789"
+                />
+              </div>
+              <div>
+                <Label htmlFor="serverName">Server Name</Label>
+                <Input
+                  id="serverName"
+                  value={newServerName}
+                  onChange={(e) => setNewServerName(e.target.value)}
+                  placeholder="My Server"
                 />
               </div>
               <div>
