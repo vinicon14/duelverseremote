@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "Usuários podem deletar suas próprias mensagens" ON public.global_chat_messages;

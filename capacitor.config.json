@@ -1,0 +1,9 @@
+{
+  "appId": "com.duelverse.app.v12",
+  "appName": "Duelverse",
+  "webDir": "dist",
+  "server": {
+    "url": "https://duelverse.site",
+    "cleartext": true
+  }
+}

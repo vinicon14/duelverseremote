@@ -1,0 +1,375 @@
+/**
+ * DuelVerse - Loja
+ * Desenvolvido por Vinícius
+ * 
+ * Loja de assinaturas Pro e planos de assinatura.
+ * Usuários podem comprar Premium com DuelCoins.
+ */
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { Navbar } from "@/components/Navbar";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { Store as StoreIcon, Crown, Loader2, Coins, Check, Clock, ShoppingBag } from "lucide-react";
+
+interface SubscriptionPlan {
+  id: string;
+  name: string;
+  description: string | null;
+  image_url: string | null;
+  price_duelcoins: number;
+  duration_days: number;
+  duration_type: "weekly" | "monthly" | "yearly";
+  is_active: boolean;
+  is_featured: boolean;
+}
+
+interface ActiveSubscription {
+  id: string;
+  plan_id: string;
+  expires_at: string;
+  is_active: boolean;
+}
+
+export default function Store() {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const [supportEmail, setSupportEmail] = useState("");
+  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
+  const [loadingPlans, setLoadingPlans] = useState(true);
+  const [purchasingPlan, setPurchasingPlan] = useState<string | null>(null);
+  const [user, setUser] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(null);
+  const [activeSubscription, setActiveSubscription] = useState<ActiveSubscription | null>(null);
+  const [timeLeft, setTimeLeft] = useState("");
+  const { toast } = useToast();
+
+  useEffect(() => {
+    fetchSettings();
+    fetchPlans();
+    checkUser();
+  }, []);
+
+  // Update countdown every minute
+  useEffect(() => {
+    if (!activeSubscription) return;
+    const update = () => setTimeLeft(getTimeLeft(activeSubscription.expires_at));
+    update();
+    const interval = setInterval(update, 60000);
+    return () => clearInterval(interval);
+  }, [activeSubscription]);
+
+  const getTimeLeft = (expiresAt: string) => {
+    const now = new Date();
+    const expires = new Date(expiresAt);
+    const diffMs = expires.getTime() - now.getTime();
+    if (diffMs <= 0) return t('common.error');
+    const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    if (days > 0) return `${days}d ${hours}h`;
+    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    return `${hours}h ${minutes}m`;
+  };
+
+  const checkUser = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    setUser(session?.user ?? null);
+    if (session?.user) {
+      fetchProfile(session.user.id);
+      fetchActiveSubscription(session.user.id);
+    }
+  };
+
+  const fetchProfile = async (userId: string) => {
+    const { data } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (data) setProfile(data);
+  };
+
+  const fetchActiveSubscription = async (userId: string) => {
+    const { data } = await (supabase as any)
+      .from('user_subscriptions')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .gte('expires_at', new Date().toISOString())
+      .order('expires_at', { ascending: false })
+      .limit(1);
+    if (data && data.length > 0) {
+      setActiveSubscription(data[0]);
+    } else {
+      setActiveSubscription(null);
+    }
+  };
+
+  const fetchSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('system_settings')
+        .select('key, value')
+        .in('key', ['support_email']);
+      if (error) throw error;
+      if (data) {
+        const emailSetting = data.find(s => s.key === 'support_email');
+        setSupportEmail(emailSetting?.value || 'suporte@duelverseonline.vercel.app');
+      }
+    } catch (error) {
+      console.error('Error fetching settings:', error);
+      setSupportEmail('suporte@duelverseonline.vercel.app');
+    }
+  };
+
+  const fetchPlans = async () => {
+    try {
+      const { data, error } = await (supabase as any)
+        .from("subscription_plans")
+        .select("*")
+        .eq("is_active", true)
+        .order("is_featured", { ascending: false })
+        .order("price_duelcoins", { ascending: true });
+      if (error) throw error;
+      setPlans((data as SubscriptionPlan[]) || []);
+    } catch (error) {
+      console.error("Error fetching plans:", error);
+    } finally {
+      setLoadingPlans(false);
+    }
+  };
+
+  const handlePurchasePlan = async (plan: SubscriptionPlan) => {
+    if (!user) {
+      toast({ title: "Login necessário", description: "Você precisa estar logado para comprar um plano.", variant: "destructive" });
+      return;
+    }
+    if (!profile) {
+      toast({ title: "Erro", description: "Perfil não encontrado.", variant: "destructive" });
+      return;
+    }
+    if (activeSubscription) {
+      toast({ title: "Plano ativo", description: "Você já possui um plano ativo. Aguarde ele expirar para comprar outro.", variant: "destructive" });
+      return;
+    }
+    if (profile.duelcoins_balance < plan.price_duelcoins) {
+      toast({ title: "Saldo insuficiente", description: `Você precisa de ${plan.price_duelcoins} DuelCoins para comprar este plano.`, variant: "destructive" });
+      return;
+    }
+
+    setPurchasingPlan(plan.id);
+    try {
+      const { data: subscriptionData, error: subscriptionError } = await (supabase as any).rpc(
+        'activate_subscription',
+        { p_user_id: user.id, p_plan_id: plan.id }
+      );
+
+      if (subscriptionError) throw subscriptionError;
+      if (subscriptionData && !subscriptionData.success) {
+        throw new Error(subscriptionData.message);
+      }
+
+      await fetchProfile(user.id);
+      await fetchActiveSubscription(user.id);
+
+      toast({
+        title: "Plano ativado!",
+        description: `Você agora é um usuário ${plan.name}. Aproveite os benefícios!`,
+      });
+    } catch (error: any) {
+      console.error("Error purchasing plan:", error);
+      toast({ title: "Erro na compra", description: error.message || "Não foi possível completar a compra.", variant: "destructive" });
+    } finally {
+      setPurchasingPlan(null);
+    }
+  };
+
+  const getDurationLabel = (type: string) => {
+    switch (type) {
+      case "weekly": return t('store.weekly');
+      case "monthly": return t('store.monthly');
+      case "yearly": return t('store.yearly');
+      default: return type;
+    }
+  };
+
+  const hasActivePlan = !!activeSubscription;
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Navbar />
+      
+      <main className="container mx-auto px-4 py-8 pt-24">
+        <div className="max-w-6xl mx-auto space-y-8">
+          {/* Tab Navigation */}
+          <div className="flex gap-2">
+            <Button className="btn-mystic">
+              <StoreIcon className="w-4 h-4 mr-2" />
+              {t('store.tabPlans')}
+            </Button>
+            <Button variant="outline" onClick={() => navigate('/marketplace')}>
+              <ShoppingBag className="w-4 h-4 mr-2" />
+              {t('store.tabMarket')}
+            </Button>
+          </div>
+
+          {/* Header */}
+          <div className="text-center space-y-4">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-r from-primary to-primary/70 mb-4">
+              <StoreIcon className="w-10 h-10 text-primary-foreground" />
+            </div>
+            <h1 className="text-4xl font-bold gradient-text">{t('store.title')}</h1>
+            <p className="text-xl text-muted-foreground">{t('store.subtitle')}</p>
+          </div>
+
+          {/* Active Subscription Banner */}
+          {hasActivePlan && (
+            <Card className="border-yellow-500 border-2 bg-yellow-500/10">
+              <CardContent className="py-4 flex items-center justify-between flex-wrap gap-4">
+                <div className="flex items-center gap-3">
+                  <Crown className="w-6 h-6 text-yellow-500" />
+                  <div>
+                    <p className="font-bold text-lg">{t('store.youArePro')}</p>
+                    <p className="text-sm text-muted-foreground">{t('store.planActive')}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 bg-background/80 rounded-lg px-4 py-2">
+                  <Clock className="w-5 h-5 text-yellow-500" />
+                  <span className="font-semibold text-sm">{timeLeft}</span>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Subscription Plans Section */}
+          <Card className="card-mystic border-primary/50">
+            <CardHeader>
+              <CardTitle className="text-2xl flex items-center gap-2">
+                <Crown className="w-6 h-6 text-yellow-500" />
+                {t('store.proPlans')}
+              </CardTitle>
+              <CardDescription>
+                {t('store.proPlansDesc')}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loadingPlans ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                </div>
+              ) : plans.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">{t('store.noPlans')}</p>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {plans.map((plan) => (
+                    <Card 
+                      key={plan.id} 
+                      className={`relative overflow-hidden ${
+                        plan.is_featured 
+                          ? "border-yellow-500 border-2 bg-yellow-500/5" 
+                          : "border-primary/30"
+                      } ${hasActivePlan ? "opacity-60" : ""}`}
+                    >
+                      {plan.is_featured && (
+                        <div className="absolute top-0 right-0 bg-yellow-500 text-black text-xs font-bold px-3 py-1 rounded-bl-lg">
+                          {t('store.popular')}
+                        </div>
+                      )}
+                      <CardHeader className="pb-2">
+                        <CardTitle className="flex items-center gap-2">
+                          <Crown className="w-5 h-5 text-yellow-500" />
+                          {plan.name}
+                        </CardTitle>
+                        <CardDescription className="line-clamp-2">
+                          {plan.description || t('store.proPlansDesc')}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          <div className="text-center">
+                            <div className="flex items-center justify-center gap-1 text-3xl font-bold text-primary">
+                              <Coins className="w-6 h-6" />
+                              {plan.price_duelcoins}
+                            </div>
+                            <p className="text-sm text-muted-foreground">{getDurationLabel(plan.duration_type)}</p>
+                          </div>
+
+                          <div className="space-y-2 text-sm">
+                            <div className="flex items-center gap-2">
+                              <Check className="w-4 h-4 text-green-500" />
+                              <span>{t('store.benefit1')}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Check className="w-4 h-4 text-green-500" />
+                              <span>{t('store.benefit2')}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Check className="w-4 h-4 text-green-500" />
+                              <span>{t('store.benefit3')}</span>
+                            </div>
+                          </div>
+
+                          <Button
+                            onClick={() => handlePurchasePlan(plan)}
+                            disabled={purchasingPlan === plan.id || !user || hasActivePlan || !profile || (profile?.duelcoins_balance ?? 0) < plan.price_duelcoins}
+                            className="w-full"
+                            variant={plan.is_featured ? "default" : "outline"}
+                          >
+                            {purchasingPlan === plan.id ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                {t('store.buying')}
+                              </>
+                            ) : !user ? (
+                              t('store.loginToBuy')
+                            ) : hasActivePlan ? (
+                              t('store.planActiveBtn')
+                            ) : (profile?.duelcoins_balance ?? 0) < plan.price_duelcoins ? (
+                              t('store.noBalance')
+                            ) : (
+                              t('store.buyWith', { amount: plan.price_duelcoins })
+                            )}
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+
+              {user && (
+                <div className="mt-4 p-4 bg-muted/50 rounded-lg flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Coins className="w-5 h-5 text-yellow-500" />
+                    <span className="text-sm">{t('store.yourBalance')}</span>
+                    <span className="font-bold text-primary">{profile?.duelcoins_balance || 0} DuelCoins</span>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => window.location.href = '/duelcoins'}>
+                    {t('store.viewBalance')}
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Support Card */}
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm text-muted-foreground text-center">
+                {t('store.supportText')}{" "}
+                {supportEmail && (
+                  <a href={`mailto:${supportEmail}`} className="text-primary hover:underline font-medium">
+                    {supportEmail}
+                  </a>
+                )}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
+    </div>
+  );
+}
