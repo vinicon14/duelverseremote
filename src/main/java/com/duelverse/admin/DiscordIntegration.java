@@ -16,7 +16,7 @@ import java.net.http.HttpResponse;
 
 public class DiscordIntegration {
     private static final Logger logger = LoggerFactory.getLogger(DiscordIntegration.class);
-    private static final String DUELVERSE_API_URL = "https://duelverse.site/api";
+    private static final String DUELVERSE_API_URL = "https://duelverse.site/chat";
     private static final String INVITE_LINK = "https://discord.com/oauth2/authorize?client_id=1495723127357833256&permissions=8&scope=bot";
     private static final String BOT_ID = "1495723127357833256";
     private static final String BOT_NAME = "duelverse";
