@@ -19,21 +19,22 @@ serve(async (req) => {
     const url = new URL(req.url);
     const path = url.pathname;
 
-    // Discord webhook endpoint - Discord sends messages to this URL
     if (path.endsWith("/webhook") || path.includes("discord-webhook")) {
       const payload = await req.json();
       
       console.log("Discord webhook received:", JSON.stringify(payload));
       
-      // Discord sends messages in this format
       if (payload.content || (payload.message && payload.message.content)) {
         const content = payload.content || payload.message?.content;
+        const guildId = payload.guild_id ?? payload.guild?.id;
+        const channelId = payload.channel_id ?? payload.channel?.id;
         const username = payload.author?.username || payload.username || "Discord User";
         
         if (content) {
+          const origin = (guildId && channelId) ? `[Discord ${guildId}:${channelId}]` : "[Discord]";
           const { error } = await supabase.from("global_chat_messages").insert({
             user_id: "discord",
-            username: `[Discord] ${username}`,
+            username: `${origin} ${username}`.trim(),
             message: content,
             tcg_type: "ygopro",
           });
@@ -60,50 +61,63 @@ serve(async (req) => {
     const body = await req.json();
     const { type, username, content, webhookUrl } = body;
 
-    // Send message from DuelVerse chat to Discord
-    if (type === "chat_to_discord" && webhookUrl) {
-      const embed = {
-        embeds: [{
-          title: "💬 Chat Global - DuelVerse",
-          description: content,
-          color: 0x8B5CF6,
-          footer: {
-            text: `Enviado por ${username}`
-          },
-          timestamp: new Date().toISOString()
-        }]
-      };
-
-      const response = await fetch(webhookUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(embed)
-      });
-
-      return new Response(JSON.stringify({ success: response.ok }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (type === "chat_to_discord") {
+      const urls: string[] = [];
+      if (Array.isArray((body as any).webhookUrls)) {
+        (body as any).webhookUrls.forEach((u: string) => urls.push(u));
+      } else if (typeof (body as any).webhookUrl === "string") {
+        urls.push((body as any).webhookUrl);
+      }
+      if (urls.length === 0 && typeof webhookUrl === "string") {
+        urls.push(webhookUrl);
+      }
+      
+      if (urls.length > 0) {
+        const embed = {
+          embeds: [{
+            title: "💬 Chat Global - DuelVerse",
+            description: content,
+            color: 0x8B5CF6,
+            footer: { text: `Enviado por ${username}` },
+            timestamp: new Date().toISOString()
+          }]
+        };
+        const results: Array<{ ok: boolean; url: string }> = [];
+        for (const url of urls) {
+          try {
+            const response = await fetch(url, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(embed)
+            });
+            results.push({ ok: response.ok, url });
+          } catch (e) {
+            results.push({ ok: false, url });
+          }
+        }
+        return new Response(JSON.stringify({ success: results.every(r => r.ok), details: results }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } else {
+        return new Response(JSON.stringify({ error: "No webhook URLs configured" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
-    // Get Discord config (webhook URL and invite link)
     if (type === "get_config") {
       const { data } = await supabase
         .from("system_settings")
         .select("value")
-        .eq("key", "discord_bot_status")
+        .eq("key", "discord_bridge_config")
         .maybeSingle();
 
-      let config = { webhookUrl: "", inviteLink: "", webhookEndpoint: "" };
+      let config = { bridges: [] as any[], webhookEndpoint: "" };
       if (data?.value) {
         const parsed = typeof data.value === 'string' ? JSON.parse(data.value) : data.value;
-        const enabledServers = parsed.servers?.filter((s: any) => s.enabled) || [];
-        if (enabledServers.length > 0) {
-          config = {
-            webhookUrl: enabledServers[0].webhookUrl || "",
-            inviteLink: enabledServers[0].inviteLink || "",
-            webhookEndpoint: `${supabaseUrl}/functions/v1/discord-bridge/webhook`,
-          };
-        }
+        config.bridges = parsed.bridges || [];
+        config.webhookEndpoint = parsed.webhookEndpoint || `${supabaseUrl}/functions/v1/discord-bridge/webhook`;
       }
 
       return new Response(JSON.stringify(config), {
