@@ -246,6 +246,27 @@ export const GlobalChat = () => {
 
       if (error) throw error;
 
+      // Enviar para Discord se houver servidores configurados
+      if (discordServers.length > 0 && discordServers[0].channelId !== "duelverse") {
+        try {
+          await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/discord-bridge`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            },
+            body: JSON.stringify({
+              type: "chat_to_discord",
+              username: currentUser.username,
+              content: newMessage.trim(),
+              serverId: discordServers[0].id,
+              channelId: discordServers[0].channelId,
+            }),
+          });
+        } catch (err) {
+          console.error("Erro ao enviar para Discord:", err);
+        }
+      }
 
       setNewMessage("");
       
