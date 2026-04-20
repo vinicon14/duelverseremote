@@ -35,7 +35,6 @@ export const GlobalChat = () => {
   const [mentionSuggestions, setMentionSuggestions] = useState<{ username: string; user_id: string }[]>([]);
   const [showMentions, setShowMentions] = useState(false);
   const [mentionQuery, setMentionQuery] = useState("");
-  const [discordServers, setDiscordServers] = useState<{ id: string; name: string; channelId: string; inviteLink?: string; webhookUrl?: string }[]>([]);
   const [webhookUrl, setWebhookUrl] = useState<string>("");
   const [inviteLink, setInviteLink] = useState<string>("https://discord.gg/A7GqCGNGNn");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -124,29 +123,27 @@ export const GlobalChat = () => {
 
   const fetchDiscordServers = async () => {
     try {
-      const { data } = await supabase
-        .from("system_settings")
-        .select("value")
-        .eq("key", "discord_bot_status")
-        .maybeSingle();
-
-      if (data?.value) {
-        const parsed = typeof data.value === 'string' ? JSON.parse(data.value) : data.value;
-        const enabledServers = parsed.servers?.filter((s: any) => s.enabled) || [];
-        if (enabledServers.length > 0) {
-          setDiscordServers(enabledServers);
-          const serverWithWebhook = enabledServers.find((s: any) => s.webhookUrl);
-          if (serverWithWebhook) {
-            setWebhookUrl(serverWithWebhook.webhookUrl);
-          }
-          const serverWithInvite = enabledServers.find((s: any) => s.inviteLink);
-          if (serverWithInvite) {
-            setInviteLink(serverWithInvite.inviteLink);
-          }
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/discord-bridge`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({ type: "get_config" }),
         }
+      );
+      const config = await response.json();
+      
+      if (config.webhookUrl) {
+        setWebhookUrl(config.webhookUrl);
+      }
+      if (config.inviteLink) {
+        setInviteLink(config.inviteLink);
       }
     } catch (err) {
-      console.error("Erro ao buscar servidores Discord:", err);
+      console.error("Erro ao buscar configurações Discord:", err);
     }
   };
 
@@ -376,15 +373,14 @@ export const GlobalChat = () => {
             <MessageCircle className="w-5 h-5" />
             Chat Global
           </CardTitle>
-          {discordServers.length > 0 ? (
-            <Button
+          <Button
               variant="outline"
               size="sm"
               className="text-xs"
               asChild
             >
               <a
-                href={inviteLink || discordServers[0]?.inviteLink || "https://discord.gg/A7GqCGNGNn"}
+                href={inviteLink || "https://discord.gg/A7GqCGNGNn"}
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -392,23 +388,6 @@ export const GlobalChat = () => {
                 Discord
               </a>
             </Button>
-          ) : (
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-xs"
-              asChild
-            >
-              <a
-                href={inviteLink}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <ExternalLink className="w-3 h-3 mr-1" />
-                Discord
-              </a>
-            </Button>
-          )}
         </div>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col gap-3 min-h-0 overflow-hidden">
