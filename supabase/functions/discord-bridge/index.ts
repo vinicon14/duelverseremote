@@ -6,15 +6,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface DiscordWebhook payload {
-  type?: number;
-  content?: string;
-  username?: string;
-  attachments?: any[];
-  embeds?: any[];
-  allowed_mentions?: any;
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -28,32 +19,40 @@ serve(async (req) => {
     const url = new URL(req.url);
     const path = url.pathname;
 
-    if (path.startsWith("/discord-webhook")) {
-      const payload: DiscordWebhook = await req.json();
+    // Discord webhook endpoint - Discord sends messages to this URL
+    if (path.endsWith("/webhook") || path.includes("discord-webhook")) {
+      const payload = await req.json();
       
-      if (payload.content && payload.username) {
-        const { error } = await supabase.from("global_chat_messages").insert({
-          user_id: "discord",
-          username: `[Discord] ${payload.username}`,
-          message: payload.content,
-          tcg_type: "ygopro",
-        });
+      console.log("Discord webhook received:", JSON.stringify(payload));
+      
+      // Discord sends messages in this format
+      if (payload.content || (payload.message && payload.message.content)) {
+        const content = payload.content || payload.message?.content;
+        const username = payload.author?.username || payload.username || "Discord User";
+        
+        if (content) {
+          const { error } = await supabase.from("global_chat_messages").insert({
+            user_id: "discord",
+            username: `[Discord] ${username}`,
+            message: content,
+            tcg_type: "ygopro",
+          });
 
-        if (error) {
-          console.error("Error inserting message:", error);
-          return new Response(JSON.stringify({ error: error.message }), {
-            status: 500,
+          if (error) {
+            console.error("Error inserting message:", error);
+            return new Response(JSON.stringify({ error: error.message }), {
+              status: 500,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+
+          return new Response(JSON.stringify({ success: true }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
-
-        return new Response(JSON.stringify({ success: true }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
       }
 
-      return new Response(JSON.stringify({ error: "No content" }), {
-        status: 400,
+      return new Response(JSON.stringify({ ok: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -61,6 +60,7 @@ serve(async (req) => {
     const body = await req.json();
     const { type, username, content, webhookUrl } = body;
 
+    // Send message from DuelVerse chat to Discord
     if (type === "chat_to_discord" && webhookUrl) {
       const embed = {
         embeds: [{
@@ -85,6 +85,7 @@ serve(async (req) => {
       });
     }
 
+    // Get Discord config (webhook URL and invite link)
     if (type === "get_config") {
       const { data } = await supabase
         .from("system_settings")
@@ -92,7 +93,7 @@ serve(async (req) => {
         .eq("key", "discord_bot_status")
         .maybeSingle();
 
-      let config = { webhookUrl: "", inviteLink: "" };
+      let config = { webhookUrl: "", inviteLink: "", webhookEndpoint: "" };
       if (data?.value) {
         const parsed = typeof data.value === 'string' ? JSON.parse(data.value) : data.value;
         const enabledServers = parsed.servers?.filter((s: any) => s.enabled) || [];
@@ -100,6 +101,7 @@ serve(async (req) => {
           config = {
             webhookUrl: enabledServers[0].webhookUrl || "",
             inviteLink: enabledServers[0].inviteLink || "",
+            webhookEndpoint: `${supabaseUrl}/functions/v1/discord-bridge/webhook`,
           };
         }
       }
