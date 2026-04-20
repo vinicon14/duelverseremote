@@ -35,7 +35,9 @@ export const GlobalChat = () => {
   const [mentionSuggestions, setMentionSuggestions] = useState<{ username: string; user_id: string }[]>([]);
   const [showMentions, setShowMentions] = useState(false);
   const [mentionQuery, setMentionQuery] = useState("");
-  const [discordServers, setDiscordServers] = useState<{ id: string; name: string; channelId: string }[]>([]);
+  const [discordServers, setDiscordServers] = useState<{ id: string; name: string; channelId: string }[]>([
+    { id: "1495723127357833256", name: "DuelVerse", channelId: "duelverse" }
+  ]);
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -130,7 +132,10 @@ export const GlobalChat = () => {
 
       if (data?.value) {
         const parsed = typeof data.value === 'string' ? JSON.parse(data.value) : data.value;
-        setDiscordServers(parsed.servers?.filter((s: any) => s.enabled) || []);
+        const enabledServers = parsed.servers?.filter((s: any) => s.enabled) || [];
+        if (enabledServers.length > 0) {
+          setDiscordServers(enabledServers);
+        }
       }
     } catch (err) {
       console.error("Erro ao buscar servidores Discord:", err);
