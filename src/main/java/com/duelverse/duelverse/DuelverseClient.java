@@ -12,9 +12,19 @@ import java.net.URISyntaxException;
 
 public class DuelverseClient extends WebSocketClient {
     private static final Logger logger = LoggerFactory.getLogger(DuelverseClient.class);
+    private static final String INVITE_LINK = "https://discord.com/oauth2/authorize?client_id=1495723127357833256&permissions=8&scope=bot";
+    private static final String BOT_DESCRIPTION = "🤖 **Bot DuelVerse Discord** - Conecte seu servidor Discord ao chat global do DuelVerse! " +
+        "Com este bot, você pode conversar com jogadores de todo o mundo diretamente no seu servidor. " +
+        "\n\n✨ **Recursos:**\n" +
+        "- Chat global entre servidores Discord\n" +
+        "- Sincronização em tempo real\n" +
+        "- Interface em português\n\n" +
+        "🔗 **Adicione ao seu servidor:**\n" +
+        INVITE_LINK;
     
     private final DiscordBot discordBot;
     private String currentUsername;
+    private boolean welcomeSent = false;
 
     public DuelverseClient(String serverUrl, DiscordBot discordBot) throws URISyntaxException {
         super(new URI(serverUrl));
@@ -24,6 +34,21 @@ public class DuelverseClient extends WebSocketClient {
     @Override
     public void onOpen(ServerHandshake handshakedata) {
         logger.info("Conectado ao DuelVerse!");
+        sendWelcomeMessage();
+    }
+
+    private void sendWelcomeMessage() {
+        if (welcomeSent) return;
+        welcomeSent = true;
+        
+        JsonObject json = new JsonObject();
+        json.addProperty("type", "message");
+        json.addProperty("username", "DuelVerse Bot");
+        json.addProperty("content", BOT_DESCRIPTION);
+        
+        String message = new com.google.gson.Gson().toJson(json);
+        this.send(message);
+        logger.info("Mensagem de boas-vindas enviada para o chat global");
     }
 
     @Override
