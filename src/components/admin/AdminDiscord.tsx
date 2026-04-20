@@ -18,6 +18,8 @@ interface DiscordServer {
   name: string;
   enabled: boolean;
   channelId: string;
+  inviteLink?: string;
+  webhookUrl?: string;
 }
 
 interface DiscordBotStatus {
@@ -38,6 +40,9 @@ export function AdminDiscord() {
   const [newServerId, setNewServerId] = useState("");
   const [newServerName, setNewServerName] = useState("");
   const [newChannelId, setNewChannelId] = useState("");
+  const [newInviteLink, setNewInviteLink] = useState("");
+  const [newWebhookUrl, setNewWebhookUrl] = useState("");
+  const [discordBotToken, setDiscordBotToken] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -134,6 +139,39 @@ export function AdminDiscord() {
     }
   };
 
+  const handleCreateWebhook = async (serverId: string, channelId: string) => {
+    if (!discordBotToken) {
+      setError("Bot Token is required to create webhook");
+      return null;
+    }
+
+    try {
+      const response = await fetch(`https://discord.com/api/v10/channels/${channelId}/webhooks`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bot ${discordBotToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: "DuelVerse Bridge",
+          avatar: null,
+        }),
+      });
+
+      if (response.ok) {
+        const webhook = await response.json();
+        return webhook;
+      } else {
+        const err = await response.json();
+        console.error("Webhook creation error:", err);
+        return null;
+      }
+    } catch (err) {
+      console.error("Error creating webhook:", err);
+      return null;
+    }
+  };
+
   const handleAddServer = async () => {
     if (!newServerId || !newChannelId) {
       setError(t("admin.discord.requireIds"));
@@ -143,6 +181,20 @@ export function AdminDiscord() {
     setSaving(true);
     setError(null);
     setSuccess(null);
+
+    let webhookUrl = newWebhookUrl;
+    let inviteLink = newInviteLink;
+
+    if (!webhookUrl && discordBotToken) {
+      const webhook = await handleCreateWebhook(newServerId, newChannelId);
+      if (webhook) {
+        webhookUrl = `https://discord.com/api/webhooks/${webhook.id}/${webhook.token}`;
+      }
+    }
+
+    if (!inviteLink) {
+      inviteLink = `https://discord.gg/${newChannelId}`;
+    }
 
     try {
       const existingServer = servers.find(s => s.id === newServerId);
@@ -157,12 +209,16 @@ export function AdminDiscord() {
         name: newServerName || `Server ${newServerId}`,
         enabled: true,
         channelId: newChannelId,
+        inviteLink,
+        webhookUrl,
       }];
       
       await saveToSupabase(newServers);
       setNewServerId("");
       setNewServerName("");
       setNewChannelId("");
+      setNewInviteLink("");
+      setNewWebhookUrl("");
       setSuccess(t("admin.discord.serverAdded"));
     } catch (err) {
       console.error("Erro ao adicionar servidor:", err);
@@ -328,15 +384,29 @@ export function AdminDiscord() {
           <CardHeader className="pb-3">
             <CardTitle className="text-sm">{t("admin.discord.addServer")}</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <CardContent className="space-y-4">
+            <div className="bg-muted p-3 rounded-lg">
+              <Label htmlFor="discordBotToken">Discord Bot Token (to auto-create webhook)</Label>
+              <Input
+                id="discordBotToken"
+                type="password"
+                value={discordBotToken}
+                onChange={(e) => setDiscordBotToken(e.target.value)}
+                placeholder="MTE0OTU3MTI3MzU3ODMzMjU2.G..."
+                className="mt-1"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Required to automatically create webhooks. Get your bot token from Discord Developer Portal.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <Label htmlFor="serverId">{t("admin.discord.serverId")}</Label>
                 <Input
                   id="serverId"
                   value={newServerId}
                   onChange={(e) => setNewServerId(e.target.value)}
-                  placeholder="123456789"
+                  placeholder="Server ID"
                 />
               </div>
               <div>
@@ -354,7 +424,26 @@ export function AdminDiscord() {
                   id="channelId"
                   value={newChannelId}
                   onChange={(e) => setNewChannelId(e.target.value)}
-                  placeholder="123456789"
+                  placeholder="Channel ID"
+                />
+              </div>
+              <div>
+                <Label htmlFor="inviteLink">Invite Link</Label>
+                <Input
+                  id="inviteLink"
+                  value={newInviteLink}
+                  onChange={(e) => setNewInviteLink(e.target.value)}
+                  placeholder="https://discord.gg/xxx"
+                />
+              </div>
+              <div>
+                <Label htmlFor="webhookUrl">Webhook URL</Label>
+                <Input
+                  id="webhookUrl"
+                  type="password"
+                  value={newWebhookUrl}
+                  onChange={(e) => setNewWebhookUrl(e.target.value)}
+                  placeholder="https://discord.com/api/webhooks/..."
                 />
               </div>
               <div className="flex items-end">
