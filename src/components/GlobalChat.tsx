@@ -356,7 +356,9 @@ export const GlobalChat = () => {
               asChild
             >
               <a
-                href={`https://discord.gg/${discordServers[0].channelId}`}
+                href={discordServers[0].channelId === "duelverse" 
+                  ? "https://discord.com/oauth2/authorize?client_id=1495723127357833256&permissions=8&scope=bot"
+                  : `https://discord.gg/${discordServers[0].channelId}`}
                 target="_blank"
                 rel="noopener noreferrer"
               >
