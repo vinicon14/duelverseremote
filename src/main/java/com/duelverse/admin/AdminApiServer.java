@@ -19,7 +19,7 @@ import java.util.function.Consumer;
 
 public class AdminApiServer {
     private static final Logger logger = LoggerFactory.getLogger(AdminApiServer.class);
-    private static final int DEFAULT_PORT = duelverse.site/duels;
+    private static final int DEFAULT_PORT = 8080;
     
     private final DiscordServerManager serverManager;
     private final int port;
