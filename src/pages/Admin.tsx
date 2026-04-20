@@ -65,7 +65,7 @@ export default function Admin() {
 
         <Tabs defaultValue="news" className="w-full">
           <div className="overflow-x-auto -mx-4 px-4 pb-2">
-            <TabsList className="flex w-max sm:grid sm:w-full sm:grid-cols-12 gap-1">
+            <TabsList className="flex w-max sm:w-full overflow-x-auto gap-1">
             <TabsTrigger value="news">{t('admin.tabs.news')}</TabsTrigger>
               <TabsTrigger value="discord">{t('admin.tabs.discord')}</TabsTrigger>
             <TabsTrigger value="ads">{t('admin.tabs.ads')}</TabsTrigger>
