@@ -761,7 +761,32 @@
       "judges": "Juízes",
       "plans": "Planos",
       "marketplace": "Aprovações",
-      "settings": "Config"
+      "settings": "Config",
+      "discord": "Discord"
+    },
+    "discord": {
+      "title": "Integração Discord",
+      "description": "Gerencie servidores Discord conectados ao DuelVerse",
+      "botStatus": "Status do Bot",
+      "botName": "Nome do Bot",
+      "inviteLink": "Link de Convite",
+      "openInvite": "Abrir",
+      "servers": "Servidores Conectados",
+      "noServers": "Nenhum servidor conectado",
+      "addServer": "Adicionar Novo Servidor",
+      "serverId": "ID do Servidor",
+      "channelId": "ID do Canal",
+      "add": "Adicionar",
+      "remove": "Remover",
+      "sync": "Sincronizar",
+      "serverUpdated": "Servidor atualizado com sucesso",
+      "serverAdded": "Servidor adicionado com sucesso",
+      "serverRemoved": "Servidor removido com sucesso",
+      "errorUpdating": "Erro ao atualizar servidor",
+      "errorAdding": "Erro ao adicionar servidor",
+      "errorRemoving": "Erro ao remover servidor",
+      "connectionError": "Erro de conexão",
+      "requireIds": "ID do servidor e ID do canal são obrigatórios"
     }
   },
   "judgePanel": {

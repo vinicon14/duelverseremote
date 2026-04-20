@@ -22,6 +22,7 @@ import { AdminJudges } from "@/components/admin/AdminJudges";
 import { AdminSubscriptionPlans } from "@/components/admin/AdminSubscriptionPlans";
 import { AdminMarketplace } from "@/components/admin/AdminMarketplace";
 import { AdminDuelCoinsPackages } from "@/components/admin/AdminDuelCoinsPackages";
+import { AdminDiscord } from "@/components/admin/AdminDiscord";
 import { Shield, Loader2 } from "lucide-react";
 
 export default function Admin() {
@@ -64,8 +65,9 @@ export default function Admin() {
 
         <Tabs defaultValue="news" className="w-full">
           <div className="overflow-x-auto -mx-4 px-4 pb-2">
-            <TabsList className="flex w-max sm:grid sm:w-full sm:grid-cols-11 gap-1">
+            <TabsList className="flex w-max sm:grid sm:w-full sm:grid-cols-12 gap-1">
             <TabsTrigger value="news">{t('admin.tabs.news')}</TabsTrigger>
+              <TabsTrigger value="discord">{t('admin.tabs.discord')}</TabsTrigger>
             <TabsTrigger value="ads">{t('admin.tabs.ads')}</TabsTrigger>
             <TabsTrigger value="users">{t('admin.tabs.users')}</TabsTrigger>
             <TabsTrigger value="duels">{t('admin.tabs.duels')}</TabsTrigger>
@@ -81,6 +83,10 @@ export default function Admin() {
           
           <TabsContent value="news" className="mt-6">
             <AdminNews />
+          </TabsContent>
+          
+          <TabsContent value="discord" className="mt-6">
+            <AdminDiscord />
           </TabsContent>
           
           <TabsContent value="ads" className="mt-6">
