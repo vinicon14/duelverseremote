@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- i18n is handled internally by react-i18next; the runtime updates <html lang> after hydration. -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <meta name="msapplication-TileImage" content="/icons/icon-144x144.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#000000" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Duelverse" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <style>
+      body {
+        background-color: #000000;
+        margin: 0;
+        padding: 0;
+      }
+      #root {
+        min-height: 100vh;
+      }
+    </style>
+    
+    <!-- Google Search Console Verification -->
+    <meta name="google-site-verification" content="VSj-aDxgp8FteJm0hHZOaw6CTXD0msX9wECPkinK8s8" />
+    
+    <!-- Primary SEO Meta Tags (English defaults for global crawlers; SEOHead overrides per locale) -->
+    <title>Duelverse - Live TCG Duels | Yu-Gi-Oh, Magic & Pokémon Online</title>
+    <meta name="title" content="Duelverse - Live TCG Duels | Yu-Gi-Oh, Magic & Pokémon Online" />
+    <meta name="description" content="Duelverse is the global platform for live TCG remote duels with video calls. Play Yu-Gi-Oh, Magic: The Gathering and Pokémon TCG online with players worldwide.">
+    <meta name="keywords" content="TCG, Yu-Gi-Oh, Magic The Gathering, Pokémon TCG, remote duel, duelverse, online duels, live duels, TCG tournaments, ranking, card game, online card game, MTG, PKM, YGO, duelists, video call duel" />
+    <meta name="author" content="Duelverse" />
+    <link rel="canonical" href="https://duelverse.site/" />
+
+    <!-- hreflang alternates for global indexing (root URL — locale switched client-side) -->
+    <link rel="alternate" hreflang="x-default" href="https://duelverse.site/" />
+    <link rel="alternate" hreflang="en"    href="https://duelverse.site/?lang=en" />
+    <link rel="alternate" hreflang="pt-BR" href="https://duelverse.site/?lang=pt-BR" />
+    <link rel="alternate" hreflang="pt-PT" href="https://duelverse.site/?lang=pt-PT" />
+    <link rel="alternate" hreflang="es"    href="https://duelverse.site/?lang=es" />
+    <link rel="alternate" hreflang="fr"    href="https://duelverse.site/?lang=fr" />
+    <link rel="alternate" hreflang="de"    href="https://duelverse.site/?lang=de" />
+    <link rel="alternate" hreflang="it"    href="https://duelverse.site/?lang=it" />
+    <link rel="alternate" hreflang="ja"    href="https://duelverse.site/?lang=ja" />
+    <link rel="alternate" hreflang="ko"    href="https://duelverse.site/?lang=ko" />
+    <link rel="alternate" hreflang="zh"    href="https://duelverse.site/?lang=zh" />
+    <link rel="alternate" hreflang="ru"    href="https://duelverse.site/?lang=ru" />
+    <link rel="alternate" hreflang="nl"    href="https://duelverse.site/?lang=nl" />
+    <link rel="alternate" hreflang="pl"    href="https://duelverse.site/?lang=pl" />
+    <link rel="alternate" hreflang="tr"    href="https://duelverse.site/?lang=tr" />
+    <link rel="alternate" hreflang="ar"    href="https://duelverse.site/?lang=ar" />
+    <link rel="alternate" hreflang="id"    href="https://duelverse.site/?lang=id" />
+
+    <!-- Robots and Indexing -->
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="googlebot" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="bingbot" content="index, follow" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://duelverse.site/" />
+    
+    
+    <meta property="og:image" content="https://storage.googleapis.com/gpt-engineer-file-uploads/KQDINWCdecbnD1jdOuhFAJvMqLm1/social-images/social-1774921112789-Captura_de_tela_2026-03-30_223603.webp">
+    <meta property="og:image:alt" content="Duelverse - Live TCG Duel Platform" />
+    <meta property="og:site_name" content="Duelverse" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:locale:alternate" content="pt_BR" />
+    <meta property="og:locale:alternate" content="pt_PT" />
+    <meta property="og:locale:alternate" content="es_ES" />
+    <meta property="og:locale:alternate" content="fr_FR" />
+    <meta property="og:locale:alternate" content="de_DE" />
+    <meta property="og:locale:alternate" content="it_IT" />
+    <meta property="og:locale:alternate" content="ja_JP" />
+    <meta property="og:locale:alternate" content="ko_KR" />
+    <meta property="og:locale:alternate" content="zh_CN" />
+    <meta property="og:locale:alternate" content="ru_RU" />
+    <meta property="og:locale:alternate" content="nl_NL" />
+    <meta property="og:locale:alternate" content="pl_PL" />
+    <meta property="og:locale:alternate" content="tr_TR" />
+    <meta property="og:locale:alternate" content="ar_SA" />
+    <meta property="og:locale:alternate" content="id_ID" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://duelverse.site/" />
+    
+    
+    <meta name="twitter:image" content="https://storage.googleapis.com/gpt-engineer-file-uploads/KQDINWCdecbnD1jdOuhFAJvMqLm1/social-images/social-1774921112789-Captura_de_tela_2026-03-30_223603.webp">
+    <meta name="twitter:site" content="@duelverse" />
+    <meta name="twitter:creator" content="@duelverse" />
+
+    <!-- Structured Data - WebSite -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Duelverse",
+      "alternateName": ["DuelVerse", "Duel Verse", "Remote Duel", "TCG Online", "Live TCG Duels"],
+      "url": "https://duelverse.site/",
+      "description": "Global platform for live TCG remote duels — Yu-Gi-Oh, Magic: The Gathering and Pokémon TCG with video calls, tournaments and worldwide ranking",
+      "inLanguage": ["en","pt-BR","pt-PT","es","fr","de","it","ja","ko","zh","ru","nl","pl","tr","ar","id"],
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://duelverse.site/ranking?search={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
+
+    <!-- Structured Data - Organization -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Duelverse",
+      "url": "https://duelverse.site/",
+      "logo": "https://duelverse.site/favicon.png",
+      "description": "Global platform for live TCG remote duels — Yu-Gi-Oh, Magic and Pokémon",
+      "foundingDate": "2024",
+      "areaServed": "Worldwide",
+      "sameAs": []
+    }
+    </script>
+
+    <!-- Structured Data - SoftwareApplication -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Duelverse",
+      "applicationCategory": "GameApplication",
+      "operatingSystem": "Web Browser",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "description": "Web app for live TCG duels (Yu-Gi-Oh, Magic, Pokémon) with video calls, ranking and tournaments",
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.8",
+        "ratingCount": "150"
+      }
+    }
+    </script>
+
+    <!-- Structured Data - FAQ -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What is Duelverse?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Duelverse is an online platform for live TCG duels — Yu-Gi-Oh, Magic: The Gathering and Pokémon TCG — with video calls, enabling remote duels between players anywhere in the world."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How does a remote duel on Duelverse work?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "You can create or join live duels with video chat, showing your cards to the opponent in real time and simulating an in-person duel."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is Duelverse free?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes! Duelverse offers free features for all users, including matchmaking, Yu-Gi-Oh, Magic and Pokémon duels, and competitive ranking."
+          }
+        }
+      ]
+    }
+    </script>
+    
+    <!-- Google AdSense loaded dynamically by GoogleAd component -->
+    
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-K1XY1SED02"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-K1XY1SED02');
+    </script>
+    
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  <meta property="og:title" content="Duelverse - Live TCG Duels | Yu-Gi-Oh, Magic & Pokémon Online">
+  <meta name="twitter:title" content="Duelverse - Live TCG Duels | Yu-Gi-Oh, Magic & Pokémon Online">
+  <meta property="og:description" content="Duelverse is the global platform for live TCG remote duels with video calls. Play Yu-Gi-Oh, Magic: The Gathering and Pokémon TCG online with players worldwide.">
+  <meta name="twitter:description" content="Duelverse is the global platform for live TCG remote duels with video calls. Play Yu-Gi-Oh, Magic: The Gathering and Pokémon TCG online with players worldwide.">
+</head>
+
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
