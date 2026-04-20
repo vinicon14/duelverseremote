@@ -26,11 +26,16 @@ public class DiscordBot extends ListenerAdapter {
     private static final Logger logger = LoggerFactory.getLogger(DiscordBot.class);
     
     private final BotConfig config;
-    private final DuelverseClient duelverseClient;
-    private final DiscordMessageHandler messageHandler;
+    private DuelverseClient duelverseClient;
+    private DiscordMessageHandler messageHandler;
     private final Map<String, TextChannel> serverChannels;
     private JDA jda;
     private DiscordServerManager serverManager;
+
+    public void setDuelverseClient(DuelverseClient client) {
+        this.duelverseClient = client;
+        this.messageHandler = new DiscordMessageHandler(client);
+    }
 
     public DiscordBot(BotConfig config, DuelverseClient duelverseClient) {
         this.config = config;

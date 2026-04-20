@@ -1,6 +1,6 @@
 package com.duelverse;
 
-import com.duelverse.admin.AdminApiServer;
+import com.duelverse.admin.DiscordIntegration;
 import com.duelverse.bot.DiscordBot;
 import com.duelverse.config.BotConfig;
 import com.duelverse.duelverse.DuelverseClient;
@@ -13,7 +13,6 @@ import java.util.Scanner;
 
 public class Main {
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
-    private static final int DEFAULT_ADMIN_PORT = 8081;
 
     public static void main(String[] args) {
         BotConfig config = parseArguments(args);
@@ -25,30 +24,31 @@ public class Main {
 
         logger.info("Iniciando DuelVerse Discord Bot...");
         logger.info("DuelVerse URL: {}", config.getDuelverseUrl());
-        logger.info("Admin API porta: {}", DEFAULT_ADMIN_PORT);
 
         try {
             DiscordBot discordBot = new DiscordBot(config, null);
             DuelverseClient duelverseClient = new DuelverseClient(config.getDuelverseUrl(), discordBot);
+            discordBot.setDuelverseClient(duelverseClient);
             
             discordBot.start();
             
             duelverseClient.connect();
             
-            AdminApiServer adminApi = new AdminApiServer(
+            DiscordIntegration discordIntegration = new DiscordIntegration(
+                discordBot,
                 discordBot.getServerManager(),
-                DEFAULT_ADMIN_PORT
+                duelverseClient
             );
-            adminApi.start();
+            discordIntegration.start();
             
             logger.info("========================================");
             logger.info("Bot iniciado com sucesso!");
-            logger.info("Admin API: http://localhost:{}", DEFAULT_ADMIN_PORT);
+            logger.info("Painel Admin: DuelVerse > Aba Admin");
+            logger.info("Link convite: https://discord.com/oauth2/authorize?client_id=1495723127357833256&permissions=8&scope=bot");
             logger.info("========================================");
             
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 logger.info("Encerrando bot...");
-                adminApi.stop();
                 discordBot.shutdown();
                 duelverseClient.close();
             }));
