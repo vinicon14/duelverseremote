@@ -356,8 +356,9 @@ const Auth = () => {
         .auth-cycle-text { animation: auth-text-cycle 9s ease-in-out infinite; }
         .auth-cycle-btn { animation: auth-btn-cycle 9s ease-in-out infinite; }
       `}</style>
-      <div className="fixed inset-0 bg-background" />
-      <div className="fixed inset-0 bg-gradient-to-br from-primary/20 via-background to-accent/20" />
+      <div className="fixed inset-0 pointer-events-none z-0 auth-cycle-bg" />
+      <div className={`absolute inset-0 bg-gradient-to-br ${TCG_OPTIONS.find(o => o.value === selectedTcg)?.bgGradient || 'from-primary/10 via-background to-accent/10'} transition-all duration-700`} />
+      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMzLjMxNCAwIDYgMi42ODYgNiA2cy0yLjY4NiA2LTYgNi02LTIuNjg2LTYtNiAyLjY4Ni02IDYtNnoiIHN0cm9rZT0iIzgwNTBhMCIgc3Ryb2tlLXdpZHRoPSIuNSIgb3BhY2l0eT0iLjEiLz48L2c+PC9zdmc+')] opacity-20" />
       
       <Card className="w-full max-w-md card-mystic animate-slide-up relative z-10">
         <CardHeader className="text-center space-y-2">
