@@ -93,6 +93,51 @@ export type Database = {
           },
         ]
       }
+      discord_links: {
+        Row: {
+          access_token: string | null
+          discord_avatar_url: string | null
+          discord_email: string | null
+          discord_global_name: string | null
+          discord_id: string
+          discord_username: string
+          id: string
+          linked_at: string
+          refresh_token: string | null
+          token_expires_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token?: string | null
+          discord_avatar_url?: string | null
+          discord_email?: string | null
+          discord_global_name?: string | null
+          discord_id: string
+          discord_username: string
+          id?: string
+          linked_at?: string
+          refresh_token?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string | null
+          discord_avatar_url?: string | null
+          discord_email?: string | null
+          discord_global_name?: string | null
+          discord_id?: string
+          discord_username?: string
+          id?: string
+          linked_at?: string
+          refresh_token?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       duel_invites: {
         Row: {
           created_at: string
@@ -2002,6 +2047,14 @@ export type Database = {
         Returns: number
       }
       generate_next_round: { Args: { p_tournament_id: string }; Returns: Json }
+      get_discord_link_for_user: {
+        Args: { p_user_id: string }
+        Returns: {
+          discord_avatar_url: string
+          discord_id: string
+          discord_username: string
+        }[]
+      }
       get_leaderboard:
         | {
             Args: { limit_count?: number }
@@ -2067,6 +2120,14 @@ export type Database = {
           avatar_url: string
           is_online: boolean
           joined_at: string
+          user_id: string
+          username: string
+        }[]
+      }
+      get_user_by_discord_id: {
+        Args: { p_discord_id: string }
+        Returns: {
+          avatar_url: string
           user_id: string
           username: string
         }[]
