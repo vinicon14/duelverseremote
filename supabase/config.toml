@@ -25,3 +25,5 @@ project_id = "xxttwzewtqxvpgefggah"
     verify_jwt = false
   [functions.process-email-queue]
     verify_jwt = true
+  [functions.discord-bridge]
+    verify_jwt = false
