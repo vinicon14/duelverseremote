@@ -17,6 +17,7 @@ import { AvatarUpload } from "@/components/AvatarUpload";
 import { BrowserNotificationTest } from "@/components/BrowserNotificationTest";
 import { ChangePasswordForm } from "@/components/ChangePasswordForm";
 import { LanguageSelector } from "@/components/LanguageSelector";
+import { DiscordLinkCard } from "@/components/DiscordLinkCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR, enUS, es, fr, de, it, ja, ko, zhCN, ru, nl, pl, tr, ar, id as idLocale } from "date-fns/locale";
@@ -325,6 +326,9 @@ const Profile = () => {
                 onLanguageUpdated={(lng) => setProfile({ ...profile, language_code: lng })}
               />
             )}
+
+            {/* Discord Link Card - Only for own profile */}
+            {isOwnProfile && <DiscordLinkCard />}
 
             <Card className="card-mystic animate-fade-in-up delay-300">
               <CardHeader>
