@@ -97,12 +97,17 @@ public class DiscordBot extends ListenerAdapter {
                 String displayName = event.getMember() != null 
                     ? event.getMember().getEffectiveName() 
                     : event.getAuthor().getName();
-                
-                logger.info("Mensagem recebida do Discord ({}): {} - {}", 
-                    guild.getName(), displayName, content);
-                
+
+                String authorId = event.getAuthor().getId();
+                String avatarUrl = event.getAuthor().getEffectiveAvatarUrl();
+
+                logger.info("Mensagem recebida do Discord ({}): [{}] {} - {}",
+                    guild.getName(), authorId, displayName, content);
+
                 messageHandler.handleDiscordMessage(
+                    authorId,
                     displayName,
+                    avatarUrl,
                     content
                 );
             }
