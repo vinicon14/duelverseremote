@@ -18,11 +18,17 @@ serve(async (req) => {
 
     const url = new URL(req.url);
     const path = url.pathname;
+    const isDiscordWebhook =
+      path.endsWith("/webhook") ||
+      path.includes("discord-webhook") ||
+      url.searchParams.get("source") === "discord";
+
+    console.log(`[discord-bridge] ${req.method} path=${path} isWebhook=${isDiscordWebhook}`);
 
     // ===========================================================
     // ENTRADA DO DISCORD (bot Java POSTa aqui)
     // ===========================================================
-    if (path.endsWith("/webhook") || path.includes("discord-webhook")) {
+    if (isDiscordWebhook) {
       const payload = await req.json();
       console.log("Discord webhook received:", JSON.stringify(payload));
 
