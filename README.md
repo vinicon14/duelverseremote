@@ -1,227 +1,183 @@
 # 🂡 DuelVerse - Plataforma de Duelos Online Yu-Gi-Oh!
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Vite-5.4.19-blue" alt="Vite">
-  <img src="https://img.shields.io/badge/React-18.3.1-blue" alt="React">
-  <img src="https://img.shields.io/badge/TypeScript-5.8.3-blue" alt="TypeScript">
-  <img src="https://img.shields.io/badge/Supabase-Realtime-brightgreen" alt="Supabase">
-  <img src="https://img.shields.io/badge/License-MIT-yellow" alt="License">
+  <img src="./duelverse_banner.png" alt="DuelVerse Banner" width="100%">
 </p>
 
-> Desenvolvido por **Vinícius** - Uma plataforma completa para duelistas de Yu-Gi-Oh! jogarem online com videochamada, torneios e muito mais!
+<p align="center">
+  <a href="https://vitejs.dev/">
+    <img src="https://img.shields.io/badge/Vite-5.4.19-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite">
+  </a>
+  <a href="https://reactjs.org/">
+    <img src="https://img.shields.io/badge/React-18.3.1-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React">
+  </a>
+  <a href="https://www.typescriptlang.org/">
+    <img src="https://img.shields.io/badge/TypeScript-5.8.3-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript">
+  </a>
+  <a href="https://supabase.com/">
+    <img src="https://img.shields.io/badge/Supabase-Realtime-3FCF8E?style=for-the-badge&logo=supabase&logoColor=white" alt="Supabase">
+  </a>
+  <a href="https://opensource.org/licenses/MIT">
+    <img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge" alt="License">
+  </a>
+</p>
 
 ---
 
-## 📋 Índice
+<p align="center">
+  <strong>DuelVerse</strong> é um ecossistema digital completo projetado para duelistas de Yu-Gi-Oh! que buscam a experiência competitiva definitiva. Unindo videochamadas em tempo real, economia virtual e um sistema robusto de torneios, levamos o duelo físico para o ambiente remoto com perfeição.
+</p>
 
-- [Sobre o Projeto](#sobre-o-projeto)
-- [Funcionalidades](#funcionalidades)
-- [Tecnologias](#tecnologias)
-- [Estrutura do Projeto](#estrutura-do-projeto)
-- [Como Executar](#como-executar)
-- [Variáveis de Ambiente](#variáveis-de-ambiente)
-- [Contribuição](#contribuição)
-- [Licença](#licença)
-
----
-
-## 🎮 Sobre o Projeto
-
-DuelVerse é uma plataforma completa de duelos online de Yu-Gi-Oh! que permite duelistas de todo o Brasil (e do mundo) jogarem partidas em tempo real com videochamada, sistema de torneios, ranking, loja virtual e muito mais.
-
-O projeto foi desenvolvido com foco em:
-- **Experiência em tempo real** - Partidas sincronizadas via Supabase Realtime
-- **Videochamada** - Integração com Daily.co para comunicação entre duelistas
-- **Sistema completo de torneios** - Torneios semanais e customizados com premiações
-- **Economia virtual** - DuelCoins para compras e premiações
-- **Interface responsiva** - Funciona em desktop e mobile
+<p align="center">
+  <a href="#-funcionalidades">Funcionalidades</a> •
+  <a href="#-tecnologias">Tecnologias</a> •
+  <a href="#-como-executar-localmente">Instalação</a> •
+  <a href="#-contato--suporte">Contato</a>
+</p>
 
 ---
 
-## ✨ Funcionalidades
+## 🚀 O que torna o DuelVerse Único?
 
-### 🗡️ Duelos
-- Criar e entrar em salas de duelo
-- Videochamada em tempo real (Daily.co)
-- Chat durante o duelo
-- Calculadora de Life Points (LP) flutuante e arrastável
-- Sistema de chamadas de juíz
-- Visualizador de deck do oponente
-- Timer sincronizado
-
-### 🎯 Matchmaking
-- Busca automática de oponentes
-- Modos ranqueado e casual
-- Fila de espera em tempo real
-
-### 🏆 Torneios
-- Torneios customizados (criação livre)
-- Torneios semanais com premiação em DuelCoins
-- Sistema de rodadas (Swiss)
-- Gerenciamento de participantes
-- Distribuição automática de premiações
-
-### 🃏 Deck Builder
-- Busca de cartas Yu-Gi-Oh!
-- Criação e edição de decks
-- Reconhecimento de cartas por imagem (IA)
-- Deck público e privado
-
-### 👥 Social
-- Lista de amigos
-- Solicitações de amizade
-- Chat privado com amigos
-- Chat global
-- Status online em tempo real
-
-### 🏅 Sistema de Ranking
-- Leaderboard de jogadores
-- Pontos por vitórias
-- Estatísticas detalhadas
-
-### 💰 DuelCoins
-- Moeda virtual do plataforma
-- Transferência entre usuários
-- Compra de assinaturas Pro
-- Histórico de transações
-
-### 👨‍⚖️ Sistema de Juízes
-- Painel dejuíz para verificar chamadas
-- Registro de decisões
-
-### ⚙️ Administração
-- Gerenciamento de usuários
-- Criação/edição de notícias
-- Gerenciamento de anúncios
-- Configurações do sistema
-
-### 💎 Assinatura Pro
-- Duelos exclusivos Pro
-- Torneios exclusivos
-- Remoção de anúncios
-- Benefícios exclusivos
+| 🗡️ Duelos Sincronizados | 🎥 Videochamada Integrada | 🏆 Torneios Automáticos |
+| :--- | :--- | :--- |
+| Partidas em tempo real via Supabase Realtime, garantindo latência mínima. | Integração nativa com Daily.co para comunicação face-a-face durante o jogo. | Sistema de Swiss Rounds e distribuição automática de premiações. |
 
 ---
 
-## 🛠️ Tecnologias
+## ✨ Funcionalidades em Destaque
 
-### Frontend
-- **React 18** - Framework principal
-- **TypeScript** - Tipagem estática
-- **Vite** - Build tool
-- **React Router v6** - Roteamento
-- **TanStack Query** - Gerenciamento de estado servidor
-- **Tailwind CSS** - Estilização
-- **shadcn/ui** - Componentes UI (Radix UI)
-- **Lucide React** - Ícones
+<details>
+<summary><b>🎮 Experiência de Jogo</b></summary>
+<ul>
+  <li><b>Salas de Duelo:</b> Criação instantânea com suporte a observadores.</li>
+  <li><b>Calculadora LP:</b> Interface flutuante e arrastável inspirada em interfaces modernas de jogos.</li>
+  <li><b>Chat Realtime:</b> Comunicação integrada para coordenação de jogadas.</li>
+  <li><b>Timer de Duelo:</b> Controle rigoroso de tempo para ambiente competitivo.</li>
+</ul>
+</details>
 
-### Backend/Services
-- **Supabase** - Backend-as-a-Service
-  - Autentica��ão
-  - Banco de dados PostgreSQL
-  - Realtime subscriptions
-  - Edge Functions
-- **Daily.co** - Videochamadas
+<details>
+<summary><b>🃏 Deck Builder & IA</b></summary>
+<ul>
+  <li><b>Busca Inteligente:</b> Acesso à base de dados completa de cartas.</li>
+  <li><b>Reconhecimento de Cartas:</b> Upload de imagens para identificação automática via IA.</li>
+  <li><b>Gestão de Decks:</b> Exporte, importe e organize seus decks com facilidade.</li>
+</ul>
+</details>
 
-### Ferramentas
-- **ESLint** - Linting
-- **TypeScript** - Compilação
-- **PostgreSQL** - Banco de dados
+<details>
+<summary><b>💰 Economia & Social</b></summary>
+<ul>
+  <li><b>DuelCoins:</b> Ganhe moedas em duelos e torneios.</li>
+  <li><b>Loja Virtual:</b> Adquira assinaturas Pro e cosméticos exclusivos.</li>
+  <li><b>Sistema de Amigos:</b> Veja quem está online e convide para um duelo direto.</li>
+</ul>
+</details>
 
 ---
 
-## 📁 Estrutura do Projeto
+## 🛠️ Stack Tecnológica
 
-```
+<p align="left">
+  <img src="https://skillicons.dev/icons?i=react,ts,vite,tailwind,supabase,postgres,electron,git" />
+</p>
+
+- **Frontend:** React + TypeScript + Tailwind CSS
+- **Backend:** Supabase (Auth, DB, Realtime, Edge Functions)
+- **Desktop:** Electron (Integração desktop)
+- **Vídeo:** Daily.co SDK
+- **Mobile:** Capacitor (Suporte Android/iOS)
+
+---
+
+## 📁 Estrutura de Pastas
+
+```bash
 duelverseremote/
-├── src/
-│   ├── components/
-│   │   ├── ui/              # Componentes shadcn/ui
-│   │   ├── admin/          # Componentes do painel admin
-│   │   ├── deckbuilder/    # Componentes do Deck Builder
-│   │   ├── duel/           # Componentes de duelo
-│   │   └── ...
-│   ├── pages/
-│   │   ├── pro/            # Páginas Pro
-│   │   └── ...
-│   ├── hooks/              # Custom React Hooks
-│   ├── integrations/
-│   │   └── supabase/       # Cliente e tipos Supabase
-│   ├── utils/              # Funções utilitárias
-│   ├── types/              # Tipos TypeScript
-│   └── layouts/            # Layouts da aplicação
-├── supabase/
-│   └── functions/          # Edge Functions do Supabase
-├── database/               # Migrações do banco
-└── public/                 # Arquivos estáticos
+├── 📱 android/          # Código nativo Android (Capacitor)
+├── ⚡ electron/         # Main process e builds desktop
+├── 🗄️ supabase/         # Edge Functions e schemas do banco
+├── 🧪 database/         # Scripts de migração SQL
+└── ⚛️ src/
+    ├── 🧩 components/   # UI Reutilizável (shadcn/ui)
+    ├── 📄 pages/        # Visões da aplicação
+    ├── 🎣 hooks/        # Lógica React desacoplada
+    └── 🔗 integrations/ # Configurações de serviços externos
 ```
 
 ---
 
-## 🚀 Como Executar
+## 🚀 Como Executar Localmente
 
-### Pré-requisitos
-- Node.js 18+
-- npm ou yarn
+### 1. Preparação do Ambiente
 
-### Instalação
+Certifique-se de ter o **Node.js 18+** e o **npm/yarn** instalados.
 
-1. Clone o repositório:
+### 2. Instalação
+
 ```bash
+# Clone o repositório
 git clone https://github.com/vinicon14/duelverseremote.git
-cd duelverseremote
-```
 
-2. Instale as dependências:
-```bash
+# Entre no diretório
+cd duelverseremote
+
+# Instale as dependências
 npm install
 ```
 
-3. Configure as variáveis de ambiente:
-```bash
-cp .env.example .env
-# Edite o arquivo .env com suas configurações
+### 3. Configuração
+
+Renomeie o arquivo `.env.example` para `.env` e preencha suas credenciais do Supabase:
+
+```env
+VITE_SUPABASE_URL=seu_projeto.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=sua_chave_anon
 ```
 
-4. Inicie o servidor de desenvolvimento:
+### 4. Rodando o Projeto
+
 ```bash
 npm run dev
 ```
 
-5. Acesse em: `http://127.0.0.1:8080`
-
-### Build para Produção
-```bash
-npm run build
-```
-
-### Preview do Build
-```bash
-npm run preview
-```
+Acesse em `http://localhost:8080` e que os duelos comecem!
 
 ---
 
-## 🔐 Variáveis de Ambiente
+## 💎 Vantagens do Plano Pro
 
-Crie um arquivo `.env` com as seguintes variáveis:
-
-```env
-VITE_SUPABASE_URL=your_supabase_url
-VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_anon_key
-```
+| Benefício | Free | Pro |
+| :--- | :---: | :---: |
+| Duelos Ilimitados | ✅ | ✅ |
+| Torneios Premium | ❌ | ✅ |
+| Sem Anúncios | ❌ | ✅ |
+| Badge Exclusiva | ❌ | ✅ |
+| Suporte Prioritário | ❌ | ✅ |
 
 ---
 
 ## 🤝 Contribuição
 
-Contribuições são bem-vindas! Sinta-se livre para:
+Sua ajuda é muito bem-vinda! Siga o fluxo abaixo:
 
-1. Fork o projeto
-2. Criar uma branch (`git checkout -b feature/nova-funcionalidade`)
-3. Commit suas mudanças (`git commit -m 'Adiciona nova funcionalidade'`)
-4. Push para a branch (`git push origin feature/nova-funcionalidade`)
-5. Abrir um Pull Request
+1. 🍴 **Fork** o projeto
+2. 🌿 Crie sua **Branch** (`git checkout -b feature/AmazingFeature`)
+3. 💾 **Commit** suas mudanças (`git commit -m 'Add some AmazingFeature'`)
+4. 🚀 **Push** para a Branch (`git push origin feature/AmazingFeature`)
+5. ⤴️ Abra um **Pull Request**
+
+---
+
+## 📞 Contato & Suporte
+
+<p align="left">
+<a href="https://github.com/vinicon14" target="blank"><img align="center" src="https://img.shields.io/badge/github-%23121011.svg?style=for-the-badge&logo=github&logoColor=white" alt="vinicon14" /></a>
+<a href="https://duelverse.com.br" target="blank"><img align="center" src="https://img.shields.io/badge/website-000000?style=for-the-badge&logo=about.me&logoColor=white" alt="DuelVerse" /></a>
+</p>
+
+Desenvolvido com ❤️ por **Vinícius**.
 
 ---
 
@@ -229,17 +185,6 @@ Contribuições são bem-vindas! Sinta-se livre para:
 
 Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
 
----
-
-## 📞 Contato
-
-Desenvolvido por **Vinícius**
-
-- GitHub: [vinicon14](https://github.com/vinicon14)
-- Plataforma: [DuelVerse](https://duelverse.com.br)
-
----
-
 <p align="center">
-  <strong>🂡 Que os duelistas marquem suas cartas! 🂡</strong>
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=auto&height=100&section=footer" />
 </p>
