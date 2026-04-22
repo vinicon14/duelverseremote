@@ -177,7 +177,7 @@ Sua ajuda é muito bem-vinda! Siga o fluxo abaixo:
 <a href="https://duelverse.com.br" target="blank"><img align="center" src="https://img.shields.io/badge/website-000000?style=for-the-badge&logo=about.me&logoColor=white" alt="DuelVerse" /></a>
 </p>
 
-Desenvolvido com ❤️ por **Vinícius**.
+Desenvolvido por **Vinícius**.
 
 ---
 
