@@ -49,7 +49,7 @@ serve(async (req) => {
       path.endsWith("/webhook") ||
       path.includes("discord-webhook") ||
       url.searchParams.get("source") === "discord" ||
-      (!requestType && Boolean(content && discordUserId));
+      Boolean(body?.author?.id || body?.message?.author?.id || (body?.content && body?.author));
 
     console.log(
       `[discord-bridge] ${req.method} path=${path} isWebhook=${isDiscordWebhook} type=${requestType ?? "none"} author=${discordUserId ?? "none"}`,
