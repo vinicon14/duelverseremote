@@ -247,21 +247,21 @@ export const GlobalChat = () => {
 
       if (bridgeEnabled) {
         try {
-          await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/discord-bridge`, {
+          const bridgeResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/discord-bridge`, {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-            },
             body: JSON.stringify({
               type: "chat_to_discord",
+              content: content,
               username: currentUser.username,
-              content,
+              avatarUrl: currentUser.avatar_url,
               userId: currentUser.id,
             }),
           });
+          if (!bridgeResponse.ok) {
+            console.warn("Discord bridge returned an error:", await bridgeResponse.text());
+          }
         } catch (bridgeError) {
-          console.error("Erro ao enviar para Discord:", bridgeError);
+          console.error("Erro ao enviar para o Discord bridge:", bridgeError);
         }
       }
 

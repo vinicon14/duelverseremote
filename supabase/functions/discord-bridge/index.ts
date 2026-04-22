@@ -166,8 +166,11 @@ serve(async (req) => {
     }
 
     if (type === "chat_to_discord") {
-      const activeServers = (botStatus.servers || []).filter((server: any) => server.enabled && server.webhookUrl);
+      const servers = Array.isArray(botStatus.servers) ? botStatus.servers : [];
+      const activeServers = servers.filter((server: any) => server.enabled && server.webhookUrl);
       const urls: string[] = activeServers.map((server: any) => server.webhookUrl);
+
+      console.log(`[discord-bridge] chat_to_discord: found ${urls.length} active webhooks`);
 
       if (urls.length === 0) {
         return jsonResponse({ error: "No active Discord server configured" }, 400);
@@ -186,12 +189,12 @@ serve(async (req) => {
 
       const webhookPayload = {
         content: body.content,
-        username: finalUsername || "DuelVerse",
+        username: finalUsername || "DuelVerse Player",
         avatar_url: finalAvatar || undefined,
-        allowed_mentions: { parse: [] },
+        allowed_mentions: { parse: ["users"] },
       };
 
-      const results: Array<{ ok: boolean; url: string }> = [];
+      const results: Array<{ ok: boolean; url: string; status?: number }> = [];
       for (const targetUrl of urls) {
         try {
           const response = await fetch(targetUrl, {
@@ -199,32 +202,36 @@ serve(async (req) => {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(webhookPayload),
           });
-          results.push({ ok: response.ok, url: targetUrl });
-        } catch {
+          results.push({ ok: response.ok, url: targetUrl, status: response.status });
+          console.log(`[discord-bridge] webhook sent to ${targetUrl.substring(0, 40)}... status=${response.status}`);
+        } catch (err) {
+          console.error(`[discord-bridge] webhook error for ${targetUrl}:`, err);
           results.push({ ok: false, url: targetUrl });
         }
       }
 
       return jsonResponse({
-        success: results.every((result) => result.ok),
-        details: results,
+        success: results.some((result) => result.ok),
+        results,
       });
     }
 
     if (type === "get_config") {
+      const servers = Array.isArray(botStatus.servers) ? botStatus.servers : [];
       let inviteLink = botStatus.inviteLink;
-      if (!inviteLink && botStatus.servers?.length > 0) {
-        const serverWithLink = botStatus.servers.find((server: any) => server.inviteLink);
+      if (!inviteLink && servers.length > 0) {
+        const serverWithLink = servers.find((server: any) => server.inviteLink);
         inviteLink = serverWithLink ? serverWithLink.inviteLink : inviteLink;
       }
 
-      const bridgeEnabled = (botStatus.servers || []).some((server: any) => server.enabled && server.webhookUrl);
+      const bridgeEnabled = servers.some((server: any) => server.enabled && server.webhookUrl);
+      console.log(`[discord-bridge] get_config: bridgeEnabled=${bridgeEnabled}`);
       return jsonResponse({ inviteLink, bridgeEnabled });
     }
 
-    return jsonResponse({ error: "Invalid request" }, 400);
+    return jsonResponse({ error: "Invalid request type: " + type }, 400);
   } catch (error: any) {
-    console.error("[discord-bridge] unexpected error:", error);
+    console.error("[discord-bridge] critical error:", error);
     return jsonResponse({ error: error.message }, 500);
   }
 });
