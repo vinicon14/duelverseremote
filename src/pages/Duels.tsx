@@ -14,8 +14,9 @@ import { Label } from "@/components/ui/label";
 import { Navbar } from "@/components/Navbar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { Swords, Plus, Users, Clock, Download, Monitor, Smartphone, Share2, Search, Sparkles } from "lucide-react";
+import { Swords, Plus, Users, Clock, Download, Search, Sparkles } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Link } from "react-router-dom";
 import { useBanCheck } from "@/hooks/useBanCheck";
 import { AdPopup } from "@/components/AdPopup";
 import { GlobalChat } from "@/components/GlobalChat";
@@ -40,9 +41,7 @@ const Duels = () => {
   const [showAdPopup, setShowAdPopup] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [pendingAction, setPendingAction] = useState<{ type: 'create' | 'join', duelId?: string } | null>(null);
-  const [showDownloadDialog, setShowDownloadDialog] = useState(false);
-  const [windowsDownloadUrl, setWindowsDownloadUrl] = useState("");
-  const [androidDownloadUrl, setAndroidDownloadUrl] = useState("");
+
   const platform = detectPlatform();
   const isWebBrowser = !platform.isStandalone && !(window as any).electronAPI?.isElectron && !platform.isNativeApp;
 
@@ -50,17 +49,7 @@ const Duels = () => {
     checkAuth();
     fetchDuels();
     
-    const fetchDownloadLinks = async () => {
-      const { data } = await supabase
-        .from('system_settings')
-        .select('key, value')
-        .in('key', ['windows_download_url', 'android_download_url']);
-      if (data) {
-        setWindowsDownloadUrl(data.find(i => i.key === 'windows_download_url')?.value || '');
-        setAndroidDownloadUrl(data.find(i => i.key === 'android_download_url')?.value || '');
-      }
-    };
-    fetchDownloadLinks();
+
 
     const cleanupEmptyRooms = async () => {
       try {
@@ -361,57 +350,12 @@ const Duels = () => {
 
               <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                 {isWebBrowser && (
-                  <Dialog open={showDownloadDialog} onOpenChange={setShowDownloadDialog}>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" className="w-full sm:w-auto">
-                        <Download className="mr-2 h-4 w-4" />
-                        {t('duels.download')}
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="card-mystic">
-                      <DialogHeader>
-                        <DialogTitle className="text-gradient-mystic">{t('duels.downloadTitle')}</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-3">
-                        {windowsDownloadUrl && (
-                          <a href={windowsDownloadUrl} target="_blank" rel="noopener noreferrer">
-                            <Button variant="outline" className="w-full justify-start gap-3">
-                              <Monitor className="h-5 w-5 text-blue-400" />
-                              <div className="text-left">
-                                <p className="font-semibold">Windows</p>
-                                <p className="text-xs text-muted-foreground">{t('duels.windowsApp')}</p>
-                              </div>
-                            </Button>
-                          </a>
-                        )}
-                        {androidDownloadUrl && (
-                          <a href={androidDownloadUrl} target="_blank" rel="noopener noreferrer" className="block mt-2">
-                            <Button variant="outline" className="w-full justify-start gap-3">
-                              <Smartphone className="h-5 w-5 text-green-400" />
-                              <div className="text-left">
-                                <p className="font-semibold">Android</p>
-                                <p className="text-xs text-muted-foreground">{t('duels.androidApp')}</p>
-                              </div>
-                            </Button>
-                          </a>
-                        )}
-                        <Button
-                          variant="outline"
-                          className="w-full justify-start gap-3 mt-2"
-                          onClick={() => {
-                            setShowDownloadDialog(false);
-                            window.location.href = '/install-app';
-                          }}
-                        >
-                          <Share2 className="h-5 w-5 text-purple-400" />
-                          <div className="text-left">
-                            <p className="font-semibold">{t('duels.pwaTitle')}</p>
-                            <p className="text-xs text-muted-foreground">{t('duels.pwaDesc')}</p>
-                          </div>
-                        </Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
+                  <Link to="/install-app">
+                    <Button variant="outline" className="w-full sm:w-auto">
+                      <Download className="mr-2 h-4 w-4" />
+                      {t('duels.download')}
+                    </Button>
+                  </Link>
                 )}
                 <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
                 <DialogTrigger asChild>

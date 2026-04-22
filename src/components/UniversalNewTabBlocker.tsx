@@ -63,7 +63,7 @@ export const UniversalNewTabBlocker = () => {
         const safeDomains = [
           'discord.com', 'discord.gg', 'youtube.com', 'youtu.be',
           'twitter.com', 'x.com', 'github.com', 'stackoverflow.com',
-          'reddit.com', 'wikipedia.org', 'google.com', 'stackoverflow.com'
+          'reddit.com', 'wikipedia.org', 'google.com', 'supabase.co', 'supabase.in'
         ];
         
         const isSafeDomain = safeDomains.some(domain => 
