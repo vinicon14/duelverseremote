@@ -59,7 +59,7 @@ export const SEOHead = ({
   const finalDescription = description ?? t(`seo.${tKey}Description`);
   const finalKeywords = keywords ?? t(`seo.${tKey}Keywords`, { defaultValue: "" });
   const canonical = `${BASE_URL}${path}`;
-  const ogImage = image ?? "https://duelverse.site/og-image.jpg";
+  const ogImage = image ?? "https://duelverse.site/og-image.png";
 
   return (
     <Helmet>
