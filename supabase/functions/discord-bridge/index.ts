@@ -74,23 +74,36 @@ serve(async (req) => {
         return jsonResponse({ error: linkedUserError.message }, 500);
       }
 
-      if (!linkedUser || linkedUser.length === 0) {
-        console.log(`[discord-bridge] skipped unlinked discord user ${discordUserId}`);
-        return jsonResponse({
-          ok: true,
-          skipped: "discord_account_not_linked",
-          hint: "User must link their Discord account at duelverse.site/profile",
-        });
+      let userIdToUse;
+      let usernameLabel;
+      let finalContent = normalizedContent;
+
+      if (linkedUser && linkedUser.length > 0) {
+        userIdToUse = linkedUser[0].user_id;
+        usernameLabel = linkedUser[0].username;
+      } else {
+        // Fallback for unlinked users: Find the first available profile to use as a placeholder
+        const { data: fallbackProfiles } = await supabase
+          .from("profiles")
+          .select("user_id, username")
+          .limit(1);
+        
+        if (fallbackProfiles && fallbackProfiles.length > 0) {
+          userIdToUse = fallbackProfiles[0].user_id;
+          usernameLabel = `Discord: ${discordUsername}`;
+          finalContent = `[Discord: ${discordUsername}] ${normalizedContent}`;
+        } else {
+          console.log(`[discord-bridge] no profiles found for fallback`);
+          return jsonResponse({ ok: true, skipped: "no_profiles_available" });
+        }
       }
 
-      const userIdToUse = linkedUser[0].user_id;
-      const usernameLabel = linkedUser[0].username;
       const tcgType = typeof body?.tcg_type === "string" ? body.tcg_type : "yugioh";
       const languageCode = typeof body?.language_code === "string" ? body.language_code : "en";
 
       const { error } = await supabase.from("global_chat_messages").insert({
         user_id: userIdToUse,
-        message: normalizedContent,
+        message: finalContent,
         tcg_type: tcgType,
         language_code: languageCode,
       });
