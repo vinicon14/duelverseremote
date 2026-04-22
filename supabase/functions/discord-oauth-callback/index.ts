@@ -6,6 +6,29 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+type OAuthState = {
+  user_id: string;
+  nonce: string;
+  ts: number;
+  origin?: string;
+  return_path?: string;
+};
+
+const getSafeTarget = (origin?: string, returnPath?: string) => {
+  const safeOrigin = typeof origin === "string" && /^https?:\/\//.test(origin)
+    ? origin
+    : "https://duelverse.site";
+  const safeReturnPath = typeof returnPath === "string" && returnPath.startsWith("/")
+    ? returnPath
+    : "/profile";
+
+  try {
+    return new URL(safeReturnPath, safeOrigin);
+  } catch {
+    return new URL("/profile", "https://duelverse.site");
+  }
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -16,11 +39,8 @@ serve(async (req) => {
   const state = url.searchParams.get("state");
   const errorParam = url.searchParams.get("error");
 
-  // Origem para redirecionar de volta
-  const appOrigin = url.searchParams.get("origin") || "https://duelverse.site";
-
-  const redirectBack = (status: "success" | "error", message?: string) => {
-    const target = new URL(`${appOrigin}/profile`);
+  const redirectBack = (status: "success" | "error", message?: string, parsedState?: OAuthState) => {
+    const target = getSafeTarget(parsedState?.origin, parsedState?.return_path);
     target.searchParams.set("discord", status);
     if (message) target.searchParams.set("message", message);
     return Response.redirect(target.toString(), 302);
@@ -35,16 +55,15 @@ serve(async (req) => {
   }
 
   try {
-    let parsedState: { user_id: string; nonce: string; ts: number };
+    let parsedState: OAuthState;
     try {
       parsedState = JSON.parse(atob(state));
     } catch {
       return redirectBack("error", "invalid_state");
     }
 
-    // Estado expira em 10 minutos
     if (Date.now() - parsedState.ts > 10 * 60 * 1000) {
-      return redirectBack("error", "state_expired");
+      return redirectBack("error", "state_expired", parsedState);
     }
 
     const clientId = Deno.env.get("DISCORD_CLIENT_ID")!;
@@ -54,7 +73,6 @@ serve(async (req) => {
 
     const redirectUri = `${supabaseUrl}/functions/v1/discord-oauth-callback`;
 
-    // Trocar código por token
     const tokenResp = await fetch("https://discord.com/api/oauth2/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -70,19 +88,18 @@ serve(async (req) => {
     if (!tokenResp.ok) {
       const errText = await tokenResp.text();
       console.error("Token exchange failed:", errText);
-      return redirectBack("error", "token_exchange_failed");
+      return redirectBack("error", "token_exchange_failed", parsedState);
     }
 
     const tokenData = await tokenResp.json();
     const { access_token, refresh_token, expires_in } = tokenData;
 
-    // Buscar dados do usuário Discord
     const userResp = await fetch("https://discord.com/api/users/@me", {
       headers: { Authorization: `Bearer ${access_token}` },
     });
 
     if (!userResp.ok) {
-      return redirectBack("error", "user_fetch_failed");
+      return redirectBack("error", "user_fetch_failed", parsedState);
     }
 
     const discordUser = await userResp.json();
@@ -92,7 +109,6 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    // Verificar se este Discord ID já está vinculado a outra conta
     const { data: existing } = await supabase
       .from("discord_links")
       .select("user_id")
@@ -100,10 +116,9 @@ serve(async (req) => {
       .maybeSingle();
 
     if (existing && existing.user_id !== parsedState.user_id) {
-      return redirectBack("error", "discord_already_linked");
+      return redirectBack("error", "discord_already_linked", parsedState);
     }
 
-    // Upsert da vinculação
     const { error: upsertError } = await supabase
       .from("discord_links")
       .upsert({
@@ -121,10 +136,10 @@ serve(async (req) => {
 
     if (upsertError) {
       console.error("Upsert error:", upsertError);
-      return redirectBack("error", "save_failed");
+      return redirectBack("error", "save_failed", parsedState);
     }
 
-    return redirectBack("success");
+    return redirectBack("success", undefined, parsedState);
   } catch (error: any) {
     console.error("discord-oauth-callback error:", error);
     return redirectBack("error", "internal_error");
