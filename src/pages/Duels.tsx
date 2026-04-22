@@ -364,7 +364,7 @@ const Duels = () => {
                     {t('duels.createDuel')}
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="card-mystic">
+                <DialogContent className="card-mystic max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle className="text-gradient-mystic">{t('duels.createRoom')}</DialogTitle>
                   </DialogHeader>

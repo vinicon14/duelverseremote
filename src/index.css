@@ -177,7 +177,6 @@ All colors MUST be HSL.
     overflow-x: hidden;
     position: relative;
     width: 100%;
-    zoom: 0.8;
   }
 
   /* Fix iOS input zoom */
