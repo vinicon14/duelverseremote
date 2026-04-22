@@ -4,11 +4,11 @@ android {
     namespace "com.duelverse.app"
     compileSdk rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.duelverse.app.v12"
+        applicationId "com.duelverse.app.v13"
         minSdkVersion 24
         targetSdkVersion 34
-        versionCode 120
-        versionName "1.2.0"
+        versionCode 130
+        versionName "1.3.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
