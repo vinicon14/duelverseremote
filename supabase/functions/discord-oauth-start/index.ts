@@ -23,7 +23,6 @@ serve(async (req) => {
       });
     }
 
-    // Verificar autenticação do usuário
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "No auth header" }), {
@@ -43,11 +42,27 @@ serve(async (req) => {
       });
     }
 
-    // Gerar state aleatório com user_id codificado
+    let origin = "https://duelverse.site";
+    let returnPath = "/profile";
+
+    try {
+      const body = await req.json();
+      if (typeof body?.origin === "string" && /^https?:\/\//.test(body.origin)) {
+        origin = body.origin;
+      }
+      if (typeof body?.returnPath === "string" && body.returnPath.startsWith("/")) {
+        returnPath = body.returnPath;
+      }
+    } catch {
+      // body is optional
+    }
+
     const state = btoa(JSON.stringify({
       user_id: userData.user.id,
       nonce: crypto.randomUUID(),
       ts: Date.now(),
+      origin,
+      return_path: returnPath,
     }));
 
     const redirectUri = `${supabaseUrl}/functions/v1/discord-oauth-callback`;
