@@ -49,13 +49,21 @@ serve(async (req) => {
       path.endsWith("/webhook") ||
       path.includes("discord-webhook") ||
       url.searchParams.get("source") === "discord" ||
-      Boolean(body?.author?.id || body?.message?.author?.id || (body?.content && body?.author));
+      Boolean(body?.content && (body?.author || body?.message));
+
+    // Check if this is a Discord webhook message (from Discord -> DuelVerse)
+    // Discord webhook payload has 'content' and optionally 'author' (with id, username, bot flag)
+    // Also check if source=discord query param is present
+    const sourceFromDiscord = url.searchParams.get("source") === "discord";
+    const hasDiscordAuthor = (body?.author?.id || body?.message?.author?.id);
+    const isFromDiscord = (sourceFromDiscord || isDiscordWebhook) && body?.content;
 
     console.log(
-      `[discord-bridge] ${req.method} path=${path} isWebhook=${isDiscordWebhook} type=${requestType ?? "none"} author=${discordUserId ?? "none"}`,
+      `[discord-bridge] ${req.method} path=${path} isWebhook=${isDiscordWebhook} isFromDiscord=${isFromDiscord} sourceFromDiscord=${sourceFromDiscord} hasAuthorId=${hasDiscordAuthor} type=${requestType ?? "none"} author=${discordUserId ?? "none"}`,
     );
 
-    if (isDiscordWebhook) {
+    // Handle Discord -> DuelVerse messages
+    if (isFromDiscord && body?.content) {
       // Loop protection: Ignore messages from bots or our own bridge
       const isBot = body?.author?.bot === true || body?.message?.author?.bot === true;
       if (isBot || discordUsername.includes("DuelVerse")) {
@@ -63,9 +71,12 @@ serve(async (req) => {
         return jsonResponse({ ok: true, skipped: "loop_protection" });
       }
 
-      if (!content || !discordUserId) {
-        return jsonResponse({ ok: true, skipped: "no_content_or_user" });
+      if (!content) {
+        return jsonResponse({ ok: true, skipped: "no_content" });
       }
+
+      // If no discord user ID, use the username as identifier (for unlinked users)
+      const effectiveDiscordUserId = discordUserId || discordUsername;
 
       const normalizedContent = String(content).trim();
       if (!normalizedContent) {
@@ -73,7 +84,7 @@ serve(async (req) => {
       }
 
       const { data: linkedUser, error: linkedUserError } = await supabase.rpc("get_user_by_discord_id", {
-        p_discord_id: String(discordUserId),
+        p_discord_id: String(effectiveDiscordUserId),
       });
 
       if (linkedUserError) {
