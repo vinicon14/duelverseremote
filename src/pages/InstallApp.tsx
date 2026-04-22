@@ -92,8 +92,8 @@ export default function InstallApp() {
   ].filter((item) => item.visible);
 
   return (
-    <div className="min-h-screen bg-transparent flex flex-col items-center justify-center p-4">
-      <div className="max-w-md w-full space-y-6 text-center">
+    <div className="fixed inset-0 z-0 flex items-center justify-center overflow-y-auto bg-transparent px-4 py-8">
+      <div className="mx-auto my-auto w-full max-w-md space-y-6 text-center">
         <div className="space-y-2">
           <div className="text-6xl">⚔️</div>
           <h1 className="text-3xl font-bold">Instalar Duelverse</h1>
