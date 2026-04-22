@@ -56,6 +56,13 @@ serve(async (req) => {
     );
 
     if (isDiscordWebhook) {
+      // Loop protection: Ignore messages from bots or our own bridge
+      const isBot = body?.author?.bot === true || body?.message?.author?.bot === true;
+      if (isBot || discordUsername.includes("DuelVerse")) {
+        console.log(`[discord-bridge] loop protection: skipped message from ${discordUsername} (bot=${isBot})`);
+        return jsonResponse({ ok: true, skipped: "loop_protection" });
+      }
+
       if (!content || !discordUserId) {
         return jsonResponse({ ok: true, skipped: "no_content_or_user" });
       }
