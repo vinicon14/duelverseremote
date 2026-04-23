@@ -58,10 +58,6 @@ const Landing = () => {
         
         <div className="container mx-auto relative z-10">
           <div className="max-w-4xl mx-auto text-center space-y-6 sm:space-y-8">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full border text-xs sm:text-sm tcg-border-animate animate-fade-in-up">
-              <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-              <span>{t('landing.heroBadge')}</span>
-            </div>
             
             <h1 className="text-3xl sm:text-5xl md:text-7xl font-extrabold leading-tight animate-fade-in-up delay-100">
               <span className="text-primary">{t('landing.heroTitle1')}</span>
