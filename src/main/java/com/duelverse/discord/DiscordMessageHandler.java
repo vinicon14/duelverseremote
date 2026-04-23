@@ -14,8 +14,6 @@ import java.time.Duration;
 public class DiscordMessageHandler {
     private static final Logger logger = LoggerFactory.getLogger(DiscordMessageHandler.class);
 
-    // Endpoint da edge function que processa mensagens do Discord -> DuelVerse.
-    // O path "/webhook" é reconhecido pelo discord-bridge para tratar como input do Discord.
     private static final String BRIDGE_WEBHOOK_URL =
         "https://xxttwzewtqxvpgefggah.supabase.co/functions/v1/discord-bridge/webhook";
 
@@ -43,6 +41,7 @@ public class DiscordMessageHandler {
         JsonObject author = new JsonObject();
         author.addProperty("id", authorId);
         author.addProperty("username", username != null ? username : "Discord User");
+        author.addProperty("bot", false);
         if (avatarUrl != null && !avatarUrl.isEmpty()) {
             author.addProperty("avatar_url", avatarUrl);
         }
@@ -50,7 +49,7 @@ public class DiscordMessageHandler {
         JsonObject payload = new JsonObject();
         payload.add("author", author);
         payload.addProperty("content", content);
-        // Campos redundantes para compatibilidade com a bridge:
+        // Top-level aliases for compatibility
         payload.addProperty("discord_user_id", authorId);
         payload.addProperty("username", username != null ? username : "Discord User");
         if (avatarUrl != null && !avatarUrl.isEmpty()) {
