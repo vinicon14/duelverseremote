@@ -2159,32 +2159,19 @@ export type Database = {
         Args: { p_tournament_id: string }
         Returns: Json
       }
-      matchmake:
-        | {
-            Args: {
-              p_match_type: string
-              p_max_players?: number
-              p_tcg_type?: string
-              p_user_id: string
-            }
-            Returns: {
-              duel_id: string
-              player_role: string
-            }[]
-          }
-        | {
-            Args: {
-              p_language_code?: string
-              p_match_type: string
-              p_max_players?: number
-              p_tcg_type?: string
-              p_user_id: string
-            }
-            Returns: {
-              duel_id: string
-              status: string
-            }[]
-          }
+      matchmake: {
+        Args: {
+          p_language_code?: string
+          p_match_type: string
+          p_max_players?: number
+          p_tcg_type?: string
+          p_user_id: string
+        }
+        Returns: {
+          duel_id: string
+          status: string
+        }[]
+      }
       move_to_dlq: {
         Args: {
           dlq_name: string

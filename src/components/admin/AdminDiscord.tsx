@@ -1,16 +1,45 @@
 /**
  * DuelVerse - Admin Discord Manager
- * Gerencia os servidores Discord conectados ao DuelVerse
+ * Gerencia os servidores Discord conectados ao DuelVerse com setup automático.
  */
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, RefreshCw, ExternalLink, Save, Server, CheckCircle, XCircle, Trash2 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+  Loader2,
+  RefreshCw,
+  ExternalLink,
+  Save,
+  Server,
+  CheckCircle,
+  XCircle,
+  Trash2,
+  Wand2,
+  ChevronDown,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface DiscordServer {
@@ -31,18 +60,32 @@ interface DiscordBotStatus {
   servers: DiscordServer[];
 }
 
+interface GuildEntry {
+  guildId: string;
+  guildName: string;
+  channels: { id: string; name: string }[];
+}
+
 export function AdminDiscord() {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [botStatus, setBotStatus] = useState<DiscordBotStatus | null>(null);
   const [servers, setServers] = useState<DiscordServer[]>([]);
+
+  // Auto-setup state
+  const [guilds, setGuilds] = useState<GuildEntry[]>([]);
+  const [loadingGuilds, setLoadingGuilds] = useState(false);
+  const [selectedGuildId, setSelectedGuildId] = useState<string>("");
+  const [selectedChannelId, setSelectedChannelId] = useState<string>("");
+
+  // Manual fallback state
   const [newServerId, setNewServerId] = useState("");
   const [newServerName, setNewServerName] = useState("");
   const [newChannelId, setNewChannelId] = useState("");
   const [newInviteLink, setNewInviteLink] = useState("");
   const [newWebhookUrl, setNewWebhookUrl] = useState("");
-  const [discordBotToken, setDiscordBotToken] = useState("");
+
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -68,7 +111,8 @@ export function AdminDiscord() {
       const defaultStatus: DiscordBotStatus = {
         botId: "1495723127357833256",
         botName: "duelverse",
-        inviteLink: "https://discord.com/oauth2/authorize?client_id=1495723127357833256&permissions=8&scope=bot",
+        inviteLink:
+          "https://discord.com/oauth2/authorize?client_id=1495723127357833256&permissions=8&scope=bot",
         duelverseUrl: "https://duelverse.site",
         status: "online",
         servers: [],
@@ -76,7 +120,8 @@ export function AdminDiscord() {
 
       if (data?.value) {
         try {
-          const parsed = typeof data.value === 'string' ? JSON.parse(data.value) : data.value;
+          const parsed =
+            typeof data.value === "string" ? JSON.parse(data.value) : data.value;
           setBotStatus(parsed);
           setServers(parsed.servers || []);
         } catch {
@@ -99,7 +144,9 @@ export function AdminDiscord() {
     const newStatus: DiscordBotStatus = {
       botId: botStatus?.botId || "1495723127357833256",
       botName: botStatus?.botName || "duelverse",
-      inviteLink: botStatus?.inviteLink || "https://discord.com/oauth2/authorize?client_id=1495723127357833256&permissions=8&scope=bot",
+      inviteLink:
+        botStatus?.inviteLink ||
+        "https://discord.com/oauth2/authorize?client_id=1495723127357833256&permissions=8&scope=bot",
       duelverseUrl: botStatus?.duelverseUrl || "https://duelverse.site",
       status: "online",
       servers: newServers,
@@ -107,14 +154,11 @@ export function AdminDiscord() {
 
     const { error: upsertError } = await supabase
       .from("system_settings")
-      .upsert({
-        key: "discord_bot_status",
-        value: JSON.stringify(newStatus),
-      }, { onConflict: "key" });
-
-    if (upsertError) {
-      throw upsertError;
-    }
+      .upsert(
+        { key: "discord_bot_status", value: JSON.stringify(newStatus) },
+        { onConflict: "key" }
+      );
+    if (upsertError) throw upsertError;
 
     setBotStatus(newStatus);
     setServers(newServers);
@@ -124,110 +168,15 @@ export function AdminDiscord() {
     setSaving(true);
     setError(null);
     setSuccess(null);
-
     try {
-      const newServers = servers.map(s => 
+      const newServers = servers.map((s) =>
         s.id === serverId ? { ...s, enabled } : s
       );
       await saveToSupabase(newServers);
-      setSuccess(t("admin.discord.serverUpdated"));
+      setSuccess("Servidor atualizado");
     } catch (err) {
-      console.error("Erro ao atualizar servidor:", err);
-      setError(t("admin.discord.errorUpdating"));
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleCreateWebhook = async (serverId: string, channelId: string) => {
-    if (!discordBotToken) {
-      setError("Bot Token is required to create webhook");
-      return null;
-    }
-
-    try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/discord-bridge`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({
-          type: "create_webhook",
-          channelId: channelId,
-          botToken: discordBotToken
-        }),
-      });
-
-      if (response.ok) {
-        const webhook = await response.json();
-        if (webhook.id && webhook.token) {
-          return webhook;
-        }
-        return null;
-      } else {
-        const err = await response.json();
-        console.error("Webhook creation error:", err);
-        setError(`Erro da API do Discord: ${err.message || 'Código/Token Inválido'}`);
-        return null;
-      }
-    } catch (err) {
-      console.error("Error creating webhook:", err);
-      return null;
-    }
-  };
-
-  const handleAddServer = async () => {
-    if (!newServerId || !newChannelId) {
-      setError(t("admin.discord.requireIds"));
-      return;
-    }
-
-    setSaving(true);
-    setError(null);
-    setSuccess(null);
-
-    let webhookUrl = newWebhookUrl;
-    let inviteLink = newInviteLink;
-
-    if (!webhookUrl && discordBotToken) {
-      const webhook = await handleCreateWebhook(newServerId, newChannelId);
-      if (webhook) {
-        webhookUrl = `https://discord.com/api/webhooks/${webhook.id}/${webhook.token}`;
-      }
-    }
-
-    if (!inviteLink) {
-      inviteLink = `https://discord.gg/${newChannelId}`;
-    }
-
-    try {
-      const existingServer = servers.find(s => s.id === newServerId);
-      if (existingServer) {
-        setError("Servidor já existe");
-        setSaving(false);
-        return;
-      }
-
-      const newServers = [...servers, {
-        id: newServerId,
-        name: newServerName || `Server ${newServerId}`,
-        enabled: true,
-        channelId: newChannelId,
-        inviteLink,
-        webhookUrl,
-      }];
-      
-      await saveToSupabase(newServers);
-      setNewServerId("");
-      setNewServerName("");
-      setNewChannelId("");
-      setNewInviteLink("");
-      setNewWebhookUrl("");
-      setSuccess(t("admin.discord.serverAdded"));
-    } catch (err) {
-      console.error("Erro ao adicionar servidor:", err);
-      setError(t("admin.discord.errorAdding"));
+      console.error(err);
+      setError("Erro ao atualizar servidor");
     } finally {
       setSaving(false);
     }
@@ -237,31 +186,117 @@ export function AdminDiscord() {
     setSaving(true);
     setError(null);
     setSuccess(null);
-
     try {
-      const newServers = servers.filter(s => s.id !== serverId);
+      const newServers = servers.filter((s) => s.id !== serverId);
       await saveToSupabase(newServers);
-      setSuccess(t("admin.discord.serverRemoved"));
+      setSuccess("Servidor removido");
     } catch (err) {
-      console.error("Erro ao remover servidor:", err);
-      setError(t("admin.discord.errorRemoving"));
+      console.error(err);
+      setError("Erro ao remover servidor");
     } finally {
       setSaving(false);
     }
   };
 
-  const handleSync = async () => {
-    setSaving(true);
+  const loadGuilds = async () => {
+    setLoadingGuilds(true);
     setError(null);
     try {
+      const { data, error: invokeErr } = await supabase.functions.invoke(
+        "discord-bridge",
+        { body: { type: "list_guilds" } }
+      );
+      if (invokeErr) throw invokeErr;
+      if (!data?.success) {
+        throw new Error(data?.error || "Falha ao listar servidores");
+      }
+      setGuilds(data.guilds || []);
+      setSuccess(`${data.guilds?.length || 0} servidor(es) encontrado(s)`);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Erro ao carregar servidores do Discord");
+    } finally {
+      setLoadingGuilds(false);
+    }
+  };
+
+  const handleAutoSetup = async () => {
+    if (!selectedGuildId || !selectedChannelId) {
+      setError("Selecione um servidor e um canal");
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const { data, error: invokeErr } = await supabase.functions.invoke(
+        "discord-bridge",
+        {
+          body: {
+            type: "auto_setup_server",
+            guildId: selectedGuildId,
+            channelId: selectedChannelId,
+          },
+        }
+      );
+      if (invokeErr) throw invokeErr;
+      if (!data?.success) {
+        throw new Error(data?.error || "Falha no setup automático");
+      }
       await fetchBotStatus();
-      setSuccess(t("admin.discord.syncComplete"));
-    } catch {
-      setError("Erro ao sincronizar");
+      setSelectedGuildId("");
+      setSelectedChannelId("");
+      setSuccess(`Servidor "${data.server.name}" configurado automaticamente!`);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Erro no setup automático");
     } finally {
       setSaving(false);
     }
   };
+
+  const handleManualAdd = async () => {
+    if (!newServerId || !newChannelId) {
+      setError("ID do servidor e do canal são obrigatórios");
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const existingServer = servers.find((s) => s.id === newServerId);
+      if (existingServer) {
+        setError("Servidor já existe");
+        setSaving(false);
+        return;
+      }
+      const newServers = [
+        ...servers,
+        {
+          id: newServerId,
+          name: newServerName || `Server ${newServerId}`,
+          enabled: true,
+          channelId: newChannelId,
+          inviteLink: newInviteLink || `https://discord.gg/${newChannelId}`,
+          webhookUrl: newWebhookUrl,
+        },
+      ];
+      await saveToSupabase(newServers);
+      setNewServerId("");
+      setNewServerName("");
+      setNewChannelId("");
+      setNewInviteLink("");
+      setNewWebhookUrl("");
+      setSuccess("Servidor adicionado");
+    } catch (err) {
+      console.error(err);
+      setError("Erro ao adicionar servidor");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const selectedGuild = guilds.find((g) => g.guildId === selectedGuildId);
 
   if (loading) {
     return (
@@ -278,24 +313,19 @@ export function AdminDiscord() {
           <div>
             <CardTitle className="flex items-center gap-2">
               <Server className="w-5 h-5" />
-              {t("admin.discord.title")}
+              Discord
             </CardTitle>
             <CardDescription>
-              {t("admin.discord.description")}
+              Gerencie servidores Discord conectados ao DuelVerse
             </CardDescription>
           </div>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleSync}
-            disabled={saving}
-          >
+          <Button variant="outline" size="sm" onClick={fetchBotStatus} disabled={saving}>
             {saving ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
               <RefreshCw className="w-4 h-4" />
             )}
-            <span className="ml-2">{t("admin.discord.sync")}</span>
+            <span className="ml-2">Sincronizar</span>
           </Button>
         </div>
       </CardHeader>
@@ -303,26 +333,26 @@ export function AdminDiscord() {
         {botStatus && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-muted p-4 rounded-lg">
-              <Label className="text-muted-foreground">{t("admin.discord.botStatus")}</Label>
+              <Label className="text-muted-foreground">Status</Label>
               <div className="flex items-center gap-2 mt-1">
                 <CheckCircle className="w-4 h-4 text-green-500" />
                 <span className="font-medium capitalize">{botStatus.status}</span>
               </div>
             </div>
             <div className="bg-muted p-4 rounded-lg">
-              <Label className="text-muted-foreground">{t("admin.discord.botName")}</Label>
+              <Label className="text-muted-foreground">Bot</Label>
               <p className="font-medium">{botStatus.botName}</p>
             </div>
             <div className="bg-muted p-4 rounded-lg">
-              <Label className="text-muted-foreground">{t("admin.discord.inviteLink")}</Label>
-              <a 
-                href={botStatus.inviteLink} 
-                target="_blank" 
+              <Label className="text-muted-foreground">Convite</Label>
+              <a
+                href={botStatus.inviteLink}
+                target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1 text-primary hover:underline"
               >
                 <ExternalLink className="w-3 h-3" />
-                {t("admin.discord.openInvite")}
+                Abrir convite
               </a>
             </div>
           </div>
@@ -330,18 +360,18 @@ export function AdminDiscord() {
 
         <div className="border rounded-lg overflow-hidden">
           <div className="bg-muted px-4 py-3 font-medium flex items-center justify-between">
-            <span>{t("admin.discord.servers")}</span>
+            <span>Servidores conectados</span>
             <Badge variant="secondary">{servers.length}</Badge>
           </div>
           <div className="divide-y">
             {servers.length === 0 ? (
               <div className="p-4 text-center text-muted-foreground">
-                {t("admin.discord.noServers")}
+                Nenhum servidor conectado
               </div>
             ) : (
               servers.map((server) => (
-                <div 
-                  key={server.id} 
+                <div
+                  key={server.id}
                   className="p-4 flex items-center justify-between"
                 >
                   <div className="flex items-center gap-3">
@@ -352,12 +382,10 @@ export function AdminDiscord() {
                     )}
                     <div>
                       <p className="font-medium">{server.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        ID: {server.id}
-                      </p>
+                      <p className="text-sm text-muted-foreground">ID: {server.id}</p>
                       {server.channelId && (
                         <p className="text-sm text-muted-foreground">
-                          Channel: {server.channelId}
+                          Canal: {server.channelId}
                         </p>
                       )}
                     </div>
@@ -365,7 +393,7 @@ export function AdminDiscord() {
                   <div className="flex items-center gap-2">
                     <Switch
                       checked={server.enabled}
-                      onCheckedChange={(checked) => 
+                      onCheckedChange={(checked) =>
                         handleToggleServer(server.id, checked)
                       }
                       disabled={saving}
@@ -385,88 +413,172 @@ export function AdminDiscord() {
           </div>
         </div>
 
+        {/* Auto-setup */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm">{t("admin.discord.addServer")}</CardTitle>
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Wand2 className="w-4 h-4" />
+              Adicionar servidor automaticamente
+            </CardTitle>
+            <CardDescription>
+              Selecione um servidor onde o bot está e o canal desejado. Webhook e convite são criados automaticamente.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="bg-muted p-3 rounded-lg">
-              <Label htmlFor="discordBotToken">Discord Bot Token (to auto-create webhook)</Label>
-              <Input
-                id="discordBotToken"
-                type="password"
-                value={discordBotToken}
-                onChange={(e) => setDiscordBotToken(e.target.value)}
-                placeholder="MTE0OTU3MTI3MzU3ODMzMjU2.G..."
-                className="mt-1"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Required to automatically create webhooks. Get your bot token from Discord Developer Portal.
-              </p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="serverId">{t("admin.discord.serverId")}</Label>
-                <Input
-                  id="serverId"
-                  value={newServerId}
-                  onChange={(e) => setNewServerId(e.target.value)}
-                  placeholder="Server ID"
-                />
+            <Button
+              onClick={loadGuilds}
+              disabled={loadingGuilds}
+              variant="outline"
+              size="sm"
+            >
+              {loadingGuilds ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <RefreshCw className="w-4 h-4 mr-2" />
+              )}
+              Buscar servidores do bot
+            </Button>
+
+            {guilds.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label>Servidor</Label>
+                  <Select
+                    value={selectedGuildId}
+                    onValueChange={(v) => {
+                      setSelectedGuildId(v);
+                      setSelectedChannelId("");
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione um servidor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {guilds.map((g) => (
+                        <SelectItem key={g.guildId} value={g.guildId}>
+                          {g.guildName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label>Canal</Label>
+                  <Select
+                    value={selectedChannelId}
+                    onValueChange={setSelectedChannelId}
+                    disabled={!selectedGuild}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione um canal" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {selectedGuild?.channels.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          #{c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-end">
+                  <Button
+                    onClick={handleAutoSetup}
+                    disabled={saving || !selectedGuildId || !selectedChannelId}
+                    className="w-full"
+                  >
+                    {saving ? (
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    ) : (
+                      <Wand2 className="w-4 h-4 mr-2" />
+                    )}
+                    Configurar
+                  </Button>
+                </div>
               </div>
-              <div>
-                <Label htmlFor="serverName">Server Name</Label>
-                <Input
-                  id="serverName"
-                  value={newServerName}
-                  onChange={(e) => setNewServerName(e.target.value)}
-                  placeholder="My Server"
-                />
-              </div>
-              <div>
-                <Label htmlFor="channelId">{t("admin.discord.channelId")}</Label>
-                <Input
-                  id="channelId"
-                  value={newChannelId}
-                  onChange={(e) => setNewChannelId(e.target.value)}
-                  placeholder="Channel ID"
-                />
-              </div>
-              <div>
-                <Label htmlFor="inviteLink">Invite Link</Label>
-                <Input
-                  id="inviteLink"
-                  value={newInviteLink}
-                  onChange={(e) => setNewInviteLink(e.target.value)}
-                  placeholder="https://discord.gg/xxx"
-                />
-              </div>
-              <div>
-                <Label htmlFor="webhookUrl">Webhook URL</Label>
-                <Input
-                  id="webhookUrl"
-                  type="password"
-                  value={newWebhookUrl}
-                  onChange={(e) => setNewWebhookUrl(e.target.value)}
-                  placeholder="https://discord.com/api/webhooks/..."
-                />
-              </div>
-              <div className="flex items-end">
-                <Button 
-                  onClick={handleAddServer}
-                  disabled={saving || !newServerId || !newChannelId}
-                >
-                  {saving ? (
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  ) : (
-                    <Save className="w-4 h-4 mr-2" />
-                  )}
-                  {t("admin.discord.add")}
-                </Button>
-              </div>
-            </div>
+            )}
           </CardContent>
         </Card>
+
+        {/* Manual fallback */}
+        <Collapsible>
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" size="sm" className="w-full justify-between">
+              <span>Adicionar manualmente (avançado)</span>
+              <ChevronDown className="w-4 h-4" />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <Card className="mt-2">
+              <CardContent className="pt-6 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label htmlFor="serverId">ID do servidor</Label>
+                    <Input
+                      id="serverId"
+                      value={newServerId}
+                      onChange={(e) => setNewServerId(e.target.value)}
+                      placeholder="Server ID"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="serverName">Nome</Label>
+                    <Input
+                      id="serverName"
+                      value={newServerName}
+                      onChange={(e) => setNewServerName(e.target.value)}
+                      placeholder="Nome do servidor"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="channelId">ID do canal</Label>
+                    <Input
+                      id="channelId"
+                      value={newChannelId}
+                      onChange={(e) => setNewChannelId(e.target.value)}
+                      placeholder="Channel ID"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="inviteLink">Link de convite</Label>
+                    <Input
+                      id="inviteLink"
+                      value={newInviteLink}
+                      onChange={(e) => setNewInviteLink(e.target.value)}
+                      placeholder="https://discord.gg/xxx"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="webhookUrl">Webhook URL</Label>
+                    <Input
+                      id="webhookUrl"
+                      type="password"
+                      value={newWebhookUrl}
+                      onChange={(e) => setNewWebhookUrl(e.target.value)}
+                      placeholder="https://discord.com/api/webhooks/..."
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <Button
+                      onClick={handleManualAdd}
+                      disabled={saving || !newServerId || !newChannelId}
+                      className="w-full"
+                    >
+                      {saving ? (
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      ) : (
+                        <Save className="w-4 h-4 mr-2" />
+                      )}
+                      Adicionar
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </CollapsibleContent>
+        </Collapsible>
 
         {error && (
           <div className="bg-destructive/10 text-destructive p-3 rounded-lg">

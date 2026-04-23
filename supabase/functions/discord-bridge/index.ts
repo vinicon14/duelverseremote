@@ -6,6 +6,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const DISCORD_API = "https://discord.com/api/v10";
+
 const jsonResponse = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
@@ -14,16 +16,35 @@ const jsonResponse = (body: unknown, status = 200) =>
 
 const parseJsonBody = async (req: Request) => {
   if (req.method !== "POST") return null;
-
   const rawBody = await req.text();
   if (!rawBody) return null;
-
   try {
     return JSON.parse(rawBody);
   } catch {
     return null;
   }
 };
+
+async function discordFetch(path: string, init: RequestInit = {}) {
+  const token = Deno.env.get("DISCORD_BOT_TOKEN");
+  if (!token) throw new Error("DISCORD_BOT_TOKEN not configured");
+  const res = await fetch(`${DISCORD_API}${path}`, {
+    ...init,
+    headers: {
+      ...(init.headers || {}),
+      Authorization: `Bot ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+  const text = await res.text();
+  let data: any = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = text;
+  }
+  return { ok: res.ok, status: res.status, data };
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -41,87 +62,74 @@ serve(async (req) => {
 
     const requestType = typeof body?.type === "string" ? body.type : null;
     const content = body?.content ?? body?.message?.content ?? null;
-    const discordUserId = body?.author?.id ?? body?.message?.author?.id ?? body?.discord_user_id ?? null;
-    const discordUsername = body?.author?.username ?? body?.message?.author?.username ?? body?.username ?? "Discord User";
-    const discordAvatar = body?.author?.avatar_url ?? body?.message?.author?.avatar_url ?? body?.avatar_url ?? null;
+    const discordUserId =
+      body?.author?.id ?? body?.message?.author?.id ?? body?.discord_user_id ?? null;
+    const discordUsername =
+      body?.author?.username ?? body?.message?.author?.username ?? body?.username ?? "Discord User";
+    const discordAvatar =
+      body?.author?.avatar_url ?? body?.message?.author?.avatar_url ?? body?.avatar_url ?? null;
 
     const isDiscordWebhook =
       path.endsWith("/webhook") ||
       path.includes("discord-webhook") ||
       url.searchParams.get("source") === "discord" ||
+      Boolean(body?.discord_user_id && body?.content) ||
       Boolean(body?.content && (body?.author || body?.message));
 
-    // Check if this is a Discord webhook message (from Discord -> DuelVerse)
-    // Discord webhook payload has 'content' and optionally 'author' (with id, username, bot flag)
-    // Also check if source=discord query param is present
-    const sourceFromDiscord = url.searchParams.get("source") === "discord";
-    const hasDiscordAuthor = (body?.author?.id || body?.message?.author?.id);
-    const isFromDiscord = (sourceFromDiscord || isDiscordWebhook) && body?.content;
-
     console.log(
-      `[discord-bridge] ${req.method} path=${path} isWebhook=${isDiscordWebhook} isFromDiscord=${isFromDiscord} sourceFromDiscord=${sourceFromDiscord} hasAuthorId=${hasDiscordAuthor} type=${requestType ?? "none"} author=${discordUserId ?? "none"}`,
+      `[discord-bridge] ${req.method} path=${path} isWebhook=${isDiscordWebhook} type=${
+        requestType ?? "none"
+      } author=${discordUserId ?? "none"}`,
     );
 
-    // Handle Discord -> DuelVerse messages
-    if (isFromDiscord && body?.content) {
-      // Loop protection: Ignore messages from bots or our own bridge
+    // ============================================================
+    // Discord -> DuelVerse: incoming chat message from the Java bot
+    // ============================================================
+    if (isDiscordWebhook && content && !requestType) {
+      // Loop protection: only skip explicit bots
       const isBot = body?.author?.bot === true || body?.message?.author?.bot === true;
-      if (isBot || discordUsername.includes("DuelVerse")) {
-        console.log(`[discord-bridge] loop protection: skipped message from ${discordUsername} (bot=${isBot})`);
-        return jsonResponse({ ok: true, skipped: "loop_protection" });
+      if (isBot) {
+        console.log(`[discord-bridge] loop protection: skipped bot message from ${discordUsername}`);
+        return jsonResponse({ ok: true, skipped: "bot" });
       }
 
-      if (!content) {
-        return jsonResponse({ ok: true, skipped: "no_content" });
+      if (!discordUserId) {
+        console.log(`[discord-bridge] skipped: no discord user id`);
+        return jsonResponse({ ok: true, skipped: "no_discord_user_id" });
       }
-
-      // If no discord user ID, use the username as identifier (for unlinked users)
-      const effectiveDiscordUserId = discordUserId || discordUsername;
 
       const normalizedContent = String(content).trim();
       if (!normalizedContent) {
         return jsonResponse({ ok: true, skipped: "empty_content" });
       }
 
-      const { data: linkedUser, error: linkedUserError } = await supabase.rpc("get_user_by_discord_id", {
-        p_discord_id: String(effectiveDiscordUserId),
-      });
+      // Require linked DuelVerse account via OAuth
+      const { data: linkedUser, error: linkedUserError } = await supabase.rpc(
+        "get_user_by_discord_id",
+        { p_discord_id: String(discordUserId) },
+      );
 
       if (linkedUserError) {
         console.error("[discord-bridge] lookup error:", linkedUserError);
         return jsonResponse({ error: linkedUserError.message }, 500);
       }
 
-      let userIdToUse;
-      let usernameLabel;
-      let finalContent = normalizedContent;
-
-      if (linkedUser && linkedUser.length > 0) {
-        userIdToUse = linkedUser[0].user_id;
-        usernameLabel = linkedUser[0].username;
-      } else {
-        // Fallback for unlinked users: Find the first available profile to use as a placeholder
-        const { data: fallbackProfiles } = await supabase
-          .from("profiles")
-          .select("user_id, username")
-          .limit(1);
-        
-        if (fallbackProfiles && fallbackProfiles.length > 0) {
-          userIdToUse = fallbackProfiles[0].user_id;
-          usernameLabel = `Discord: ${discordUsername}`;
-          finalContent = `[Discord: ${discordUsername}] ${normalizedContent}`;
-        } else {
-          console.log(`[discord-bridge] no profiles found for fallback`);
-          return jsonResponse({ ok: true, skipped: "no_profiles_available" });
-        }
+      if (!linkedUser || linkedUser.length === 0) {
+        console.log(
+          `[discord-bridge] skipped: discord user ${discordUserId} (${discordUsername}) is not linked to a DuelVerse account`,
+        );
+        return jsonResponse({ ok: true, skipped: "user_not_linked" });
       }
+
+      const userIdToUse = linkedUser[0].user_id;
+      const usernameLabel = linkedUser[0].username;
 
       const tcgType = typeof body?.tcg_type === "string" ? body.tcg_type : "yugioh";
       const languageCode = typeof body?.language_code === "string" ? body.language_code : "en";
 
       const { error } = await supabase.from("global_chat_messages").insert({
         user_id: userIdToUse,
-        message: finalContent,
+        message: normalizedContent,
         tcg_type: tcgType,
         language_code: languageCode,
       });
@@ -130,6 +138,10 @@ serve(async (req) => {
         console.error("[discord-bridge] insert error:", error);
         return jsonResponse({ error: error.message }, 500);
       }
+
+      console.log(
+        `[discord-bridge] posted message from Discord user ${discordUsername} as DuelVerse user ${usernameLabel}`,
+      );
 
       return jsonResponse({
         success: true,
@@ -143,26 +155,161 @@ serve(async (req) => {
       return jsonResponse({ error: "Invalid or missing JSON body" }, 400);
     }
 
-    const { type, username, channelId, botToken, avatarUrl, userId } = body;
-
-    if (type === "create_webhook") {
-      if (!channelId || !botToken) {
-        return jsonResponse({ error: "Missing channelId or botToken" }, 400);
+    // ============================================================
+    // List guilds the bot is in (with their text channels)
+    // ============================================================
+    if (requestType === "list_guilds") {
+      const guildsRes = await discordFetch("/users/@me/guilds");
+      if (!guildsRes.ok) {
+        return jsonResponse(
+          { error: "Failed to list guilds", details: guildsRes.data },
+          guildsRes.status,
+        );
       }
 
-      const response = await fetch(`https://discord.com/api/v10/channels/${channelId}/webhooks`, {
+      const guilds: any[] = Array.isArray(guildsRes.data) ? guildsRes.data : [];
+      const result: Array<{ guildId: string; guildName: string; channels: Array<{ id: string; name: string }> }> = [];
+
+      for (const g of guilds) {
+        const chRes = await discordFetch(`/guilds/${g.id}/channels`);
+        const channels: any[] = chRes.ok && Array.isArray(chRes.data) ? chRes.data : [];
+        result.push({
+          guildId: g.id,
+          guildName: g.name,
+          channels: channels
+            .filter((c) => c.type === 0) // 0 = GUILD_TEXT
+            .map((c) => ({ id: c.id, name: c.name })),
+        });
+      }
+
+      return jsonResponse({ success: true, guilds: result });
+    }
+
+    // ============================================================
+    // Auto-setup a server: webhook + invite + persist to settings
+    // ============================================================
+    if (requestType === "auto_setup_server") {
+      const guildId = body?.guildId;
+      const channelId = body?.channelId;
+      if (!guildId || !channelId) {
+        return jsonResponse({ error: "Missing guildId or channelId" }, 400);
+      }
+
+      // 1. Get guild name
+      const guildRes = await discordFetch(`/guilds/${guildId}`);
+      if (!guildRes.ok) {
+        return jsonResponse(
+          { error: "Failed to fetch guild", details: guildRes.data },
+          guildRes.status,
+        );
+      }
+      const guildName = guildRes.data?.name || `Server ${guildId}`;
+
+      // 2. Create webhook
+      const webhookRes = await discordFetch(`/channels/${channelId}/webhooks`, {
+        method: "POST",
+        body: JSON.stringify({ name: "DuelVerse Global Chat" }),
+      });
+      if (!webhookRes.ok) {
+        return jsonResponse(
+          { error: "Failed to create webhook", details: webhookRes.data },
+          webhookRes.status,
+        );
+      }
+      const webhookUrl = `https://discord.com/api/webhooks/${webhookRes.data.id}/${webhookRes.data.token}`;
+
+      // 3. Create invite (never-expiring)
+      const inviteRes = await discordFetch(`/channels/${channelId}/invites`, {
+        method: "POST",
+        body: JSON.stringify({ max_age: 0, max_uses: 0, unique: false }),
+      });
+      const inviteLink = inviteRes.ok
+        ? `https://discord.gg/${inviteRes.data.code}`
+        : `https://discord.gg/${channelId}`;
+
+      // 4. Persist to system_settings
+      const { data: cfg } = await supabase
+        .from("system_settings")
+        .select("value")
+        .eq("key", "discord_bot_status")
+        .maybeSingle();
+
+      let status: any = {
+        botId: "1495723127357833256",
+        botName: "duelverse",
+        inviteLink,
+        duelverseUrl: "https://duelverse.site",
+        status: "online",
+        servers: [],
+      };
+      if (cfg?.value) {
+        try {
+          status = typeof cfg.value === "string" ? JSON.parse(cfg.value) : cfg.value;
+        } catch {
+          /* keep default */
+        }
+      }
+
+      const servers: any[] = Array.isArray(status.servers) ? status.servers : [];
+      const filtered = servers.filter((s: any) => s.id !== guildId);
+      filtered.push({
+        id: guildId,
+        name: guildName,
+        enabled: true,
+        channelId,
+        inviteLink,
+        webhookUrl,
+      });
+      status.servers = filtered;
+
+      const { error: upsertErr } = await supabase
+        .from("system_settings")
+        .upsert({ key: "discord_bot_status", value: JSON.stringify(status) }, { onConflict: "key" });
+
+      if (upsertErr) {
+        return jsonResponse({ error: upsertErr.message }, 500);
+      }
+
+      return jsonResponse({
+        success: true,
+        server: {
+          id: guildId,
+          name: guildName,
+          enabled: true,
+          channelId,
+          inviteLink,
+          webhookUrl,
+        },
+      });
+    }
+
+    // ============================================================
+    // Legacy create_webhook (kept for backwards compatibility)
+    // ============================================================
+    if (requestType === "create_webhook") {
+      const { channelId, botToken } = body;
+      if (!channelId) {
+        return jsonResponse({ error: "Missing channelId" }, 400);
+      }
+      const tokenToUse = botToken || Deno.env.get("DISCORD_BOT_TOKEN");
+      if (!tokenToUse) {
+        return jsonResponse({ error: "No bot token available" }, 400);
+      }
+      const response = await fetch(`${DISCORD_API}/channels/${channelId}/webhooks`, {
         method: "POST",
         headers: {
-          Authorization: `Bot ${botToken}`,
+          Authorization: `Bot ${tokenToUse}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ name: "DuelVerse Global Chat", avatar: null }),
       });
-
       const data = await response.json();
       return jsonResponse(data, response.ok ? 200 : 400);
     }
 
+    // ============================================================
+    // Read current bot status
+    // ============================================================
     const { data: cfg } = await supabase
       .from("system_settings")
       .select("value")
@@ -183,12 +330,14 @@ serve(async (req) => {
       }
     }
 
-    if (type === "chat_to_discord") {
+    // ============================================================
+    // DuelVerse -> Discord
+    // ============================================================
+    if (requestType === "chat_to_discord") {
+      const { username, avatarUrl, userId } = body;
       const servers = Array.isArray(botStatus.servers) ? botStatus.servers : [];
       const activeServers = servers.filter((server: any) => server.enabled && server.webhookUrl);
       const urls: string[] = activeServers.map((server: any) => server.webhookUrl);
-
-      console.log(`[discord-bridge] chat_to_discord: found ${urls.length} active webhooks`);
 
       if (urls.length === 0) {
         return jsonResponse({ error: "No active Discord server configured" }, 400);
@@ -198,7 +347,9 @@ serve(async (req) => {
       let finalAvatar = avatarUrl;
 
       if (userId) {
-        const { data: discordLink } = await supabase.rpc("get_discord_link_for_user", { p_user_id: userId });
+        const { data: discordLink } = await supabase.rpc("get_discord_link_for_user", {
+          p_user_id: userId,
+        });
         if (discordLink && discordLink.length > 0) {
           finalUsername = discordLink[0].discord_username || username;
           finalAvatar = discordLink[0].discord_avatar_url || avatarUrl;
@@ -221,33 +372,27 @@ serve(async (req) => {
             body: JSON.stringify(webhookPayload),
           });
           results.push({ ok: response.ok, url: targetUrl, status: response.status });
-          console.log(`[discord-bridge] webhook sent to ${targetUrl.substring(0, 40)}... status=${response.status}`);
         } catch (err) {
           console.error(`[discord-bridge] webhook error for ${targetUrl}:`, err);
           results.push({ ok: false, url: targetUrl });
         }
       }
 
-      return jsonResponse({
-        success: results.some((result) => result.ok),
-        results,
-      });
+      return jsonResponse({ success: results.some((r) => r.ok), results });
     }
 
-    if (type === "get_config") {
+    if (requestType === "get_config") {
       const servers = Array.isArray(botStatus.servers) ? botStatus.servers : [];
       let inviteLink = botStatus.inviteLink;
       if (!inviteLink && servers.length > 0) {
         const serverWithLink = servers.find((server: any) => server.inviteLink);
         inviteLink = serverWithLink ? serverWithLink.inviteLink : inviteLink;
       }
-
       const bridgeEnabled = servers.some((server: any) => server.enabled && server.webhookUrl);
-      console.log(`[discord-bridge] get_config: bridgeEnabled=${bridgeEnabled}`);
       return jsonResponse({ inviteLink, bridgeEnabled });
     }
 
-    return jsonResponse({ error: "Invalid request type: " + type }, 400);
+    return jsonResponse({ error: "Invalid request type: " + requestType }, 400);
   } catch (error: any) {
     console.error("[discord-bridge] critical error:", error);
     return jsonResponse({ error: error.message }, 500);
