@@ -381,7 +381,7 @@ export const GlobalChat = () => {
               <DropdownMenuContent align="end" className="w-52">
                 <DropdownMenuItem onSelect={() => window.open(inviteLink || "https://discord.gg/A7GqCGNGNn", "_blank", "noopener,noreferrer")}>
                   <ExternalLink className="mr-2 h-4 w-4" />
-                  Entrar no Discord
+                  Adicionar servidor
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={handleOpenDiscordConnect}>
                   <Link2 className="mr-2 h-4 w-4" />
