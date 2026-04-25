@@ -49,9 +49,9 @@ public class DiscordBot extends ListenerAdapter {
         logger.info("Iniciando bot Discord...");
 
         EnumSet<GatewayIntent> intents = EnumSet.of(
-            GatewayIntent.GUILDS,
             GatewayIntent.GUILD_MESSAGES,
-            GatewayIntent.MESSAGE_CONTENT
+            GatewayIntent.MESSAGE_CONTENT,
+            GatewayIntent.GUILD_MEMBERS
         );
 
         jda = JDABuilder.createDefault(config.getDiscordToken(), intents)
