@@ -45,6 +45,7 @@ public class Main {
             logger.info("Bot iniciado com sucesso!");
             logger.info("Painel Admin: DuelVerse > Aba Admin");
             logger.info("Link convite: https://discord.com/oauth2/authorize?client_id=1495723127357833256&permissions=8&scope=bot");
+            logger.info("Permissão obrigatória no Discord Developer Portal: Message Content Intent habilitada.");
             logger.info("========================================");
             
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
