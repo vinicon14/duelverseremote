@@ -21,9 +21,10 @@ interface GlobalMessage {
   id: string;
   message: string;
   created_at: string;
-  user_id: string;
+  user_id: string | null;
   username: string;
   avatar_url?: string;
+  source_type?: string;
 }
 
 export const GlobalChat = () => {
@@ -58,16 +59,19 @@ export const GlobalChat = () => {
           filter: `tcg_type=eq.${activeTcg}`,
         },
         async (payload) => {
-          const { data: userData } = await supabase
-            .from("profiles")
-            .select("username, avatar_url")
-            .eq("user_id", payload.new.user_id)
-            .single();
+          const isDiscordMessage = payload.new.source_type === "discord";
+          const { data: userData } = payload.new.user_id
+            ? await supabase
+                .from("profiles")
+                .select("username, avatar_url")
+                .eq("user_id", payload.new.user_id)
+                .single()
+            : { data: null };
 
           const newMsg = {
             ...payload.new,
-            username: userData?.username || "Anônimo",
-            avatar_url: userData?.avatar_url,
+            username: userData?.username || payload.new.source_username || (isDiscordMessage ? "Discord" : "Anônimo"),
+            avatar_url: userData?.avatar_url || payload.new.source_avatar_url || undefined,
           } as GlobalMessage;
 
           setMessages((prev) => [...prev, newMsg]);
@@ -176,7 +180,7 @@ export const GlobalChat = () => {
 
       if (error) throw error;
 
-      const userIds = [...new Set(data?.map((message) => message.user_id) || [])];
+      const userIds = [...new Set((data?.map((message) => message.user_id).filter(Boolean) as string[]) || [])];
       const { data: profiles } = await supabase
         .from("profiles")
         .select("user_id, username, avatar_url")
@@ -190,8 +194,12 @@ export const GlobalChat = () => {
           message: message.message,
           created_at: message.created_at,
           user_id: message.user_id,
-          username: profileMap.get(message.user_id)?.username || "Anônimo",
-          avatar_url: profileMap.get(message.user_id)?.avatar_url,
+          username:
+            profileMap.get(message.user_id)?.username ||
+            message.source_username ||
+            (message.source_type === "discord" ? "Discord" : "Anônimo"),
+          avatar_url: profileMap.get(message.user_id)?.avatar_url || message.source_avatar_url || undefined,
+          source_type: message.source_type,
         })).reverse() || [];
 
       setMessages(formattedMessages);
@@ -401,9 +409,18 @@ export const GlobalChat = () => {
                   className={`flex min-w-0 gap-2 ${message.user_id === currentUser?.id ? "flex-row-reverse" : "flex-row"}`}
                 >
                   <div className="flex-shrink-0">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 text-xs font-bold">
-                      {message.username[0]?.toUpperCase()}
-                    </div>
+                    {message.avatar_url ? (
+                      <img
+                        src={message.avatar_url}
+                        alt={message.username}
+                        className="h-8 w-8 rounded-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 text-xs font-bold">
+                        {message.username[0]?.toUpperCase()}
+                      </div>
+                    )}
                   </div>
                   <div
                     className={`flex max-w-[calc(100%-48px)] min-w-0 flex-col gap-1 ${message.user_id === currentUser?.id ? "items-end" : "items-start"}`}

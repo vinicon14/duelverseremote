@@ -475,27 +475,39 @@ export type Database = {
       global_chat_messages: {
         Row: {
           created_at: string
+          discord_user_id: string | null
           id: string
           language_code: string
           message: string
+          source_avatar_url: string | null
+          source_type: string
+          source_username: string | null
           tcg_type: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
+          discord_user_id?: string | null
           id?: string
           language_code?: string
           message: string
+          source_avatar_url?: string | null
+          source_type?: string
+          source_username?: string | null
           tcg_type?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
+          discord_user_id?: string | null
           id?: string
           language_code?: string
           message?: string
+          source_avatar_url?: string | null
+          source_type?: string
+          source_username?: string | null
           tcg_type?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: []
       }

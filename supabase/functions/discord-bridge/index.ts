@@ -103,7 +103,7 @@ serve(async (req) => {
         return jsonResponse({ ok: true, skipped: "empty_content" });
       }
 
-      // Require linked DuelVerse account via OAuth
+      // Try linked DuelVerse account first, but still allow pure Discord-origin messages
       const { data: linkedUser, error: linkedUserError } = await supabase.rpc(
         "get_user_by_discord_id",
         { p_discord_id: String(discordUserId) },
@@ -114,15 +114,9 @@ serve(async (req) => {
         return jsonResponse({ error: linkedUserError.message }, 500);
       }
 
-      if (!linkedUser || linkedUser.length === 0) {
-        console.log(
-          `[discord-bridge] skipped: discord user ${discordUserId} (${discordUsername}) is not linked to a DuelVerse account`,
-        );
-        return jsonResponse({ ok: true, skipped: "user_not_linked" });
-      }
-
-      const userIdToUse = linkedUser[0].user_id;
-      const usernameLabel = linkedUser[0].username;
+      const hasLinkedUser = Boolean(linkedUser && linkedUser.length > 0);
+      const userIdToUse = hasLinkedUser ? linkedUser[0].user_id : null;
+      const usernameLabel = hasLinkedUser ? linkedUser[0].username : null;
 
       const tcgType = typeof body?.tcg_type === "string" ? body.tcg_type : "yugioh";
       const languageCode = typeof body?.language_code === "string" ? body.language_code : "en";
@@ -132,6 +126,10 @@ serve(async (req) => {
         message: normalizedContent,
         tcg_type: tcgType,
         language_code: languageCode,
+        source_type: "discord",
+        source_username: discordUsername,
+        source_avatar_url: discordAvatar,
+        discord_user_id: String(discordUserId),
       });
 
       if (error) {
@@ -139,13 +137,14 @@ serve(async (req) => {
         return jsonResponse({ error: error.message }, 500);
       }
 
-      console.log(
-        `[discord-bridge] posted message from Discord user ${discordUsername} as DuelVerse user ${usernameLabel}`,
-      );
+      console.log(hasLinkedUser
+        ? `[discord-bridge] posted message from Discord user ${discordUsername} linked to DuelVerse user ${usernameLabel}`
+        : `[discord-bridge] posted message from unlinked Discord user ${discordUsername} directly into global chat`);
 
       return jsonResponse({
         success: true,
-        posted_as: usernameLabel,
+        posted_as: discordUsername,
+        linked_duelverse_user: usernameLabel,
         discord_username: discordUsername,
         discord_avatar_url: discordAvatar,
       });
