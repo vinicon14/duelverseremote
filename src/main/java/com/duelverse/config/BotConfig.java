@@ -7,10 +7,12 @@ public class BotConfig {
     private String discordToken;
     private String duelverseUrl;
     private String targetChannel;
+    private boolean targetChannelExplicit;
     
     public BotConfig() {
         this.duelverseUrl = DEFAULT_DUELVERSE_API;
         this.targetChannel = DEFAULT_DISCORD_CHANNEL;
+        this.targetChannelExplicit = false;
     }
     
     public String getDiscordToken() {
@@ -35,5 +37,10 @@ public class BotConfig {
     
     public void setTargetChannel(String targetChannel) {
         this.targetChannel = targetChannel;
+        this.targetChannelExplicit = targetChannel != null && !targetChannel.isEmpty();
+    }
+
+    public boolean isTargetChannelExplicit() {
+        return targetChannelExplicit;
     }
 }

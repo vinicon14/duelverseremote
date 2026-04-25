@@ -13,6 +13,7 @@ import net.dv8tion.jda.api.entities.channel.ChannelType;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.requests.GatewayIntent;
+import net.dv8tion.jda.api.utils.cache.CacheFlag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,11 +49,13 @@ public class DiscordBot extends ListenerAdapter {
         logger.info("Iniciando bot Discord...");
 
         EnumSet<GatewayIntent> intents = EnumSet.of(
+            GatewayIntent.GUILDS,
             GatewayIntent.GUILD_MESSAGES,
             GatewayIntent.MESSAGE_CONTENT
         );
 
         jda = JDABuilder.createDefault(config.getDiscordToken(), intents)
+            .enableCache(CacheFlag.MEMBER_OVERRIDES)
             .addEventListeners(this)
             .build();
 
@@ -90,10 +93,26 @@ public class DiscordBot extends ListenerAdapter {
         }
 
         if (event.isFromType(ChannelType.TEXT)) {
-            Message message = event.getMessage();
-            String content = message.getContentDisplay();
+            String configuredChannelId = serverManager != null ? serverManager.getServerChannel(serverId) : null;
+            String incomingChannelId = event.getChannel().getId();
 
-            if (!content.isEmpty()) {
+            if (configuredChannelId != null && !configuredChannelId.isEmpty() && !configuredChannelId.equals(incomingChannelId)) {
+                return;
+            }
+
+            if ((configuredChannelId == null || configuredChannelId.isEmpty())
+                && config.isTargetChannelExplicit()
+                && !config.getTargetChannel().equalsIgnoreCase(event.getChannel().getName())) {
+                return;
+            }
+
+            Message message = event.getMessage();
+            String content = message.getContentRaw();
+            if (content == null || content.trim().isEmpty()) {
+                content = message.getContentDisplay();
+            }
+
+            if (content != null && !content.trim().isEmpty()) {
                 String displayName = event.getMember() != null 
                     ? event.getMember().getEffectiveName() 
                     : event.getAuthor().getName();
@@ -108,7 +127,7 @@ public class DiscordBot extends ListenerAdapter {
                     authorId,
                     displayName,
                     avatarUrl,
-                    content
+                    content.trim()
                 );
             }
         }

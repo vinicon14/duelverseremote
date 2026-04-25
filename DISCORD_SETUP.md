@@ -1,31 +1,34 @@
-# Como Configurar o Webhook do Discord
+# Como Configurar o Discord no DuelVerse
 
-## Para receber mensagens do Discord no Chat Global do DuelVerse:
+## Para replicar mensagens reais do servidor Discord no Chat Global
 
-### 1. Obtenha a URL do Webhook do DuelVerse:
-```
-https://seu-projeto.supabase.co/functions/v1/discord-bridge
-```
+O webhook do Discord só envia mensagens do DuelVerse para o Discord. Para o caminho inverso — mensagens digitadas por qualquer usuário no app do Discord aparecerem no Chat Global — o bot Java precisa estar online e escutando o canal configurado.
 
-*(Nota: Substitua "seu-projeto" pelo nome do seu projeto Supabase)*
+### 1. Ative a permissão no Discord Developer Portal
 
-### 2. Configure o Webhook no Discord:
+1. Acesse **Discord Developer Portal** > sua aplicação > **Bot**.
+2. Em **Privileged Gateway Intents**, ative **Message Content Intent**.
+3. Salve as alterações.
 
-1. Abra o Discord e vá para o servidor
-2. Vá em **Configurações do Servidor** > **Integrações**
-3. Clique em **Webhooks**
-4. Clique em **Novo Webhook**
-5. Escolha o canal onde as mensagens serão recebidas
-6. No campo "URL do webhook", cole a URL do passo 1
-7. Clique em **Salvar** e **Copiar URL do Webhook**
+Sem essa permissão, o Discord não entrega o texto das mensagens dos usuários ao bot.
 
-### 3. Adicione o Webhook no Admin do DuelVerse:
+### 2. Convide o bot com permissões suficientes
 
-1. Acesse **Admin** > **Discord**
-2. Preencha os dados do servidor:
-   - **Server ID**: ID do seu servidor Discord
-   - **Channel ID**: ID do canal
-   - **Webhook URL**: Cole a URL do webhook que você copiou no passo 2
-3. Clique em **Adicionar**
+Use o convite exibido no painel Admin do DuelVerse ou gere um convite com permissões para:
 
-Pronto! Agora as mensagens enviadas no Discord aparecerão no Chat Global do DuelVerse!
+- View Channels
+- Read Message History
+- Send Messages
+- Manage Webhooks
+
+### 3. Configure o servidor pelo Admin do DuelVerse
+
+1. Acesse **Admin** > **Discord**.
+2. Clique em **Adicionar servidor**.
+3. Selecione o servidor e o canal que será sincronizado.
+
+### 4. Reinicie o bot Java
+
+Depois de ativar o intent e configurar o canal, reinicie o `.jar` do bot.
+
+Pronto: mensagens enviadas por qualquer usuário no canal configurado do Discord serão replicadas no Chat Global do DuelVerse.
