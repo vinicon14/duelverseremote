@@ -88,6 +88,87 @@ const buildAvatarUrl = (userId: string | undefined, avatarHash: string | null | 
   return `https://cdn.discordapp.com/avatars/${userId}/${avatarHash}.${ext}`;
 };
 
+const runInBackground = (promise: Promise<unknown>) => {
+  const edgeRuntime = (globalThis as any).EdgeRuntime;
+  if (edgeRuntime?.waitUntil) {
+    edgeRuntime.waitUntil(promise);
+    return;
+  }
+  promise.catch((err) => console.error("[discord-interactions] background error:", err));
+};
+
+async function postToGlobalChatFromDiscord(params: {
+  messageContent: string;
+  discordUsername: string;
+  discordUserId?: string;
+  avatarUrl: string | null;
+  guildId?: string;
+}) {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!supabaseUrl || !supabaseKey) {
+    console.error("[discord-interactions] missing backend env vars", {
+      hasUrl: !!supabaseUrl,
+      hasKey: !!supabaseKey,
+    });
+    return;
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
+  const { data: cfg } = await supabase
+    .from("system_settings")
+    .select("value")
+    .eq("key", "discord_bot_status")
+    .maybeSingle();
+
+  let allowAnyGuild = true;
+  let allowedGuildIds: string[] = [];
+  if (cfg?.value) {
+    try {
+      const status = typeof cfg.value === "string" ? JSON.parse(cfg.value) : cfg.value;
+      const servers = Array.isArray(status?.servers) ? status.servers : [];
+      const enabled = servers.filter((s: any) => s?.enabled);
+      if (enabled.length > 0) {
+        allowAnyGuild = false;
+        allowedGuildIds = enabled.map((s: any) => String(s.id));
+      }
+    } catch {
+      /* keep defaults */
+    }
+  }
+
+  if (!allowAnyGuild && params.guildId && !allowedGuildIds.includes(String(params.guildId))) {
+    console.warn("[discord-interactions] skipped unauthorized guild", { guildId: params.guildId });
+    return;
+  }
+
+  let userIdToUse: string | null = null;
+  if (params.discordUserId) {
+    const { data: linkedUser } = await supabase.rpc("get_user_by_discord_id", {
+      p_discord_id: String(params.discordUserId),
+    });
+    if (linkedUser && linkedUser.length > 0) {
+      userIdToUse = linkedUser[0].user_id;
+    }
+  }
+
+  const { error: insertErr } = await supabase.from("global_chat_messages").insert({
+    user_id: userIdToUse,
+    message: params.messageContent,
+    tcg_type: "yugioh",
+    language_code: "en",
+    source_type: "discord",
+    source_username: params.discordUsername,
+    source_avatar_url: params.avatarUrl,
+    discord_user_id: params.discordUserId ? String(params.discordUserId) : null,
+  });
+
+  if (insertErr) {
+    console.error("[discord-interactions] insert error:", insertErr);
+  }
+}
+
 // Register the global slash command via the Discord REST API
 async function registerGlobalCommand(): Promise<{ ok: boolean; data: any }> {
   const token = Deno.env.get("DISCORD_BOT_TOKEN");
@@ -221,96 +302,25 @@ serve(async (req) => {
     }
 
     if (commandName === "dv" || commandName === "duelverse") {
-      try {
-        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-        const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-        const supabase = createClient(supabaseUrl, supabaseKey);
+      runInBackground(
+        postToGlobalChatFromDiscord({
+          messageContent,
+          discordUsername,
+          discordUserId,
+          avatarUrl,
+          guildId,
+        }),
+      );
 
-        // Optional: only accept commands from configured guilds
-        const { data: cfg } = await supabase
-          .from("system_settings")
-          .select("value")
-          .eq("key", "discord_bot_status")
-          .maybeSingle();
-
-        let allowAnyGuild = true;
-        let allowedGuildIds: string[] = [];
-        if (cfg?.value) {
-          try {
-            const status = typeof cfg.value === "string" ? JSON.parse(cfg.value) : cfg.value;
-            const servers = Array.isArray(status?.servers) ? status.servers : [];
-            const enabled = servers.filter((s: any) => s?.enabled);
-            if (enabled.length > 0) {
-              allowAnyGuild = false;
-              allowedGuildIds = enabled.map((s: any) => String(s.id));
-            }
-          } catch {
-            /* keep defaults */
-          }
-        }
-
-        if (!allowAnyGuild && guildId && !allowedGuildIds.includes(String(guildId))) {
-          return json({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: "⚠️ Este servidor Discord não está autorizado a postar no Chat Global do DuelVerse.",
-              flags: 64,
-            },
-          });
-        }
-
-        // Try to resolve linked DuelVerse account
-        let userIdToUse: string | null = null;
-        let linkedUsername: string | null = null;
-        if (discordUserId) {
-          const { data: linkedUser } = await supabase.rpc("get_user_by_discord_id", {
-            p_discord_id: String(discordUserId),
-          });
-          if (linkedUser && linkedUser.length > 0) {
-            userIdToUse = linkedUser[0].user_id;
-            linkedUsername = linkedUser[0].username;
-          }
-        }
-
-        const { error: insertErr } = await supabase.from("global_chat_messages").insert({
-          user_id: userIdToUse,
-          message: messageContent,
-          tcg_type: "yugioh",
-          language_code: "en",
-          source_type: "discord",
-          source_username: discordUsername,
-          source_avatar_url: avatarUrl,
-          discord_user_id: discordUserId ? String(discordUserId) : null,
-        });
-
-        if (insertErr) {
-          console.error("[discord-interactions] insert error:", insertErr);
-          return json({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: `❌ Falha ao postar no Chat Global: ${insertErr.message}`,
-              flags: 64,
-            },
-          });
-        }
-
-        // Public response: looks like a normal chat message from the user.
-        // The "Used /dv" badge above is unavoidable in Discord, but the content
-        // itself reads cleanly. No emojis, no verbose prefix.
-        return json({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: messageContent,
-            allowed_mentions: { parse: [] },
-          },
-        });
-      } catch (err: any) {
-        console.error("[discord-interactions] critical:", err);
-        return json({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: { content: `❌ Erro: ${err.message}`, flags: 64 },
-        });
-      }
+      // Discord requires an answer within ~3 seconds. Reply immediately and
+      // do the database work in the background to avoid "app did not respond".
+      return json({
+        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+        data: {
+          content: messageContent,
+          allowed_mentions: { parse: [] },
+        },
+      });
     }
 
     return json({
