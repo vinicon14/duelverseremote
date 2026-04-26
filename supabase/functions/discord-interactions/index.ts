@@ -30,9 +30,10 @@ const InteractionResponseType = {
 } as const;
 
 const hexToUint8Array = (hex: string): Uint8Array => {
-  const out = new Uint8Array(hex.length / 2);
+  const clean = hex.trim().toLowerCase().replace(/[^0-9a-f]/g, "");
+  const out = new Uint8Array(clean.length / 2);
   for (let i = 0; i < out.length; i++) {
-    out[i] = parseInt(hex.substring(i * 2, i * 2 + 2), 16);
+    out[i] = parseInt(clean.substring(i * 2, i * 2 + 2), 16);
   }
   return out;
 };
@@ -43,13 +44,31 @@ const verifySignature = (
   timestamp: string | null,
   publicKey: string,
 ): boolean => {
-  if (!signature || !timestamp) return false;
+  if (!signature || !timestamp) {
+    console.warn("[discord-interactions] missing signature or timestamp", {
+      hasSig: !!signature,
+      hasTs: !!timestamp,
+    });
+    return false;
+  }
   try {
     const enc = new TextEncoder();
+    const sigBytes = hexToUint8Array(signature);
+    const keyBytes = hexToUint8Array(publicKey);
+    console.log("[discord-interactions] verify lengths", {
+      sig: sigBytes.length,
+      key: keyBytes.length,
+      tsLen: timestamp.length,
+      bodyLen: rawBody.length,
+    });
+    if (sigBytes.length !== 64 || keyBytes.length !== 32) {
+      console.error("[discord-interactions] invalid hex lengths");
+      return false;
+    }
     return nacl.sign.detached.verify(
       enc.encode(timestamp + rawBody),
-      hexToUint8Array(signature),
-      hexToUint8Array(publicKey),
+      sigBytes,
+      keyBytes,
     );
   } catch (err) {
     console.error("[discord-interactions] verify error:", err);
