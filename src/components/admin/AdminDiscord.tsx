@@ -580,6 +580,45 @@ export function AdminDiscord() {
           </CollapsibleContent>
         </Collapsible>
 
+        {/* Discord -> DuelVerse via Slash Commands */}
+        <Card className="border-primary/40">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <CheckCircle className="w-4 h-4 text-green-500" />
+              Discord → Chat Global (Slash Commands)
+            </CardTitle>
+            <CardDescription>
+              Qualquer usuário do Discord pode replicar mensagens no Chat Global
+              do DuelVerse usando os comandos <code className="bg-muted px-1 rounded">/dv</code> ou{" "}
+              <code className="bg-muted px-1 rounded">/duelverse</code> seguidos da mensagem.
+              Não é necessário rodar nenhum bot externo — tudo acontece via Edge Function.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <div className="bg-muted p-3 rounded-lg">
+              <p className="font-medium mb-1">Endpoint de Interactions (configure no Discord Developer Portal):</p>
+              <code className="block text-xs break-all bg-background p-2 rounded">
+                https://xxttwzewtqxvpgefggah.supabase.co/functions/v1/discord-interactions
+              </code>
+              <p className="text-xs text-muted-foreground mt-2">
+                Cole essa URL em <strong>Application → General Information → Interactions Endpoint URL</strong>.
+                O Discord vai validar com um PING — a função responde automaticamente.
+              </p>
+            </div>
+            <div className="bg-muted p-3 rounded-lg">
+              <p className="font-medium mb-1">Como usar (qualquer usuário no Discord):</p>
+              <code className="block text-xs bg-background p-2 rounded">
+                /dv mensagem aqui
+              </code>
+              <p className="text-xs text-muted-foreground mt-2">
+                A mensagem aparece imediatamente no Chat Global do DuelVerse com o nome
+                e avatar do Discord. Se o usuário tem conta vinculada, a mensagem é
+                associada ao perfil DuelVerse.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
         {error && (
           <div className="bg-destructive/10 text-destructive p-3 rounded-lg">
             {error}

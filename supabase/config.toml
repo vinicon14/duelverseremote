@@ -27,3 +27,5 @@ project_id = "xxttwzewtqxvpgefggah"
     verify_jwt = true
   [functions.discord-bridge]
     verify_jwt = false
+  [functions.discord-interactions]
+    verify_jwt = false
