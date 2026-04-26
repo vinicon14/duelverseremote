@@ -88,6 +88,87 @@ const buildAvatarUrl = (userId: string | undefined, avatarHash: string | null | 
   return `https://cdn.discordapp.com/avatars/${userId}/${avatarHash}.${ext}`;
 };
 
+const runInBackground = (promise: Promise<unknown>) => {
+  const edgeRuntime = (globalThis as any).EdgeRuntime;
+  if (edgeRuntime?.waitUntil) {
+    edgeRuntime.waitUntil(promise);
+    return;
+  }
+  promise.catch((err) => console.error("[discord-interactions] background error:", err));
+};
+
+async function postToGlobalChatFromDiscord(params: {
+  messageContent: string;
+  discordUsername: string;
+  discordUserId?: string;
+  avatarUrl: string | null;
+  guildId?: string;
+}) {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!supabaseUrl || !supabaseKey) {
+    console.error("[discord-interactions] missing backend env vars", {
+      hasUrl: !!supabaseUrl,
+      hasKey: !!supabaseKey,
+    });
+    return;
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
+  const { data: cfg } = await supabase
+    .from("system_settings")
+    .select("value")
+    .eq("key", "discord_bot_status")
+    .maybeSingle();
+
+  let allowAnyGuild = true;
+  let allowedGuildIds: string[] = [];
+  if (cfg?.value) {
+    try {
+      const status = typeof cfg.value === "string" ? JSON.parse(cfg.value) : cfg.value;
+      const servers = Array.isArray(status?.servers) ? status.servers : [];
+      const enabled = servers.filter((s: any) => s?.enabled);
+      if (enabled.length > 0) {
+        allowAnyGuild = false;
+        allowedGuildIds = enabled.map((s: any) => String(s.id));
+      }
+    } catch {
+      /* keep defaults */
+    }
+  }
+
+  if (!allowAnyGuild && params.guildId && !allowedGuildIds.includes(String(params.guildId))) {
+    console.warn("[discord-interactions] skipped unauthorized guild", { guildId: params.guildId });
+    return;
+  }
+
+  let userIdToUse: string | null = null;
+  if (params.discordUserId) {
+    const { data: linkedUser } = await supabase.rpc("get_user_by_discord_id", {
+      p_discord_id: String(params.discordUserId),
+    });
+    if (linkedUser && linkedUser.length > 0) {
+      userIdToUse = linkedUser[0].user_id;
+    }
+  }
+
+  const { error: insertErr } = await supabase.from("global_chat_messages").insert({
+    user_id: userIdToUse,
+    message: params.messageContent,
+    tcg_type: "yugioh",
+    language_code: "en",
+    source_type: "discord",
+    source_username: params.discordUsername,
+    source_avatar_url: params.avatarUrl,
+    discord_user_id: params.discordUserId ? String(params.discordUserId) : null,
+  });
+
+  if (insertErr) {
+    console.error("[discord-interactions] insert error:", insertErr);
+  }
+}
+
 // Register the global slash command via the Discord REST API
 async function registerGlobalCommand(): Promise<{ ok: boolean; data: any }> {
   const token = Deno.env.get("DISCORD_BOT_TOKEN");
