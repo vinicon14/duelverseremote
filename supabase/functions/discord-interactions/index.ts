@@ -294,11 +294,14 @@ serve(async (req) => {
           });
         }
 
-        const linkedSuffix = linkedUsername ? ` (vinculado a ${linkedUsername})` : "";
+        // Public response: looks like a normal chat message from the user.
+        // The "Used /dv" badge above is unavoidable in Discord, but the content
+        // itself reads cleanly. No emojis, no verbose prefix.
         return json({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: `✅ **${discordUsername}**${linkedSuffix} postou no Chat Global do DuelVerse:\n>>> ${messageContent}`,
+            content: messageContent,
+            allowed_mentions: { parse: [] },
           },
         });
       } catch (err: any) {
