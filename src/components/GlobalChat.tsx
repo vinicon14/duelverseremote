@@ -168,9 +168,11 @@ export const GlobalChat = () => {
         .eq("key", "discord_bot_status")
         .maybeSingle();
 
+      console.log("[GlobalChat] Partner servers config:", cfg);
       if (cfg?.value) {
         const status = typeof cfg.value === "string" ? JSON.parse(cfg.value) : cfg.value;
         const servers = Array.isArray(status?.servers) ? status.servers : [];
+        console.log("[GlobalChat] Raw servers from DB:", servers);
         const formatted = servers
           .filter((s: any) => s.enabled && s.inviteLink)
           .map((s: any) => ({
@@ -180,6 +182,7 @@ export const GlobalChat = () => {
             description: s.description || "",
             iconUrl: s.iconUrl || s.icon_url,
           }));
+        console.log("[GlobalChat] Formatted partner servers:", formatted);
         setPartnerServers(formatted);
       }
     } catch (error) {

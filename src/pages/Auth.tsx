@@ -517,9 +517,6 @@ const Auth = () => {
                 <Button type="submit" className="w-full auth-cycle-btn text-white" disabled={loading}>
                   {loading ? t('auth.signingIn') : t('auth.signInBtn')}
                 </Button>
-                <Button type="button" variant="outline" className="w-full" onClick={handleDiscordSignIn} disabled={loading}>
-                  Discord
-                </Button>
               </form>
 
               {!detectPlatform().isNativeApp && !detectPlatform().isDiscord && (
