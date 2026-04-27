@@ -1115,6 +1115,7 @@ export type Database = {
       matchmaking_invites: {
         Row: {
           created_at: string
+          discord_messages: Json
           duel_id: string | null
           expires_at: string
           host_user_id: string
@@ -1129,6 +1130,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          discord_messages?: Json
           duel_id?: string | null
           expires_at?: string
           host_user_id: string
@@ -1143,6 +1145,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          discord_messages?: Json
           duel_id?: string | null
           expires_at?: string
           host_user_id?: string
