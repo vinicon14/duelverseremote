@@ -46,7 +46,7 @@ export const DiscordVoiceRoster = ({ duelId }: Props) => {
     const loadRoom = async () => {
       const { data: voiceRoom } = await supabase
         .from("discord_voice_rooms")
-        .select("id, guild_name, channel_name")
+        .select("id, guild_id, guild_name, channel_id, channel_name, invite_url")
         .eq("duel_id", duelId)
         .eq("is_active", true)
         .maybeSingle();
