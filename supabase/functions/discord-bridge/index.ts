@@ -46,6 +46,17 @@ async function discordFetch(path: string, init: RequestInit = {}) {
   return { ok: res.ok, status: res.status, data };
 }
 
+const deleteWebhookMessageSoon = (webhookUrl: string, messageId?: string) => {
+  if (!messageId) return;
+  setTimeout(async () => {
+    try {
+      await fetch(`${webhookUrl}/messages/${messageId}`, { method: "DELETE" });
+    } catch (err) {
+      console.error("[discord-bridge] failed to delete temporary matchmaking message:", err);
+    }
+  }, 8000);
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -446,6 +457,34 @@ serve(async (req) => {
       }
 
       return jsonResponse({ success: results.some((r) => r.ok), results });
+    }
+
+    if (requestType === "announce_matchmaking") {
+      const servers = Array.isArray(botStatus.servers) ? botStatus.servers : [];
+      const activeServers = servers.filter((server: any) => server.enabled && server.webhookUrl);
+      if (activeServers.length === 0) return jsonResponse({ error: "No active Discord server configured" }, 400);
+
+      const username = String(body.username || "Duelista");
+      const mode = body.matchType === "ranked" ? "rankeada" : "casual";
+      const link = String(body.link || "https://duelverse.site/matchmaking");
+      const webhookPayload = {
+        content: `/dv @everyone usuario ${username} está buscando partida ${mode} ${link}`,
+        username: "DuelVerse Matchmaking",
+        allowed_mentions: { parse: ["everyone"] },
+      };
+
+      const results: Array<{ ok: boolean; status?: number; messageId?: string }> = [];
+      for (const server of activeServers) {
+        const response = await fetch(`${server.webhookUrl}?wait=true`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(webhookPayload),
+        });
+        const posted = await response.json().catch(() => null);
+        if (response.ok) deleteWebhookMessageSoon(server.webhookUrl, posted?.id);
+        results.push({ ok: response.ok, status: response.status, messageId: posted?.id });
+      }
+      return jsonResponse({ success: results.some((r) => r.ok), temporary: true, results });
     }
 
     if (requestType === "get_config") {
