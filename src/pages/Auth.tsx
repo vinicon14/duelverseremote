@@ -57,28 +57,50 @@ const Auth = () => {
     try {
       setLoading(true);
       console.log('[AUTH] Starting Discord sign-in...');
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/discord-oauth-start`, {
+      console.log('[AUTH] Supabase URL:', import.meta.env.VITE_SUPABASE_URL);
+      
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const publishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      
+      if (!supabaseUrl || !publishableKey) {
+        throw new Error('Supabase não configurado');
+      }
+      
+      const response = await fetch(`${supabaseUrl}/functions/v1/discord-oauth-start`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          'apikey': publishableKey,
+          'Authorization': `Bearer ${publishableKey}`,
         },
         body: JSON.stringify({
           mode: 'login',
           origin: window.location.origin,
-          returnPath: returnTo || '/',
+          returnPath: returnTo || '/duels',
         }),
       });
+      
       const data = await response.json();
       console.log('[AUTH] Discord sign-in response:', response.status, data);
-      if (!response.ok) throw new Error(data?.error || `Discord login failed: ${response.status}`);
-      if (!data?.url) throw new Error('Discord URL not returned');
+      
+      if (!response.ok) {
+        throw new Error(data?.error || `Erro do servidor: ${response.status}`);
+      }
+      
+      if (!data?.url) {
+        throw new Error('URL de autorização não retornada');
+      }
+      
       window.location.href = data.url;
     } catch (err: any) {
       console.error('[AUTH] Discord sign-in error:', err);
+      // Show helpful error message
+      const errorMsg = err.message || 'Erro desconhecido';
       toast({
         title: t('auth.loginError'),
-        description: err.message || 'Discord login failed',
+        description: runningInDiscord 
+          ? `${errorMsg}. Tente usar o site: duelverse.site`
+          : errorMsg,
         variant: 'destructive',
       });
       setLoading(false);
