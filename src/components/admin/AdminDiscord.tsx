@@ -88,6 +88,7 @@ export function AdminDiscord() {
   const [loadingGuilds, setLoadingGuilds] = useState(false);
   const [selectedGuildId, setSelectedGuildId] = useState<string>("");
   const [selectedChannelId, setSelectedChannelId] = useState<string>("");
+  const [selectedVoiceChannelIds, setSelectedVoiceChannelIds] = useState<string[]>([]);
 
   // Manual fallback state
   const [newServerId, setNewServerId] = useState("");
@@ -95,6 +96,12 @@ export function AdminDiscord() {
   const [newChannelId, setNewChannelId] = useState("");
   const [newInviteLink, setNewInviteLink] = useState("");
   const [newWebhookUrl, setNewWebhookUrl] = useState("");
+
+  // Edit existing server state
+  const [editingServerId, setEditingServerId] = useState<string | null>(null);
+  const [editDescription, setEditDescription] = useState("");
+  const [editIconUrl, setEditIconUrl] = useState("");
+  const [editVoiceChannelIds, setEditVoiceChannelIds] = useState<string[]>([]);
 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
