@@ -43,20 +43,6 @@ interface YugiohCard {
     image_url_cropped: string;
   }[];
 }
-  subtypes?: string[];
-  types?: string[];
-  hp?: string;
-  evolvesFrom?: string;
-  evolvesTo?: string[];
-  rules?: string[];
-  attacks?: { name: string; damage: string; text: string; cost: string[] }[];
-  abilities?: { name: string; text: string; type: string }[];
-  regulationMark?: string;
-  rarity?: string;
-  images: {
-    small: string;
-    large: string;
-  };
   set: {
     name: string;
     id: string;
@@ -73,9 +59,7 @@ const RUSH_DUEL_TYPES = [
   'All', 'Normal Monster', 'Effect Monster', 'Spell', 'Trap'
 ];
 
-const SUPERTYPES = ['All', 'Pokémon', 'Trainer', 'Energy'];
-
-const SUBTYPES_TRAINER = ['All', 'Item', 'Supporter', 'Stadium', 'Tool'];
+const RUSH_ATTRIBUTES = ['All', 'DARK', 'DIVINE', 'EARTH', 'FIRE', 'LIGHT', 'WATER', 'WIND'];
 
 export default function PokemonDeckBuilder() {
   const { toast } = useToast();
@@ -251,14 +235,8 @@ const searchCards = useCallback(async () => {
     return true;
   };
 
-  const getSupertypeBadgeClass = (supertype: string) => {
-    switch (supertype) {
-      case 'Pokémon': return 'bg-primary/20 text-primary border-primary/30';
-      case 'Trainer': return 'bg-accent/20 text-accent-foreground border-accent/30';
-      case 'Energy': return 'bg-secondary/20 text-secondary-foreground border-secondary/30';
-      default: return '';
-    }
-  };
+  // Simple status
+  const statusText = `${totalCards}/30`;
 
   return (
     <div className="min-h-screen bg-transparent">
@@ -290,36 +268,25 @@ const searchCards = useCallback(async () => {
                   />
                 </div>
               </div>
-              <Select value={supertypeFilter} onValueChange={v => { setSupertypeFilter(v); setSubtypeFilter('All'); }}>
-                <SelectTrigger className="w-[130px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {SUPERTYPES.map(t => (
-                    <SelectItem key={t} value={t}>{t === 'All' ? 'Categoria' : t}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {supertypeFilter === 'Trainer' && (
-                <Select value={subtypeFilter} onValueChange={setSubtypeFilter}>
-                  <SelectTrigger className="w-[120px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SUBTYPES_TRAINER.map(t => (
-                      <SelectItem key={t} value={t}>{t === 'All' ? 'Subtipo' : t}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-              {(supertypeFilter === 'All' || supertypeFilter === 'Pokémon') && (
-                <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
                   <SelectTrigger className="w-[130px]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {POKEMON_TYPES.map(t => (
+                    {RUSH_DUEL_TYPES.map(t => (
                       <SelectItem key={t} value={t}>{t === 'All' ? 'Tipo' : t}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              {attributeFilter !== 'All' && (
+                <Select value={attributeFilter} onValueChange={setAttributeFilter}>
+                  <SelectTrigger className="w-[120px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {RUSH_ATTRIBUTES.map(t => (
+                      <SelectItem key={t} value={t}>{t === 'All' ? 'Atributo' : t}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -407,83 +374,68 @@ const searchCards = useCallback(async () => {
                 {/* Stats */}
                 <div className="grid grid-cols-3 gap-2 mb-3">
                   <div className="text-center p-2 rounded bg-primary/10">
-                    <div className="text-sm font-bold text-primary">{pokemonCount}</div>
-                    <div className="text-[10px] text-muted-foreground">Pokémon</div>
+                    <div className="text-sm font-bold text-primary">{monsterCards.reduce((s,c) => s + c.quantity, 0)}</div>
+                    <div className="text-[10px] text-muted-foreground">Monstros</div>
                   </div>
                   <div className="text-center p-2 rounded bg-accent/10">
-                    <div className="text-sm font-bold text-accent-foreground">{trainerCount}</div>
-                    <div className="text-[10px] text-muted-foreground">Treinador</div>
+                    <div className="text-sm font-bold text-accent-foreground">{spellCount}</div>
+                    <div className="text-[10px] text-muted-foreground">Spells</div>
                   </div>
                   <div className="text-center p-2 rounded bg-secondary/20">
-                    <div className="text-sm font-bold">{energyCount}</div>
-                    <div className="text-[10px] text-muted-foreground">Energia</div>
+                    <div className="text-sm font-bold">{trapCount}</div>
+                    <div className="text-[10px] text-muted-foreground">Traps</div>
                   </div>
                 </div>
 
                 {/* Validation */}
                 <div className="space-y-1 mb-3">
-                  <div className={`flex items-center gap-1.5 text-[11px] ${hasBasicPokemon ? 'text-green-500' : 'text-destructive'}`}>
-                    {hasBasicPokemon ? <CheckCircle2 className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
-                    {hasBasicPokemon
-                      ? `${basicPokemonCount} Pokémon Básico(s)`
-                      : 'Precisa de pelo menos 1 Pokémon Básico'}
+                  <div className={`flex items-center gap-1.5 text-[11px] ${hasMonsters ? 'text-green-500' : 'text-yellow-500'}`}>
+                    {hasMonsters ? <CheckCircle2 className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
+                    {hasMonsters ? 'Monstros OK' : 'Precisa de monstros'}
                   </div>
                   <div className={`flex items-center gap-1.5 text-[11px] ${isDeckComplete ? 'text-green-500' : 'text-muted-foreground'}`}>
                     {isDeckComplete ? <CheckCircle2 className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
-                    {isDeckComplete ? 'Deck completo (60/60)' : `Faltam ${60 - totalCards} cartas`}
+                    {isDeckComplete ? 'Deck completo (20-30)' : `Faltam ${30 - totalCards} cartas`}
                   </div>
-                  {evolutionWarnings.map((w, i) => (
-                    <div key={i} className="flex items-center gap-1.5 text-[11px] text-yellow-500">
-                      <AlertTriangle className="w-3 h-3 flex-shrink-0" />
-                      <span className="truncate">{w}</span>
-                    </div>
-                  ))}
                 </div>
 
                 {/* Progress bar */}
                 <div className="w-full bg-muted rounded-full h-2 mb-4">
                   <div
                     className={`h-2 rounded-full transition-all ${isDeckValid ? 'bg-green-500' : 'bg-primary'}`}
-                    style={{ width: `${Math.min(100, (totalCards / 60) * 100)}%` }}
+                    style={{ width: `${Math.min(100, (totalCards / 30) * 100)}%` }}
                   />
                 </div>
 
                 <ScrollArea className="h-[400px]">
                   <div className="space-y-1 pr-2">
-                    {/* Group by supertype */}
-                    {['Pokémon', 'Trainer', 'Energy'].map(supertype => {
-                      const groupCards = deck.filter(c => c.supertype === supertype);
-                      if (groupCards.length === 0) return null;
-                      return (
-                        <div key={supertype}>
-                          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-1 py-1 border-b border-border/50 mb-1">
-                            {supertype === 'Pokémon' ? '⚡ Pokémon' : supertype === 'Trainer' ? '🎒 Treinador' : '🔋 Energia'}
-                            {' '}({groupCards.reduce((s, c) => s + c.quantity, 0)})
-                          </div>
-                          {groupCards.map(card => (
-                            <div key={card.id} className="flex items-center gap-2 p-1.5 rounded hover:bg-muted/50 group">
-                              <img
-                                src={card.images.small}
-                                alt={card.name}
-                                className="w-8 h-11 rounded object-cover cursor-pointer"
-                                onClick={() => setPreviewCard(card)}
-                              />
-                              <div className="flex-1 min-w-0">
-                                <p className="text-xs font-medium truncate">{card.name}</p>
-                                <div className="flex gap-1">
-                                  {card.subtypes?.includes('Basic') && (
-                                    <span className="text-[9px] text-green-500">Básico</span>
-                                  )}
-                                  {card.evolvesFrom && (
-                                    <span className="text-[9px] text-blue-400">↑{card.evolvesFrom}</span>
-                                  )}
-                                  {!card.subtypes?.includes('Basic') && !card.evolvesFrom && (
-                                    <span className="text-[9px] text-muted-foreground">{card.subtypes?.[0] || card.supertype}</span>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => removeFromDeck(card.id)}>
+                    {deck.map(card => (
+                      <div key={card.id} className="flex items-center gap-2 p-1.5 rounded hover:bg-muted/50">
+                        <img
+                          src={card.card_images?.[0]?.image_url_small}
+                          alt={card.name}
+                          className="w-8 h-11 rounded object-cover cursor-pointer"
+                          onClick={() => setPreviewCard(card)}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium truncate">{card.name}</p>
+                          <span className="text-[9px] text-muted-foreground">{card.type}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs font-medium w-6 text-center">{card.quantity}</span>
+                          <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => removeFromDeck(card.id)}>
+                            <Minus className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                    {deck.length === 0 && (
+                      <p className="text-center text-muted-foreground py-8 text-sm">
+                        Nenhuma carta no deck
+                      </p>
+                    )}
+                  </div>
+                </ScrollArea>
                                   <Minus className="w-3 h-3" />
                                 </Button>
                                 <span className="text-xs font-bold w-4 text-center">{card.quantity}</span>
@@ -512,24 +464,14 @@ const searchCards = useCallback(async () => {
           </DialogHeader>
           {previewCard && (
             <div className="space-y-3">
-              <img src={previewCard.images.large} alt={previewCard.name} className="w-full rounded-lg" />
+              <img src={previewCard.card_images?.[0]?.image_url} alt={previewCard.name} className="w-full rounded-lg" />
               <div className="flex flex-wrap gap-1">
-                <Badge variant="outline">{previewCard.supertype}</Badge>
-                {previewCard.subtypes?.map(st => (
-                  <Badge key={st} variant="secondary" className="text-xs">{st}</Badge>
-                ))}
-                {previewCard.hp && <Badge>HP {previewCard.hp}</Badge>}
-                {previewCard.types?.map(t => (
-                  <Badge key={t} variant="outline" className="text-xs">{t}</Badge>
-                ))}
+                <Badge variant="outline">{previewCard.type}</Badge>
+                {previewCard.level && <Badge variant="secondary">★{previewCard.level}</Badge>}
+                {previewCard.atk !== undefined && <Badge>ATK {previewCard.atk}</Badge>}
+                {previewCard.def !== undefined && <Badge>DEF {previewCard.def}</Badge>}
               </div>
-              {previewCard.evolvesFrom && (
-                <p className="text-xs text-muted-foreground">Evolui de: {previewCard.evolvesFrom}</p>
-              )}
-              {previewCard.rarity && (
-                <p className="text-xs text-muted-foreground">Raridade: {previewCard.rarity}</p>
-              )}
-              <p className="text-xs text-muted-foreground">Set: {previewCard.set.name}</p>
+              <p className="text-xs text-muted-foreground">{previewCard.desc}</p>
               <Button className="w-full" onClick={() => { addToDeck(previewCard); setPreviewCard(null); }}>
                 <Plus className="w-4 h-4 mr-1" /> Adicionar ao Deck
               </Button>
