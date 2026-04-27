@@ -49,7 +49,8 @@ const Auth = () => {
   const insideDiscord = isDiscordEmbedded();
   const runningInDiscord = isRunningInsideDiscord();
 
-  const returnTo = (location.state as any)?.returnTo;
+  const returnToParam = new URLSearchParams(window.location.search).get('redirect');
+  const returnTo = (location.state as any)?.returnTo || (returnToParam === 'duels' ? '/duels' : null);
 
   // Handle Discord sign-in - defined early so it can be called from useEffect
   const handleDiscordSignIn = async () => {
@@ -94,10 +95,12 @@ const Auth = () => {
     
     console.log('[Auth] Running inside Discord, initiating auto-login...');
     
-    // Small delay to let the UI render first
+    // In Discord Embedded App, OAuth redirects may not work well
+    // Show option to login on main site instead
     const timer = setTimeout(() => {
+      // Try auto-login first
       handleDiscordSignIn();
-    }, 500);
+    }, 1000);
     
     return () => clearTimeout(timer);
   }, [runningInDiscord]);
@@ -158,7 +161,7 @@ const Auth = () => {
 
   // Verificar se usuário já está logado e redirecionar
   useEffect(() => {
-    const defaultRedirect = returnTo || '/';
+    const defaultRedirect = returnTo || (runningInDiscord ? '/duels' : '/');
     
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
@@ -477,21 +480,33 @@ const Auth = () => {
 
         <CardContent>
           {insideDiscord ? (
-            <div className="space-y-5">
+            <div className="space-y-4">
               <p className="text-sm text-muted-foreground text-center">
-                Entre com sua conta Discord para acessar o DuelVerse.
+                Entre com sua conta Discord para jogar no DuelVerse.
               </p>
               <Button type="button" className="w-full bg-[#5865F2] text-white hover:bg-[#4752C4]" onClick={handleDiscordSignIn} disabled={loading}>
                 <DiscordIcon className="mr-2 h-4 w-4" />
-                Continuar com Discord
+                {loading ? 'Conectando...' : 'Entrar com Discord'}
               </Button>
+              {loading && (
+                <p className="text-xs text-center text-muted-foreground">
+                  Se não redirecionar em 5 segundos, clique abaixo:
+                </p>
+              )}
               <div className="relative">
                 <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
                 <div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-2 text-muted-foreground">ou</span></div>
               </div>
-              <Button type="button" variant="outline" className="w-full" onClick={() => window.open("https://duelverse.site/auth", "_blank") }>
-                Criar conta em duelverse.site
+              <Button type="button" variant="outline" className="w-full" onClick={() => window.open("https://duelverse.site/auth?redirect=duels", "_blank")}>
+                Criar conta no site
               </Button>
+              <p className="text-xs text-center text-muted-foreground pt-2">
+                Após criar sua conta no site,
+                <br />
+                <button type="button" className="text-primary underline" onClick={() => window.location.reload()}>
+                  clique aqui para atualizar
+                </button>
+              </p>
             </div>
           ) : (
           <Tabs defaultValue="signin" className="w-full">
