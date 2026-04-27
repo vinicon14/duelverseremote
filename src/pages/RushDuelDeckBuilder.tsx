@@ -2,6 +2,7 @@
  * DuelVerse - Rush Duel Deck Builder
  * 
  * Deck builder usando a API YGOPRODeck com filtro Rush Duel.
+ * Regras: 40+ cartas main, até 15 extra, máx 3 cópias por carta.
  */
 import { useState, useEffect, useCallback } from 'react';
 import { Navbar } from '@/components/Navbar';
@@ -12,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Search, Plus, Minus, Trash2, Save, FolderOpen, Zap, Loader2, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -46,13 +48,15 @@ interface DeckCard extends YugiohCard {
 
 const RUSH_DUEL_TYPES = ['All', 'Normal Monster', 'Effect Monster', 'Spell', 'Trap'];
 const RUSH_ATTRIBUTES = ['All', 'DARK', 'DIVINE', 'EARTH', 'FIRE', 'LIGHT', 'WATER', 'WIND'];
+const RUSH_FORMAT = 'Rush Duel';
 
-export default function PokemonDeckBuilder() {
+export default function RushDuelDeckBuilder() {
   const { toast } = useToast();
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<YugiohCard[]>([]);
-  const [deck, setDeck] = useState<DeckCard[]>([]);
+  const [mainDeck, setMainDeck] = useState<DeckCard[]>([]);
+  const [extraDeck, setExtraDeck] = useState<DeckCard[]>([]);
   const [loading, setLoading] = useState(false);
   const [typeFilter, setTypeFilter] = useState('All');
   const [attributeFilter, setAttributeFilter] = useState('All');
@@ -65,6 +69,7 @@ export default function PokemonDeckBuilder() {
   const [currentDeckName, setCurrentDeckName] = useState('');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [previewCard, setPreviewCard] = useState<YugiohCard | null>(null);
+  const [addTo, setAddTo] = useState<'main' | 'extra'>('main');
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -78,7 +83,7 @@ export default function PokemonDeckBuilder() {
     if (!searchQuery.trim() && typeFilter === 'All' && attributeFilter === 'All') return;
     setLoading(true);
     try {
-      let query = 'https://db.ygoprodeck.com/api/v7/cardinfo.php?format=Rush%20Duel&num=40';
+      let query = `https://db.ygoprodeck.com/api/v7/cardinfo.php?format=${encodeURIComponent(RUSH_FORMAT)}&num=40`;
       const params: string[] = [];
       if (searchQuery.trim()) params.push(`fname=${encodeURIComponent(searchQuery.trim())}`);
       if (typeFilter !== 'All') params.push(`type=${encodeURIComponent(typeFilter)}`);
@@ -92,37 +97,75 @@ export default function PokemonDeckBuilder() {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, typeFilter, attributeFilter]);
+  }, [searchQuery, typeFilter, attributeFilter, toast]);
+
+  const getTotal = (deck: DeckCard[]) => deck.reduce((sum, c) => sum + c.quantity, 0);
+
+  const isExtraCard = (type: string) => type.includes('Fusion') || type.includes('Synchro') || type.includes('XYZ') || type.includes('Link');
 
   const addToDeck = (card: YugiohCard) => {
-    const totalCards = deck.reduce((sum, c) => sum + c.quantity, 0);
-    if (totalCards >= 30) {
-      toast({ title: 'Deck cheio', description: 'Máximo 30 cartas', variant: 'destructive' });
-      return;
+    const target = isExtraCard(card.type) ? extraDeck : mainDeck;
+    const setTarget = isExtraCard(card.type) ? setExtraDeck : setMainDeck;
+    const total = getTotal(target);
+
+    if (!isExtraCard(card.type)) {
+      if (total >= 40) {
+        toast({ title: 'Main Deck cheio', description: 'Máximo 40 cartas', variant: 'destructive' });
+        return;
+      }
+    } else {
+      if (total >= 15) {
+        toast({ title: 'Extra Deck cheio', description: 'Máximo 15 cartas', variant: 'destructive' });
+        return;
+      }
     }
-    const existing = deck.find(c => c.id === card.id);
+
+    const existing = target.find(c => c.id === card.id);
     if (existing && existing.quantity >= 3) {
       toast({ title: 'Limite atingido', description: 'Máximo 3 cópias', variant: 'destructive' });
       return;
     }
-    setDeck(prev => prev.map(c => c.id === card.id ? { ...c, quantity: c.quantity + 1 } : c).concat(!existing ? { ...card, quantity: 1 } : []));
+    setTarget(prev => prev.map(c => c.id === card.id ? { ...c, quantity: c.quantity + 1 } : c).concat(!existing ? { ...card, quantity: 1 } : []));
   };
 
-  const removeFromDeck = (cardId: number) => {
-    setDeck(prev => prev.map(c => c.id === cardId ? (c.quantity <= 1 ? null : { ...c, quantity: c.quantity - 1 }) : c).filter(Boolean));
+  const removeFromDeck = (cardId: number, from: 'main' | 'extra') => {
+    if (from === 'main') {
+      setMainDeck(prev => prev.map(c => c.id === cardId ? (c.quantity <= 1 ? null : { ...c, quantity: c.quantity - 1 }) : c).filter(Boolean) as DeckCard[]);
+    } else {
+      setExtraDeck(prev => prev.map(c => c.id === cardId ? (c.quantity <= 1 ? null : { ...c, quantity: c.quantity - 1 }) : c).filter(Boolean) as DeckCard[]);
+    }
   };
 
-  const clearDeck = () => { setDeck([]); setCurrentDeckId(null); setCurrentDeckName(''); };
+  const clearDeck = () => { setMainDeck([]); setExtraDeck([]); setCurrentDeckId(null); setCurrentDeckName(''); };
 
-  const totalCards = deck.reduce((sum, c) => sum + c.quantity, 0);
-  const isDeckComplete = totalCards >= 20;
+  const totalMain = getTotal(mainDeck);
+  const totalExtra = getTotal(extraDeck);
+  const isDeckComplete = totalMain >= 40;
 
   const saveDeck = async (name: string, description: string, isPublic: boolean) => {
     setSavingDeck(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Não autenticado');
-      const deckData = { user_id: user.id, name, description, is_public: isPublic, tcg_type: 'pokemon', main_deck: deck, extra_deck: [], side_deck: [], tokens_deck: [] };
+
+      if (totalMain < 40) {
+        toast({ title: 'Main Deck incompleto', description: 'Mínimo 40 cartas necessárias', variant: 'destructive' });
+        setSavingDeck(false);
+        return;
+      }
+
+      const deckData = { 
+        user_id: user.id, 
+        name, 
+        description, 
+        is_public: isPublic, 
+        tcg_type: 'rush_duel', 
+        main_deck: mainDeck, 
+        extra_deck: extraDeck, 
+        side_deck: [], 
+        tokens_deck: [] 
+      };
+      
       if (currentDeckId) {
         const { error } = await supabase.from('saved_decks').update(deckData).eq('id', currentDeckId);
         if (error) throw error;
@@ -146,7 +189,7 @@ export default function PokemonDeckBuilder() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data, error } = await supabase.from('saved_decks').select('*').eq('user_id', user.id).eq('tcg_type', 'pokemon').order('updated_at', { ascending: false });
+      const { data, error } = await supabase.from('saved_decks').select('*').eq('user_id', user.id).eq('tcg_type', 'rush_duel').order('updated_at', { ascending: false });
       if (!error) setSavedDecks(data || []);
     } finally {
       setLoadingDecks(false);
@@ -156,7 +199,8 @@ export default function PokemonDeckBuilder() {
   const loadDeck = (savedDeck: any) => {
     setCurrentDeckId(savedDeck.id);
     setCurrentDeckName(savedDeck.name);
-    setDeck(savedDeck.main_deck || []);
+    setMainDeck(savedDeck.main_deck || []);
+    setExtraDeck(savedDeck.extra_deck || []);
     setShowLoadModal(false);
   };
 
@@ -169,6 +213,39 @@ export default function PokemonDeckBuilder() {
     return true;
   };
 
+  const renderDeck = (deck: DeckCard[], from: 'main' | 'extra') => (
+    <ScrollArea className="h-[250px]">
+      <div className="space-y-1 pr-2">
+        {deck.length === 0 ? (
+          <p className="text-center text-muted-foreground py-8 text-sm">
+            {from === 'main' ? 'Nenhuma carta no Main Deck' : 'Nenhuma carta no Extra Deck'}
+          </p>
+        ) : (
+          deck.map(card => (
+            <div key={card.id} className="flex items-center gap-2 p-1.5 rounded hover:bg-muted/50">
+              <img 
+                src={card.card_images?.[0]?.image_url_small} 
+                alt={card.name} 
+                className="w-8 h-11 rounded object-cover cursor-pointer" 
+                onClick={() => setPreviewCard(card)} 
+              />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium truncate">{card.name}</p>
+                <span className="text-[9px] text-muted-foreground">{card.type}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="text-xs font-medium w-6 text-center">{card.quantity}</span>
+                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => removeFromDeck(card.id, from)}>
+                  <Minus className="w-3 h-3" />
+                </Button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </ScrollArea>
+  );
+
   return (
     <div className="min-h-screen bg-transparent">
       <Navbar />
@@ -179,16 +256,23 @@ export default function PokemonDeckBuilder() {
             Rush Duel Deck Builder
           </h1>
           <p className="text-sm text-muted-foreground">
-            {currentDeckName ? `Deck: ${currentDeckName}` : 'Deck vazio'}
+            {currentDeckName ? `Deck: ${currentDeckName}` : 'Deck vazio'} • Formato: Rush Duel
           </p>
         </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-4">
             <div className="flex flex-wrap gap-2">
               <div className="flex-1 min-w-[200px]">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input placeholder="Buscar cartas..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} onKeyDown={e => e.key === 'Enter' && searchCards()} className="pl-9" />
+                  <Input 
+                    placeholder="Buscar cartas Rush Duel..." 
+                    value={searchQuery} 
+                    onChange={e => setSearchQuery(e.target.value)} 
+                    onKeyDown={e => e.key === 'Enter' && searchCards()} 
+                    className="pl-9" 
+                  />
                 </div>
               </div>
               <Select value={typeFilter} onValueChange={setTypeFilter}>
@@ -203,12 +287,42 @@ export default function PokemonDeckBuilder() {
                   {RUSH_ATTRIBUTES.map(t => <SelectItem key={t} value={t}>{t === 'All' ? 'Atributo' : t}</SelectItem>)}
                 </SelectContent>
               </Select>
-              <Button onClick={searchCards} disabled={loading}>{loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}</Button>
+              <Button onClick={searchCards} disabled={loading}>
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+              </Button>
             </div>
+
+            <div className="flex items-center gap-2 p-2 bg-muted/30 rounded-lg">
+              <span className="text-sm">Adicionar ao:</span>
+              <Button 
+                size="sm" 
+                variant={addTo === 'main' ? 'default' : 'outline'} 
+                onClick={() => setAddTo('main')}
+              >
+                Main Deck
+              </Button>
+              <Button 
+                size="sm" 
+                variant={addTo === 'extra' ? 'default' : 'outline'} 
+                onClick={() => setAddTo('extra')}
+              >
+                Extra Deck
+              </Button>
+            </div>
+
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
               {searchResults.map(card => (
-                <Card key={card.id} className="card-mystic cursor-pointer hover:border-primary/40" onClick={() => addToDeck(card)}>
-                  <img src={card.card_images?.[0]?.image_url_small} alt={card.name} className="w-full h-auto rounded-t-lg" loading="lazy" />
+                <Card 
+                  key={card.id} 
+                  className="card-mystic cursor-pointer hover:border-primary/40" 
+                  onClick={() => { addToDeck(card); }}
+                >
+                  <img 
+                    src={card.card_images?.[0]?.image_url_small} 
+                    alt={card.name} 
+                    className="w-full h-auto rounded-t-lg" 
+                    loading="lazy" 
+                  />
                   <CardContent className="p-2">
                     <p className="text-xs font-medium truncate">{card.name}</p>
                     <Badge variant="outline" className="text-[10px]">{card.type}</Badge>
@@ -223,44 +337,52 @@ export default function PokemonDeckBuilder() {
               </div>
             )}
           </div>
+
           <div className="space-y-4">
             <Card className="card-mystic">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <h2 className="font-bold text-lg">Deck ({totalCards}/30)</h2>
+                  <h2 className="font-bold text-lg">Deck</h2>
                   <div className="flex gap-1">
-                    <Button size="icon" variant="ghost" onClick={() => { loadSavedDecks(); setShowLoadModal(true); }}><FolderOpen className="w-4 h-4" /></Button>
-                    <Button size="icon" variant="ghost" onClick={() => setShowSaveModal(true)} disabled={deck.length === 0}><Save className="w-4 h-4" /></Button>
-                    <Button size="icon" variant="ghost" onClick={clearDeck} disabled={deck.length === 0}><Trash2 className="w-4 h-4" /></Button>
+                    <Button size="icon" variant="ghost" onClick={() => { loadSavedDecks(); setShowLoadModal(true); }}>
+                      <FolderOpen className="w-4 h-4" />
+                    </Button>
+                    <Button size="icon" variant="ghost" onClick={() => setShowSaveModal(true)} disabled={mainDeck.length === 0}>
+                      <Save className="w-4 h-4" />
+                    </Button>
+                    <Button size="icon" variant="ghost" onClick={clearDeck} disabled={mainDeck.length === 0 && extraDeck.length === 0}>
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                   </div>
                 </div>
-                <div className="flex items-center justify-between text-[11px] mb-3">
-                  <span className={isDeckComplete ? 'text-green-500' : 'text-yellow-500'}>{isDeckComplete ? '✓ Deck válido' : 'Mínimo 20 cartas'}</span>
-                  <span>{totalCards} cartas</span>
+
+                <div className={`flex items-center justify-between text-[11px] mb-3 p-2 rounded ${isDeckComplete ? 'bg-green-500/20 text-green-500' : 'bg-yellow-500/20 text-yellow-500'}`}>
+                  {isDeckComplete ? (
+                    <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Deck válido</span>
+                  ) : (
+                    <span className="flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Mínimo 40 cartas</span>
+                  )}
+                  <span>{totalMain} main • {totalExtra} extra</span>
                 </div>
-                <ScrollArea className="h-[300px]">
-                  <div className="space-y-1 pr-2">
-                    {deck.map(card => (
-                      <div key={card.id} className="flex items-center gap-2 p-1.5 rounded hover:bg-muted/50">
-                        <img src={card.card_images?.[0]?.image_url_small} alt={card.name} className="w-8 h-11 rounded object-cover cursor-pointer" onClick={() => setPreviewCard(card)} />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium truncate">{card.name}</p>
-                          <span className="text-[9px] text-muted-foreground">{card.type}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <span className="text-xs font-medium w-6 text-center">{card.quantity}</span>
-                          <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => removeFromDeck(card.id)}><Minus className="w-3 h-3" /></Button>
-                        </div>
-                      </div>
-                    ))}
-                    {deck.length === 0 && <p className="text-center text-muted-foreground py-8 text-sm">Nenhuma carta no deck</p>}
-                  </div>
-                </ScrollArea>
+
+                <Tabs defaultValue="main">
+                  <TabsList className="w-full">
+                    <TabsTrigger value="main" className="flex-1">Main ({totalMain}/40)</TabsTrigger>
+                    <TabsTrigger value="extra" className="flex-1">Extra ({totalExtra}/15)</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="main" className="mt-2">
+                    {renderDeck(mainDeck, 'main')}
+                  </TabsContent>
+                  <TabsContent value="extra" className="mt-2">
+                    {renderDeck(extraDeck, 'extra')}
+                  </TabsContent>
+                </Tabs>
               </CardContent>
             </Card>
           </div>
         </div>
       </main>
+
       <Dialog open={!!previewCard} onOpenChange={() => setPreviewCard(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader><DialogTitle>{previewCard?.name}</DialogTitle></DialogHeader>
@@ -274,13 +396,30 @@ export default function PokemonDeckBuilder() {
                 {previewCard.def !== undefined && <Badge>DEF {previewCard.def}</Badge>}
               </div>
               <p className="text-xs text-muted-foreground">{previewCard.desc}</p>
-              <Button className="w-full" onClick={() => { addToDeck(previewCard); setPreviewCard(null); }}><Plus className="w-4 h-4 mr-1" /> Adicionar</Button>
+              <Button className="w-full" onClick={() => { addToDeck(previewCard); setPreviewCard(null); }}>
+                <Plus className="w-4 h-4 mr-1" /> Adicionar
+              </Button>
             </div>
           )}
         </DialogContent>
       </Dialog>
-      <SaveDeckModal open={showSaveModal} onClose={() => setShowSaveModal(false)} onSave={saveDeck} isLoading={savingDeck} existingName={currentDeckName} isUpdate={!!currentDeckId} />
-      <LoadDeckModal open={showLoadModal} onClose={() => setShowLoadModal(false)} decks={savedDecks} onLoad={loadDeck} onDelete={deleteDeck} isLoading={loadingDecks} />
+
+      <SaveDeckModal 
+        open={showSaveModal} 
+        onClose={() => setShowSaveModal(false)} 
+        onSave={saveDeck} 
+        isLoading={savingDeck} 
+        existingName={currentDeckName} 
+        isUpdate={!!currentDeckId} 
+      />
+      <LoadDeckModal 
+        open={showLoadModal} 
+        onClose={() => setShowLoadModal(false)} 
+        decks={savedDecks} 
+        onLoad={loadDeck} 
+        onDelete={deleteDeck} 
+        isLoading={loadingDecks} 
+      />
     </div>
   );
 }

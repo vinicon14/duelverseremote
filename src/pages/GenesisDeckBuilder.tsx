@@ -63,13 +63,14 @@ const getCardImageLarge = (card: YugiohCard): string => {
   return '';
 };
 
-export default function MagicDeckBuilder() {
+export default function GenesisDeckBuilder() {
   const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<YugiohCard[]>([]);
   const [searching, setSearching] = useState(false);
   const [mainDeck, setMainDeck] = useState<DeckCard[]>([]);
   const [sideboard, setSideboard] = useState<DeckCard[]>([]);
+  const [extraDeck, setExtraDeck] = useState<DeckCard[]>([]);
   const [selectedCard, setSelectedCard] = useState<YugiohCard | null>(null);
   const [saveOpen, setSaveOpen] = useState(false);
   const [loadOpen, setLoadOpen] = useState(false);
@@ -81,13 +82,13 @@ export default function MagicDeckBuilder() {
   const [saving, setSaving] = useState(false);
   const [savedDecks, setSavedDecks] = useState<any[]>([]);
   const [loadingDecks, setLoadingDecks] = useState(false);
+  const GENESIS_FORMAT = 'genesys';
 
   const searchCards = useCallback(async () => {
     if (!query.trim()) return;
     setSearching(true);
     try {
-      // Use YGO API with Genesis format instead of Scryfall
-      const res = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?format=genesys&fname=${encodeURIComponent(query)}&num=30`);
+      const res = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?format=${GENESIS_FORMAT}&fname=${encodeURIComponent(query)}&num=30`);
       if (!res.ok) {
         setResults([]);
         return;
@@ -102,8 +103,14 @@ export default function MagicDeckBuilder() {
     }
   }, [query]);
 
-  const addToDeck = (card: YugiohCard, target: 'main' | 'side') => {
-    const setter = target === 'main' ? setMainDeck : setSideboard;
+  const isExtraCard = (type: string) => type.includes('Fusion') || type.includes('Synchro') || type.includes('XYZ') || type.includes('Link');
+
+  const addToDeck = (card: YugiohCard, target: 'main' | 'side' | 'extra') => {
+    let setter;
+    if (target === 'main') setter = setMainDeck;
+    else if (target === 'side') setter = setSideboard;
+    else setter = setExtraDeck;
+    
     setter(prev => {
       const existing = prev.find(c => c.card.id === card.id);
       if (existing) {
@@ -117,8 +124,12 @@ export default function MagicDeckBuilder() {
     });
   };
 
-  const removeFromDeck = (cardId: number, target: 'main' | 'side') => {
-    const setter = target === 'main' ? setMainDeck : setSideboard;
+  const removeFromDeck = (cardId: number, target: 'main' | 'side' | 'extra') => {
+    let setter;
+    if (target === 'main') setter = setMainDeck;
+    else if (target === 'side') setter = setSideboard;
+    else setter = setExtraDeck;
+    
     setter(prev => {
       const existing = prev.find(c => c.card.id === cardId);
       if (existing && existing.quantity > 1) {
@@ -159,6 +170,11 @@ export default function MagicDeckBuilder() {
       setSaving(false);
       return;
     }
+    if (totalExtra > 15) {
+      toast.error(`Extra Deck máximo de 15 cartas (atual: ${totalExtra})`);
+      setSaving(false);
+      return;
+    }
 
     const deckData = {
       user_id: user.id,
@@ -184,9 +200,16 @@ export default function MagicDeckBuilder() {
         type_line: c.card.type_line || '',
         mana_cost: c.card.mana_cost || '',
       })),
-      extra_deck: [],
+      extra_deck: extraDeck.map(c => ({
+        id: c.card.id,
+        name: c.card.name,
+        quantity: c.quantity,
+        image: getCardImage(c.card),
+        image_uris: c.card.image_uris || null,
+        type_line: c.card.type_line || '',
+      })),
       tokens_deck: [],
-      tcg_type: 'magic'
+      tcg_type: 'genesis'
     };
 
     const { error } = await supabase.from('saved_decks').insert(deckData);
@@ -207,7 +230,7 @@ export default function MagicDeckBuilder() {
       .from('saved_decks')
       .select('*')
       .eq('user_id', user.id)
-      .eq('tcg_type', 'magic')
+      .eq('tcg_type', 'genesis')
       .order('created_at', { ascending: false });
     setLoadingDecks(false);
     if (error) { toast.error('Erro ao carregar decks'); return; }
@@ -220,34 +243,32 @@ export default function MagicDeckBuilder() {
       card: {
         id: c.id,
         name: c.name,
-        mana_cost: c.mana_cost || '',
-        type_line: c.type_line || '',
-        oracle_text: c.oracle_text || '',
-        image_uris: c.image_uris || (c.image ? { small: c.image, normal: c.image, large: c.image } : undefined),
-        card_faces: c.card_faces || undefined,
-        colors: c.colors || [],
-        rarity: c.rarity || 'common',
-        set_name: c.set_name || '',
-      } as ScryfallCard,
+        card_images: c.image ? [{ id: c.id, image_url: c.image, image_url_small: c.image, image_url_cropped: c.image }] : [],
+        type: c.type_line || '',
+      } as YugiohCard,
       quantity: c.quantity || 1,
     }));
     const sideCards: DeckCard[] = (deck.side_deck as any[] || []).map((c: any) => ({
       card: {
         id: c.id,
         name: c.name,
-        mana_cost: c.mana_cost || '',
-        type_line: c.type_line || '',
-        oracle_text: c.oracle_text || '',
-        image_uris: c.image_uris || (c.image ? { small: c.image, normal: c.image, large: c.image } : undefined),
-        card_faces: c.card_faces || undefined,
-        colors: c.colors || [],
-        rarity: c.rarity || 'common',
-        set_name: c.set_name || '',
-      } as ScryfallCard,
+        card_images: c.image ? [{ id: c.id, image_url: c.image, image_url_small: c.image, image_url_cropped: c.image }] : [],
+        type: c.type_line || '',
+      } as YugiohCard,
+      quantity: c.quantity || 1,
+    }));
+    const extraCards: DeckCard[] = (deck.extra_deck as any[] || []).map((c: any) => ({
+      card: {
+        id: c.id,
+        name: c.name,
+        card_images: c.image ? [{ id: c.id, image_url: c.image, image_url_small: c.image, image_url_cropped: c.image }] : [],
+        type: c.type_line || '',
+      } as YugiohCard,
       quantity: c.quantity || 1,
     }));
     setMainDeck(mainCards);
     setSideboard(sideCards);
+    setExtraDeck(extraCards);
     setDeckName(deck.name);
     setLoadOpen(false);
     toast.success(`Deck "${deck.name}" carregado!`);

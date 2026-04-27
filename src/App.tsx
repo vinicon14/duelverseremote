@@ -57,8 +57,8 @@ const DiscordActivity = lazy(() => import("./pages/DiscordActivity"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const DeckBuilder = lazy(() => import("./pages/DeckBuilder"));
-const MagicDeckBuilder = lazy(() => import("./pages/MagicDeckBuilder"));
-const PokemonDeckBuilder = lazy(() => import("./pages/PokemonDeckBuilder"));
+const GenesisDeckBuilder = lazy(() => import("./pages/GenesisDeckBuilder"));
+const RushDuelDeckBuilder = lazy(() => import("./pages/RushDuelDeckBuilder"));
 const ProfileSelect = lazy(() => import("./pages/ProfileSelect"));
 const CreateWeeklyTournament = lazy(() => import("./pages/CreateWeeklyTournament"));
 const WeeklyTournaments = lazy(() => import("./pages/WeeklyTournaments"));
@@ -83,10 +83,9 @@ const HomePage = ({ user }: { user: User | null }) => {
 
 // Componente que resolve automaticamente o deck builder com base no TCG ativo
 const ActiveDeckBuilderRoute = () => {
-  const { activeTcg } = useTcg();
-
-  if (activeTcg === "magic") return <MagicDeckBuilder />;
-  if (activeTcg === "pokemon") return <PokemonDeckBuilder />;
+  const activeTcg = localStorage.getItem('activeTcg') || 'yugioh';
+  if (activeTcg === "genesis") return <GenesisDeckBuilder />;
+  if (activeTcg === "rush_duel") return <RushDuelDeckBuilder />;
   return <DeckBuilder />;
 };
 
@@ -124,10 +123,8 @@ const RouterContent = ({ user }: { user: User | null }) => {
         <Route path="/video/:id" element={<VideoShare />} />
         
         <Route path="/deck-builder" element={<ActiveDeckBuilderRoute />} />
-        <Route path="/magic-deck-builder" element={<MagicDeckBuilder />} />
-        <Route path="/pokemon-deck-builder" element={<PokemonDeckBuilder />} />
-        <Route path="/genesis" element={<MagicDeckBuilder />} />
-        <Route path="/rush-duel" element={<PokemonDeckBuilder />} />
+        <Route path="/genesis" element={<GenesisDeckBuilder />} />
+        <Route path="/rush-duel" element={<RushDuelDeckBuilder />} />
         <Route path="/advanced" element={<DeckBuilder />} />
         <Route path="/profile-select" element={<ProfileSelect />} />
         <Route path="/weekly-tournaments" element={<WeeklyTournaments />} />
