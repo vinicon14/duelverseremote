@@ -234,12 +234,21 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     };
     peersRef.current.set(remotePeerId, peerState);
 
-    // Add local tracks
+    // Add local tracks (or recvonly transceivers for spectators)
     const localStream = localStreamRef.current;
     if (localStream) {
       localStream.getTracks().forEach((track) => {
         pc.addTrack(track, localStream);
       });
+    } else if (isSpectator) {
+      // Spectators: ensure SDP includes media sections to receive audio + video
+      try {
+        pc.addTransceiver("audio", { direction: "recvonly" });
+        pc.addTransceiver("video", { direction: "recvonly" });
+        console.log("[WebRTC] Spectator recvonly transceivers added for:", remotePeerId);
+      } catch (err) {
+        console.error("[WebRTC] Failed to add recvonly transceivers:", err);
+      }
     } else {
       console.warn("[WebRTC] No local stream yet for peer:", remotePeerId);
     }
