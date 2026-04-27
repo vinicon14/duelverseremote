@@ -76,6 +76,23 @@ export const Navbar = () => {
         .from('profiles')
         .update({ is_online: false, last_seen: new Date().toISOString() })
         .eq('user_id', user.id);
+
+      // Remove "Jogando DuelVerse" role on linked Discord servers
+      try {
+        const { data: sess } = await supabase.auth.getSession();
+        const token = sess.session?.access_token;
+        if (token) {
+          await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/discord-presence`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ playing: false }),
+          });
+        }
+      } catch { /* best-effort */ }
     }
     
     await supabase.auth.signOut();
