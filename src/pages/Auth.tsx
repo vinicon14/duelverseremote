@@ -50,6 +50,33 @@ const Auth = () => {
 
   const returnTo = (location.state as any)?.returnTo;
 
+  // Capturar erros de redirecionamento do Discord OAuth
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const discordStatus = params.get('discord');
+    const message = params.get('message');
+
+    if (discordStatus === 'error') {
+      const errorMessages: Record<string, string> = {
+        discord_already_linked: "Esta conta Discord já está vinculada a outro usuário.",
+        state_expired: "A solicitação expirou. Tente novamente.",
+        token_exchange_failed: "Falha ao validar com o Discord.",
+        user_fetch_failed: "Não foi possível obter dados do Discord.",
+        save_failed: "Erro ao salvar a vinculação.",
+      };
+
+      toast({
+        title: "Erro na Autenticação Discord",
+        description: errorMessages[message || ""] || message || "Não foi possível validar sua conta Discord.",
+        variant: "destructive",
+      });
+
+      // Limpar parâmetros da URL
+      const newUrl = window.location.pathname + (returnTo ? `?returnTo=${returnTo}` : '');
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, [toast, returnTo]);
+
   // Verificar se usuário já está logado e redirecionar
   useEffect(() => {
     const defaultRedirect = returnTo || '/';
@@ -176,10 +203,11 @@ const Auth = () => {
           headers: {
             'Authorization': `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
+            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
           },
           body: JSON.stringify({
             origin: window.location.origin,
-            returnPath: '/',
+            returnPath: returnTo || '/',
           }),
         }
       );
