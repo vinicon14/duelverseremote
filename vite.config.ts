@@ -40,9 +40,9 @@ export default defineConfig(({ mode }) => ({
       },
       manifest: {
         id: "/",
-        name: "Duelverse - Duelos de TCG ao Vivo",
+        name: "Duelverse - Duelos de Yu-Gi-Oh ao Vivo",
         short_name: "Duelverse",
-        description: "Plataforma de duelos de TCG ao vivo com chamadas de vídeo. Yu-Gi-Oh, Magic e Pokémon.",
+        description: "Plataforma de duelos de Yu-Gi-Oh ao vivo com chamadas de vídeo. YGO Advanced, Rush Duel e Genesis.",
         theme_color: "#000000",
         background_color: "#000000",
         display: "standalone",
