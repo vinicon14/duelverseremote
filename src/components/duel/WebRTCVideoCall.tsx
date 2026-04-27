@@ -234,12 +234,21 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     };
     peersRef.current.set(remotePeerId, peerState);
 
-    // Add local tracks
+    // Add local tracks (or recvonly transceivers for spectators)
     const localStream = localStreamRef.current;
     if (localStream) {
       localStream.getTracks().forEach((track) => {
         pc.addTrack(track, localStream);
       });
+    } else if (isSpectator) {
+      // Spectators: ensure SDP includes media sections to receive audio + video
+      try {
+        pc.addTransceiver("audio", { direction: "recvonly" });
+        pc.addTransceiver("video", { direction: "recvonly" });
+        console.log("[WebRTC] Spectator recvonly transceivers added for:", remotePeerId);
+      } catch (err) {
+        console.error("[WebRTC] Failed to add recvonly transceivers:", err);
+      }
     } else {
       console.warn("[WebRTC] No local stream yet for peer:", remotePeerId);
     }
@@ -315,7 +324,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     };
 
     return pc;
-  }, [userId]);
+  }, [userId, isSpectator]);
 
   const handleSignal = useCallback(
     async (payload: any) => {
@@ -326,17 +335,38 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       const remotePeerId = payload.senderId;
 
       if (payload.type === "ready") {
-        // New peer announced itself, create connection and send offer
-        // The peer with "higher" id is polite (to break ties)
-        if (!peersRef.current.has(remotePeerId)) {
+        const isNewPeer = !peersRef.current.has(remotePeerId);
+        if (isNewPeer) {
           createPeerConnection(remotePeerId);
         }
         const peer = peersRef.current.get(remotePeerId);
         if (!peer) return;
 
-        // Only one side should create the offer to avoid glare
-        // Use string comparison as tiebreaker
-        if (userId > remotePeerId) {
+        // Spectator handshake: if we are spectator and this is a new player peer,
+        // reply with our own targeted "ready" so the player knows to create an offer.
+        if (isSpectator && isNewPeer && payload.isSpectator !== true) {
+          channelRef.current?.send({
+            type: "broadcast",
+            event: "webrtc-signal",
+            payload: { type: "ready", senderId: userId, targetId: remotePeerId, isSpectator: true },
+          });
+        }
+
+        // Decide who creates the offer:
+        // - Spectator never creates the offer.
+        // - If remote is spectator, we (player) always create it.
+        // - Otherwise, glare-avoidance via id comparison.
+        const remoteIsSpectator = payload.isSpectator === true;
+        let shouldCreateOffer: boolean;
+        if (isSpectator) {
+          shouldCreateOffer = false;
+        } else if (remoteIsSpectator) {
+          shouldCreateOffer = true;
+        } else {
+          shouldCreateOffer = userId > remotePeerId;
+        }
+
+        if (shouldCreateOffer) {
           try {
             peer.makingOffer = true;
             const offer = await peer.pc.createOffer();
@@ -407,7 +437,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         console.error("[WebRTC] signal handling error:", err);
       }
     },
-    [userId, createPeerConnection]
+    [userId, createPeerConnection, isSpectator]
   );
 
   useEffect(() => {
@@ -495,7 +525,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
             channel.send({
               type: "broadcast",
               event: "webrtc-signal",
-              payload: { type: "ready", senderId: userId },
+              payload: { type: "ready", senderId: userId, isSpectator },
             });
           }
         });
