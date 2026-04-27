@@ -23,30 +23,14 @@ serve(async (req) => {
       });
     }
 
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "No auth header" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const token = authHeader.replace("Bearer ", "");
-    const supabase = createClient(supabaseUrl, serviceKey);
-    const { data: userData, error: userError } = await supabase.auth.getUser(token);
-
-    if (userError || !userData.user) {
-      return new Response(JSON.stringify({ error: "Invalid user token" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
+    // Parse body first (mode/origin/returnPath are optional)
+    let mode: "link" | "login" = "link";
     let origin = "https://duelverse.site";
     let returnPath = "/profile";
 
     try {
       const body = await req.json();
+      if (body?.mode === "login") mode = "login";
       if (typeof body?.origin === "string" && /^https?:\/\//.test(body.origin)) {
         origin = body.origin;
       }
@@ -57,8 +41,38 @@ serve(async (req) => {
       // body is optional
     }
 
+    // For "link" mode (linking Discord to an existing logged-in account) we
+    // require an authenticated user. For "login" mode we skip auth so Discord
+    // becomes an entry point to create / sign in.
+    let userId: string | null = null;
+
+    if (mode === "link") {
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader) {
+        return new Response(JSON.stringify({ error: "No auth header" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const token = authHeader.replace("Bearer ", "");
+      const supabase = createClient(supabaseUrl, serviceKey);
+      const { data: userData, error: userError } = await supabase.auth.getUser(token);
+      if (userError || !userData.user) {
+        return new Response(JSON.stringify({ error: "Invalid user token" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      userId = userData.user.id;
+      // For link mode the default return path is /profile
+    } else {
+      // Login mode default return path → home
+      if (returnPath === "/profile") returnPath = "/";
+    }
+
     const state = btoa(JSON.stringify({
-      user_id: userData.user.id,
+      mode,
+      user_id: userId,
       nonce: crypto.randomUUID(),
       ts: Date.now(),
       origin,
