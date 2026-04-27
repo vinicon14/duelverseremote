@@ -39,6 +39,15 @@ export default function Matchmaking() {
   const pollingInterval = useRef<ReturnType<typeof setInterval> | null>(null);
   const isRedirecting = useRef(false);
 
+  const cancelOpenMatchmakingInvite = useCallback(async () => {
+    if (!currentUserId.current) return;
+    await supabase
+      .from('matchmaking_invites')
+      .update({ status: 'cancelled' })
+      .eq('host_user_id', currentUserId.current)
+      .eq('status', 'open');
+  }, []);
+
   const cleanup = useCallback(async () => {
     if (timerInterval.current) {
       clearInterval(timerInterval.current);
@@ -50,8 +59,9 @@ export default function Matchmaking() {
     }
     if (currentUserId.current && !matchFound) {
       await supabase.from('matchmaking_queue').delete().eq('user_id', currentUserId.current);
+      await cancelOpenMatchmakingInvite();
     }
-  }, [matchFound]);
+  }, [matchFound, cancelOpenMatchmakingInvite]);
 
   useEffect(() => {
     const init = async () => {
@@ -234,6 +244,20 @@ export default function Matchmaking() {
         }
       }
 
+      try {
+        await supabase.functions.invoke('discord-bridge', {
+          body: {
+            type: 'announce_matchmaking',
+            matchType,
+            tcgType: activeTcg,
+            maxPlayers: playerCount,
+            languageCode,
+          },
+        });
+      } catch (discordError) {
+        console.warn('Discord matchmaking announcement failed:', discordError);
+      }
+
       fetchQueueStats();
       pollingInterval.current = setInterval(async () => {
         const found = await checkForRedirect();
@@ -261,6 +285,7 @@ export default function Matchmaking() {
     if (pollingInterval.current) { clearInterval(pollingInterval.current); pollingInterval.current = null; }
     if (currentUserId.current) {
       await supabase.from('matchmaking_queue').delete().eq('user_id', currentUserId.current);
+      await cancelOpenMatchmakingInvite();
     }
     setSearching(false);
     setElapsedTime(0);
