@@ -123,9 +123,16 @@ const Auth = () => {
       if (error) throw error;
     } catch (error: any) {
       console.error('❌ [AUTH] Erro no login com Google:', error);
+      
+      // Provide user-friendly error messages
+      let errorMessage = error.message;
+      if (error.message?.includes('Failed to fetch') || error.message?.includes('fetch')) {
+        errorMessage = 'Erro de conexão. Verifique sua internet e tente novamente.';
+      }
+      
       toast({
         title: t('auth.loginError'),
-        description: error.message,
+        description: errorMessage,
         variant: "destructive"
       });
       setLoading(false);
@@ -391,7 +398,7 @@ const Auth = () => {
                 </Button>
               </form>
 
-              {!detectPlatform().isNativeApp && (
+              {!detectPlatform().isNativeApp && !detectPlatform().isDiscord && (
                 <>
                   <div className="relative my-4">
                     <div className="absolute inset-0 flex items-center">
