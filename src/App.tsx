@@ -104,6 +104,7 @@ const RouterContent = ({ user }: { user: User | null }) => {
         <Route path="/duels" element={<Duels />} />
         <Route path="/duel/:id" element={<DuelRoom />} />
         <Route path="/join/:duelId" element={<JoinDuel />} />
+        <Route path="/m/:inviteId" element={<MatchInvite />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/profile/:userId" element={<Profile />} />
         <Route path="/ranking" element={<Ranking />} />
