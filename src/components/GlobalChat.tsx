@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { Send, MessageCircle, Trash2, ExternalLink, Link2 } from "lucide-react";
+import { Send, MessageCircle, Trash2, ExternalLink, Link2, Server } from "lucide-react";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useTcg } from "@/contexts/TcgContext";
 import { DiscordLinkCard } from "@/components/DiscordLinkCard";
