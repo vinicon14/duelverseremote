@@ -167,16 +167,29 @@ serve(async (req) => {
       }
 
       const guilds: any[] = Array.isArray(guildsRes.data) ? guildsRes.data : [];
-      const result: Array<{ guildId: string; guildName: string; channels: Array<{ id: string; name: string }> }> = [];
+      const result: Array<{
+        guildId: string;
+        guildName: string;
+        iconUrl: string | null;
+        channels: Array<{ id: string; name: string }>;
+        voiceChannels: Array<{ id: string; name: string }>;
+      }> = [];
 
       for (const g of guilds) {
         const chRes = await discordFetch(`/guilds/${g.id}/channels`);
         const channels: any[] = chRes.ok && Array.isArray(chRes.data) ? chRes.data : [];
+        const iconUrl = g.icon
+          ? `https://cdn.discordapp.com/icons/${g.id}/${g.icon}.${g.icon.startsWith("a_") ? "gif" : "png"}?size=256`
+          : null;
         result.push({
           guildId: g.id,
           guildName: g.name,
+          iconUrl,
           channels: channels
-            .filter((c) => c.type === 0) // 0 = GUILD_TEXT
+            .filter((c) => c.type === 0) // GUILD_TEXT
+            .map((c) => ({ id: c.id, name: c.name })),
+          voiceChannels: channels
+            .filter((c) => c.type === 2) // GUILD_VOICE
             .map((c) => ({ id: c.id, name: c.name })),
         });
       }
@@ -190,11 +203,14 @@ serve(async (req) => {
     if (requestType === "auto_setup_server") {
       const guildId = body?.guildId;
       const channelId = body?.channelId;
+      const voiceChannelIds: string[] = Array.isArray(body?.voiceChannelIds)
+        ? body.voiceChannelIds.filter((v: any) => typeof v === "string")
+        : [];
       if (!guildId || !channelId) {
         return jsonResponse({ error: "Missing guildId or channelId" }, 400);
       }
 
-      // 1. Get guild name
+      // 1. Get guild name + icon
       const guildRes = await discordFetch(`/guilds/${guildId}`);
       if (!guildRes.ok) {
         return jsonResponse(
@@ -203,8 +219,12 @@ serve(async (req) => {
         );
       }
       const guildName = guildRes.data?.name || `Server ${guildId}`;
+      const guildIcon = guildRes.data?.icon as string | null | undefined;
+      const autoIconUrl = guildIcon
+        ? `https://cdn.discordapp.com/icons/${guildId}/${guildIcon}.${guildIcon.startsWith("a_") ? "gif" : "png"}?size=256`
+        : null;
 
-      // 2. Create webhook
+      // 2. Create webhook (text channel)
       const webhookRes = await discordFetch(`/channels/${channelId}/webhooks`, {
         method: "POST",
         body: JSON.stringify({ name: "DuelVerse Global Chat" }),
@@ -217,7 +237,7 @@ serve(async (req) => {
       }
       const webhookUrl = `https://discord.com/api/webhooks/${webhookRes.data.id}/${webhookRes.data.token}`;
 
-      // 3. Create invite (never-expiring)
+      // 3. Create invite (never-expiring) for the text channel
       const inviteRes = await discordFetch(`/channels/${channelId}/invites`, {
         method: "POST",
         body: JSON.stringify({ max_age: 0, max_uses: 0, unique: false }),
@@ -250,6 +270,7 @@ serve(async (req) => {
       }
 
       const servers: any[] = Array.isArray(status.servers) ? status.servers : [];
+      const existing = servers.find((s: any) => s.id === guildId);
       const filtered = servers.filter((s: any) => s.id !== guildId);
       filtered.push({
         id: guildId,
@@ -258,8 +279,11 @@ serve(async (req) => {
         channelId,
         inviteLink,
         webhookUrl,
-        description: body?.description || "",
-        iconUrl: body?.iconUrl || null,
+        description: body?.description ?? existing?.description ?? "",
+        iconUrl: body?.iconUrl ?? existing?.iconUrl ?? autoIconUrl,
+        voiceChannelIds: voiceChannelIds.length > 0
+          ? voiceChannelIds
+          : existing?.voiceChannelIds ?? [],
       });
       status.servers = filtered;
 
@@ -280,8 +304,50 @@ serve(async (req) => {
           channelId,
           inviteLink,
           webhookUrl,
+          iconUrl: autoIconUrl,
+          voiceChannelIds,
         },
       });
+    }
+
+    // ============================================================
+    // Update an existing server's metadata (description, voice channels, icon)
+    // ============================================================
+    if (requestType === "update_server") {
+      const guildId = body?.guildId;
+      if (!guildId) {
+        return jsonResponse({ error: "Missing guildId" }, 400);
+      }
+
+      const { data: cfg } = await supabase
+        .from("system_settings")
+        .select("value")
+        .eq("key", "discord_bot_status")
+        .maybeSingle();
+      let status: any = cfg?.value
+        ? (typeof cfg.value === "string" ? JSON.parse(cfg.value) : cfg.value)
+        : { servers: [] };
+      const servers: any[] = Array.isArray(status.servers) ? status.servers : [];
+      const idx = servers.findIndex((s: any) => s.id === guildId);
+      if (idx < 0) return jsonResponse({ error: "Server not found" }, 404);
+
+      const updates: Record<string, unknown> = {};
+      if (typeof body.description === "string") updates.description = body.description;
+      if (typeof body.iconUrl === "string") updates.iconUrl = body.iconUrl;
+      if (Array.isArray(body.voiceChannelIds)) {
+        updates.voiceChannelIds = body.voiceChannelIds.filter(
+          (v: any) => typeof v === "string",
+        );
+      }
+      servers[idx] = { ...servers[idx], ...updates };
+      status.servers = servers;
+
+      const { error: upsertErr } = await supabase
+        .from("system_settings")
+        .upsert({ key: "discord_bot_status", value: JSON.stringify(status) }, { onConflict: "key" });
+      if (upsertErr) return jsonResponse({ error: upsertErr.message }, 500);
+
+      return jsonResponse({ success: true, server: servers[idx] });
     }
 
     // ============================================================

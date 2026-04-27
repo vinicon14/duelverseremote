@@ -49,6 +49,9 @@ interface DiscordServer {
   channelId: string;
   inviteLink?: string;
   webhookUrl?: string;
+  iconUrl?: string | null;
+  description?: string;
+  voiceChannelIds?: string[];
 }
 
 interface DiscordBotStatus {
@@ -60,10 +63,17 @@ interface DiscordBotStatus {
   servers: DiscordServer[];
 }
 
+interface ChannelEntry {
+  id: string;
+  name: string;
+}
+
 interface GuildEntry {
   guildId: string;
   guildName: string;
-  channels: { id: string; name: string }[];
+  iconUrl?: string | null;
+  channels: ChannelEntry[];
+  voiceChannels: ChannelEntry[];
 }
 
 export function AdminDiscord() {
@@ -78,6 +88,7 @@ export function AdminDiscord() {
   const [loadingGuilds, setLoadingGuilds] = useState(false);
   const [selectedGuildId, setSelectedGuildId] = useState<string>("");
   const [selectedChannelId, setSelectedChannelId] = useState<string>("");
+  const [selectedVoiceChannelIds, setSelectedVoiceChannelIds] = useState<string[]>([]);
 
   // Manual fallback state
   const [newServerId, setNewServerId] = useState("");
@@ -85,6 +96,12 @@ export function AdminDiscord() {
   const [newChannelId, setNewChannelId] = useState("");
   const [newInviteLink, setNewInviteLink] = useState("");
   const [newWebhookUrl, setNewWebhookUrl] = useState("");
+
+  // Edit existing server state
+  const [editingServerId, setEditingServerId] = useState<string | null>(null);
+  const [editDescription, setEditDescription] = useState("");
+  const [editIconUrl, setEditIconUrl] = useState("");
+  const [editVoiceChannelIds, setEditVoiceChannelIds] = useState<string[]>([]);
 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -222,7 +239,7 @@ export function AdminDiscord() {
 
   const handleAutoSetup = async () => {
     if (!selectedGuildId || !selectedChannelId) {
-      setError("Selecione um servidor e um canal");
+      setError("Selecione um servidor e um canal de texto");
       return;
     }
     setSaving(true);
@@ -236,6 +253,7 @@ export function AdminDiscord() {
             type: "auto_setup_server",
             guildId: selectedGuildId,
             channelId: selectedChannelId,
+            voiceChannelIds: selectedVoiceChannelIds,
           },
         }
       );
@@ -246,6 +264,7 @@ export function AdminDiscord() {
       await fetchBotStatus();
       setSelectedGuildId("");
       setSelectedChannelId("");
+      setSelectedVoiceChannelIds([]);
       setSuccess(`Servidor "${data.server.name}" configurado automaticamente!`);
     } catch (err: any) {
       console.error(err);
@@ -253,6 +272,54 @@ export function AdminDiscord() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const startEditServer = (server: DiscordServer) => {
+    setEditingServerId(server.id);
+    setEditDescription(server.description || "");
+    setEditIconUrl(server.iconUrl || "");
+    setEditVoiceChannelIds(server.voiceChannelIds || []);
+    // Refresh guild list so we can show voice channels in the picker
+    if (guilds.length === 0) loadGuilds();
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingServerId) return;
+    setSaving(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const { data, error: invokeErr } = await supabase.functions.invoke(
+        "discord-bridge",
+        {
+          body: {
+            type: "update_server",
+            guildId: editingServerId,
+            description: editDescription,
+            iconUrl: editIconUrl || null,
+            voiceChannelIds: editVoiceChannelIds,
+          },
+        }
+      );
+      if (invokeErr) throw invokeErr;
+      if (!data?.success) throw new Error(data?.error || "Falha ao atualizar");
+      await fetchBotStatus();
+      setEditingServerId(null);
+      setSuccess("Servidor atualizado");
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Erro ao atualizar servidor");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggleVoiceId = (
+    list: string[],
+    setList: (v: string[]) => void,
+    id: string,
+  ) => {
+    setList(list.includes(id) ? list.filter((v) => v !== id) : [...list, id]);
   };
 
   const handleManualAdd = async () => {
@@ -369,46 +436,151 @@ export function AdminDiscord() {
                 Nenhum servidor conectado
               </div>
             ) : (
-              servers.map((server) => (
-                <div
-                  key={server.id}
-                  className="p-4 flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-3">
-                    {server.enabled ? (
-                      <CheckCircle className="w-4 h-4 text-green-500" />
-                    ) : (
-                      <XCircle className="w-4 h-4 text-muted-foreground" />
-                    )}
-                    <div>
-                      <p className="font-medium">{server.name}</p>
-                      <p className="text-sm text-muted-foreground">ID: {server.id}</p>
-                      {server.channelId && (
-                        <p className="text-sm text-muted-foreground">
-                          Canal: {server.channelId}
-                        </p>
-                      )}
+              servers.map((server) => {
+                const isEditing = editingServerId === server.id;
+                const editGuild = guilds.find((g) => g.guildId === server.id);
+                return (
+                  <div key={server.id} className="p-4 space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        {server.iconUrl ? (
+                          <img
+                            src={server.iconUrl}
+                            alt={server.name}
+                            className="w-10 h-10 rounded-full object-cover border"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center font-bold">
+                            {server.name[0]?.toUpperCase()}
+                          </div>
+                        )}
+                        {server.enabled ? (
+                          <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />
+                        ) : (
+                          <XCircle className="w-4 h-4 text-muted-foreground shrink-0" />
+                        )}
+                        <div className="min-w-0">
+                          <p className="font-medium truncate">{server.name}</p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            ID: {server.id}
+                          </p>
+                          {server.channelId && (
+                            <p className="text-xs text-muted-foreground truncate">
+                              Canal de texto: {server.channelId}
+                            </p>
+                          )}
+                          <p className="text-xs text-muted-foreground">
+                            Canais de voz monitorados:{" "}
+                            <span className="font-medium">
+                              {server.voiceChannelIds?.length ?? 0}
+                            </span>
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Switch
+                          checked={server.enabled}
+                          onCheckedChange={(checked) =>
+                            handleToggleServer(server.id, checked)
+                          }
+                          disabled={saving}
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            isEditing
+                              ? setEditingServerId(null)
+                              : startEditServer(server)
+                          }
+                          disabled={saving}
+                        >
+                          {isEditing ? "Cancelar" : "Editar"}
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleRemoveServer(server.id)}
+                          disabled={saving}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
+
+                    {isEditing && (
+                      <div className="border-t pt-3 space-y-3">
+                        <div>
+                          <Label htmlFor={`desc-${server.id}`}>Descrição</Label>
+                          <Input
+                            id={`desc-${server.id}`}
+                            value={editDescription}
+                            onChange={(e) => setEditDescription(e.target.value)}
+                            placeholder="Descrição exibida nos cards de servidores parceiros"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor={`icon-${server.id}`}>
+                            URL da capa (deixe vazio para usar o ícone do Discord)
+                          </Label>
+                          <Input
+                            id={`icon-${server.id}`}
+                            value={editIconUrl}
+                            onChange={(e) => setEditIconUrl(e.target.value)}
+                            placeholder="https://..."
+                          />
+                        </div>
+                        <div>
+                          <Label>Canais de voz monitorados (criam DuelRoom ao entrar)</Label>
+                          {!editGuild ? (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Clique em "Buscar servidores do bot" abaixo para listar canais.
+                            </p>
+                          ) : editGuild.voiceChannels.length === 0 ? (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Nenhum canal de voz neste servidor.
+                            </p>
+                          ) : (
+                            <div className="mt-2 grid grid-cols-2 gap-2 max-h-40 overflow-y-auto p-2 border rounded">
+                              {editGuild.voiceChannels.map((vc) => (
+                                <label
+                                  key={vc.id}
+                                  className="flex items-center gap-2 text-sm cursor-pointer"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={editVoiceChannelIds.includes(vc.id)}
+                                    onChange={() =>
+                                      toggleVoiceId(
+                                        editVoiceChannelIds,
+                                        setEditVoiceChannelIds,
+                                        vc.id,
+                                      )
+                                    }
+                                  />
+                                  🔊 {vc.name}
+                                </label>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <Button
+                          onClick={handleSaveEdit}
+                          disabled={saving}
+                          size="sm"
+                        >
+                          {saving ? (
+                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                          ) : (
+                            <Save className="w-4 h-4 mr-2" />
+                          )}
+                          Salvar alterações
+                        </Button>
+                      </div>
+                    )}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      checked={server.enabled}
-                      onCheckedChange={(checked) =>
-                        handleToggleServer(server.id, checked)
-                      }
-                      disabled={saving}
-                    />
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleRemoveServer(server.id)}
-                      disabled={saving}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>
@@ -440,63 +612,98 @@ export function AdminDiscord() {
             </Button>
 
             {guilds.length > 0 && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label>Servidor</Label>
-                  <Select
-                    value={selectedGuildId}
-                    onValueChange={(v) => {
-                      setSelectedGuildId(v);
-                      setSelectedChannelId("");
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione um servidor" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {guilds.map((g) => (
-                        <SelectItem key={g.guildId} value={g.guildId}>
-                          {g.guildName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label>Servidor</Label>
+                    <Select
+                      value={selectedGuildId}
+                      onValueChange={(v) => {
+                        setSelectedGuildId(v);
+                        setSelectedChannelId("");
+                        setSelectedVoiceChannelIds([]);
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um servidor" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {guilds.map((g) => (
+                          <SelectItem key={g.guildId} value={g.guildId}>
+                            {g.guildName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label>Canal de texto (chat global)</Label>
+                    <Select
+                      value={selectedChannelId}
+                      onValueChange={setSelectedChannelId}
+                      disabled={!selectedGuild}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um canal" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {selectedGuild?.channels.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            #{c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex items-end">
+                    <Button
+                      onClick={handleAutoSetup}
+                      disabled={saving || !selectedGuildId || !selectedChannelId}
+                      className="w-full"
+                    >
+                      {saving ? (
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      ) : (
+                        <Wand2 className="w-4 h-4 mr-2" />
+                      )}
+                      Configurar
+                    </Button>
+                  </div>
                 </div>
 
-                <div>
-                  <Label>Canal</Label>
-                  <Select
-                    value={selectedChannelId}
-                    onValueChange={setSelectedChannelId}
-                    disabled={!selectedGuild}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione um canal" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {selectedGuild?.channels.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          #{c.name}
-                        </SelectItem>
+                {selectedGuild && selectedGuild.voiceChannels.length > 0 && (
+                  <div>
+                    <Label>
+                      Canais de voz monitorados (entrar = criar DuelRoom automática)
+                    </Label>
+                    <div className="mt-2 grid grid-cols-2 md:grid-cols-3 gap-2 max-h-44 overflow-y-auto p-2 border rounded">
+                      {selectedGuild.voiceChannels.map((vc) => (
+                        <label
+                          key={vc.id}
+                          className="flex items-center gap-2 text-sm cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedVoiceChannelIds.includes(vc.id)}
+                            onChange={() =>
+                              toggleVoiceId(
+                                selectedVoiceChannelIds,
+                                setSelectedVoiceChannelIds,
+                                vc.id,
+                              )
+                            }
+                          />
+                          🔊 {vc.name}
+                        </label>
                       ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex items-end">
-                  <Button
-                    onClick={handleAutoSetup}
-                    disabled={saving || !selectedGuildId || !selectedChannelId}
-                    className="w-full"
-                  >
-                    {saving ? (
-                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                    ) : (
-                      <Wand2 className="w-4 h-4 mr-2" />
-                    )}
-                    Configurar
-                  </Button>
-                </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Deixe vazio para monitorar todos os canais de voz do servidor.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
