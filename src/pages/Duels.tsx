@@ -129,7 +129,15 @@ const Duels = () => {
       });
       return;
     }
-    
+    if (isPrivate && roomPassword.trim().length < 3) {
+      toast({
+        title: "Senha obrigatória",
+        description: "Defina uma senha com pelo menos 3 caracteres para a sala privada.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Mostrar anúncio antes de criar
     setPendingAction({ type: 'create' });
     setShowCreateDialog(false);
@@ -173,7 +181,9 @@ const Duels = () => {
           player3_lp: defaultLP,
           player4_lp: defaultLP,
           max_players: playerCount,
-        })
+          is_private: isPrivate,
+          password: isPrivate ? roomPassword.trim() : null,
+        } as any)
         .select()
         .single();
 
@@ -181,7 +191,9 @@ const Duels = () => {
 
       toast({
         title: t('duels.roomCreated'),
-        description: t('duels.roomCreatedDesc'),
+        description: isPrivate
+          ? `Sala privada criada. Senha: ${roomPassword.trim()}`
+          : t('duels.roomCreatedDesc'),
       });
 
       // Anuncia a nova sala no chat global e Discord
