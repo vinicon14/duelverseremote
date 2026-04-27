@@ -515,7 +515,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
             channel.send({
               type: "broadcast",
               event: "webrtc-signal",
-              payload: { type: "ready", senderId: userId },
+              payload: { type: "ready", senderId: userId, isSpectator },
             });
           }
         });
