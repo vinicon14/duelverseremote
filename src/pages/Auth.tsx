@@ -111,8 +111,6 @@ const Auth = () => {
       .catch(() => { /* ignore */ });
   }, [signupCountry]);
 
-  const returnTo = (location.state as any)?.returnTo;
-
   // Handle Discord OAuth login redirect: ?discord=success&flow=login&token_hash=...&email=...
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
