@@ -1287,6 +1287,9 @@ const DuelRoom = () => {
                           <YouTubeLiveButton duelId={id!} />
                         </span>
                       )}
+                      {isParticipant && (
+                        <BroadcastDuelToDiscordButton duelId={id!} />
+                      )}
                     </>
                   )}
 
