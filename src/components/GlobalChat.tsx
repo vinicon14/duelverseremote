@@ -557,29 +557,30 @@ export const GlobalChat = () => {
               Lista de servidores Discord conectados ao DuelVerse. Clique para entrar.
             </DialogDescription>
           </DialogHeader>
-          {partnerServers.length === 0 ? (
+{partnerServers.length === 0 ? (
             <p className="text-muted-foreground py-4 text-center">
               Nenhum servidor parceiro disponível no momento.
             </p>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2">
-{partnerServers.map((server) => {
-  // Ensure we have a valid invite link
-  const inviteUrl = server.inviteLink || `https://discord.gg/${server.id}` || "https://discord.gg/A7GqCGNGNn";
-  
-  return (
-    <DropdownMenuItem 
-      key={server.id} 
-      onSelect={() => {
-        // Use window.open with proper parameters
-        window.open(inviteUrl, "_blank", "noopener,noreferrer");
-      }}
-    >
-      <Server className="mr-2 h-4 w-4" />
-      {server.name}
-    </DropdownMenuItem>
-  );
-})}
+              {partnerServers.map((server) => {
+                const inviteUrl = server.inviteLink || `https://discord.gg/${server.id}`;
+                return (
+                  <div
+                    key={server.id}
+                    className="flex flex-col items-center p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                    onClick={() => window.open(inviteUrl, "_blank", "noopener,noreferrer")}
+                  >
+                    {server.iconUrl ? (
+                      <img src={server.iconUrl} alt={server.name} className="w-16 h-16 rounded-full mb-2 object-cover" />
+                    ) : (
+                      <Server className="w-16 h-16 mb-2 text-muted-foreground" />
+                    )}
+                    <span className="font-medium text-center">{server.name}</span>
+                    <span className="text-xs text-muted-foreground text-center mt-1">Clique para entrar</span>
+                  </div>
+                );
+              })}
             </div>
           )}
         </DialogContent>

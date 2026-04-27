@@ -1,15 +1,13 @@
-import { useEffect, useRef, useCallback } from 'react';
-import type { Client as RPCClient, Presence } from 'discord-rpc';
+import { useEffect, useRef } from 'react';
 
-// We'll import the discord-rpc package dynamically to avoid issues in environments where it's not available
-// This is a client-side only hook
-let RPC: typeof import('discord-rpc') | null = null;
+let rpcModule: any = null;
+let rpcClient: any = null;
 
-const initRPCLibrary = async () => {
-  if (RPC) return RPC;
+const getRPCModule = async () => {
+  if (rpcModule) return rpcModule;
   try {
-    RPC = await import('discord-rpc');
-    return RPC;
+    rpcModule = await import('discord-rpc');
+    return rpcModule;
   } catch (error) {
     console.error('Failed to load discord-rpc library:', error);
     return null;
@@ -17,104 +15,91 @@ const initRPCLibrary = async () => {
 };
 
 export const useDiscordRichPresence = (discordConnection: { discord_id: string; discord_username: string } | null) => {
-  const rpcClientRef = useRef<RPCClient | null>(null);
   const isInitializedRef = useRef(false);
-  const startTimestampRef = useRef<number | null>(null);
 
-  // Initialize RPC client when we have a discord connection
   useEffect(() => {
-    let isActive = true;
+    if (!discordConnection) return;
 
-    const initializeRPC = async () => {
-      if (!discordConnection || !isActive) return;
-      
+    const initRPC = async () => {
       try {
-        const RPCModule = await initRPCLibrary();
-        if (!RPCModule) {
-          console.warn('Discord RPC library not available');
-          return;
+        const module = await getRPCModule();
+        if (!module) return;
+
+        const clientId = import.meta.env.VITE_DISCORD_CLIENT_ID || '1495723127357833256';
+
+        if (rpcClient) {
+          rpcClient.destroy();
         }
 
-        const transport = new RPCModule.IPCTransport(import.meta.env.VITE_DISCORD_CLIENT_ID || '1495723127357833256');
-        const client = new RPCModule.Client({ transport });
-        
-        client.on('ready', () => {
+        rpcClient = new module.Client({ transport: new module.IPCTransport(clientId) });
+
+        rpcClient.on('ready', () => {
           console.log('Discord Rich Presence client ready');
           isInitializedRef.current = true;
-          
-          // Set initial presence (idle in app)
-          setIdlePresence(client);
+          rpcClient.setActivity({
+            details: 'No Duelverse',
+            state: 'Navegando ou aguardando partida',
+            largeImageKey: 'duelverse_logo',
+            largeImageText: 'Duelverse - Live TCG Duels',
+            instance: false,
+          });
         });
 
-        client.on('error', (err) => {
-          console.error('Discord RPC error:', err);
-        });
-
-        client.on('close', () => {
+        rpcClient.on('close', () => {
           console.log('Discord RPC connection closed');
           isInitializedRef.current = false;
-          rpcClientRef.current = null;
+          rpcClient = null;
         });
 
-        // Login to Discord RPC
-        client.login();
-        rpcClientRef.current = client;
+        rpcClient.login();
       } catch (error) {
         console.error('Failed to initialize Discord RPC:', error);
       }
     };
 
-    initializeRPC();
+    initRPC();
 
     return () => {
-      isActive = false;
-      if (rpcClientRef.current && isInitializedRef.current) {
-        rpcClientRef.current.destroy();
+      if (rpcClient && isInitializedRef.current) {
+        rpcClient.destroy();
+        rpcClient = null;
         isInitializedRef.current = false;
-        rpcClientRef.current = null;
       }
     };
   }, [discordConnection]);
 
-  // Function to set presence when in a duel
   const setDuelPresence = (opponentUsername: string, tcgType: string, isRanked: boolean, duelStartTime: number) => {
-    useEffect(() => {
-      if (!rpcClientRef.current || !isInitializedRef.current) return;
+    if (!rpcClient || !isInitializedRef.current) return;
 
-      const presence: Presence = {
-        details: `Em duelo contra ${opponentUsername}`,
-        state: `${tcgType} ${isRanked ? '(Ranked)' : '(Casual)'}`,
-        startTimestamp: duelStartTime,
-        largeImageKey: 'duelverse_logo', // This needs to be registered in Discord Developer Portal
-        largeImageText: 'Duelverse - Live TCG Duels',
-        smallImageKey: isRanked ? 'ranked' : 'casual',
-        smallImageText: isRanked ? 'Partida Rankeada' : 'Partida Casual',
-        instance: false,
-      };
-
-      rpcClientRef.current.setActivity(presence);
-    }, [opponentUsername, tcgType, isRanked, duelStartTime]);
+    rpcClient.setActivity({
+      details: `Em duelo contra ${opponentUsername}`,
+      state: `${tcgType} ${isRanked ? '(Ranked)' : '(Casual)'}`,
+      startTimestamp: duelStartTime,
+      largeImageKey: 'duelverse_logo',
+      largeImageText: 'Duelverse - Live TCG Duels',
+      smallImageKey: isRanked ? 'ranked' : 'casual',
+      smallImageText: isRanked ? 'Partida Rankeada' : 'Partida Casual',
+      instance: false,
+    });
   };
 
-  // Function to set presence when in app but not in duel (idle)
-  const setIdlePresence = (client: RPCClient) => {
-    const presence: Presence = {
+  const setIdlePresence = () => {
+    if (!rpcClient || !isInitializedRef.current) return;
+
+    rpcClient.setActivity({
       details: 'No Duelverse',
       state: 'Navegando ou aguardando partida',
       largeImageKey: 'duelverse_logo',
       largeImageText: 'Duelverse - Live TCG Duels',
       instance: false,
-    };
-    
-    client.setActivity(presence);
+    });
   };
 
-  // Function to clear presence
-  const clearPresence = useCallback(() => {
-    if (rpcClientRef.current && isInitializedRef.current) {
-      rpcClientRef.current.clearActivity();
+  const clearPresence = () => {
+    if (rpcClient && isInitializedRef.current) {
+      rpcClient.clearActivity();
     }
-  }, []);
+  };
 
   return { setDuelPresence, setIdlePresence, clearPresence };
 };
