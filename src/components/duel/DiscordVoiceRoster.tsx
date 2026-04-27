@@ -8,7 +8,8 @@
  */
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Headphones, Hash } from "lucide-react";
+import { Headphones, Hash, ExternalLink } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface VoiceParticipant {
   id: string;
@@ -21,8 +22,11 @@ interface VoiceParticipant {
 
 interface VoiceRoom {
   id: string;
+  guild_id: string;
   guild_name: string | null;
+  channel_id: string;
   channel_name: string | null;
+  invite_url: string | null;
 }
 
 interface Props {
@@ -42,7 +46,7 @@ export const DiscordVoiceRoster = ({ duelId }: Props) => {
     const loadRoom = async () => {
       const { data: voiceRoom } = await supabase
         .from("discord_voice_rooms")
-        .select("id, guild_name, channel_name")
+        .select("id, guild_id, guild_name, channel_id, channel_name, invite_url")
         .eq("duel_id", duelId)
         .eq("is_active", true)
         .maybeSingle();
@@ -158,9 +162,32 @@ export const DiscordVoiceRoster = ({ duelId }: Props) => {
           ))
         )}
       </div>
-      <p className="mt-2 text-[10px] italic text-muted-foreground">
-        Áudio/vídeo permanece no Discord (limitação da API).
-      </p>
+
+      {(room.invite_url || (room.guild_id && room.channel_id)) && (
+        <div className="mt-3 flex flex-col gap-1.5">
+          <Button
+            size="sm"
+            variant="default"
+            className="h-8 w-full gap-1.5 text-xs"
+            onClick={() => {
+              // Try desktop deeplink first; fallback to web invite
+              const deepLink = `discord://discord.com/channels/${room.guild_id}/${room.channel_id}`;
+              const webFallback =
+                room.invite_url ?? `https://discord.com/channels/${room.guild_id}/${room.channel_id}`;
+              window.location.href = deepLink;
+              window.setTimeout(() => {
+                window.open(webFallback, "_blank", "noopener,noreferrer");
+              }, 600);
+            }}
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            Entrar no canal de voz no Discord
+          </Button>
+          <p className="text-[10px] italic text-muted-foreground">
+            Áudio e vídeo continuam no Discord — a API não permite espelhar a câmera dos usuários para fora do app.
+          </p>
+        </div>
+      )}
     </div>
   );
 };

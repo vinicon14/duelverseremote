@@ -192,6 +192,7 @@ export type Database = {
           guild_id: string
           guild_name: string | null
           id: string
+          invite_url: string | null
           is_active: boolean
           updated_at: string
         }
@@ -204,6 +205,7 @@ export type Database = {
           guild_id: string
           guild_name?: string | null
           id?: string
+          invite_url?: string | null
           is_active?: boolean
           updated_at?: string
         }
@@ -216,6 +218,7 @@ export type Database = {
           guild_id?: string
           guild_name?: string | null
           id?: string
+          invite_url?: string | null
           is_active?: boolean
           updated_at?: string
         }
