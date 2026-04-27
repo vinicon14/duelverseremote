@@ -1,190 +1,143 @@
-# 🂡 DuelVerse - Plataforma de Duelos Online Yu-Gi-Oh!
+# 🎮 DuelVerse - Plataforma de Duelos Online
 
 <p align="center">
-  <img src="./duelverse_banner.png" alt="DuelVerse Banner" width="100%">
+  <img src="https://via.placeholder.com/800x200/000000/FFFFFF?text=DuelVerse+Banner" alt="DuelVerse Banner" width="100%">
 </p>
 
 <p align="center">
-  <a href="https://vitejs.dev/">
-    <img src="https://img.shields.io/badge/Vite-5.4.19-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite">
-  </a>
-  <a href="https://reactjs.org/">
-    <img src="https://img.shields.io/badge/React-18.3.1-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React">
-  </a>
-  <a href="https://www.typescriptlang.org/">
-    <img src="https://img.shields.io/badge/TypeScript-5.8.3-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript">
-  </a>
-  <a href="https://supabase.com/">
-    <img src="https://img.shields.io/badge/Supabase-Realtime-3FCF8E?style=for-the-badge&logo=supabase&logoColor=white" alt="Supabase">
-  </a>
-  <a href="https://opensource.org/licenses/MIT">
-    <img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge" alt="License">
-  </a>
+  Plataforma completa para duelistas de TCG que buscam competir remotamente com experiência presencial. Combine videochamadas, economia virtual e torneios estruturados em um único ambiente.
+</p>
+
+<p align="center">
+  <a href="#-como-funciona">Como Funciona</a> •
+  <a href="#-experiência-do-usuário">Experiência</a> •
+  <a href="#-contato">Contato</a>
 </p>
 
 ---
 
-<p align="center">
-  <strong>DuelVerse</strong> é um ecossistema digital completo projetado para duelistas de Yu-Gi-Oh! que buscam a experiência competitiva definitiva. Unindo videochamadas em tempo real, economia virtual e um sistema robusto de torneios, levamos o duelo físico para o ambiente remoto com perfeição.
-</p>
+## 🎯 Conceito Central
 
-<p align="center">
-  <a href="#-funcionalidades">Funcionalidades</a> •
-  <a href="#-tecnologias">Tecnologias</a> •
-  <a href="#-como-executar-localmente">Instalação</a> •
-  <a href="#-contato--suporte">Contato</a>
-</p>
+DuelVerse nasceu da necessidade de manter a essência dos duels presenciais no ambiente digital. Em vez de simplesmente replicar mecânicas de jogo, focamos em três pilares fundamentais:
 
----
-
-## 🚀 O que torna o DuelVerse Único?
-
-| 🗡️ Duelos Sincronizados | 🎥 Videochamada Integrada | 🏆 Torneios Automáticos |
-| :--- | :--- | :--- |
-| Partidas em tempo real via Supabase Realtime, garantindo latência mínima. | Integração nativa com Daily.co para comunicação face-a-face durante o jogo. | Sistema de Swiss Rounds e distribuição automática de premiações. |
+| Pilar | Descrição | Benefício para o Usuário |
+|-------|-----------|--------------------------|
+| **Presença** | Sensação de estar frente a frente com o oponente | Reduz a distância emocional do jogo online |
+| **Progresso** | Sistema de evolução reconhecendo dedicação e habilidade | Motivação contínua para melhorar |
+| **Comunidade** | Espaço seguro para conexão entre duelistas | pertencimento e engajamento de longo prazo |
 
 ---
 
-## ✨ Funcionalidades em Destaque
+## 🔄 Como Funciona (Fluxo Conceitual)
 
-<details>
-<summary><b>🎮 Experiência de Jogo</b></summary>
-<ul>
-  <li><b>Salas de Duelo:</b> Criação instantânea com suporte a observadores.</li>
-  <li><b>Calculadora LP:</b> Interface flutuante e arrastável inspirada em interfaces modernas de jogos.</li>
-  <li><b>Chat Realtime:</b> Comunicação integrada para coordenação de jogadas.</li>
-  <li><b>Timer de Duelo:</b> Controle rigoroso de tempo para ambiente competitivo.</li>
-</ul>
-</details>
+```mermaid
+flowchart TD
+    A[Início] --> B{Escolha do Modo}
+    B -->|Duelo Casual| C[Sala de Duelo]
+    B -->|Torneio| D[Inscrição no Evento]
+    B -->|Prática| E[Treino Solo]
+    
+    C --> F[Partida em Tempo Real]
+    D --> G[Rodadas Suíças]
+    G --> H[Eliminação Direta]
+    H --> I[Premiação Automática]
+    
+    F --> J[Resultado Registrado]
+    I --> J
+    J --> K[Atualização de Perfil]
+    K --> L[Recompensas Distribuídas]
+    
+    L --> M[Novo Ciclo Começa]
+```
 
-<details>
-<summary><b>🃏 Deck Builder & IA</b></summary>
-<ul>
-  <li><b>Busca Inteligente:</b> Acesso à base de dados completa de cartas.</li>
-  <li><b>Reconhecimento de Cartas:</b> Upload de imagens para identificação automática via IA.</li>
-  <li><b>Gestão de Decks:</b> Exporte, importe e organize seus decks com facilidade.</li>
-</ul>
-</details>
-
-<details>
-<summary><b>💰 Economia & Social</b></summary>
-<ul>
-  <li><b>DuelCoins:</b> Ganhe moedas em duelos e torneios.</li>
-  <li><b>Loja Virtual:</b> Adquira assinaturas Pro e cosméticos exclusivos.</li>
-  <li><b>Sistema de Amigos:</b> Veja quem está online e convide para um duelo direto.</li>
-</ul>
-</details>
+### Elementos-Chave do Fluxo:
+1. **Início**: Sempre acessível através da página inicial intuitiva
+2. **Escolha do Modo**: Três caminhos principais baseados no objetivo do jogador
+3. **Processo**: Cada modo segue um caminho estruturado com pontos de validação
+4. **Conclusão**: Resultados alimentam o sistema de progresso para futuras partidas
 
 ---
 
-## 🛠️ Stack Tecnológica
+## 👥 Experiência do Usuário por Perfil
+
+### Para o Novo Jogador
+- Boas-vindas guiada com tutoriais interativos
+- Salas de treinamento sem pressão competitiva
+- Sistema de correspondência baseado em nível semelhante
+- Feedback imediato após cada partida
+
+### Para o Jogador Regular
+- Histórico detalhado de desempenho
+- Desafios diários para habilidade específica
+- Leaderboards regionais e globais
+- Eventos comunitários regulares
+
+### Para o Organizador/Torneio
+- Criação simplificada de eventos com templates
+- Ferramentas de moderação embutidas
+- Distribuição automática de prêmios
+- Relatórios completos pós-evento
+
+---
+
+## ⚙️ Mecânicas Principais (Abordagem Conceitual)
+
+### Sistema de Duelo
+```
+[Preparação] 
+    ↓
+[Conexão] ←→ [Sincronização de Estado]
+    ↓
+[Interação] ←→ [Comunicação em Tempo Real]
+    ↓
+[Resolução] ←→ [Validação de Jogada]
+    ↓
+[Conclusão] ←→ [Registro de Resultado]
+```
+
+### Economia Virtual
+```mermaid
+pie
+    title Fontes de DuelCoins
+    "Vitórias em Duels" : 40
+    "Participação em Torneios" : 30
+    "Missões Diárias" : 20
+    "Eventos Especiais" : 10
+```
+
+### Progressão de Habilidade
+```
+Iniciante → Aprendiz → Competente → Expert → Mestre → Lenda
+    ↑                                       ↓
+    └────────────── Sistema de Matchmaking ──────────────┘
+```
+
+---
+
+## 📞 Contato
 
 <p align="left">
-  <img src="https://skillicons.dev/icons?i=react,ts,vite,tailwind,supabase,postgres,electron,git" />
+  <a href="mailto:duelverse.app@gmail.com" target="blank"><img align="center" src="https://img.shields.io/badge/email-duelverse.app%40gmail.com-%23D14836?style=for-the-badge&logo=gmail&logoColor=white" alt="duelverse.app@gmail.com" /></a>
+  <a href="https://duelverse.site" target="blank"><img align="center" src="https://img.shields.io/badge/site-duelverse.site-000000?style=for-the-badge&logo=google-chrome&logoColor=white" alt="DuelVerse Site" /></a>
 </p>
 
-- **Frontend:** React + TypeScript + Tailwind CSS
-- **Backend:** Supabase (Auth, DB, Realtime, Edge Functions)
-- **Desktop:** Electron (Integração desktop)
-- **Vídeo:** Daily.co SDK
-- **Mobile:** Capacitor (Suporte Android/iOS)
+**Email oficial**: duelverse.app@gmail.com  
+**Website**: https://duelverse.site  
+**Suporte**: Resposta em até 24 horas úteis
 
 ---
 
-## 📁 Estrutura de Pastas
+## 🌱 Visão Futura
 
-```bash
-duelverseremote/
-├── 📱 android/          # Código nativo Android (Capacitor)
-├── ⚡ electron/         # Main process e builds desktop
-├── 🗄️ supabase/         # Edge Functions e schemas do banco
-├── 🧪 database/         # Scripts de migração SQL
-└── ⚛️ src/
-    ├── 🧩 components/   # UI Reutilizável (shadcn/ui)
-    ├── 📄 pages/        # Visões da aplicação
-    ├── 🎣 hooks/        # Lógica React desacoplada
-    └── 🔗 integrations/ # Configurações de serviços externos
-```
+DuelVerse vê além do simples jogo online. Nosso roadmap conceitual inclui:
+
+| Horizonte | Foco | Objetivo |
+|-----------|------|----------|
+| **Curto Prazo** (3-6 meses) | Estabilização da experiência core | Reduzir friction para novos usuários |
+| **Médio Prazo** (6-12 meses) | Expansão de modos de jogo | Incluir formatos alternativos e colaborativos |
+| **Longo Prazo** (1+ ano) | Ecossistema integrado | Conectar duelistas, criadores de conteúdo e lojas físicas |
 
 ---
 
-## 🚀 Como Executar Localmente
-
-### 1. Preparação do Ambiente
-
-Certifique-se de ter o **Node.js 18+** e o **npm/yarn** instalados.
-
-### 2. Instalação
-
-```bash
-# Clone o repositório
-git clone https://github.com/vinicon14/duelverseremote.git
-
-# Entre no diretório
-cd duelverseremote
-
-# Instale as dependências
-npm install
-```
-
-### 3. Configuração
-
-Renomeie o arquivo `.env.example` para `.env` e preencha suas credenciais do Supabase:
-
-```env
-VITE_SUPABASE_URL=seu_projeto.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=sua_chave_anon
-```
-
-### 4. Rodando o Projeto
-
-```bash
-npm run dev
-```
-
-Acesse em `http://localhost:8080` e que os duelos comecem!
-
----
-
-## 💎 Vantagens do Plano Pro
-
-| Benefício | Free | Pro |
-| :--- | :---: | :---: |
-| Duelos Ilimitados | ✅ | ✅ |
-| Torneios Premium | ❌ | ✅ |
-| Sem Anúncios | ❌ | ✅ |
-| Badge Exclusiva | ❌ | ✅ |
-| Suporte Prioritário | ❌ | ✅ |
-
----
-
-## 🤝 Contribuição
-
-Sua ajuda é muito bem-vinda! Siga o fluxo abaixo:
-
-1. 🍴 **Fork** o projeto
-2. 🌿 Crie sua **Branch** (`git checkout -b feature/AmazingFeature`)
-3. 💾 **Commit** suas mudanças (`git commit -m 'Add some AmazingFeature'`)
-4. 🚀 **Push** para a Branch (`git push origin feature/AmazingFeature`)
-5. ⤴️ Abra um **Pull Request**
-
----
-
-## 📞 Contato & Suporte
-
-<p align="left">
-<a href="https://github.com/vinicon14" target="blank"><img align="center" src="https://img.shields.io/badge/github-%23121011.svg?style=for-the-badge&logo=github&logoColor=white" alt="vinicon14" /></a>
-<a href="https://duelverse.com.br" target="blank"><img align="center" src="https://img.shields.io/badge/website-000000?style=for-the-badge&logo=about.me&logoColor=white" alt="DuelVerse" /></a>
-</p>
-
-Desenvolvido por **Vinícius**.
-
----
-
-## 📄 Licença
-
-Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
-
-<p align="center">
-  <img src="https://capsule-render.vercel.app/api?type=waving&color=auto&height=100&section=footer" />
-</p>
+*Última atualização: Abril 2026*  
+*Desenvolvido com foco na experiência humana por trás de cada carta virada.*
