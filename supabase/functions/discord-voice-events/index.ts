@@ -271,6 +271,19 @@ async function handleJoin(
     }
   }
 
+  // Announce in the linked text channel: "/dv @everyone remote <link>"
+  try {
+    await announceVoiceJoinInTextChannel(supabase, {
+      guildId: body.guild_id,
+      channelId: body.channel_id,
+      channelName: body.channel_name ?? body.channel_id,
+      discordUsername: body.discord_username,
+      inviteUrl,
+    });
+  } catch (err) {
+    console.warn("[discord-voice-events] failed to announce join in text channel:", err);
+  }
+
   return json({
     ok: true,
     voice_room_id: room.id,
@@ -354,6 +367,70 @@ async function sendDuelRoomInviteDM(opts: {
       msgRes.status,
       await msgRes.text(),
     );
+  }
+}
+
+// Posts "/dv @everyone remote <call link>" in the configured text channel webhook
+// for the guild, then deletes it shortly after so the channel stays clean.
+async function announceVoiceJoinInTextChannel(
+  supabase: ReturnType<typeof createClient>,
+  opts: {
+    guildId: string;
+    channelId: string;
+    channelName: string;
+    discordUsername: string;
+    inviteUrl: string | null;
+  },
+) {
+  const { data: cfg } = await supabase
+    .from("system_settings")
+    .select("value")
+    .eq("key", "discord_bot_status")
+    .maybeSingle();
+  if (!cfg?.value) return;
+  const status: any = typeof cfg.value === "string" ? JSON.parse(cfg.value) : cfg.value;
+  const servers: any[] = Array.isArray(status?.servers) ? status.servers : [];
+  const guildCfg = servers.find((s: any) => s.id === opts.guildId && s.enabled && s.webhookUrl);
+  if (!guildCfg) return;
+
+  const callLink = opts.inviteUrl
+    ?? `https://discord.com/channels/${opts.guildId}/${opts.channelId}`;
+  const content = `/dv @everyone remote ${callLink}`;
+
+  const payload = {
+    content,
+    username: "DuelVerse Voice",
+    allowed_mentions: { parse: ["everyone"] },
+  };
+
+  try {
+    const res = await fetch(`${guildCfg.webhookUrl}?wait=true`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      console.warn(
+        "[discord-voice-events] webhook announce failed:",
+        res.status,
+        await res.text(),
+      );
+      return;
+    }
+    const posted = await res.json().catch(() => null);
+    const messageId = posted?.id;
+    if (messageId) {
+      // Auto-delete after 10s so the bot can react/forward and we don't spam
+      setTimeout(async () => {
+        try {
+          await fetch(`${guildCfg.webhookUrl}/messages/${messageId}`, { method: "DELETE" });
+        } catch (err) {
+          console.warn("[discord-voice-events] failed to delete announce msg:", err);
+        }
+      }, 10000);
+    }
+  } catch (err) {
+    console.warn("[discord-voice-events] webhook announce exception:", err);
   }
 }
 
