@@ -53,6 +53,7 @@ const MatchGallery = lazy(() => import("./pages/MatchGallery"));
 const VideoShare = lazy(() => import("./pages/VideoShare"));
 const News = lazy(() => import("./pages/News"));
 const InstallApp = lazy(() => import("./pages/InstallApp"));
+const DiscordActivity = lazy(() => import("./pages/DiscordActivity"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const DeckBuilder = lazy(() => import("./pages/DeckBuilder"));
@@ -135,6 +136,7 @@ const RouterContent = ({ user }: { user: User | null }) => {
         <Route path="/my-items" element={<MyItems />} />
         <Route path="/buy-duelcoins" element={<BuyDuelCoins />} />
         <Route path="/install-app" element={<InstallApp />} />
+        <Route path="/discord-activity" element={<DiscordActivity />} />
 
         {/* PRO routes - guarded; reuse standard pages so they always work */}
         <Route path="/pro/home" element={<ProRouteGuard><ProHome /></ProRouteGuard>} />
