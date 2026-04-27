@@ -441,124 +441,156 @@ const Auth = () => {
         </CardHeader>
 
         <CardContent>
-          <Tabs defaultValue="signin" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="signin">{t('auth.tabSignIn')}</TabsTrigger>
-              <TabsTrigger value="signup">{t('auth.tabSignUp')}</TabsTrigger>
-            </TabsList>
+          {insideDiscord ? (
+            // ====== Discord Activity / Embedded mode ======
+            <div className="space-y-4">
+              <p className="text-sm text-center text-muted-foreground">
+                Entre com sua conta Discord para acessar o DuelVerse. Caso seu Discord não tenha conta vinculada, crie uma no site oficial.
+              </p>
 
-            <TabsContent value="signin">
-              <form onSubmit={handleSignIn} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signin-email">{t('auth.email')}</Label>
-                  <Input id="signin-email" name="signin-email" type="email" placeholder="seu@email.com" required className="bg-background/50" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signin-password">{t('auth.password')}</Label>
-                  <Input id="signin-password" name="signin-password" type="password" placeholder="••••••••" required className="bg-background/50" />
-                </div>
-                <Button type="submit" className="w-full auth-cycle-btn text-white" disabled={loading}>
-                  {loading ? t('auth.signingIn') : t('auth.signInBtn')}
-                </Button>
-              </form>
+              <Button
+                type="button"
+                className="w-full text-white"
+                style={{ background: '#5865F2' }}
+                onClick={handleDiscordSignIn}
+                disabled={loading}
+              >
+                <svg className="mr-2 h-5 w-5" viewBox="0 0 127.14 96.36" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,46,96.12,53,91.08,65.69,84.69,65.69Z" />
+                </svg>
+                Continuar com Discord
+              </Button>
 
-              {!detectPlatform().isNativeApp && (
-                <>
-                  <div className="relative my-4">
-                    <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t" />
+              <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-2 text-muted-foreground">ou</span>
+                </div>
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => window.open('https://duelverse.site/auth', '_blank', 'noopener,noreferrer')}
+              >
+                Criar conta em duelverse.site
+              </Button>
+
+              <p className="text-[11px] text-center text-muted-foreground">
+                Se seu Discord ainda não está vinculado a uma conta DuelVerse, crie uma e depois faça login aqui pelo Discord.
+              </p>
+            </div>
+          ) : (
+            // ====== Normal web mode ======
+            <Tabs defaultValue="signin" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 mb-6">
+                <TabsTrigger value="signin">{t('auth.tabSignIn')}</TabsTrigger>
+                <TabsTrigger value="signup">{t('auth.tabSignUp')}</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="signin">
+                <form onSubmit={handleSignIn} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="signin-email">{t('auth.email')}</Label>
+                    <Input id="signin-email" name="signin-email" type="email" placeholder="seu@email.com" required className="bg-background/50" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signin-password">{t('auth.password')}</Label>
+                    <Input id="signin-password" name="signin-password" type="password" placeholder="••••••••" required className="bg-background/50" />
+                  </div>
+                  <Button type="submit" className="w-full auth-cycle-btn text-white" disabled={loading}>
+                    {loading ? t('auth.signingIn') : t('auth.signInBtn')}
+                  </Button>
+                </form>
+
+                {!detectPlatform().isNativeApp && (
+                  <>
+                    <div className="relative my-4">
+                      <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t" />
+                      </div>
+                      <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-card px-2 text-muted-foreground">{t('auth.orContinueWith')}</span>
+                      </div>
                     </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-card px-2 text-muted-foreground">{t('auth.orContinueWith')}</span>
+
+                    <Button type="button" variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={loading}>
+                      <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
+                        <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                        <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                        <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                        <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                      </svg>
+                      {t('auth.google')}
+                    </Button>
+                  </>
+                )}
+              </TabsContent>
+
+              <TabsContent value="signup">
+                <form onSubmit={handleSignUp} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-username">{t('auth.username')}</Label>
+                    <Input id="signup-username" name="signup-username" type="text" placeholder={t('auth.username')} required minLength={3} maxLength={20} className="bg-background/50" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-email">{t('auth.email')}</Label>
+                    <Input id="signup-email" name="signup-email" type="email" placeholder="seu@email.com" required className="bg-background/50" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-password">{t('auth.password')}</Label>
+                    <Input id="signup-password" name="signup-password" type="password" placeholder="••••••••" required minLength={6} className="bg-background/50" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-confirm-password">{t('auth.confirmPassword')}</Label>
+                    <Input id="signup-confirm-password" name="signup-confirm-password" type="password" placeholder="••••••••" required minLength={6} className="bg-background/50" />
+                  </div>
+
+                  {/* Country selection - REQUIRED */}
+                  <div className="space-y-2">
+                    <Label>{t('auth.country')} *</Label>
+                    <CountrySelect
+                      value={signupCountry}
+                      onChange={setSignupCountry}
+                      placeholder={t('auth.countryPlaceholder')}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {t('auth.countryHelp')}
+                    </p>
+                  </div>
+
+                  {/* TCG Selection */}
+                  <div className="space-y-2">
+                    <Label>{t('auth.selectTcg')}</Label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {TCG_OPTIONS.map(opt => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => setSelectedTcg(opt.value)}
+                          className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border-2 transition-all ${
+                            selectedTcg === opt.value
+                              ? opt.color + ' border-opacity-100 shadow-md'
+                              : 'border-border/50 opacity-60 hover:opacity-80'
+                          }`}
+                        >
+                          {opt.icon}
+                          <span className="text-[10px] font-medium leading-tight text-center">{opt.label}</span>
+                        </button>
+                      ))}
                     </div>
                   </div>
 
-                  <Button type="button" variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={loading}>
-                    <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
-                      <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                      <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                      <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                      <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-                    </svg>
-                    {t('auth.google')}
+                  <Button type="submit" className="w-full auth-cycle-btn text-white" disabled={loading || !signupCountry}>
+                    {loading ? t('auth.signingUp') : t('auth.signUpBtn')}
                   </Button>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full mt-2 border-[#5865F2]/40 hover:bg-[#5865F2]/10 hover:text-[#5865F2]"
-                    onClick={handleDiscordSignIn}
-                    disabled={loading}
-                  >
-                    <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="#5865F2">
-                      <path d="M20.317 4.369A19.79 19.79 0 0 0 16.558 3a14.49 14.49 0 0 0-.69 1.422 18.27 18.27 0 0 0-5.487 0A14.49 14.49 0 0 0 9.69 3a19.74 19.74 0 0 0-3.76 1.37C2.66 8.86 1.84 13.236 2.27 17.55a19.9 19.9 0 0 0 6.073 3.07 14.7 14.7 0 0 0 1.27-2.06 12.94 12.94 0 0 1-2.005-.96c.168-.124.333-.253.493-.386 3.86 1.78 8.05 1.78 11.86 0 .16.133.325.262.493.386-.643.382-1.32.71-2.005.96.378.738.808 1.43 1.27 2.06a19.85 19.85 0 0 0 6.073-3.07c.5-5.04-.86-9.38-3.42-13.18zM9.55 15.45c-1.183 0-2.156-1.085-2.156-2.42 0-1.336.96-2.43 2.156-2.43 1.205 0 2.176 1.094 2.156 2.43 0 1.335-.96 2.42-2.156 2.42zm4.9 0c-1.184 0-2.156-1.085-2.156-2.42 0-1.336.96-2.43 2.156-2.43 1.205 0 2.176 1.094 2.156 2.43 0 1.335-.95 2.42-2.156 2.42z" />
-                    </svg>
-                    Continuar com Discord
-                  </Button>
-                </>
-              )}
-            </TabsContent>
-
-            <TabsContent value="signup">
-              <form onSubmit={handleSignUp} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signup-username">{t('auth.username')}</Label>
-                  <Input id="signup-username" name="signup-username" type="text" placeholder={t('auth.username')} required minLength={3} maxLength={20} className="bg-background/50" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email">{t('auth.email')}</Label>
-                  <Input id="signup-email" name="signup-email" type="email" placeholder="seu@email.com" required className="bg-background/50" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">{t('auth.password')}</Label>
-                  <Input id="signup-password" name="signup-password" type="password" placeholder="••••••••" required minLength={6} className="bg-background/50" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-confirm-password">{t('auth.confirmPassword')}</Label>
-                  <Input id="signup-confirm-password" name="signup-confirm-password" type="password" placeholder="••••••••" required minLength={6} className="bg-background/50" />
-                </div>
-
-                {/* Country selection - REQUIRED */}
-                <div className="space-y-2">
-                  <Label>{t('auth.country')} *</Label>
-                  <CountrySelect
-                    value={signupCountry}
-                    onChange={setSignupCountry}
-                    placeholder={t('auth.countryPlaceholder')}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    {t('auth.countryHelp')}
-                  </p>
-                </div>
-
-                {/* TCG Selection */}
-                <div className="space-y-2">
-                  <Label>{t('auth.selectTcg')}</Label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {TCG_OPTIONS.map(opt => (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        onClick={() => setSelectedTcg(opt.value)}
-                        className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border-2 transition-all ${
-                          selectedTcg === opt.value
-                            ? opt.color + ' border-opacity-100 shadow-md'
-                            : 'border-border/50 opacity-60 hover:opacity-80'
-                        }`}
-                      >
-                        {opt.icon}
-                        <span className="text-[10px] font-medium leading-tight text-center">{opt.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <Button type="submit" className="w-full auth-cycle-btn text-white" disabled={loading || !signupCountry}>
-                  {loading ? t('auth.signingUp') : t('auth.signUpBtn')}
-                </Button>
-              </form>
-            </TabsContent>
-          </Tabs>
+                </form>
+              </TabsContent>
+            </Tabs>
+          )}
         </CardContent>
       </Card>
     </div>
