@@ -271,6 +271,19 @@ async function handleJoin(
     }
   }
 
+  // Announce in the linked text channel: "/dv @everyone remote <link>"
+  try {
+    await announceVoiceJoinInTextChannel(supabase, {
+      guildId: body.guild_id,
+      channelId: body.channel_id,
+      channelName: body.channel_name ?? body.channel_id,
+      discordUsername: body.discord_username,
+      inviteUrl,
+    });
+  } catch (err) {
+    console.warn("[discord-voice-events] failed to announce join in text channel:", err);
+  }
+
   return json({
     ok: true,
     voice_room_id: room.id,
