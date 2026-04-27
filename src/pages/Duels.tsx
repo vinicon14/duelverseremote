@@ -196,27 +196,33 @@ const Duels = () => {
           : t('duels.roomCreatedDesc'),
       });
 
-      // Anuncia a nova sala no chat global e Discord
-      try {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('username, avatar_url, language_code')
-          .eq('user_id', user.id)
-          .maybeSingle();
-        if (profile?.username) {
-          announceDuelRoom({
-            duelId: data.id,
-            username: profile.username,
-            avatarUrl: profile.avatar_url,
-            userId: user.id,
-            tcgType: activeTcg,
-            languageCode: profile.language_code || 'en',
-            roomName,
-          });
+      // Anuncia a nova sala no chat global e Discord — apenas para salas públicas
+      if (!isPrivate) {
+        try {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('username, avatar_url, language_code')
+            .eq('user_id', user.id)
+            .maybeSingle();
+          if (profile?.username) {
+            announceDuelRoom({
+              duelId: data.id,
+              username: profile.username,
+              avatarUrl: profile.avatar_url,
+              userId: user.id,
+              tcgType: activeTcg,
+              languageCode: profile.language_code || 'en',
+              roomName,
+            });
+          }
+        } catch (e) {
+          console.warn('announceDuelRoom skipped:', e);
         }
-      } catch (e) {
-        console.warn('announceDuelRoom skipped:', e);
       }
+
+      // Reset campos de privacidade
+      setIsPrivate(false);
+      setRoomPassword("");
 
       // Redirecionar diretamente para a sala
       navigate(`/duel/${data.id}`);
@@ -229,7 +235,28 @@ const Duels = () => {
     }
   };
 
-  const handleJoinDuel = (duelId: string) => {
+  const handleJoinDuel = async (duelId: string) => {
+    // Verifica se a sala é privada — se for, pede a senha antes de tudo
+    try {
+      const { data: roomInfo } = await supabase
+        .from('live_duels')
+        .select('is_private, password, creator_id')
+        .eq('id', duelId)
+        .maybeSingle();
+      const room = roomInfo as any;
+      if (room?.is_private) {
+        const { data: { user } } = await supabase.auth.getUser();
+        // O criador entra livremente na própria sala privada
+        if (user && room.creator_id !== user.id) {
+          setEnteredPassword("");
+          setPasswordPrompt({ duelId, expected: room.password || "" });
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('Falha ao checar privacidade da sala:', e);
+    }
+
     // Mostrar anúncio antes de entrar
     setPendingAction({ type: 'join', duelId });
     setShowAdPopup(true);
