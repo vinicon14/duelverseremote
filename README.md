@@ -2,7 +2,7 @@
 
 Plataforma completa para duelistas de TCG que buscam competir remotamente com experiência presencial. Combine videochamadas, economia virtual e torneios estruturados em um único ambiente.
 
-[![DuelVerse Logo](https://via.placeholder.com/200x80/000000/FFFFFF?text=DuelVerse+Logo)](https://duelverse.site)
+[![DuelVerse Logo](https://raw.githubusercontent.com/vinicon14/duelverseremote/main/duelverse_banner.png)](https://duelverse.site)
 
 ## Sumário
 
