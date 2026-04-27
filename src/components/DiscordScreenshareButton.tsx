@@ -336,13 +336,24 @@ export const DiscordScreenshareButton = ({
                             />
                             <span>{server.name}</span>
                           </div>
-                          {server.inviteLink && (
+                          {server.inviteLink ? (
                             <div 
-                              className="p-1 hover:bg-accent rounded-md"
+                              className="p-1 hover:bg-accent rounded-md cursor-pointer"
+                              title="Abrir convite do Discord"
                               onClick={(e) => {
+                                e.preventDefault();
                                 e.stopPropagation();
+                                console.log("Redirecting to Discord invite:", server.inviteLink);
                                 window.open(server.inviteLink, "_blank", "noopener,noreferrer");
                               }}
+                            >
+                              <ExternalLink className="w-3 h-3 text-indigo-500" />
+                            </div>
+                          ) : (
+                            <div 
+                              className="p-1 opacity-30 cursor-not-allowed"
+                              title="Convite não configurado"
+                              onClick={(e) => e.stopPropagation()}
                             >
                               <ExternalLink className="w-3 h-3 text-muted-foreground" />
                             </div>
