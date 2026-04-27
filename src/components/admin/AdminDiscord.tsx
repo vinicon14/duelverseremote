@@ -436,46 +436,151 @@ export function AdminDiscord() {
                 Nenhum servidor conectado
               </div>
             ) : (
-              servers.map((server) => (
-                <div
-                  key={server.id}
-                  className="p-4 flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-3">
-                    {server.enabled ? (
-                      <CheckCircle className="w-4 h-4 text-green-500" />
-                    ) : (
-                      <XCircle className="w-4 h-4 text-muted-foreground" />
-                    )}
-                    <div>
-                      <p className="font-medium">{server.name}</p>
-                      <p className="text-sm text-muted-foreground">ID: {server.id}</p>
-                      {server.channelId && (
-                        <p className="text-sm text-muted-foreground">
-                          Canal: {server.channelId}
-                        </p>
-                      )}
+              servers.map((server) => {
+                const isEditing = editingServerId === server.id;
+                const editGuild = guilds.find((g) => g.guildId === server.id);
+                return (
+                  <div key={server.id} className="p-4 space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        {server.iconUrl ? (
+                          <img
+                            src={server.iconUrl}
+                            alt={server.name}
+                            className="w-10 h-10 rounded-full object-cover border"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center font-bold">
+                            {server.name[0]?.toUpperCase()}
+                          </div>
+                        )}
+                        {server.enabled ? (
+                          <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />
+                        ) : (
+                          <XCircle className="w-4 h-4 text-muted-foreground shrink-0" />
+                        )}
+                        <div className="min-w-0">
+                          <p className="font-medium truncate">{server.name}</p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            ID: {server.id}
+                          </p>
+                          {server.channelId && (
+                            <p className="text-xs text-muted-foreground truncate">
+                              Canal de texto: {server.channelId}
+                            </p>
+                          )}
+                          <p className="text-xs text-muted-foreground">
+                            Canais de voz monitorados:{" "}
+                            <span className="font-medium">
+                              {server.voiceChannelIds?.length ?? 0}
+                            </span>
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Switch
+                          checked={server.enabled}
+                          onCheckedChange={(checked) =>
+                            handleToggleServer(server.id, checked)
+                          }
+                          disabled={saving}
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            isEditing
+                              ? setEditingServerId(null)
+                              : startEditServer(server)
+                          }
+                          disabled={saving}
+                        >
+                          {isEditing ? "Cancelar" : "Editar"}
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleRemoveServer(server.id)}
+                          disabled={saving}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
+
+                    {isEditing && (
+                      <div className="border-t pt-3 space-y-3">
+                        <div>
+                          <Label htmlFor={`desc-${server.id}`}>Descrição</Label>
+                          <Input
+                            id={`desc-${server.id}`}
+                            value={editDescription}
+                            onChange={(e) => setEditDescription(e.target.value)}
+                            placeholder="Descrição exibida nos cards de servidores parceiros"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor={`icon-${server.id}`}>
+                            URL da capa (deixe vazio para usar o ícone do Discord)
+                          </Label>
+                          <Input
+                            id={`icon-${server.id}`}
+                            value={editIconUrl}
+                            onChange={(e) => setEditIconUrl(e.target.value)}
+                            placeholder="https://..."
+                          />
+                        </div>
+                        <div>
+                          <Label>Canais de voz monitorados (criam DuelRoom ao entrar)</Label>
+                          {!editGuild ? (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Clique em "Buscar servidores do bot" abaixo para listar canais.
+                            </p>
+                          ) : editGuild.voiceChannels.length === 0 ? (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Nenhum canal de voz neste servidor.
+                            </p>
+                          ) : (
+                            <div className="mt-2 grid grid-cols-2 gap-2 max-h-40 overflow-y-auto p-2 border rounded">
+                              {editGuild.voiceChannels.map((vc) => (
+                                <label
+                                  key={vc.id}
+                                  className="flex items-center gap-2 text-sm cursor-pointer"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={editVoiceChannelIds.includes(vc.id)}
+                                    onChange={() =>
+                                      toggleVoiceId(
+                                        editVoiceChannelIds,
+                                        setEditVoiceChannelIds,
+                                        vc.id,
+                                      )
+                                    }
+                                  />
+                                  🔊 {vc.name}
+                                </label>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <Button
+                          onClick={handleSaveEdit}
+                          disabled={saving}
+                          size="sm"
+                        >
+                          {saving ? (
+                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                          ) : (
+                            <Save className="w-4 h-4 mr-2" />
+                          )}
+                          Salvar alterações
+                        </Button>
+                      </div>
+                    )}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      checked={server.enabled}
-                      onCheckedChange={(checked) =>
-                        handleToggleServer(server.id, checked)
-                      }
-                      disabled={saving}
-                    />
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleRemoveServer(server.id)}
-                      disabled={saving}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>
