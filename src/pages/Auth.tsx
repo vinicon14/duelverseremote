@@ -57,16 +57,20 @@ const Auth = () => {
     try {
       setLoading(true);
       console.log('[AUTH] Starting Discord sign-in...');
+      console.log('[AUTH] window.location:', window.location.href);
       console.log('[AUTH] Supabase URL:', import.meta.env.VITE_SUPABASE_URL);
       
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const publishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
       
       if (!supabaseUrl || !publishableKey) {
-        throw new Error('Supabase não configurado');
+        throw new Error('Supabase não configurado no ambiente');
       }
       
-      const response = await fetch(`${supabaseUrl}/functions/v1/discord-oauth-start`, {
+      const funcUrl = `${supabaseUrl}/functions/v1/discord-oauth-start`;
+      console.log('[AUTH] Calling:', funcUrl);
+      
+      const response = await fetch(funcUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -75,32 +79,43 @@ const Auth = () => {
         },
         body: JSON.stringify({
           mode: 'login',
-          origin: window.location.origin,
-          returnPath: returnTo || '/duels',
+          origin: 'https://duelverse.site',
+          returnPath: '/duels',
         }),
       });
       
-      const data = await response.json();
-      console.log('[AUTH] Discord sign-in response:', response.status, data);
+      const text = await response.text();
+      console.log('[AUTH] Raw response:', response.status, text);
+      
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = { error: text };
+      }
+      
+      console.log('[AUTH] Discord sign-in response:', data);
       
       if (!response.ok) {
-        throw new Error(data?.error || `Erro do servidor: ${response.status}`);
+        throw new Error(data?.error || `Erro: ${response.status}`);
       }
       
       if (!data?.url) {
-        throw new Error('URL de autorização não retornada');
+        throw new Error('URL não retornada');
       }
       
       window.location.href = data.url;
     } catch (err: any) {
-      console.error('[AUTH] Discord sign-in error:', err);
-      // Show helpful error message
-      const errorMsg = err.message || 'Erro desconhecido';
+      console.error('[AUTH] Error:', err);
+      
+      // If fetch fails in Discord, show clear message
+      const isNetworkError = err.name === 'TypeError' && err.message === 'Failed to fetch';
+      
       toast({
         title: t('auth.loginError'),
-        description: runningInDiscord 
-          ? `${errorMsg}. Tente usar o site: duelverse.site`
-          : errorMsg,
+        description: isNetworkError
+          ? 'Rede bloqueada no Discord. Acesse duelverse.site para jogar.'
+          : err.message,
         variant: 'destructive',
       });
       setLoading(false);
