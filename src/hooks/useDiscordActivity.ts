@@ -49,14 +49,18 @@ export function useDiscordActivity(enabled: boolean = true): DiscordActivityStat
     let cancelled = false;
     (async () => {
       try {
-        const { DiscordSDK } = await import("@discord/embedded-app-sdk");
-        const clientId = (import.meta as any).env?.VITE_DISCORD_CLIENT_ID
-          // Fallback: expose client id via build-time replacement or hardcode below.
-          // Discord Activity client id is the bot's Application ID (public).
-          ?? "";
+        const projectId = (import.meta as any).env.VITE_SUPABASE_PROJECT_ID;
+        const tokenEndpoint = `https://${projectId}.supabase.co/functions/v1/discord-activity-token`;
 
-        // The SDK requires the Application/Client ID at construction.
-        const sdk = new DiscordSDK(clientId || "MISSING_CLIENT_ID");
+        // Fetch the public DISCORD_CLIENT_ID from our edge function so we
+        // don't need to hardcode/expose it through Vite env at build time.
+        const cfgRes = await fetch(tokenEndpoint, { method: "GET" });
+        const cfg = await cfgRes.json();
+        const clientId: string = cfg?.client_id;
+        if (!clientId) throw new Error("missing_client_id");
+
+        const { DiscordSDK } = await import("@discord/embedded-app-sdk");
+        const sdk = new DiscordSDK(clientId);
         await sdk.ready();
 
         // OAuth: ask user to authorize, exchange code for token via our edge function
@@ -68,14 +72,11 @@ export function useDiscordActivity(enabled: boolean = true): DiscordActivityStat
           scope: ["identify"],
         });
 
-        const tokenRes = await fetch(
-          `https://${(import.meta as any).env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/discord-activity-token`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ code }),
-          },
-        );
+        const tokenRes = await fetch(tokenEndpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code }),
+        });
         const tokenData = await tokenRes.json();
         if (!tokenRes.ok || !tokenData.access_token) {
           throw new Error(tokenData?.error || "token_exchange_failed");
