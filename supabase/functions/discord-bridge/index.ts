@@ -46,15 +46,33 @@ async function discordFetch(path: string, init: RequestInit = {}) {
   return { ok: res.ok, status: res.status, data };
 }
 
-const deleteWebhookMessageSoon = (webhookUrl: string, messageId?: string) => {
+const scheduleWebhookMessageDeletion = (
+  webhookUrl: string,
+  messageId: string | undefined | null,
+  delayMs = 8000,
+) => {
   if (!messageId) return;
-  setTimeout(async () => {
+  const task = (async () => {
     try {
-      await fetch(`${webhookUrl}/messages/${messageId}`, { method: "DELETE" });
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+      const res = await fetch(`${webhookUrl}/messages/${messageId}`, { method: "DELETE" });
+      if (!res.ok && res.status !== 404) {
+        const txt = await res.text().catch(() => "");
+        console.error(
+          `[discord-bridge] delete failed status=${res.status} body=${txt.slice(0, 200)}`,
+        );
+      } else {
+        console.log(`[discord-bridge] deleted ephemeral webhook message ${messageId}`);
+      }
     } catch (err) {
-      console.error("[discord-bridge] failed to delete temporary matchmaking message:", err);
+      console.error("[discord-bridge] failed to delete ephemeral webhook message:", err);
     }
-  }, 8000);
+  })();
+  // @ts-ignore - EdgeRuntime is provided by the Supabase edge runtime
+  if (typeof EdgeRuntime !== "undefined" && typeof EdgeRuntime.waitUntil === "function") {
+    // @ts-ignore
+    EdgeRuntime.waitUntil(task);
+  }
 };
 
 serve(async (req) => {
