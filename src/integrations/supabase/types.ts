@@ -1112,6 +1112,51 @@ export type Database = {
           },
         ]
       }
+      matchmaking_invites: {
+        Row: {
+          created_at: string
+          duel_id: string | null
+          expires_at: string
+          host_user_id: string
+          id: string
+          language_code: string
+          match_type: string
+          matched_at: string | null
+          matched_user_id: string | null
+          max_players: number
+          status: string
+          tcg_type: string
+        }
+        Insert: {
+          created_at?: string
+          duel_id?: string | null
+          expires_at?: string
+          host_user_id: string
+          id?: string
+          language_code?: string
+          match_type: string
+          matched_at?: string | null
+          matched_user_id?: string | null
+          max_players?: number
+          status?: string
+          tcg_type?: string
+        }
+        Update: {
+          created_at?: string
+          duel_id?: string | null
+          expires_at?: string
+          host_user_id?: string
+          id?: string
+          language_code?: string
+          match_type?: string
+          matched_at?: string | null
+          matched_user_id?: string | null
+          max_players?: number
+          status?: string
+          tcg_type?: string
+        }
+        Relationships: []
+      }
       matchmaking_queue: {
         Row: {
           duel_id: string | null
@@ -2059,6 +2104,14 @@ export type Database = {
       }
     }
     Functions: {
+      accept_matchmaking_invite: {
+        Args: { p_invite_id: string; p_user_id: string }
+        Returns: {
+          duel_id: string
+          message: string
+          status: string
+        }[]
+      }
       activate_subscription: {
         Args: { p_plan_id: string; p_user_id: string }
         Returns: Json
