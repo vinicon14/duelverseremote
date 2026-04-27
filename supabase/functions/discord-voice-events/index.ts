@@ -256,12 +256,105 @@ async function handleJoin(
   });
   if (partErr) console.error("[discord-voice-events] failed to insert participant:", partErr);
 
+  // Send a DM to the Discord user with a button to jump into the DuelVerse DuelRoom
+  if (duelId) {
+    try {
+      await sendDuelRoomInviteDM({
+        discordUserId: body.discord_user_id,
+        duelId,
+        channelName: body.channel_name ?? body.channel_id,
+        guildName: body.guild_name ?? "Discord",
+        hasAccount: Boolean(duelverseUserId),
+      });
+    } catch (err) {
+      console.warn("[discord-voice-events] failed to send invite DM:", err);
+    }
+  }
+
   return json({
     ok: true,
     voice_room_id: room.id,
     duel_id: duelId,
     has_duelverse_link: Boolean(duelverseUserId),
   });
+}
+
+// ----- DM helper -----
+// Opens a DM channel with the user and posts a message with a link button to the DuelRoom.
+async function sendDuelRoomInviteDM(opts: {
+  discordUserId: string;
+  duelId: string;
+  channelName: string;
+  guildName: string;
+  hasAccount: boolean;
+}) {
+  const botToken = Deno.env.get("DISCORD_BOT_TOKEN");
+  if (!botToken) {
+    console.warn("[discord-voice-events] DISCORD_BOT_TOKEN missing — skipping DM");
+    return;
+  }
+
+  const dmRes = await fetch("https://discord.com/api/v10/users/@me/channels", {
+    method: "POST",
+    headers: {
+      Authorization: `Bot ${botToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ recipient_id: opts.discordUserId }),
+  });
+  if (!dmRes.ok) {
+    console.warn("[discord-voice-events] open DM failed:", dmRes.status, await dmRes.text());
+    return;
+  }
+  const dm = await dmRes.json();
+  const dmChannelId = dm?.id;
+  if (!dmChannelId) return;
+
+  const joinUrl = `https://duelverse.site/join/${opts.duelId}`;
+
+  const payload = {
+    content:
+      `🎮 Você entrou em **#${opts.channelName}** no servidor **${opts.guildName}**.\n` +
+      (opts.hasAccount
+        ? "Sua conta DuelVerse está vinculada — toque o botão para abrir a DuelRoom."
+        : "Toque o botão para abrir a DuelRoom no DuelVerse (app, site ou navegador)."),
+    embeds: [
+      {
+        title: "Sala de Duelo pronta",
+        description:
+          "A DuelRoom desta call já está criada. Abra para duelar enquanto continua em chamada no Discord.",
+        color: 0x7c3aed,
+        url: joinUrl,
+      },
+    ],
+    components: [
+      {
+        type: 1,
+        components: [
+          { type: 2, style: 5, label: "🎮 Abrir DuelRoom", url: joinUrl },
+        ],
+      },
+    ],
+  };
+
+  const msgRes = await fetch(
+    `https://discord.com/api/v10/channels/${dmChannelId}/messages`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bot ${botToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    },
+  );
+  if (!msgRes.ok) {
+    console.warn(
+      "[discord-voice-events] DM send failed:",
+      msgRes.status,
+      await msgRes.text(),
+    );
+  }
 }
 
 async function handleLeave(supabase: ReturnType<typeof createClient>, body: VoicePayload) {
