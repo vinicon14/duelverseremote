@@ -283,9 +283,25 @@ const DuelRoom = () => {
     const checkDiscordConn = async () => {
       if (currentUser) {
         setDiscordConnectionLoading(true);
-        const connection = await checkDiscordConnection(currentUser.id);
-        setDiscordConnection(connection);
-        setDiscordConnectionLoading(false);
+        try {
+          const { data, error } = await supabase
+            .from('discord_links')
+            .select('discord_id, discord_username')
+            .eq('user_id', currentUser.id)
+            .single();
+          
+          if (error && error.code !== 'PGRST116') {
+            console.error('Error checking Discord connection:', error);
+            setDiscordConnection(null);
+          } else {
+            setDiscordConnection(data || null);
+          }
+        } catch (err) {
+          console.error('Exception checking Discord connection:', err);
+          setDiscordConnection(null);
+        } finally {
+          setDiscordConnectionLoading(false);
+        }
       } else {
         setDiscordConnection(null);
         setDiscordConnectionLoading(false);
@@ -293,7 +309,7 @@ const DuelRoom = () => {
     };
 
     checkDiscordConn();
-  }, [currentUser, checkDiscordConnection]);
+  }, [currentUser]);
 
   // Listener realtime para sincronizar LP entre usuários e atualização de opponent
   useEffect(() => {

@@ -110,6 +110,95 @@ const Auth = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
+  const handleDiscordSignIn = async () => {
+    try {
+      setLoading(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        const tempEmail = `discord-user-${Date.now()}@duelverse.local`;
+        const tempPassword = crypto.randomUUID();
+        
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email: tempEmail,
+          password: tempPassword,
+          options: {
+            data: {
+              selected_tcg: selectedTcg,
+              country_code: signupCountry || 'BR',
+              language_code: 'pt-BR',
+            }
+          }
+        });
+
+        if (signUpError) throw signUpError;
+        if (!data.user) throw new Error('Falha ao criar usuario');
+        
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+          email: tempEmail,
+          password: tempPassword,
+        });
+        
+        if (signInError) throw signInError;
+        if (!signInData.session?.access_token) throw new Error('Sem sessao');
+        
+        await initiateDiscordOAuth(signInData.session.access_token);
+      } else {
+        await initiateDiscordOAuth(session.access_token);
+      }
+    } catch (error: any) {
+      console.error('Erro no login com Discord:', error);
+      
+      let errorMessage = error.message || 'Erro desconhecido';
+      if (error.message?.includes('Failed to fetch') || error.message?.includes('fetch')) {
+        errorMessage = 'Erro de conexao com Discord. Verifique sua internet e tente novamente.';
+      }
+      
+      toast({
+        title: t('auth.loginError'),
+        description: errorMessage,
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const initiateDiscordOAuth = async (accessToken: string) => {
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      if (!supabaseUrl) throw new Error('Supabase URL nao configurada');
+      
+      const response = await fetch(
+        `${supabaseUrl}/functions/v1/discord-oauth-start`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            origin: window.location.origin,
+            returnPath: '/',
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
+        throw new Error(error.error || 'Falha ao iniciar Discord OAuth');
+      }
+
+      const { url } = await response.json();
+      if (!url) throw new Error('URL de OAuth nao retornada');
+      
+      window.location.href = url;
+    } catch (error: any) {
+      console.error('Erro ao iniciar Discord OAuth:', error);
+      throw error;
+    }
+  };
+
   const handleGoogleSignIn = async () => {
     try {
       setLoading(true);
@@ -395,6 +484,9 @@ const Auth = () => {
                 </div>
                 <Button type="submit" className="w-full auth-cycle-btn text-white" disabled={loading}>
                   {loading ? t('auth.signingIn') : t('auth.signInBtn')}
+                </Button>
+                <Button type="button" variant="outline" className="w-full" onClick={handleDiscordSignIn} disabled={loading}>
+                  Discord
                 </Button>
               </form>
 
