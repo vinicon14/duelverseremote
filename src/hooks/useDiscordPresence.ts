@@ -27,6 +27,25 @@ const callPresence = async (playing: boolean) => {
   }
 };
 
+const refreshOnlineCounter = async () => {
+  try {
+    await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/discord-presence-counter`,
+      {
+        method: "POST",
+        keepalive: true,
+        headers: {
+          "Content-Type": "application/json",
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: JSON.stringify({}),
+      },
+    );
+  } catch (err) {
+    console.warn("[discord-presence-counter] failed:", err);
+  }
+};
+
 export const useDiscordPresence = (userId: string | undefined) => {
   useEffect(() => {
     if (!userId) return;
