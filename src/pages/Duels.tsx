@@ -38,10 +38,15 @@ const Duels = () => {
   const [isRanked, setIsRanked] = useState(true);
   const [maxPlayers, setMaxPlayers] = useState(2);
   const [durationMinutes, setDurationMinutes] = useState(50);
+  const [isPrivate, setIsPrivate] = useState(false);
+  const [roomPassword, setRoomPassword] = useState("");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showAdPopup, setShowAdPopup] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [pendingAction, setPendingAction] = useState<{ type: 'create' | 'join', duelId?: string } | null>(null);
+  // Password prompt for joining private rooms
+  const [passwordPrompt, setPasswordPrompt] = useState<{ duelId: string; expected: string } | null>(null);
+  const [enteredPassword, setEnteredPassword] = useState("");
 
   const platform = detectPlatform();
   const isWebBrowser = !platform.isStandalone && !(window as any).electronAPI?.isElectron && !platform.isNativeApp;
