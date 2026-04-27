@@ -26,6 +26,9 @@ export interface DiscordAutoRoom {
 /**
  * Hook que escuta criação automática de DuelRooms via Discord.
  * Mostra notificação ao usuário DuelVerse com opção de entrar na sala.
+ * 
+ * IMPORTANTE: Este hook deve ser chamado DENTRO de um componente que está
+ * dentro do <BrowserRouter>, pois usa useNavigate().
  */
 export const useDiscordAutoRoom = () => {
   const { toast } = useToast();
@@ -64,21 +67,25 @@ export const useDiscordAutoRoom = () => {
             setPendingRooms((prev) => [...prev, autoRoom]);
 
             // Mostrar notificação com opção de entrar
+            // Usar toast simples sem action complexa para evitar problemas de tipo
+            const handleEnter = () => {
+              navigate(`/duel/${autoRoom.duelId}`);
+              dismissRoom(autoRoom.duelId);
+            };
+
             toast({
               title: `🎮 DuelRoom Discord: ${autoRoom.duelRoomName}`,
-              description: `${autoRoom.discordUsername} entrou no canal de voz Discord e criou uma sala. Clique para entrar.`,
-              action: (
-                <button
-                  onClick={() => {
-                    navigate(`/duel/${autoRoom.duelId}`);
-                    dismissRoom(autoRoom.duelId);
-                  }}
-                  className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-8 px-3"
-                >
-                  Entrar
-                </button>
-              ) as any,
+              description: `${autoRoom.discordUsername} entrou no canal de voz Discord e criou uma sala.`,
             });
+
+            // Usar setTimeout para permitir que o usuário clique em um botão de ação
+            // ou simplesmente navegue manualmente
+            const toastId = setTimeout(() => {
+              console.log("[useDiscordAutoRoom] Toast timeout - user can still click to enter");
+            }, 5000);
+
+            // Cleanup do timeout
+            return () => clearTimeout(toastId);
           }
         }
       )

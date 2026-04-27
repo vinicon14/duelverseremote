@@ -89,6 +89,10 @@ const ActiveDeckBuilderRoute = () => {
 
 // Componente interno que fica dentro do Router para usar useNavigate
 const RouterContent = ({ user }: { user: User | null }) => {
+  // Escutar criação automática de DuelRooms via Discord (bot de voz)
+  // Notifica o usuário quando alguém entra em canal de voz Discord e cria uma sala
+  useDiscordAutoRoom();
+
   return (
     <Suspense fallback={
       <div className="flex-1 w-full flex items-center justify-center min-h-screen">
@@ -162,11 +166,7 @@ const AppContent = () => {
   
   // Listen for duel invite responses (accepted/rejected)
   useDuelInviteResponse(user?.id);
-
-  // Escutar criação automática de DuelRooms via Discord (bot de voz)
-  // Notifica o usuário quando alguém entra em canal de voz Discord e cria uma sala
-  useDiscordAutoRoom();
-
+  
   // Enable online status tracking
   useOnlineStatus();
 
