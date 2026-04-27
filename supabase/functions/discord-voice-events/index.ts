@@ -370,7 +370,69 @@ async function sendDuelRoomInviteDM(opts: {
   }
 }
 
-async function handleLeave(supabase: ReturnType<typeof createClient>, body: VoicePayload) {
+// Posts "/dv @everyone remote <call link>" in the configured text channel webhook
+// for the guild, then deletes it shortly after so the channel stays clean.
+async function announceVoiceJoinInTextChannel(
+  supabase: ReturnType<typeof createClient>,
+  opts: {
+    guildId: string;
+    channelId: string;
+    channelName: string;
+    discordUsername: string;
+    inviteUrl: string | null;
+  },
+) {
+  const { data: cfg } = await supabase
+    .from("system_settings")
+    .select("value")
+    .eq("key", "discord_bot_status")
+    .maybeSingle();
+  if (!cfg?.value) return;
+  const status: any = typeof cfg.value === "string" ? JSON.parse(cfg.value) : cfg.value;
+  const servers: any[] = Array.isArray(status?.servers) ? status.servers : [];
+  const guildCfg = servers.find((s: any) => s.id === opts.guildId && s.enabled && s.webhookUrl);
+  if (!guildCfg) return;
+
+  const callLink = opts.inviteUrl
+    ?? `https://discord.com/channels/${opts.guildId}/${opts.channelId}`;
+  const content = `/dv @everyone remote ${callLink}`;
+
+  const payload = {
+    content,
+    username: "DuelVerse Voice",
+    allowed_mentions: { parse: ["everyone"] },
+  };
+
+  try {
+    const res = await fetch(`${guildCfg.webhookUrl}?wait=true`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      console.warn(
+        "[discord-voice-events] webhook announce failed:",
+        res.status,
+        await res.text(),
+      );
+      return;
+    }
+    const posted = await res.json().catch(() => null);
+    const messageId = posted?.id;
+    if (messageId) {
+      // Auto-delete after 10s so the bot can react/forward and we don't spam
+      setTimeout(async () => {
+        try {
+          await fetch(`${guildCfg.webhookUrl}/messages/${messageId}`, { method: "DELETE" });
+        } catch (err) {
+          console.warn("[discord-voice-events] failed to delete announce msg:", err);
+        }
+      }, 10000);
+    }
+  } catch (err) {
+    console.warn("[discord-voice-events] webhook announce exception:", err);
+  }
+}
   const { data: room } = await supabase
     .from("discord_voice_rooms")
     .select("id, duel_id")
