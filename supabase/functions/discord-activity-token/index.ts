@@ -14,6 +14,17 @@ serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  // GET returns the public DISCORD_CLIENT_ID (safe to expose) so the
+  // browser-side Embedded App SDK can construct a DiscordSDK instance
+  // without us baking the id into the static bundle.
+  if (req.method === "GET") {
+    const clientId = Deno.env.get("DISCORD_CLIENT_ID") ?? "";
+    return new Response(
+      JSON.stringify({ client_id: clientId }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
+
   try {
     const { code } = await req.json().catch(() => ({ code: null }));
     if (!code || typeof code !== "string") {
