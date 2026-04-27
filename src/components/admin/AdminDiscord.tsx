@@ -49,6 +49,7 @@ interface DiscordServer {
   channelId: string;
   inviteLink?: string;
   webhookUrl?: string;
+  coverImageUrl?: string;
 }
 
 interface DiscordBotStatus {
@@ -375,6 +376,13 @@ export function AdminDiscord() {
                   className="p-4 flex items-center justify-between"
                 >
                   <div className="flex items-center gap-3">
+                    {server.coverImageUrl && (
+                      <img
+                        src={server.coverImageUrl}
+                        alt={`${server.name} cover`}
+                        className="h-8 w-8 rounded object-cover"
+                      />
+                    )}
                     {server.enabled ? (
                       <CheckCircle className="w-4 h-4 text-green-500" />
                     ) : (
