@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import type { Client as RPCClient, Presence } from 'discord-rpc';
 
 // We'll import the discord-rpc package dynamically to avoid issues in environments where it's not available
