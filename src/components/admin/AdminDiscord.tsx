@@ -49,6 +49,9 @@ interface DiscordServer {
   channelId: string;
   inviteLink?: string;
   webhookUrl?: string;
+  iconUrl?: string | null;
+  description?: string;
+  voiceChannelIds?: string[];
 }
 
 interface DiscordBotStatus {
@@ -60,10 +63,17 @@ interface DiscordBotStatus {
   servers: DiscordServer[];
 }
 
+interface ChannelEntry {
+  id: string;
+  name: string;
+}
+
 interface GuildEntry {
   guildId: string;
   guildName: string;
-  channels: { id: string; name: string }[];
+  iconUrl?: string | null;
+  channels: ChannelEntry[];
+  voiceChannels: ChannelEntry[];
 }
 
 export function AdminDiscord() {
