@@ -239,7 +239,7 @@ export function AdminDiscord() {
 
   const handleAutoSetup = async () => {
     if (!selectedGuildId || !selectedChannelId) {
-      setError("Selecione um servidor e um canal");
+      setError("Selecione um servidor e um canal de texto");
       return;
     }
     setSaving(true);
@@ -253,6 +253,7 @@ export function AdminDiscord() {
             type: "auto_setup_server",
             guildId: selectedGuildId,
             channelId: selectedChannelId,
+            voiceChannelIds: selectedVoiceChannelIds,
           },
         }
       );
@@ -263,6 +264,7 @@ export function AdminDiscord() {
       await fetchBotStatus();
       setSelectedGuildId("");
       setSelectedChannelId("");
+      setSelectedVoiceChannelIds([]);
       setSuccess(`Servidor "${data.server.name}" configurado automaticamente!`);
     } catch (err: any) {
       console.error(err);
@@ -270,6 +272,54 @@ export function AdminDiscord() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const startEditServer = (server: DiscordServer) => {
+    setEditingServerId(server.id);
+    setEditDescription(server.description || "");
+    setEditIconUrl(server.iconUrl || "");
+    setEditVoiceChannelIds(server.voiceChannelIds || []);
+    // Refresh guild list so we can show voice channels in the picker
+    if (guilds.length === 0) loadGuilds();
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingServerId) return;
+    setSaving(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const { data, error: invokeErr } = await supabase.functions.invoke(
+        "discord-bridge",
+        {
+          body: {
+            type: "update_server",
+            guildId: editingServerId,
+            description: editDescription,
+            iconUrl: editIconUrl || null,
+            voiceChannelIds: editVoiceChannelIds,
+          },
+        }
+      );
+      if (invokeErr) throw invokeErr;
+      if (!data?.success) throw new Error(data?.error || "Falha ao atualizar");
+      await fetchBotStatus();
+      setEditingServerId(null);
+      setSuccess("Servidor atualizado");
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Erro ao atualizar servidor");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggleVoiceId = (
+    list: string[],
+    setList: (v: string[]) => void,
+    id: string,
+  ) => {
+    setList(list.includes(id) ? list.filter((v) => v !== id) : [...list, id]);
   };
 
   const handleManualAdd = async () => {
