@@ -11,6 +11,10 @@ import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.entities.channel.ChannelType;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
+import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
+import net.dv8tion.jda.api.events.voice.VoiceJoinEvent;
+import net.dv8tion.jda.api.events.voice.VoiceLeaveEvent;
+import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.utils.cache.CacheFlag;
@@ -75,63 +79,138 @@ public class DiscordBot extends ListenerAdapter {
         return jda;
     }
 
-    @Override
-    public void onMessageReceived(MessageReceivedEvent event) {
-        if (event.getAuthor().isBot()) {
-            return;
-        }
-
-        Guild guild = event.getGuild();
-        if (guild == null) {
-            return;
-        }
-
-        String serverId = guild.getId();
-        
-        if (serverManager != null && !serverManager.isServerEnabled(serverId)) {
-            return;
-        }
-
-        if (event.isFromType(ChannelType.TEXT)) {
-            String configuredChannelId = serverManager != null ? serverManager.getServerChannel(serverId) : null;
-            String incomingChannelId = event.getChannel().getId();
-
-            if (configuredChannelId != null && !configuredChannelId.isEmpty() && !configuredChannelId.equals(incomingChannelId)) {
-                return;
-            }
-
-            if ((configuredChannelId == null || configuredChannelId.isEmpty())
-                && config.isTargetChannelExplicit()
-                && !config.getTargetChannel().equalsIgnoreCase(event.getChannel().getName())) {
-                return;
-            }
-
-            Message message = event.getMessage();
-            String content = message.getContentRaw();
-            if (content == null || content.trim().isEmpty()) {
-                content = message.getContentDisplay();
-            }
-
-            if (content != null && !content.trim().isEmpty()) {
-                String displayName = event.getMember() != null 
-                    ? event.getMember().getEffectiveName() 
-                    : event.getAuthor().getName();
-
-                String authorId = event.getAuthor().getId();
-                String avatarUrl = event.getAuthor().getEffectiveAvatarUrl();
-
-                logger.info("Mensagem recebida do Discord ({}): [{}] {} - {}",
-                    guild.getName(), authorId, displayName, content);
-
-                messageHandler.handleDiscordMessage(
-                    authorId,
-                    displayName,
-                    avatarUrl,
-                    content.trim()
-                );
-            }
-        }
-    }
+     @Override
+     public void onMessageReceived(MessageReceivedEvent event) {
+         if (event.getAuthor().isBot()) {
+             return;
+         }
+ 
+         Guild guild = event.getGuild();
+         if (guild == null) {
+             return;
+         }
+ 
+         String serverId = guild.getId();
+         
+         if (serverManager != null && !serverManager.isServerEnabled(serverId)) {
+             return;
+         }
+ 
+         if (event.isFromType(ChannelType.TEXT)) {
+             String configuredChannelId = serverManager != null ? serverManager.getServerChannel(serverId) : null;
+             String incomingChannelId = event.getChannel().getId();
+ 
+             if (configuredChannelId != null && !configuredChannelId.isEmpty() && !configuredChannelId.equals(incomingChannelId)) {
+                 return;
+             }
+ 
+             if ((configuredChannelId == null || configuredChannelId.isEmpty())
+                 && config.isTargetChannelExplicit()
+                 && !config.getTargetChannel().equalsIgnoreCase(event.getChannel().getName())) {
+                 return;
+             }
+ 
+             Message message = event.getMessage();
+             String content = message.getContentRaw();
+             if (content == null || content.trim().isEmpty()) {
+                 content = message.getContentDisplay();
+             }
+ 
+             if (content != null && !content.trim().isEmpty()) {
+                 String displayName = event.getMember() != null 
+                     ? event.getMember().getEffectiveName() 
+                     : event.getAuthor().getName();
+ 
+                 String authorId = event.getAuthor().getId();
+                 String avatarUrl = event.getAuthor().getEffectiveAvatarUrl();
+ 
+                 logger.info("Mensagem recebida do Discord ({}): [{}] {} - {}",
+                     guild.getName(), authorId, displayName, content);
+ 
+                 messageHandler.handleDiscordMessage(
+                     authorId,
+                     displayName,
+                     avatarUrl,
+                     content.trim()
+                 );
+             }
+         }
+     }
+     
+     @Override
+     public void onVoiceJoin(VoiceJoinEvent event) {
+         // Handle when a user joins a voice channel
+         Guild guild = event.getGuild();
+         if (guild == null) {
+             return;
+         }
+ 
+         String serverId = guild.getId();
+         
+         if (serverManager != null && !serverManager.isServerEnabled(serverId)) {
+             return;
+         }
+ 
+         // Check if this is a configured voice channel for DuelVerse
+         String configuredChannelId = serverManager != null ? serverManager.getServerChannel(serverId) : null;
+         String voiceChannelId = event.getChannelJoined().getId();
+ 
+         // Only process if it's the configured channel or if no specific channel is configured
+         if ((configuredChannelId != null && !configuredChannelId.isEmpty() && !configuredChannelId.equals(voiceChannelId)) ||
+             (configuredChannelId == null || configuredChannelId.isEmpty()) && 
+             config.isTargetChannelExplicit() && 
+             !config.getTargetChannel().equalsIgnoreCase(event.getChannelJoined().getName())) {
+             return;
+         }
+ 
+         // Get user info
+         String userId = event.getMember().getUser().getId();
+         String username = event.getMember().getEffectiveName();
+         
+         logger.info("Usuário entrou no canal de voz do Discord ({}): [{}] {}",
+             guild.getName(), userId, username);
+ 
+         // TODO: Implement logic to create/join duelroom when user joins Discord voice channel
+         // This would involve calling Supabase functions to create a duelroom
+         // associated with this Discord voice channel
+     }
+     
+     @Override
+     public void onVoiceLeave(VoiceLeaveEvent event) {
+         // Handle when a user leaves a voice channel
+         Guild guild = event.getGuild();
+         if (guild == null) {
+             return;
+         }
+ 
+         String serverId = guild.getId();
+         
+         if (serverManager != null && !serverManager.isServerEnabled(serverId)) {
+             return;
+         }
+ 
+         // Check if this is a configured voice channel for DuelVerse
+         String configuredChannelId = serverManager != null ? serverManager.getServerChannel(serverId) : null;
+         String voiceChannelId = event.getChannelLeft().getId();
+ 
+         // Only process if it's the configured channel or if no specific channel is configured
+         if ((configuredChannelId != null && !configuredChannelId.isEmpty() && !configuredChannelId.equals(voiceChannelId)) ||
+             (configuredChannelId == null || configuredChannelId.isEmpty()) && 
+             config.isTargetChannelExplicit() && 
+             !config.getTargetChannel().equalsIgnoreCase(event.getChannelLeft().getName())) {
+             return;
+         }
+ 
+         // Get user info
+         String userId = event.getMember().getUser().getId();
+         String username = event.getMember().getEffectiveName();
+         
+         logger.info("Usuário saiu do canal de voz do Discord ({}): [{}] {}",
+             guild.getName(), userId, username);
+ 
+         // TODO: Implement logic to handle user leaving Discord voice channel
+         // This might involve checking if the duelroom should be closed or user removed
+     }
 
     public void sendMessageToDiscord(String username, String content) {
         if (serverManager == null) {

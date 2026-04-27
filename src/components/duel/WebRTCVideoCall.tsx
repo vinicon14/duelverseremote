@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback, useImperativeHandle, forwardR
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Mic, MicOff, Video, VideoOff, Loader2, LayoutGrid, PictureInPicture2, ZoomIn, ZoomOut, Settings } from "lucide-react";
+import { Mic, MicOff, Video, VideoOff, Loader2, LayoutGrid, PictureInPicture2, ZoomIn, ZoomOut, Settings, Monitor, MonitorStop } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 export type VideoLayout = "side-by-side" | "pip";
@@ -91,10 +91,12 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   const remoteVideoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
   const peersRef = useRef<Map<string, PeerState>>(new Map());
   const localStreamRef = useRef<MediaStream | null>(null);
+  const displayStreamRef = useRef<MediaStream | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
+  const [isSharingScreen, setIsSharingScreen] = useState(false);
   const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(new Map());
   const [remotePeerIds, setRemotePeerIds] = useState<string[]>([]);
   const [pipSwapped, setPipSwapped] = useState(false);
@@ -235,7 +237,8 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     peersRef.current.set(remotePeerId, peerState);
 
     // Add local tracks (or recvonly transceivers for spectators)
-    const localStream = localStreamRef.current;
+    // When screen sharing, use displayStreamRef instead of localStreamRef
+    const localStream = isSharingScreen ? displayStreamRef.current : localStreamRef.current;
     if (localStream) {
       localStream.getTracks().forEach((track) => {
         pc.addTrack(track, localStream);
@@ -444,39 +447,44 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     let disposed = false;
 
     const acquireMedia = async (): Promise<MediaStream | null> => {
-      // Spectators don't need local media - receive only
-      if (isSpectator) return null;
+    // Spectators don't need local media - receive only
+    if (isSpectator) return null;
 
-      // Em mobile, priorizar câmera traseira ('environment'); em desktop usa frontal ('user')
-      const isMobile = typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
-      const primaryFacing = isMobile ? 'environment' : 'user';
-      const fallbackFacing = isMobile ? 'user' : 'environment';
-      const audioConstraints = {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true,
-      };
-      const constraints = [
-        { video: { facingMode: { exact: primaryFacing }, width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16 / 9 } }, audio: audioConstraints },
-        { video: { facingMode: { ideal: primaryFacing }, width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16 / 9 } }, audio: audioConstraints },
-        { video: { facingMode: { ideal: primaryFacing } }, audio: audioConstraints },
-        { video: { facingMode: { ideal: fallbackFacing }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: audioConstraints },
-        { video: { facingMode: { ideal: fallbackFacing } }, audio: audioConstraints },
-        { video: true, audio: audioConstraints },
-        { video: true, audio: false },
-      ];
+    // If screen sharing is active, return the display stream
+    if (isSharingScreen && displayStreamRef.current) {
+      return displayStreamRef.current;
+    }
 
-      for (const constraint of constraints) {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia(constraint);
-          console.log("[WebRTC] Media acquired with:", JSON.stringify(constraint));
-          return stream;
-        } catch (err) {
-          console.warn("[WebRTC] Failed constraint:", JSON.stringify(constraint), err);
-        }
-      }
-      return null;
+    // Em mobile, priorizar câmera traseira ('environment'); em desktop usa frontal ('user')
+    const isMobile = typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+    const primaryFacing = isMobile ? 'environment' : 'user';
+    const fallbackFacing = isMobile ? 'user' : 'environment';
+    const audioConstraints = {
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true,
     };
+    const constraints = [
+      { video: { facingMode: { exact: primaryFacing }, width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16 / 9 } }, audio: audioConstraints },
+      { video: { facingMode: { ideal: primaryFacing }, width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16 / 9 } }, audio: audioConstraints },
+      { video: { facingMode: { ideal: primaryFacing } }, audio: audioConstraints },
+      { video: { facingMode: { ideal: fallbackFacing }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: audioConstraints },
+      { video: { facingMode: { ideal: fallbackFacing } }, audio: audioConstraints },
+      { video: true, audio: audioConstraints },
+      { video: true, audio: false },
+    ];
+
+    for (const constraint of constraints) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia(constraint);
+        console.log("[WebRTC] Media acquired with:", JSON.stringify(constraint));
+        return stream;
+      } catch (err) {
+        console.warn("[WebRTC] Failed constraint:", JSON.stringify(constraint), err);
+      }
+    }
+    return null;
+  };
 
     const init = async () => {
       const stream = await acquireMedia();
@@ -575,6 +583,75 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     if (videoTrack) {
       videoTrack.enabled = !videoTrack.enabled;
       setIsVideoOff(!videoTrack.enabled);
+    }
+  };
+
+  const toggleScreenShare = async () => {
+    if (isSharingScreen) {
+      // Stop screen sharing and go back to camera
+      if (displayStreamRef.current) {
+        displayStreamRef.current.getTracks().forEach(t => t.stop());
+        displayStreamRef.current = null;
+      }
+      
+      // Restore camera if it was previously active
+      if (localStreamRef.current) {
+        // Camera is already active, just make sure it's enabled
+        const videoTrack = localStreamRef.current.getVideoTracks()[0];
+        if (videoTrack) {
+          videoTrack.enabled = !isVideoOff; // Set to opposite of isVideoOff
+        }
+      }
+      
+      setIsSharingScreen(false);
+    } else {
+      // Start screen sharing
+      try {
+        const displayStream = await navigator.mediaDevices.getDisplayMedia({
+          video: {
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            frameRate: { ideal: 30 },
+          },
+          audio: true,
+        });
+
+        displayStreamRef.current = displayStream;
+
+        // Stop local camera stream when sharing screen
+        if (localStreamRef.current) {
+          localStreamRef.current.getTracks().forEach(t => t.stop());
+          localStreamRef.current = null;
+        }
+
+        // Update all peer connections with screen share stream
+        peersRef.current.forEach((peerState) => {
+          // Remove all existing tracks
+          peerState.pc.getSenders().forEach(sender => {
+            peerState.pc.removeTrack(sender);
+          });
+          
+          // Add screen share tracks
+          displayStream.getTracks().forEach(track => {
+            peerState.pc.addTrack(track, displayStream);
+          });
+        });
+
+        setIsSharingScreen(true);
+        
+        // Notify user
+        toast({
+          title: "Compartilhamento de tela iniciado",
+          description: "Sua tela está sendo compartilhada na chamada.",
+        });
+      } catch (err) {
+        console.error("[WebRTC] Screen share error:", err);
+        toast({
+          title: "Erro ao compartilhar tela",
+          description: "Não foi possível iniciar o compartilhamento de tela.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -918,6 +995,14 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
             className={`rounded-full w-8 h-8 sm:w-10 sm:h-10 backdrop-blur-sm ${isVideoOff ? "bg-destructive/80 text-destructive-foreground" : "bg-card/80"}`}
           >
             {isVideoOff ? <VideoOff className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Video className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={toggleScreenShare}
+            className={`rounded-full w-8 h-8 sm:w-10 sm:h-10 backdrop-blur-sm ${isSharingScreen ? "bg-purple-500/80 text-white" : "bg-card/80"}`}
+          >
+            {isSharingScreen ? <MonitorStop className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Monitor className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
           </Button>
           {/* Zoom controls */}
           <Button

@@ -11,7 +11,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { PhoneOff, Loader2, Scale, Layers, Sparkles, Zap, Clock, Coins } from "lucide-react";
+import { PhoneOff, Loader2, Scale, Layers, Sparkles, Zap, Clock, Coins, Discord } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Navbar } from "@/components/Navbar";
 import { DuelChat } from "@/components/DuelChat";
@@ -28,6 +28,7 @@ import { MagicDuelViewer } from "@/components/duel/MagicDuelViewer";
 import { PokemonDuelViewer } from "@/components/duel/PokemonDuelViewer";
 import { WebRTCVideoCall, type VideoLayout, type WebRTCVideoCallHandle } from "@/components/duel/WebRTCVideoCall";
 import { useDuelDeck } from "@/hooks/useDuelDeck";
+import { useDiscordRichPresence } from "@/hooks/useDiscordRichPresence";
 import { useDuelPresence, useDuelCleanup } from "@/hooks/useDuelPresence";
 
 const DuelRoom = () => {
@@ -58,6 +59,9 @@ const DuelRoom = () => {
   const [isTimerPaused, setIsTimerPaused] = useState(false);
   const [judgeCalled, setJudgeCalled] = useState(false);
   const [elementsHidden, setElementsHidden] = useState(false);
+   const [discordConnection, setDiscordConnection] = useState<{ discord_id: string; discord_username: string } | null>(null);
+   const [discordConnectionLoading, setDiscordConnectionLoading] = useState(true);
+   const { setDuelPresence, setIdlePresence, clearPresence } = useDiscordRichPresence(discordConnection);
   const isTimerPausedRef = useRef(false);
   const timerInterval = useRef<ReturnType<typeof setInterval> | null>(null);
   const timerInitialized = useRef(false);
@@ -254,6 +258,23 @@ const DuelRoom = () => {
     };
   }, [id, loadDeckFromSaved]);
 
+  // Check Discord connection when user changes
+  useEffect(() => {
+    const checkDiscordConn = async () => {
+      if (currentUser) {
+        setDiscordConnectionLoading(true);
+        const connection = await checkDiscordConnection(currentUser.id);
+        setDiscordConnection(connection);
+        setDiscordConnectionLoading(false);
+      } else {
+        setDiscordConnection(null);
+        setDiscordConnectionLoading(false);
+      }
+    };
+
+    checkDiscordConn();
+  }, [currentUser, checkDiscordConnection]);
+
   // Listener realtime para sincronizar LP entre usuários e atualização de opponent
   useEffect(() => {
     if (!id || !currentUser) return;
@@ -444,6 +465,27 @@ const DuelRoom = () => {
     return session.user;
   };
 
+  // Check if user has Discord connected
+  const checkDiscordConnection = useCallback(async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('discord_links')
+        .select('discord_id, discord_username')
+        .eq('user_id', userId)
+        .single();
+      
+      if (error && error.code !== 'PGRST116') { // PGRST116 means no rows returned
+        console.error('Error checking Discord connection:', error);
+        return null;
+      }
+      
+      return data || null;
+    } catch (err) {
+      console.error('Exception checking Discord connection:', err);
+      return null;
+    }
+  }, []);
+
   const fetchDuel = async (userId: string) => {
     try {
       let { data, error } = await supabase
@@ -466,6 +508,24 @@ const DuelRoom = () => {
         });
         navigate('/duels');
         return;
+      }
+
+      // Check if this is a ranked match and if user has Discord connected
+      if (data.is_ranked && currentUser) {
+        const discordConnection = await checkDiscordConnection(currentUser.id);
+        if (!discordConnection) {
+          toast({
+            title: t('duelRoom.rankedRequiresDiscordTitle'),
+            description: t('duelRoom.rankedRequiresDiscordDesc'),
+            variant: "warning",
+          });
+          navigate('/duels');
+          return;
+        }
+        
+        // Update the user's name to use Discord username if connected
+        // This will be reflected in the UI through the linked data from discord_links table
+        // We don't need to update the duel data itself, just use the linked data in components
       }
 
       const isCreator = data.creator_id === userId;
@@ -831,6 +891,56 @@ const DuelRoom = () => {
         variant: "destructive",
       });
       navigate('/duels');
+    }
+  };
+
+  const handleDiscordVoiceChannel = async () => {
+    if (!discordConnection) {
+      // User needs to connect Discord first
+      toast({
+        title: t('duelRoom.discordNotConnectedTitle'),
+        description: t('duelRoom.discordNotConnectedDesc'),
+        variant: "warning",
+      });
+      return;
+    }
+
+    try {
+      // Call the Discord voice handler function to create/join a voice channel
+      const { data, error } = await supabase.functions.invoke('discord-voice-handler', {
+        body: {
+          type: 'join_voice_channel',
+          guild_id: discordConnection?.discord_id, // This would need to be the actual guild ID
+          channel_id: discordConnection?.discord_id, // This would need to be the actual channel ID
+          user_id: discordConnection?.discord_id,
+          username: discordConnection?.discord_username
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        toast({
+          title: t('duelRoom.discordVoiceJoinedTitle'),
+          description: t('duelRoom.discordVoiceJoinedDesc'),
+        });
+        
+        // Enable screen sharing automatically when joining Discord voice channel
+        // This would be handled in the WebRTCVideoCall component
+      } else {
+        toast({
+          title: t('duelRoom.discordVoiceErrorTitle'),
+          description: data?.error || t('duelRoom.discordVoiceErrorDesc'),
+          variant: "error",
+        });
+      }
+    } catch (error: any) {
+      console.error('Error handling Discord voice channel:', error);
+      toast({
+        title: t('duelRoom.discordVoiceErrorTitle'),
+        description: error.message,
+        variant: "error",
+      });
     }
   };
 
@@ -1245,6 +1355,59 @@ const DuelRoom = () => {
                   }`}>
                     {duel.is_ranked ? t('duelRoom.rankedBadge') : t('duelRoom.casualBadge')}
                   </div>
+                )}
+                
+                {/* Badge de Conexão Discord */}
+                {!isJudge && !isSpectator && currentUser && (
+                  <div className="px-2 sm:px-3 py-1 sm:py-2 rounded-lg backdrop-blur-sm text-xs sm:text-sm font-bold ${
+                    discordConnectionLoading
+                      ? 'bg-gray-500/95 text-white'
+                      : discordConnection
+                        ? 'bg-green-500/95 text-white'
+                        : 'bg-red-500/95 text-white'
+                  }">
+                    {discordConnectionLoading ? (
+                      <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                    ) : discordConnection ? (
+                      <>
+                        <Discord className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                        {t('duelRoom.discordConnected')}
+                      </>
+                    ) : (
+                      <>
+                        <Discord className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                        {t('duelRoom.discordNotConnected')}
+                      </>
+                    )}
+                  </div>
+                )}
+                
+                {/* Botão de Canal de Voz Discord */}
+                {!isJudge && !isSpectator && currentUser && (
+                  <Button
+                    onClick={handleDiscordVoiceChannel}
+                    variant="outline"
+                    size="sm"
+                    className="bg-blue-600/95 hover:bg-blue-700 text-white backdrop-blur-sm text-xs sm:text-sm"
+                    disabled={discordConnectionLoading}
+                  >
+                    {discordConnectionLoading ? (
+                      <>
+                        <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                        {t('duelRoom.discordConnecting')}
+                      </>
+                    ) : discordConnection ? (
+                      <>
+                        <Mic className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                        {t('duelRoom.joinDiscordVoice')}
+                      </>
+                    ) : (
+                      <>
+                        <MicOff className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                        {t('duelRoom.connectDiscord')}
+                      </>
+                    )}
+                  </Button>
                 )}
 
                 {/* Timer Display - Contagem Regressiva */}
