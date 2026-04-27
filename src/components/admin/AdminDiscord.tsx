@@ -612,63 +612,98 @@ export function AdminDiscord() {
             </Button>
 
             {guilds.length > 0 && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label>Servidor</Label>
-                  <Select
-                    value={selectedGuildId}
-                    onValueChange={(v) => {
-                      setSelectedGuildId(v);
-                      setSelectedChannelId("");
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione um servidor" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {guilds.map((g) => (
-                        <SelectItem key={g.guildId} value={g.guildId}>
-                          {g.guildName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label>Servidor</Label>
+                    <Select
+                      value={selectedGuildId}
+                      onValueChange={(v) => {
+                        setSelectedGuildId(v);
+                        setSelectedChannelId("");
+                        setSelectedVoiceChannelIds([]);
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um servidor" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {guilds.map((g) => (
+                          <SelectItem key={g.guildId} value={g.guildId}>
+                            {g.guildName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label>Canal de texto (chat global)</Label>
+                    <Select
+                      value={selectedChannelId}
+                      onValueChange={setSelectedChannelId}
+                      disabled={!selectedGuild}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um canal" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {selectedGuild?.channels.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            #{c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex items-end">
+                    <Button
+                      onClick={handleAutoSetup}
+                      disabled={saving || !selectedGuildId || !selectedChannelId}
+                      className="w-full"
+                    >
+                      {saving ? (
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      ) : (
+                        <Wand2 className="w-4 h-4 mr-2" />
+                      )}
+                      Configurar
+                    </Button>
+                  </div>
                 </div>
 
-                <div>
-                  <Label>Canal</Label>
-                  <Select
-                    value={selectedChannelId}
-                    onValueChange={setSelectedChannelId}
-                    disabled={!selectedGuild}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione um canal" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {selectedGuild?.channels.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          #{c.name}
-                        </SelectItem>
+                {selectedGuild && selectedGuild.voiceChannels.length > 0 && (
+                  <div>
+                    <Label>
+                      Canais de voz monitorados (entrar = criar DuelRoom automática)
+                    </Label>
+                    <div className="mt-2 grid grid-cols-2 md:grid-cols-3 gap-2 max-h-44 overflow-y-auto p-2 border rounded">
+                      {selectedGuild.voiceChannels.map((vc) => (
+                        <label
+                          key={vc.id}
+                          className="flex items-center gap-2 text-sm cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedVoiceChannelIds.includes(vc.id)}
+                            onChange={() =>
+                              toggleVoiceId(
+                                selectedVoiceChannelIds,
+                                setSelectedVoiceChannelIds,
+                                vc.id,
+                              )
+                            }
+                          />
+                          🔊 {vc.name}
+                        </label>
                       ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex items-end">
-                  <Button
-                    onClick={handleAutoSetup}
-                    disabled={saving || !selectedGuildId || !selectedChannelId}
-                    className="w-full"
-                  >
-                    {saving ? (
-                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                    ) : (
-                      <Wand2 className="w-4 h-4 mr-2" />
-                    )}
-                    Configurar
-                  </Button>
-                </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Deixe vazio para monitorar todos os canais de voz do servidor.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
