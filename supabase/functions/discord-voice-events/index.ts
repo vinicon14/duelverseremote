@@ -63,6 +63,34 @@ serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
+  // Only process events from voice channels that admins explicitly enabled
+  // for this guild. If the guild is not configured at all, ignore.
+  try {
+    const { data: cfg } = await supabase
+      .from("system_settings")
+      .select("value")
+      .eq("key", "discord_bot_status")
+      .maybeSingle();
+    const status: any = cfg?.value
+      ? (typeof cfg.value === "string" ? JSON.parse(cfg.value) : cfg.value)
+      : { servers: [] };
+    const servers: any[] = Array.isArray(status?.servers) ? status.servers : [];
+    const guildCfg = servers.find((s: any) => s.id === body.guild_id && s.enabled);
+    if (!guildCfg) {
+      return json({ ok: true, skipped: "guild_not_configured" });
+    }
+    const allowedVoice: string[] = Array.isArray(guildCfg.voiceChannelIds)
+      ? guildCfg.voiceChannelIds
+      : [];
+    // If admin set a list, enforce it. If empty list, allow all voice channels
+    // (backwards-compatible).
+    if (allowedVoice.length > 0 && !allowedVoice.includes(body.channel_id)) {
+      return json({ ok: true, skipped: "voice_channel_not_enabled" });
+    }
+  } catch (err) {
+    console.warn("[discord-voice-events] config lookup failed:", err);
+  }
+
   // Try to resolve the linked DuelVerse user (if any)
   let duelverseUserId: string | null = null;
   let duelverseUsername: string | null = null;
