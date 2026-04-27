@@ -52,6 +52,7 @@ interface DiscordServer {
   iconUrl?: string | null;
   description?: string;
   voiceChannelIds?: string[];
+  statsChannelId?: string | null;
 }
 
 interface DiscordBotStatus {
