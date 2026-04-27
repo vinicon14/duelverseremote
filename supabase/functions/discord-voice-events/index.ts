@@ -433,6 +433,8 @@ async function announceVoiceJoinInTextChannel(
     console.warn("[discord-voice-events] webhook announce exception:", err);
   }
 }
+
+async function handleLeave(supabase: ReturnType<typeof createClient>, body: VoicePayload) {
   const { data: room } = await supabase
     .from("discord_voice_rooms")
     .select("id, duel_id")
