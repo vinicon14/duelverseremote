@@ -50,6 +50,75 @@ const Auth = () => {
 
   const returnTo = (location.state as any)?.returnTo;
 
+  // Handle Discord OAuth login redirect: ?discord=success&flow=login&token_hash=...&email=...
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const discordStatus = params.get('discord');
+    const flow = params.get('flow');
+    const tokenHash = params.get('token_hash');
+    const email = params.get('email');
+
+    if (discordStatus === 'success' && flow === 'login' && tokenHash && email) {
+      (async () => {
+        try {
+          setLoading(true);
+          const { error } = await supabase.auth.verifyOtp({
+            type: 'magiclink',
+            token_hash: tokenHash,
+            email,
+          } as any);
+          if (error) throw error;
+          // Clean URL params after consuming them
+          window.history.replaceState({}, '', window.location.pathname);
+          toast({ title: t('auth.loginSuccess'), description: t('auth.welcomeBack') });
+          // onAuthStateChange will handle navigation
+        } catch (err: any) {
+          console.error('[AUTH] Discord login finalize failed:', err);
+          toast({
+            title: t('auth.loginError'),
+            description: err.message || 'Discord login failed',
+            variant: 'destructive',
+          });
+        } finally {
+          setLoading(false);
+        }
+      })();
+    } else if (discordStatus === 'error') {
+      const message = params.get('message') || 'unknown_error';
+      toast({
+        title: t('auth.loginError'),
+        description: `Discord: ${message}`,
+        variant: 'destructive',
+      });
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleDiscordSignIn = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase.functions.invoke('discord-oauth-start', {
+        body: {
+          mode: 'login',
+          origin: window.location.origin,
+          returnPath: returnTo || '/',
+        },
+      });
+      if (error) throw error;
+      if (!data?.url) throw new Error('Discord URL not returned');
+      window.location.href = data.url;
+    } catch (err: any) {
+      console.error('[AUTH] Discord sign-in error:', err);
+      toast({
+        title: t('auth.loginError'),
+        description: err.message || 'Discord login failed',
+        variant: 'destructive',
+      });
+      setLoading(false);
+    }
+  };
+
   // Verificar se usuário já está logado e redirecionar
   useEffect(() => {
     const defaultRedirect = returnTo || '/';
@@ -410,6 +479,19 @@ const Auth = () => {
                       <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                     </svg>
                     {t('auth.google')}
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full mt-2 border-[#5865F2]/40 hover:bg-[#5865F2]/10 hover:text-[#5865F2]"
+                    onClick={handleDiscordSignIn}
+                    disabled={loading}
+                  >
+                    <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="#5865F2">
+                      <path d="M20.317 4.369A19.79 19.79 0 0 0 16.558 3a14.49 14.49 0 0 0-.69 1.422 18.27 18.27 0 0 0-5.487 0A14.49 14.49 0 0 0 9.69 3a19.74 19.74 0 0 0-3.76 1.37C2.66 8.86 1.84 13.236 2.27 17.55a19.9 19.9 0 0 0 6.073 3.07 14.7 14.7 0 0 0 1.27-2.06 12.94 12.94 0 0 1-2.005-.96c.168-.124.333-.253.493-.386 3.86 1.78 8.05 1.78 11.86 0 .16.133.325.262.493.386-.643.382-1.32.71-2.005.96.378.738.808 1.43 1.27 2.06a19.85 19.85 0 0 0 6.073-3.07c.5-5.04-.86-9.38-3.42-13.18zM9.55 15.45c-1.183 0-2.156-1.085-2.156-2.42 0-1.336.96-2.43 2.156-2.43 1.205 0 2.176 1.094 2.156 2.43 0 1.335-.96 2.42-2.156 2.42zm4.9 0c-1.184 0-2.156-1.085-2.156-2.42 0-1.336.96-2.43 2.156-2.43 1.205 0 2.176 1.094 2.156 2.43 0 1.335-.95 2.42-2.156 2.42z" />
+                    </svg>
+                    Continuar com Discord
                   </Button>
                 </>
               )}
