@@ -524,7 +524,60 @@ serve(async (req) => {
       return jsonResponse({ success: results.some((r) => r.ok), temporary: true, inviteId: invite.id, link, results });
     }
 
-    if (requestType === "get_config") {
+    // ============================================================
+    // Broadcast a DuelVerse duel to all configured Discord text channels
+    // Format: "/dv @everyone <username> está transmitindo um duelo: <link>"
+    // ============================================================
+    if (requestType === "broadcast_duel") {
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader) return jsonResponse({ error: "No auth header" }, 401);
+      const token = authHeader.replace("Bearer ", "");
+      const { data: userData, error: userError } = await supabase.auth.getUser(token);
+      if (userError || !userData.user) return jsonResponse({ error: "Invalid user token" }, 401);
+
+      const userId = userData.user.id;
+      const duelId = typeof body.duelId === "string" ? body.duelId : null;
+      if (!duelId) return jsonResponse({ error: "Missing duelId" }, 400);
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("username")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      const servers = Array.isArray(botStatus.servers) ? botStatus.servers : [];
+      const activeServers = servers.filter((server: any) => server.enabled && server.webhookUrl);
+      if (activeServers.length === 0)
+        return jsonResponse({ error: "No active Discord server configured" }, 400);
+
+      const username = String(body.username || profile?.username || "Duelista");
+      const link = `https://duelverse.site/join/${duelId}`;
+      const content = `/dv @everyone 📺 **${username}** está transmitindo um duelo ao vivo no DuelVerse! Entre como espectador: ${link}`;
+
+      const webhookPayload = {
+        content,
+        username: "DuelVerse Live",
+        allowed_mentions: { parse: ["everyone"] },
+      };
+
+      const results: Array<{ ok: boolean; status?: number }> = [];
+      for (const server of activeServers) {
+        try {
+          const response = await fetch(server.webhookUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(webhookPayload),
+          });
+          results.push({ ok: response.ok, status: response.status });
+        } catch (err) {
+          console.error("[discord-bridge] broadcast_duel error:", err);
+          results.push({ ok: false });
+        }
+      }
+
+      return jsonResponse({ success: results.some((r) => r.ok), link, results });
+    }
+
       const servers = Array.isArray(botStatus.servers) ? botStatus.servers : [];
       let inviteLink = botStatus.inviteLink;
       if (!inviteLink && servers.length > 0) {
