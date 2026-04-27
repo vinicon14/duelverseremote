@@ -167,16 +167,29 @@ serve(async (req) => {
       }
 
       const guilds: any[] = Array.isArray(guildsRes.data) ? guildsRes.data : [];
-      const result: Array<{ guildId: string; guildName: string; channels: Array<{ id: string; name: string }> }> = [];
+      const result: Array<{
+        guildId: string;
+        guildName: string;
+        iconUrl: string | null;
+        channels: Array<{ id: string; name: string }>;
+        voiceChannels: Array<{ id: string; name: string }>;
+      }> = [];
 
       for (const g of guilds) {
         const chRes = await discordFetch(`/guilds/${g.id}/channels`);
         const channels: any[] = chRes.ok && Array.isArray(chRes.data) ? chRes.data : [];
+        const iconUrl = g.icon
+          ? `https://cdn.discordapp.com/icons/${g.id}/${g.icon}.${g.icon.startsWith("a_") ? "gif" : "png"}?size=256`
+          : null;
         result.push({
           guildId: g.id,
           guildName: g.name,
+          iconUrl,
           channels: channels
-            .filter((c) => c.type === 0) // 0 = GUILD_TEXT
+            .filter((c) => c.type === 0) // GUILD_TEXT
+            .map((c) => ({ id: c.id, name: c.name })),
+          voiceChannels: channels
+            .filter((c) => c.type === 2) // GUILD_VOICE
             .map((c) => ({ id: c.id, name: c.name })),
         });
       }
