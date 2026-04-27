@@ -36,6 +36,7 @@ const Auth = lazy(() => import("./pages/Auth"));
 const Duels = lazy(() => import("./pages/Duels"));
 const DuelRoom = lazy(() => import("./pages/DuelRoom"));
 const JoinDuel = lazy(() => import("./pages/JoinDuel"));
+const MatchInvite = lazy(() => import("./pages/MatchInvite"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Ranking = lazy(() => import("./pages/Ranking"));
 const Friends = lazy(() => import("./pages/Friends"));
@@ -103,6 +104,7 @@ const RouterContent = ({ user }: { user: User | null }) => {
         <Route path="/duels" element={<Duels />} />
         <Route path="/duel/:id" element={<DuelRoom />} />
         <Route path="/join/:duelId" element={<JoinDuel />} />
+        <Route path="/m/:inviteId" element={<MatchInvite />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/profile/:userId" element={<Profile />} />
         <Route path="/ranking" element={<Ranking />} />
