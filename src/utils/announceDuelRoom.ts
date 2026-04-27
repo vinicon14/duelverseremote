@@ -36,16 +36,36 @@ export async function announceDuelRoom({
     const roomLabel = roomName?.trim() ? ` "${roomName.trim()}"` : "";
     const message = `🎮 **${username}** criou uma nova sala${roomLabel}! @everyone remote ${joinLink}`;
 
-    // 1. Postar no chat global (banco)
-    const { error: chatError } = await supabase
+    // 1. Postar no chat global (banco) — efêmero: a mensagem é inserida
+    //    apenas para disparar o realtime/notificações e em seguida é apagada
+    //    do banco para não poluir o histórico do chat global. A mensagem
+    //    permanente fica no Discord (passo 2).
+    const { data: chatRow, error: chatError } = await supabase
       .from("global_chat_messages")
       .insert({
         user_id: userId,
         message,
         tcg_type: tcgType,
         language_code: languageCode,
-      });
+      })
+      .select("id")
+      .maybeSingle();
     if (chatError) console.warn("[announceDuelRoom] chat insert error:", chatError);
+
+    // Apaga a mensagem do chat global após um pequeno delay para garantir
+    // que clientes conectados receberam o evento de realtime e dispararam
+    // suas notificações locais. A mensagem do Discord NÃO é afetada.
+    if (chatRow?.id) {
+      setTimeout(() => {
+        supabase
+          .from("global_chat_messages")
+          .delete()
+          .eq("id", chatRow.id)
+          .then(({ error }) => {
+            if (error) console.warn("[announceDuelRoom] chat cleanup error:", error);
+          });
+      }, 8000);
+    }
 
     // 2. Disparar para o Discord via bridge (envia para todos os servidores parceiros)
     //    A mensagem é marcada como efêmera: o bot remove do canal Discord após ~10s
