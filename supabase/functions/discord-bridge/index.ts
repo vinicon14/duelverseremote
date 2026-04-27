@@ -549,7 +549,7 @@ serve(async (req) => {
           body: JSON.stringify(webhookPayload),
         });
         const posted = await response.json().catch(() => null);
-        if (response.ok) deleteWebhookMessageSoon(server.webhookUrl, posted?.id);
+        if (response.ok) scheduleWebhookMessageDeletion(server.webhookUrl, posted?.id, 10000);
         results.push({ ok: response.ok, status: response.status, messageId: posted?.id });
       }
       return jsonResponse({ success: results.some((r) => r.ok), temporary: true, inviteId: invite.id, link, results });
