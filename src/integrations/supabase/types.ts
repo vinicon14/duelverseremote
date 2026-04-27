@@ -138,6 +138,97 @@ export type Database = {
         }
         Relationships: []
       }
+      discord_voice_participants: {
+        Row: {
+          discord_avatar_url: string | null
+          discord_user_id: string
+          discord_username: string
+          duelverse_user_id: string | null
+          duelverse_username: string | null
+          id: string
+          joined_at: string
+          left_at: string | null
+          voice_room_id: string
+        }
+        Insert: {
+          discord_avatar_url?: string | null
+          discord_user_id: string
+          discord_username: string
+          duelverse_user_id?: string | null
+          duelverse_username?: string | null
+          id?: string
+          joined_at?: string
+          left_at?: string | null
+          voice_room_id: string
+        }
+        Update: {
+          discord_avatar_url?: string | null
+          discord_user_id?: string
+          discord_username?: string
+          duelverse_user_id?: string | null
+          duelverse_username?: string | null
+          id?: string
+          joined_at?: string
+          left_at?: string | null
+          voice_room_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discord_voice_participants_voice_room_id_fkey"
+            columns: ["voice_room_id"]
+            isOneToOne: false
+            referencedRelation: "discord_voice_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discord_voice_rooms: {
+        Row: {
+          channel_id: string
+          channel_name: string | null
+          closed_at: string | null
+          created_at: string
+          duel_id: string | null
+          guild_id: string
+          guild_name: string | null
+          id: string
+          is_active: boolean
+          updated_at: string
+        }
+        Insert: {
+          channel_id: string
+          channel_name?: string | null
+          closed_at?: string | null
+          created_at?: string
+          duel_id?: string | null
+          guild_id: string
+          guild_name?: string | null
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+        }
+        Update: {
+          channel_id?: string
+          channel_name?: string | null
+          closed_at?: string | null
+          created_at?: string
+          duel_id?: string | null
+          guild_id?: string
+          guild_name?: string | null
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discord_voice_rooms_duel_id_fkey"
+            columns: ["duel_id"]
+            isOneToOne: false
+            referencedRelation: "live_duels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       duel_invites: {
         Row: {
           created_at: string
