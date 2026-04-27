@@ -45,6 +45,7 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [selectedTcg, setSelectedTcg] = useState<TcgType>('yugioh');
   const [signupCountry, setSignupCountry] = useState<string | null>(null);
+  const insideDiscord = isDiscordEmbedded();
 
   // Pre-detect country via IP for signup convenience
   useEffect(() => {
@@ -105,14 +106,20 @@ const Auth = () => {
   const handleDiscordSignIn = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase.functions.invoke('discord-oauth-start', {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/discord-oauth-start`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
         body: {
           mode: 'login',
           origin: window.location.origin,
           returnPath: returnTo || '/',
         },
       });
-      if (error) throw error;
+      const data = await response.json();
+      if (!response.ok) throw new Error(data?.error || 'Discord login failed');
       if (!data?.url) throw new Error('Discord URL not returned');
       window.location.href = data.url;
     } catch (err: any) {
