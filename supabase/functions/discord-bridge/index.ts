@@ -46,6 +46,17 @@ async function discordFetch(path: string, init: RequestInit = {}) {
   return { ok: res.ok, status: res.status, data };
 }
 
+const deleteWebhookMessageSoon = (webhookUrl: string, messageId?: string) => {
+  if (!messageId) return;
+  setTimeout(async () => {
+    try {
+      await fetch(`${webhookUrl}/messages/${messageId}`, { method: "DELETE" });
+    } catch (err) {
+      console.error("[discord-bridge] failed to delete temporary matchmaking message:", err);
+    }
+  }, 8000);
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -449,82 +460,68 @@ serve(async (req) => {
     }
 
     if (requestType === "announce_matchmaking") {
-      // Broadcasts a "looking for match" message into every configured Discord
-      // text channel, with a deep link other users can click to be paired.
-      const username: string = body?.username || "Duelista";
-      const matchType: string = body?.match_type === "ranked" ? "rankeada" : "casual";
-      const tcgType: string = body?.tcg_type || "yugioh";
-      const joinUrl: string = body?.join_url;
-      const userId: string | undefined = body?.userId;
-      const avatarUrl: string | undefined = body?.avatarUrl;
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader) return jsonResponse({ error: "No auth header" }, 401);
+      const token = authHeader.replace("Bearer ", "");
+      const { data: userData, error: userError } = await supabase.auth.getUser(token);
+      if (userError || !userData.user) return jsonResponse({ error: "Invalid user token" }, 401);
 
-      if (!joinUrl) {
-        return jsonResponse({ error: "Missing join_url" }, 400);
-      }
+      const userId = userData.user.id;
+      const matchType = body.matchType === "ranked" ? "ranked" : "casual";
+      const tcgType = typeof body.tcgType === "string" ? body.tcgType : "yugioh";
+      const maxPlayers = typeof body.maxPlayers === "number" ? body.maxPlayers : 2;
+      const languageCode = typeof body.languageCode === "string" ? body.languageCode : "en";
+
+      await supabase
+        .from("matchmaking_invites")
+        .update({ status: "cancelled" })
+        .eq("host_user_id", userId)
+        .eq("status", "open");
+
+      const { data: invite, error: inviteError } = await supabase
+        .from("matchmaking_invites")
+        .insert({
+          host_user_id: userId,
+          match_type: matchType,
+          tcg_type: tcgType,
+          max_players: maxPlayers,
+          language_code: languageCode,
+        })
+        .select("id")
+        .single();
+      if (inviteError || !invite) return jsonResponse({ error: inviteError?.message || "Failed to create invite" }, 500);
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("username")
+        .eq("user_id", userId)
+        .maybeSingle();
 
       const servers = Array.isArray(botStatus.servers) ? botStatus.servers : [];
-      const activeServers = servers.filter(
-        (s: any) => s.enabled && s.webhookUrl,
-      );
-      if (activeServers.length === 0) {
-        return jsonResponse({ ok: true, skipped: "no_active_servers", results: [] });
-      }
+      const activeServers = servers.filter((server: any) => server.enabled && server.webhookUrl);
+      if (activeServers.length === 0) return jsonResponse({ error: "No active Discord server configured" }, 400);
 
-      // Use linked Discord identity when available
-      let finalUsername = username;
-      let finalAvatar = avatarUrl;
-      if (userId) {
-        try {
-          const { data: discordLink } = await supabase.rpc(
-            "get_discord_link_for_user",
-            { p_user_id: userId },
-          );
-          if (discordLink && discordLink.length > 0) {
-            finalUsername = discordLink[0].discord_username || username;
-            finalAvatar = discordLink[0].discord_avatar_url || avatarUrl;
-          }
-        } catch (err) {
-          console.warn("[announce_matchmaking] discord link lookup failed:", err);
-        }
-      }
-
-      const tcgEmoji: Record<string, string> = {
-        yugioh: "🎴",
-        magic: "🧙",
-        pokemon: "⚡",
-      };
-      const emoji = tcgEmoji[tcgType] || "🎮";
-
-      const content =
-        `/dv @everyone ${emoji} **${finalUsername}** está buscando partida **${matchType}** ` +
-        `(${tcgType.toUpperCase()}) — clique para entrar:\n${joinUrl}`;
-
-      const payload = {
-        content,
-        username: finalUsername || "DuelVerse Matchmaking",
-        avatar_url: finalAvatar || undefined,
-        allowed_mentions: { parse: ["everyone"], users: [], roles: [] },
+      const username = String(body.username || profile?.username || "Duelista");
+      const mode = matchType === "ranked" ? "rankeada" : "casual";
+      const link = `https://duelverse.site/m/${invite.id}`;
+      const webhookPayload = {
+        content: `/dv @everyone usuario ${username} está buscando partida ${mode} ${link}`,
+        username: "DuelVerse Matchmaking",
+        allowed_mentions: { parse: ["everyone"] },
       };
 
-      const results: Array<{ ok: boolean; status?: number }> = [];
+      const results: Array<{ ok: boolean; status?: number; messageId?: string }> = [];
       for (const server of activeServers) {
-        try {
-          const res = await fetch(server.webhookUrl, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          });
-          results.push({ ok: res.ok, status: res.status });
-        } catch (err) {
-          console.error(
-            `[announce_matchmaking] webhook failed for ${server.id}:`,
-            err,
-          );
-          results.push({ ok: false });
-        }
+        const response = await fetch(`${server.webhookUrl}?wait=true`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(webhookPayload),
+        });
+        const posted = await response.json().catch(() => null);
+        if (response.ok) deleteWebhookMessageSoon(server.webhookUrl, posted?.id);
+        results.push({ ok: response.ok, status: response.status, messageId: posted?.id });
       }
-
-      return jsonResponse({ success: results.some((r) => r.ok), results });
+      return jsonResponse({ success: results.some((r) => r.ok), temporary: true, inviteId: invite.id, link, results });
     }
 
     if (requestType === "get_config") {

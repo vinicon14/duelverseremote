@@ -1,115 +1,70 @@
-/**
- * Matchmaking invite acceptor.
- * URL pattern: /m/:inviteId
- *
- * - If the user is logged in, calls the accept-match-invite edge function.
- * - If matched, redirects to /duel/:duelId.
- * - If not logged in, redirects to /auth with a returnTo so they come back here.
- */
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
+import { Loader2, Swords } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
-const MatchInvite = () => {
+export default function MatchInvite() {
   const { inviteId } = useParams<{ inviteId: string }>();
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const [status, setStatus] = useState<"loading" | "error">("loading");
-  const [message, setMessage] = useState<string>("Conectando ao matchmaking…");
+  const location = useLocation();
+  const [message, setMessage] = useState("Formando partida...");
 
   useEffect(() => {
-    if (!inviteId) {
-      setStatus("error");
-      setMessage("Convite inválido");
-      return;
-    }
-
-    (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) {
-        // Bounce through /auth and come back
-        navigate("/auth", {
-          replace: true,
-          state: { returnTo: `/m/${inviteId}` },
-        });
+    const acceptInvite = async () => {
+      if (!inviteId) {
+        navigate("/matchmaking", { replace: true });
         return;
       }
 
-      try {
-        setMessage("Pareando com o anfitrião…");
-        const { data, error } = await supabase.functions.invoke(
-          "accept-match-invite",
-          { body: { invite_id: inviteId } },
-        );
-        if (error) throw error;
-
-        if (data?.duel_id && (data.status === "matched" || data.status === "already_matched")) {
-          navigate(`/duel/${data.duel_id}`, { replace: true });
-          return;
-        }
-
-        if (data?.status === "self") {
-          toast({
-            title: "Esse é o seu convite",
-            description: "Aguarde alguém clicar para parear.",
-          });
-          navigate("/matchmaking", { replace: true });
-          return;
-        }
-
-        if (data?.status === "expired") {
-          toast({
-            title: "Convite expirado",
-            description: "O anfitrião precisa buscar partida novamente.",
-            variant: "destructive",
-          });
-          navigate("/matchmaking", { replace: true });
-          return;
-        }
-
-        if (data?.status === "matched" === false || data?.status) {
-          toast({
-            title: "Convite indisponível",
-            description: data?.message || data?.status,
-            variant: "destructive",
-          });
-          navigate("/matchmaking", { replace: true });
-          return;
-        }
-
-        throw new Error("Resposta inesperada do servidor");
-      } catch (err: any) {
-        console.error("[MatchInvite] failed:", err);
-        setStatus("error");
-        setMessage(err.message || "Falha ao aceitar convite");
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        navigate("/auth", { replace: true, state: { returnTo: location.pathname } });
+        return;
       }
-    })();
-  }, [inviteId, navigate, toast]);
+
+      const { data, error } = await supabase.functions.invoke("accept-match-invite", {
+        body: { inviteId },
+      });
+
+      if (error) {
+        setMessage("Não foi possível entrar nessa partida.");
+        toast.error(error.message || "Convite indisponível");
+        return;
+      }
+
+      if (data?.duelId) {
+        toast.success("Match encontrado!");
+        navigate(`/duel/${data.duelId}`, { replace: true });
+        return;
+      }
+
+      setMessage(data?.message || "Esse convite não está mais disponível.");
+    };
+
+    acceptInvite();
+  }, [inviteId, location.pathname, navigate]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6">
-      <div className="text-center space-y-4 max-w-md">
-        {status === "loading" ? (
-          <>
-            <Loader2 className="w-10 h-10 animate-spin mx-auto text-primary" />
-            <p className="text-foreground/80">{message}</p>
-          </>
+    <div className="min-h-screen bg-gradient-to-b from-background via-background to-primary/5 flex items-center justify-center p-4">
+      <Card className="card-mystic w-full max-w-md p-8 text-center space-y-5">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+          <Swords className="h-8 w-8 text-primary" />
+        </div>
+        <div className="space-y-2">
+          <h1 className="text-2xl font-bold gradient-text">Matchmaking DuelVerse</h1>
+          <p className="text-sm text-muted-foreground">{message}</p>
+        </div>
+        {message === "Formando partida..." ? (
+          <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" />
         ) : (
-          <>
-            <p className="text-destructive font-medium">{message}</p>
-            <button
-              className="text-sm text-primary underline"
-              onClick={() => navigate("/matchmaking")}
-            >
-              Voltar para o matchmaking
-            </button>
-          </>
+          <Button onClick={() => navigate("/matchmaking")} className="w-full btn-mystic">
+            Buscar outra partida
+          </Button>
         )}
-      </div>
+      </Card>
     </div>
   );
-};
-
-export default MatchInvite;
+}
