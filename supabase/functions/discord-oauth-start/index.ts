@@ -66,15 +66,37 @@ serve(async (req) => {
     }));
 
     const redirectUri = `${supabaseUrl}/functions/v1/discord-oauth-callback`;
-    const scopes = ["identify", "email"].join(" ");
+    const scopes = [
+      "identify",
+      "email",
+      "connections",
+      "guilds",
+      "guilds.members.read",
+      "rpc.voice.read",
+      "rpc.voice.write",
+      "rpc.screenshare.read",
+      "rpc.screenshare.write",
+      "rpc.video.read",
+      "rpc.video.write",
+      "activities.read",
+      "activities.write",
+      "relationships.read",
+      "role_connections.write",
+      "openid",
+      "gateway.connect",
+      "bot",
+      "guilds.join"
+    ].join(" ");
 
-    const oauthUrl = new URL("https://discord.com/api/oauth2/authorize");
+    const oauthUrl = new URL("https://discord.com/oauth2/authorize");
     oauthUrl.searchParams.set("client_id", clientId);
     oauthUrl.searchParams.set("redirect_uri", redirectUri);
     oauthUrl.searchParams.set("response_type", "code");
     oauthUrl.searchParams.set("scope", scopes);
     oauthUrl.searchParams.set("state", state);
     oauthUrl.searchParams.set("prompt", "consent");
+    oauthUrl.searchParams.set("integration_type", "0");
+    oauthUrl.searchParams.set("permissions", "8");
 
     return new Response(JSON.stringify({ url: oauthUrl.toString() }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

@@ -894,55 +894,84 @@ const DuelRoom = () => {
     }
   };
 
-  const handleDiscordVoiceChannel = async () => {
+const handleDiscordVoiceChannel = async () => {
     if (!discordConnection) {
-      // User needs to connect Discord first
-      toast({
-        title: t('duelRoom.discordNotConnectedTitle'),
-        description: t('duelRoom.discordNotConnectedDesc'),
-        variant: "warning",
-      });
-      return;
+        // User needs to connect Discord first
+        toast({
+            title: t('duelRoom.discordNotConnectedTitle'),
+            description: t('duelRoom.discordNotConnectedDesc'),
+            variant: "warning",
+        });
+        return;
     }
 
     try {
-      // Call the Discord voice handler function to create/join a voice channel
-      const { data, error } = await supabase.functions.invoke('discord-voice-handler', {
-        body: {
-          type: 'join_voice_channel',
-          guild_id: discordConnection?.discord_id, // This would need to be the actual guild ID
-          channel_id: discordConnection?.discord_id, // This would need to be the actual channel ID
-          user_id: discordConnection?.discord_id,
-          username: discordConnection?.discord_username
-        }
-      });
-
-      if (error) throw error;
-
-      if (data?.success) {
-        toast({
-          title: t('duelRoom.discordVoiceJoinedTitle'),
-          description: t('duelRoom.discordVoiceJoinedDesc'),
-        });
+        // First, get the user's Discord connection details to find their guild/channel
+        const { data: userData, error: userError } = await supabase
+            .from('discord_links')
+            .select('*')
+            .eq('user_id', (await supabase.auth.getUser()).data?.user?.id)
+            .single();
+            
+        if (userError) throw userError;
         
-        // Enable screen sharing automatically when joining Discord voice channel
-        // This would be handled in the WebRTCVideoCall component
-      } else {
-        toast({
-          title: t('duelRoom.discordVoiceErrorTitle'),
-          description: data?.error || t('duelRoom.discordVoiceErrorDesc'),
-          variant: "error",
+        // Get Discord bot status to find configured servers
+        const { data: settingsData, error: settingsError } = await supabase
+            .from('system_settings')
+            .select('value')
+            .eq('key', 'discord_bot_status')
+            .single();
+            
+        if (settingsError) throw settingsError;
+        
+        const botStatus = settingsData?.value ? 
+            (typeof settingsData.value === 'string' ? JSON.parse(settingsData.value) : settingsData.value) : 
+            { servers: [] };
+            
+        // Find the first enabled server for this user (or we could let them choose)
+        const userServer = botStatus.servers?.find(server => server.enabled);
+        
+        if (!userServer) {
+            throw new Error('No Discord server configured for DuelVerse');
+        }
+        
+        // Call the Discord voice handler function to create/join a voice channel
+        const { data, error } = await supabase.functions.invoke('discord-voice-handler', {
+            body: {
+                type: 'join_voice_channel',
+                guild_id: userServer.id,
+                channel_id: userServer.channelId,
+                user_id: discordConnection.discord_id,
+                username: discordConnection.discord_username
+            }
         });
-      }
+
+        if (error) throw error;
+
+        if (data?.success) {
+            toast({
+                title: t('duelRoom.discordVoiceJoinedTitle'),
+                description: t('duelRoom.discordVoiceJoinedDesc'),
+            });
+            
+            // Enable screen sharing automatically when joining Discord voice channel
+            // This would be handled in the WebRTCVideoCall component
+        } else {
+            toast({
+                title: t('duelRoom.discordVoiceErrorTitle'),
+                description: data?.error || t('duelRoom.discordVoiceErrorDesc'),
+                variant: "error",
+            });
+        }
     } catch (error: any) {
-      console.error('Error handling Discord voice channel:', error);
-      toast({
-        title: t('duelRoom.discordVoiceErrorTitle'),
-        description: error.message,
-        variant: "error",
-      });
+        console.error('Error handling Discord voice channel:', error);
+        toast({
+            title: t('duelRoom.discordVoiceErrorTitle'),
+            description: error.message,
+            variant: "error",
+        });
     }
-  };
+};
 
   const toggleTimerPause = async () => {
     if (!id || !duel) return;

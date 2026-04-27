@@ -55,7 +55,8 @@ public class DiscordBot extends ListenerAdapter {
         EnumSet<GatewayIntent> intents = EnumSet.of(
             GatewayIntent.GUILD_MESSAGES,
             GatewayIntent.MESSAGE_CONTENT,
-            GatewayIntent.GUILD_MEMBERS
+            GatewayIntent.GUILD_MEMBERS,
+            GatewayIntent.GUILD_VOICE_STATES
         );
 
         jda = JDABuilder.createDefault(config.getDiscordToken(), intents)
@@ -137,80 +138,83 @@ public class DiscordBot extends ListenerAdapter {
          }
      }
      
-     @Override
-     public void onVoiceJoin(VoiceJoinEvent event) {
-         // Handle when a user joins a voice channel
-         Guild guild = event.getGuild();
-         if (guild == null) {
-             return;
-         }
- 
-         String serverId = guild.getId();
-         
-         if (serverManager != null && !serverManager.isServerEnabled(serverId)) {
-             return;
-         }
- 
-         // Check if this is a configured voice channel for DuelVerse
-         String configuredChannelId = serverManager != null ? serverManager.getServerChannel(serverId) : null;
-         String voiceChannelId = event.getChannelJoined().getId();
- 
-         // Only process if it's the configured channel or if no specific channel is configured
-         if ((configuredChannelId != null && !configuredChannelId.isEmpty() && !configuredChannelId.equals(voiceChannelId)) ||
-             (configuredChannelId == null || configuredChannelId.isEmpty()) && 
-             config.isTargetChannelExplicit() && 
-             !config.getTargetChannel().equalsIgnoreCase(event.getChannelJoined().getName())) {
-             return;
-         }
- 
-         // Get user info
-         String userId = event.getMember().getUser().getId();
-         String username = event.getMember().getEffectiveName();
-         
-         logger.info("Usuário entrou no canal de voz do Discord ({}): [{}] {}",
-             guild.getName(), userId, username);
- 
-         // TODO: Implement logic to create/join duelroom when user joins Discord voice channel
-         // This would involve calling Supabase functions to create a duelroom
-         // associated with this Discord voice channel
-     }
-     
-     @Override
-     public void onVoiceLeave(VoiceLeaveEvent event) {
-         // Handle when a user leaves a voice channel
-         Guild guild = event.getGuild();
-         if (guild == null) {
-             return;
-         }
- 
-         String serverId = guild.getId();
-         
-         if (serverManager != null && !serverManager.isServerEnabled(serverId)) {
-             return;
-         }
- 
-         // Check if this is a configured voice channel for DuelVerse
-         String configuredChannelId = serverManager != null ? serverManager.getServerChannel(serverId) : null;
-         String voiceChannelId = event.getChannelLeft().getId();
- 
-         // Only process if it's the configured channel or if no specific channel is configured
-         if ((configuredChannelId != null && !configuredChannelId.isEmpty() && !configuredChannelId.equals(voiceChannelId)) ||
-             (configuredChannelId == null || configuredChannelId.isEmpty()) && 
-             config.isTargetChannelExplicit() && 
-             !config.getTargetChannel().equalsIgnoreCase(event.getChannelLeft().getName())) {
-             return;
-         }
- 
-         // Get user info
-         String userId = event.getMember().getUser().getId();
-         String username = event.getMember().getEffectiveName();
-         
-         logger.info("Usuário saiu do canal de voz do Discord ({}): [{}] {}",
-             guild.getName(), userId, username);
- 
-         // TODO: Implement logic to handle user leaving Discord voice channel
-         // This might involve checking if the duelroom should be closed or user removed
-     }
+@Override
+      public void onVoiceJoin(VoiceJoinEvent event) {
+          // Handle when a user joins a voice channel
+          Guild guild = event.getGuild();
+          if (guild == null) {
+              return;
+          }
+  
+          String serverId = guild.getId();
+          
+          if (serverManager != null && !serverManager.isServerEnabled(serverId)) {
+              return;
+          }
+  
+          // Check if this is a configured voice channel for DuelVerse
+          String configuredChannelId = serverManager != null ? serverManager.getServerChannel(serverId) : null;
+          String voiceChannelId = event.getChannelJoined().getId();
+  
+          // Only process if it's the configured channel or if no specific channel is configured
+          if ((configuredChannelId != null && !configuredChannelId.isEmpty() && !configuredChannelId.equals(voiceChannelId)) ||
+              (configuredChannelId == null || configuredChannelId.isEmpty()) && 
+              config.isTargetChannelExplicit() && 
+              !config.getTargetChannel().equalsIgnoreCase(event.getChannelJoined().getName())) {
+              return;
+          }
+  
+          // Get user info
+          String userId = event.getMember().getUser().getId();
+          String username = event.getMember().getEffectiveName();
+          
+          logger.info("Usuário entrou no canal de voz do Discord ({}): [{}] {}",
+              guild.getName(), userId, username);
+  
+          // Create or join duelroom via Supabase
+          if (duelverseClient != null) {
+              duelverseClient.handleDiscordVoiceJoin(serverId, voiceChannelId, userId, username);
+          }
+      }
+      
+      @Override
+      public void onVoiceLeave(VoiceLeaveEvent event) {
+          // Handle when a user leaves a voice channel
+          Guild guild = event.getGuild();
+          if (guild == null) {
+              return;
+          }
+  
+          String serverId = guild.getId();
+          
+          if (serverManager != null && !serverManager.isServerEnabled(serverId)) {
+              return;
+          }
+  
+          // Check if this is a configured voice channel for DuelVerse
+          String configuredChannelId = serverManager != null ? serverManager.getServerChannel(serverId) : null;
+          String voiceChannelId = event.getChannelLeft().getId();
+  
+          // Only process if it's the configured channel or if no specific channel is configured
+          if ((configuredChannelId != null && !configuredChannelId.isEmpty() && !configuredChannelId.equals(voiceChannelId)) ||
+              (configuredChannelId == null || configuredChannelId.isEmpty()) && 
+              config.isTargetChannelExplicit() && 
+              !config.getTargetChannel().equalsIgnoreCase(event.getChannelLeft().getName())) {
+              return;
+          }
+  
+          // Get user info
+          String userId = event.getMember().getUser().getId();
+          String username = event.getMember().getEffectiveName();
+          
+          logger.info("Usuário saiu do canal de voz do Discord ({}): [{}] {}",
+              guild.getName(), userId, username);
+  
+          // Handle user leaving via Supabase
+          if (duelverseClient != null) {
+              duelverseClient.handleDiscordVoiceLeave(serverId, voiceChannelId, userId, username);
+          }
+      }
 
     public void sendMessageToDiscord(String username, String content) {
         if (serverManager == null) {

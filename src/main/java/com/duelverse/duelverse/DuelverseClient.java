@@ -139,4 +139,78 @@ public class DuelverseClient extends WebSocketClient {
     public String getUsername() {
         return currentUsername;
     }
+
+    public void handleDiscordVoiceJoin(String guildId, String channelId, String userId, String username) {
+        try {
+            JsonObject payload = new JsonObject();
+            payload.addProperty("type", "voice_join");
+            payload.addProperty("guild_id", guildId);
+            payload.addProperty("channel_id", channelId);
+            payload.addProperty("user_id", userId);
+            payload.addProperty("username", username);
+            
+            // Call Supabase function via HTTP
+            String supabaseUrl = "https://xxttwzewtqxvpgefggah.supabase.co/functions/v1/discord-voice-handler";
+            
+            java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
+            java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+                .uri(java.net.URI.create(supabaseUrl))
+                .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer " + System.getenv("SUPABASE_SERVICE_ROLE_KEY"))
+                .POST(java.net.http.HttpRequest.BodyPublishers.ofString(new com.google.gson.Gson().toJson(payload)))
+                .build();
+            
+            java.net.http.HttpResponse<String> response = client.send(request, java.net.http.HttpResponse.BodyHandlers.ofString());
+            logger.info("Discord voice join handler response: {} - {}", response.statusCode(), response.body());
+            
+            if (response.statusCode() == 200) {
+                // Send notification to the duelroom
+                JsonObject notification = new JsonObject();
+                notification.addProperty("type", "discord_voice_join");
+                notification.addProperty("username", username);
+                notification.addProperty("guild_id", guildId);
+                notification.addProperty("channel_id", channelId);
+                this.send(new com.google.gson.Gson().toJson(notification));
+            }
+        } catch (Exception e) {
+            logger.error("Erro ao processar entrada de voz do Discord", e);
+        }
+    }
+
+    public void handleDiscordVoiceLeave(String guildId, String channelId, String userId, String username) {
+        try {
+            JsonObject payload = new JsonObject();
+            payload.addProperty("type", "voice_leave");
+            payload.addProperty("guild_id", guildId);
+            payload.addProperty("channel_id", channelId);
+            payload.addProperty("user_id", userId);
+            payload.addProperty("username", username);
+            
+            // Call Supabase function via HTTP
+            String supabaseUrl = "https://xxttwzewtqxvpgefggah.supabase.co/functions/v1/discord-voice-handler";
+            
+            java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
+            java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+                .uri(java.net.URI.create(supabaseUrl))
+                .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer " + System.getenv("SUPABASE_SERVICE_ROLE_KEY"))
+                .POST(java.net.http.HttpRequest.BodyPublishers.ofString(new com.google.gson.Gson().toJson(payload)))
+                .build();
+            
+            java.net.http.HttpResponse<String> response = client.send(request, java.net.http.HttpResponse.BodyHandlers.ofString());
+            logger.info("Discord voice leave handler response: {} - {}", response.statusCode(), response.body());
+            
+            if (response.statusCode() == 200) {
+                // Send notification to the duelroom
+                JsonObject notification = new JsonObject();
+                notification.addProperty("type", "discord_voice_leave");
+                notification.addProperty("username", username);
+                notification.addProperty("guild_id", guildId);
+                notification.addProperty("channel_id", channelId);
+                this.send(new com.google.gson.Gson().toJson(notification));
+            }
+        } catch (Exception e) {
+            logger.error("Erro ao processar saída de voz do Discord", e);
+        }
+    }
 }

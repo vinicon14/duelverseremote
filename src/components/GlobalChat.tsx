@@ -563,39 +563,23 @@ export const GlobalChat = () => {
             </p>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2">
-              {partnerServers.map((server) => (
-                <div
-                  key={server.id}
-                  className="flex cursor-pointer flex-col gap-3 rounded-lg border border-border bg-card p-4 transition-colors hover:bg-accent"
-                  onClick={() => {
-                    window.open(server.inviteLink, "_blank", "noopener,noreferrer");
-                  }}
-                >
-                  <div className="flex items-center gap-3">
-                    {server.iconUrl ? (
-                      <img
-                        src={server.iconUrl}
-                        alt={server.name}
-                        className="h-12 w-12 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/20 text-xl font-bold">
-                        {server.name[0]?.toUpperCase()}
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <h3 className="truncate font-semibold">{server.name}</h3>
-                      {server.description && (
-                        <p className="text-muted-foreground truncate text-sm">{server.description}</p>
-                      )}
-                    </div>
-                  </div>
-                  <Button className="w-full" size="sm">
-                    <ExternalLink className="mr-2 h-4 w-4" />
-                    Entrar no servidor
-                  </Button>
-                </div>
-              ))}
+{partnerServers.map((server) => {
+  // Ensure we have a valid invite link
+  const inviteUrl = server.inviteLink || `https://discord.gg/${server.id}` || "https://discord.gg/A7GqCGNGNn";
+  
+  return (
+    <DropdownMenuItem 
+      key={server.id} 
+      onSelect={() => {
+        // Use window.open with proper parameters
+        window.open(inviteUrl, "_blank", "noopener,noreferrer");
+      }}
+    >
+      <Server className="mr-2 h-4 w-4" />
+      {server.name}
+    </DropdownMenuItem>
+  );
+})}
             </div>
           )}
         </DialogContent>
