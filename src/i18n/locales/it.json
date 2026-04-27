@@ -399,17 +399,17 @@
     "noNewsDesc": "News will appear here as soon as they are published"
   },
   "seo": {
-    "homeTitle": "Duelverse — Duelli TCG in diretta con videochiamata",
-    "homeDescription": "Gioca a YGO Advanced, Genesis e Rush Duel in diretta con videochiamata. Matchmaking gratuito, tornei settimanali e classifica globale.",
-    "homeKeywords": "TCG online, duello YGO Advanced, Genesis online, Rush Duel online, duello remoto, gioco di carte online, tornei TCG",
-    "tournamentsTitle": "Tornei TCG — Duelverse",
-    "tournamentsDescription": "Partecipa a tornei TCG gratuiti e a pagamento. Eventi settimanali di YGO Advanced, Genesis e Rush Duel con premi reali.",
-    "rankingTitle": "Classifica globale TCG — Duelverse",
-    "rankingDescription": "Scala la classifica globale di YGO Advanced, Genesis e Rush Duel. Sfida i migliori duellanti del mondo.",
-    "newsTitle": "Notizie TCG — Duelverse",
-    "newsDescription": "Ultime notizie, aggiornamenti e analisi del meta per YGO Advanced, Genesis e Rush Duel.",
+    "homeTitle": "Duelverse — Duelli Yu-Gi-Oh dal vivo con videochiamata",
+    "homeDescription": "Gioca a Yu-Gi-Oh online con videochiamata. Duelli remoti YGO Advanced, Rush Duel e Genesis, matchmaking gratuito, tornei settimanali e classifica globale.",
+    "homeKeywords": "Yu-Gi-Oh online, YGO Advanced, Rush Duel, Genesis YGO, duello Yu-Gi-Oh, torneo Yu-Gi-Oh",
+    "tournamentsTitle": "Tornei Yu-Gi-Oh — Duelverse",
+    "tournamentsDescription": "Partecipa a tornei Yu-Gi-Oh gratuiti e a pagamento — YGO Advanced, Rush Duel e Genesis.",
+    "rankingTitle": "Classifica Globale Yu-Gi-Oh — Duelverse",
+    "rankingDescription": "Scala la classifica globale Yu-Gi-Oh in YGO Advanced, Rush Duel e Genesis.",
+    "newsTitle": "Notizie Yu-Gi-Oh — Duelverse",
+    "newsDescription": "Ultime notizie e aggiornamenti Yu-Gi-Oh — YGO Advanced, Rush Duel e Genesis.",
     "authTitle": "Registrati — Duelverse",
-    "authDescription": "Crea il tuo account gratuito Duelverse e inizia a duellare con giocatori di tutto il mondo."
+    "authDescription": "Crea il tuo account gratuito Duelverse e inizia a duellare a Yu-Gi-Oh con giocatori di tutto il mondo."
   },
   "store": {
     "tabPlans": "Piani Pro",

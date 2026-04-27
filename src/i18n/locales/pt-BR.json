@@ -399,17 +399,17 @@
     "noNewsDesc": "As notícias aparecerão aqui assim que forem publicadas"
   },
   "seo": {
-    "homeTitle": "Duelverse — Duelos de TCG ao vivo com chat de vídeo",
-    "homeDescription": "Jogue YGO Advanced, Genesis e Rush Duel ao vivo com chat de vídeo. Matchmaking grátis, torneios semanais e ranking global.",
-    "homeKeywords": "TCG online, duelo YGO Advanced, Genesis online, Rush Duel online, duelo remoto, jogo de cartas vídeo, torneios TCG, ranking jogo de cartas",
-    "tournamentsTitle": "Torneios de TCG — Duelverse",
-    "tournamentsDescription": "Participe de torneios de TCG gratuitos e pagos. Eventos semanais de YGO Advanced, Genesis e Rush Duel com prêmios reais.",
-    "rankingTitle": "Ranking Global de TCG — Duelverse",
-    "rankingDescription": "Suba no ranking global de YGO Advanced, Genesis e Rush Duel. Compita contra os melhores duelistas do mundo.",
-    "newsTitle": "Notícias TCG — Duelverse",
-    "newsDescription": "Últimas notícias, atualizações e relatórios de meta de YGO Advanced, Genesis e Rush Duel.",
-    "authTitle": "Cadastro — Duelverse",
-    "authDescription": "Crie sua conta gratuita no Duelverse e comece a duelar com jogadores de YGO Advanced, Genesis e Rush Duel do mundo todo."
+    "homeTitle": "Duelverse — Duelos de Yu-Gi-Oh ao vivo com videochamada",
+    "homeDescription": "Jogue Yu-Gi-Oh online com videochamada. Duelos remotos ao vivo de YGO Advanced, Rush Duel e Genesis, matchmaking grátis, torneios semanais e ranking global.",
+    "homeKeywords": "Yu-Gi-Oh online, YGO Advanced, Rush Duel online, Genesis YGO, duelo remoto, duelo de Yu-Gi-Oh, torneio Yu-Gi-Oh, ranking Yu-Gi-Oh, deck builder Yu-Gi-Oh, duelo por vídeo",
+    "tournamentsTitle": "Torneios de Yu-Gi-Oh — Duelverse",
+    "tournamentsDescription": "Participe de torneios de Yu-Gi-Oh grátis e pagos. Eventos semanais de YGO Advanced, Rush Duel e Genesis com premiação real.",
+    "rankingTitle": "Ranking Global de Yu-Gi-Oh — Duelverse",
+    "rankingDescription": "Escale o ranking global de Yu-Gi-Oh em YGO Advanced, Rush Duel e Genesis. Enfrente os melhores duelistas do mundo.",
+    "newsTitle": "Notícias de Yu-Gi-Oh — Duelverse",
+    "newsDescription": "Últimas notícias, atualizações e relatórios do meta de Yu-Gi-Oh — YGO Advanced, Rush Duel e Genesis.",
+    "authTitle": "Cadastre-se — Duelverse",
+    "authDescription": "Crie sua conta grátis no Duelverse e comece a duelar Yu-Gi-Oh com jogadores do mundo todo — YGO Advanced, Rush Duel e Genesis."
   },
   "store": {
     "tabPlans": "Planos Pro",

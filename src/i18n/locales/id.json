@@ -399,17 +399,17 @@
     "noNewsDesc": "News will appear here as soon as they are published"
   },
   "seo": {
-    "homeTitle": "Duelverse — Duel TCG langsung dengan video chat",
-    "homeDescription": "Mainkan YGO Advanced, Genesis, dan Rush Duel langsung dengan video chat. Matchmaking gratis, turnamen mingguan, dan peringkat global.",
-    "homeKeywords": "TCG online, duel YGO Advanced, Genesis online, Rush Duel online, duel jarak jauh, permainan kartu online, turnamen TCG",
-    "tournamentsTitle": "Turnamen TCG — Duelverse",
-    "tournamentsDescription": "Ikuti turnamen TCG gratis dan berbayar. Acara mingguan YGO Advanced, Genesis, dan Rush Duel dengan hadiah nyata.",
-    "rankingTitle": "Peringkat Global TCG — Duelverse",
-    "rankingDescription": "Naik di peringkat global YGO Advanced, Genesis, dan Rush Duel. Bersaing dengan duelis terbaik dunia.",
-    "newsTitle": "Berita TCG — Duelverse",
-    "newsDescription": "Berita terbaru, pembaruan, dan analisis meta untuk YGO Advanced, Genesis, dan Rush Duel.",
+    "homeTitle": "Duelverse — Duel Yu-Gi-Oh langsung dengan panggilan video",
+    "homeDescription": "Mainkan Yu-Gi-Oh online dengan panggilan video. Duel jarak jauh langsung YGO Advanced, Rush Duel dan Genesis, matchmaking gratis, turnamen mingguan dan peringkat global.",
+    "homeKeywords": "Yu-Gi-Oh online, YGO Advanced, Rush Duel, Genesis YGO, duel Yu-Gi-Oh, turnamen Yu-Gi-Oh",
+    "tournamentsTitle": "Turnamen Yu-Gi-Oh — Duelverse",
+    "tournamentsDescription": "Ikuti turnamen Yu-Gi-Oh gratis dan berbayar — YGO Advanced, Rush Duel dan Genesis.",
+    "rankingTitle": "Peringkat Global Yu-Gi-Oh — Duelverse",
+    "rankingDescription": "Naiki peringkat global Yu-Gi-Oh di YGO Advanced, Rush Duel dan Genesis.",
+    "newsTitle": "Berita Yu-Gi-Oh — Duelverse",
+    "newsDescription": "Berita dan pembaruan Yu-Gi-Oh terbaru — YGO Advanced, Rush Duel dan Genesis.",
     "authTitle": "Daftar — Duelverse",
-    "authDescription": "Buat akun Duelverse gratis dan mulai berduel dengan pemain dari seluruh dunia."
+    "authDescription": "Buat akun Duelverse gratis dan mulai duel Yu-Gi-Oh dengan pemain dari seluruh dunia."
   },
   "store": {
     "tabPlans": "Paket PRO",

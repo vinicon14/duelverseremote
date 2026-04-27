@@ -399,17 +399,17 @@
     "noNewsDesc": "News will appear here as soon as they are published"
   },
   "seo": {
-    "homeTitle": "Duelverse — Duelos de TCG em direto com videochamada",
-    "homeDescription": "Joga YGO Advanced, Genesis e Rush Duel em direto com videochamada. Matchmaking grátis, torneios semanais e ranking global.",
-    "homeKeywords": "TCG online, duelo YGO Advanced, Genesis online, Rush Duel online, duelo remoto, jogo de cartas online, torneios TCG",
-    "tournamentsTitle": "Torneios de TCG — Duelverse",
-    "tournamentsDescription": "Participa em torneios gratuitos e pagos de TCG. Eventos semanais de YGO Advanced, Genesis e Rush Duel com prémios reais.",
-    "rankingTitle": "Ranking Global de TCG — Duelverse",
-    "rankingDescription": "Sobe no ranking global de YGO Advanced, Genesis e Rush Duel. Compete contra os melhores duelistas do mundo.",
-    "newsTitle": "Notícias de TCG — Duelverse",
-    "newsDescription": "Últimas notícias, atualizações e análises do meta de YGO Advanced, Genesis e Rush Duel.",
+    "homeTitle": "Duelverse — Duelos de Yu-Gi-Oh ao vivo com videochamada",
+    "homeDescription": "Joga Yu-Gi-Oh online com videochamada. Duelos remotos ao vivo de YGO Advanced, Rush Duel e Genesis, matchmaking grátis, torneios semanais e ranking global.",
+    "homeKeywords": "Yu-Gi-Oh online, YGO Advanced, Rush Duel online, Genesis YGO, duelo remoto, duelo de Yu-Gi-Oh, torneio Yu-Gi-Oh, ranking Yu-Gi-Oh, deck builder Yu-Gi-Oh",
+    "tournamentsTitle": "Torneios de Yu-Gi-Oh — Duelverse",
+    "tournamentsDescription": "Participa em torneios de Yu-Gi-Oh grátis e pagos. Eventos semanais de YGO Advanced, Rush Duel e Genesis com prémios reais.",
+    "rankingTitle": "Ranking Global de Yu-Gi-Oh — Duelverse",
+    "rankingDescription": "Sobe no ranking global de Yu-Gi-Oh em YGO Advanced, Rush Duel e Genesis. Enfrenta os melhores duelistas do mundo.",
+    "newsTitle": "Notícias de Yu-Gi-Oh — Duelverse",
+    "newsDescription": "Últimas notícias e atualizações de Yu-Gi-Oh — YGO Advanced, Rush Duel e Genesis.",
     "authTitle": "Regista-te — Duelverse",
-    "authDescription": "Cria a tua conta gratuita no Duelverse e começa a duelar com jogadores de todo o mundo."
+    "authDescription": "Cria a tua conta grátis no Duelverse e começa a duelar Yu-Gi-Oh com jogadores de todo o mundo."
   },
   "store": {
     "tabPlans": "Planos Pro",

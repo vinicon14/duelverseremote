@@ -399,17 +399,17 @@
     "noNewsDesc": "News will appear here as soon as they are published"
   },
   "seo": {
-    "homeTitle": "Duelverse — Görüntülü sohbetle canlı TCG düelloları",
-    "homeDescription": "YGO Advanced, Genesis ve Rush Duel'yi görüntülü sohbetle canlı oyna. Ücretsiz eşleştirme, haftalık turnuvalar ve küresel sıralama.",
-    "homeKeywords": "TCG çevrimiçi, YGO Advanced düello, Genesis çevrimiçi, Rush Duel çevrimiçi, uzaktan düello, çevrimiçi kart oyunu, TCG turnuvaları",
-    "tournamentsTitle": "TCG Turnuvaları — Duelverse",
-    "tournamentsDescription": "Ücretsiz ve ücretli TCG turnuvalarına katıl. YGO Advanced, Genesis ve Rush Duel haftalık etkinlikleri gerçek ödüllerle.",
-    "rankingTitle": "Küresel TCG Sıralaması — Duelverse",
-    "rankingDescription": "YGO Advanced, Genesis ve Rush Duel küresel sıralamasında yüksel. Dünyanın en iyi düellocularına meydan oku.",
-    "newsTitle": "TCG Haberleri — Duelverse",
-    "newsDescription": "YGO Advanced, Genesis ve Rush Duel için en son haberler, güncellemeler ve meta analizler.",
-    "authTitle": "Kayıt ol — Duelverse",
-    "authDescription": "Ücretsiz Duelverse hesabını oluştur ve dünyanın dört bir yanındaki oyuncularla düello yapmaya başla."
+    "homeTitle": "Duelverse — Görüntülü görüşmeyle canlı Yu-Gi-Oh düelloları",
+    "homeDescription": "Görüntülü görüşmeyle Yu-Gi-Oh çevrimiçi oynayın. YGO Advanced, Rush Duel ve Genesis canlı uzaktan düelloları, ücretsiz eşleştirme, haftalık turnuvalar ve küresel sıralama.",
+    "homeKeywords": "Yu-Gi-Oh çevrimiçi, YGO Advanced, Rush Duel, Genesis YGO, Yu-Gi-Oh düello, Yu-Gi-Oh turnuva",
+    "tournamentsTitle": "Yu-Gi-Oh Turnuvaları — Duelverse",
+    "tournamentsDescription": "Ücretsiz ve ücretli Yu-Gi-Oh turnuvalarına katılın — YGO Advanced, Rush Duel ve Genesis.",
+    "rankingTitle": "Küresel Yu-Gi-Oh Sıralaması — Duelverse",
+    "rankingDescription": "YGO Advanced, Rush Duel ve Genesis'te küresel Yu-Gi-Oh sıralamasında yükselin.",
+    "newsTitle": "Yu-Gi-Oh Haberleri — Duelverse",
+    "newsDescription": "En son Yu-Gi-Oh haberleri ve güncellemeleri — YGO Advanced, Rush Duel ve Genesis.",
+    "authTitle": "Kaydol — Duelverse",
+    "authDescription": "Ücretsiz Duelverse hesabınızı oluşturun ve dünyanın dört bir yanından oyuncularla Yu-Gi-Oh düellosu yapmaya başlayın."
   },
   "store": {
     "tabPlans": "PRO Planları",

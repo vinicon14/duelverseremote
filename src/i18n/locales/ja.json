@@ -399,17 +399,17 @@
     "noNewsDesc": "News will appear here as soon as they are published"
   },
   "seo": {
-    "homeTitle": "Duelverse — ビデオチャットで楽しむライブTCGデュエル",
-    "homeDescription": "遊戯王、マジック・ザ・ギャザリング、ポケモンカードをビデオ通話でライブ対戦。無料マッチメイキング、毎週のトーナメント、グローバルランキング。",
-    "homeKeywords": "TCG オンライン, 遊戯王 デュエル, マジック ザ ギャザリング オンライン, ポケカ オンライン, リモートデュエル, ビデオ対戦, カードゲーム 大会",
-    "tournamentsTitle": "TCGトーナメント — Duelverse",
-    "tournamentsDescription": "無料および有料のTCGトーナメントに参加しよう。遊戯王、MTG、ポケカの週次イベントとリアルな賞金プール。",
-    "rankingTitle": "グローバルTCGランキング — Duelverse",
-    "rankingDescription": "遊戯王、MTG、ポケカのグローバルランキングを駆け上がろう。世界のトッププレイヤーに挑戦。",
-    "newsTitle": "TCGニュース — Duelverse",
-    "newsDescription": "遊戯王、マジック・ザ・ギャザリング、ポケモンカードの最新ニュース、アップデート、メタ分析。",
-    "authTitle": "新規登録 — Duelverse",
-    "authDescription": "無料のDuelverseアカウントを作成して、世界中のプレイヤーと対戦しよう。"
+    "homeTitle": "Duelverse — ビデオ通話で遊戯王ライブデュエル",
+    "homeDescription": "ビデオ通話で遊戯王オンライン。YGO Advanced、ラッシュデュエル、Genesisのライブ遠隔デュエル、無料マッチメイキング、週次トーナメント、グローバルランキング。",
+    "homeKeywords": "遊戯王オンライン, YGO Advanced, ラッシュデュエル, Genesis YGO, 遊戯王デュエル, 遊戯王トーナメント",
+    "tournamentsTitle": "遊戯王トーナメント — Duelverse",
+    "tournamentsDescription": "無料・有料の遊戯王トーナメントに参加 — YGO Advanced、ラッシュデュエル、Genesis。",
+    "rankingTitle": "遊戯王グローバルランキング — Duelverse",
+    "rankingDescription": "YGO Advanced、ラッシュデュエル、Genesisで世界ランキングを駆け上がろう。",
+    "newsTitle": "遊戯王ニュース — Duelverse",
+    "newsDescription": "遊戯王の最新ニュースとアップデート — YGO Advanced、ラッシュデュエル、Genesis。",
+    "authTitle": "登録 — Duelverse",
+    "authDescription": "無料のDuelverseアカウントを作成して、世界中のプレイヤーと遊戯王を楽しもう。"
   },
   "store": {
     "tabPlans": "PROプラン",

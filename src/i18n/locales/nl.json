@@ -399,17 +399,17 @@
     "noNewsDesc": "News will appear here as soon as they are published"
   },
   "seo": {
-    "homeTitle": "Duelverse — Live TCG-duels met videochat",
-    "homeDescription": "Speel YGO Advanced, Genesis en Rush Duel live met videochat. Gratis matchmaking, wekelijkse toernooien en wereldwijde ranglijst.",
-    "homeKeywords": "TCG online, YGO Advanced duel, Genesis online, Rush Duel online, remote duel, online kaartspel, TCG toernooien",
-    "tournamentsTitle": "TCG-toernooien — Duelverse",
-    "tournamentsDescription": "Doe mee aan gratis en betaalde TCG-toernooien. Wekelijkse YGO Advanced-, Genesis- en Rush Duel-events met echte prijzen.",
-    "rankingTitle": "Wereldwijde TCG-ranglijst — Duelverse",
-    "rankingDescription": "Klim op in de wereldwijde ranglijst voor YGO Advanced, Genesis en Rush Duel. Neem het op tegen de beste duellisten ter wereld.",
-    "newsTitle": "TCG-nieuws — Duelverse",
-    "newsDescription": "Laatste nieuws, updates en meta-analyses voor YGO Advanced, Genesis en Rush Duel.",
+    "homeTitle": "Duelverse — Live Yu-Gi-Oh duels met videogesprek",
+    "homeDescription": "Speel Yu-Gi-Oh online met videogesprek. Live remote duels van YGO Advanced, Rush Duel en Genesis, gratis matchmaking, wekelijkse toernooien en wereldwijde ranglijst.",
+    "homeKeywords": "Yu-Gi-Oh online, YGO Advanced, Rush Duel, Genesis YGO, Yu-Gi-Oh duel, Yu-Gi-Oh toernooi",
+    "tournamentsTitle": "Yu-Gi-Oh Toernooien — Duelverse",
+    "tournamentsDescription": "Doe mee aan gratis en betaalde Yu-Gi-Oh toernooien — YGO Advanced, Rush Duel en Genesis.",
+    "rankingTitle": "Wereldwijde Yu-Gi-Oh Ranglijst — Duelverse",
+    "rankingDescription": "Klim op de wereldwijde Yu-Gi-Oh ranglijst in YGO Advanced, Rush Duel en Genesis.",
+    "newsTitle": "Yu-Gi-Oh Nieuws — Duelverse",
+    "newsDescription": "Laatste Yu-Gi-Oh nieuws en updates — YGO Advanced, Rush Duel en Genesis.",
     "authTitle": "Aanmelden — Duelverse",
-    "authDescription": "Maak je gratis Duelverse-account aan en begin met duelleren tegen spelers wereldwijd."
+    "authDescription": "Maak je gratis Duelverse-account en begin Yu-Gi-Oh te duelleren met spelers wereldwijd."
   },
   "store": {
     "tabPlans": "PRO-plannen",

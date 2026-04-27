@@ -399,17 +399,17 @@
     "noNewsDesc": "News will appear here as soon as they are published"
   },
   "seo": {
-    "homeTitle": "Duelverse — Live TCG duels with video chat",
-    "homeDescription": "Play YGO Advanced, Genesis and Rush Duel live with video chat. Free matchmaking, weekly tournaments and global ranking.",
-    "homeKeywords": "TCG online, YGO Advanced duel, Genesis online, Rush Duel online, remote duel, video card game, TCG tournaments, card game ranking",
-    "tournamentsTitle": "TCG Tournaments — Duelverse",
-    "tournamentsDescription": "Join free and paid TCG tournaments. Weekly events for YGO Advanced, Genesis and Rush Duel with real prize pools.",
-    "rankingTitle": "Global TCG Ranking — Duelverse",
-    "rankingDescription": "Climb the global leaderboard for YGO Advanced, Genesis and Rush Duel. Compete against the best duelists worldwide.",
-    "newsTitle": "TCG News — Duelverse",
-    "newsDescription": "Latest news, updates and meta reports for YGO Advanced, Genesis and Rush Duel.",
+    "homeTitle": "Duelverse — Live Yu-Gi-Oh duels with video call",
+    "homeDescription": "Play Yu-Gi-Oh online with video call. YGO Advanced, Rush Duel and Genesis live remote duels, free matchmaking, weekly tournaments and global ranking.",
+    "homeKeywords": "Yu-Gi-Oh online, YGO Advanced, Rush Duel online, Genesis YGO, remote duel, Yu-Gi-Oh duel, Yu-Gi-Oh tournament, Yu-Gi-Oh ranking, Yu-Gi-Oh deck builder, video call duel",
+    "tournamentsTitle": "Yu-Gi-Oh Tournaments — Duelverse",
+    "tournamentsDescription": "Join free and paid Yu-Gi-Oh tournaments. Weekly events for YGO Advanced, Rush Duel and Genesis with real prize pools.",
+    "rankingTitle": "Global Yu-Gi-Oh Ranking — Duelverse",
+    "rankingDescription": "Climb the global Yu-Gi-Oh leaderboard for YGO Advanced, Rush Duel and Genesis. Compete against the best duelists worldwide.",
+    "newsTitle": "Yu-Gi-Oh News — Duelverse",
+    "newsDescription": "Latest Yu-Gi-Oh news, updates and meta reports for YGO Advanced, Rush Duel and Genesis.",
     "authTitle": "Sign up — Duelverse",
-    "authDescription": "Create your free Duelverse account and start dueling YGO Advanced, Genesis and Rush Duel players around the world."
+    "authDescription": "Create your free Duelverse account and start dueling Yu-Gi-Oh players around the world — YGO Advanced, Rush Duel and Genesis."
   },
   "store": {
     "tabPlans": "PRO Plans",
