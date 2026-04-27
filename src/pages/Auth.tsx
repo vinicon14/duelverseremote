@@ -23,7 +23,7 @@ import { CountrySelect } from "@/components/CountrySelect";
 import { getLanguageForCountry, normalizeBrowserLanguage } from "@/i18n/countries";
 import { setAppLanguage } from "@/i18n";
 import { SEOHead } from "@/components/SEOHead";
-import { isDiscordEmbedded } from "@/utils/discordEmbed";
+import { isDiscordEmbedded, isRunningInsideDiscord } from "@/utils/discordEmbed";
 
 const DiscordIcon = ({ className = "" }: { className?: string }) => (
   <svg className={className} viewBox="0 0 127.14 96.36" aria-hidden="true" fill="currentColor">
@@ -47,6 +47,25 @@ const Auth = () => {
   const [selectedTcg, setSelectedTcg] = useState<TcgType>('yugioh');
   const [signupCountry, setSignupCountry] = useState<string | null>(null);
   const insideDiscord = isDiscordEmbedded();
+  const runningInDiscord = isRunningInsideDiscord();
+
+  // Auto-login when running inside Discord (Embedded App)
+  useEffect(() => {
+    if (!runningInDiscord) return;
+    
+    const params = new URLSearchParams(window.location.search);
+    // Don't auto-trigger if already processing OAuth callback
+    if (params.get('discord') === 'success' || params.get('code')) return;
+    
+    console.log('[Auth] Running inside Discord, initiating auto-login...');
+    
+    // Small delay to let the UI render first
+    const timer = setTimeout(() => {
+      handleDiscordSignIn();
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, [runningInDiscord]);
 
   // Pre-detect country via IP for signup convenience
   useEffect(() => {

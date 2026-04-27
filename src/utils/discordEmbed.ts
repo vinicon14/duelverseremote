@@ -14,3 +14,9 @@ export const isDiscordEmbedded = () => {
     userAgent.includes("discord")
   );
 };
+
+export const isRunningInsideDiscord = () => {
+  if (typeof window === "undefined") return false;
+  const params = new URLSearchParams(window.location.search);
+  return params.has("frame_id") || params.has("instance_id");
+};
