@@ -46,15 +46,33 @@ async function discordFetch(path: string, init: RequestInit = {}) {
   return { ok: res.ok, status: res.status, data };
 }
 
-const deleteWebhookMessageSoon = (webhookUrl: string, messageId?: string) => {
+const scheduleWebhookMessageDeletion = (
+  webhookUrl: string,
+  messageId: string | undefined | null,
+  delayMs = 8000,
+) => {
   if (!messageId) return;
-  setTimeout(async () => {
+  const task = (async () => {
     try {
-      await fetch(`${webhookUrl}/messages/${messageId}`, { method: "DELETE" });
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+      const res = await fetch(`${webhookUrl}/messages/${messageId}`, { method: "DELETE" });
+      if (!res.ok && res.status !== 404) {
+        const txt = await res.text().catch(() => "");
+        console.error(
+          `[discord-bridge] delete failed status=${res.status} body=${txt.slice(0, 200)}`,
+        );
+      } else {
+        console.log(`[discord-bridge] deleted ephemeral webhook message ${messageId}`);
+      }
     } catch (err) {
-      console.error("[discord-bridge] failed to delete temporary matchmaking message:", err);
+      console.error("[discord-bridge] failed to delete ephemeral webhook message:", err);
     }
-  }, 8000);
+  })();
+  // @ts-ignore - EdgeRuntime is provided by the Supabase edge runtime
+  if (typeof EdgeRuntime !== "undefined" && typeof EdgeRuntime.waitUntil === "function") {
+    // @ts-ignore
+    EdgeRuntime.waitUntil(task);
+  }
 };
 
 serve(async (req) => {
@@ -413,6 +431,11 @@ serve(async (req) => {
     // ============================================================
     if (requestType === "chat_to_discord") {
       const { username, avatarUrl, userId } = body;
+      const ephemeral = body?.ephemeral === true;
+      const ephemeralDelayMs =
+        typeof body?.ephemeralDelayMs === "number" && body.ephemeralDelayMs > 0
+          ? Math.min(body.ephemeralDelayMs, 60000)
+          : 10000;
       const servers = Array.isArray(botStatus.servers) ? botStatus.servers : [];
       const activeServers = servers.filter((server: any) => server.enabled && server.webhookUrl);
       const urls: string[] = activeServers.map((server: any) => server.webhookUrl);
@@ -441,22 +464,30 @@ serve(async (req) => {
         allowed_mentions: { parse: ["users", "everyone"], users: [], roles: [] },
       };
 
-      const results: Array<{ ok: boolean; url: string; status?: number }> = [];
+      const results: Array<{ ok: boolean; url: string; status?: number; messageId?: string }> = [];
       for (const targetUrl of urls) {
         try {
-          const response = await fetch(targetUrl, {
+          // wait=true so we get the posted message id back to delete later
+          const url = ephemeral ? `${targetUrl}?wait=true` : targetUrl;
+          const response = await fetch(url, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(webhookPayload),
           });
-          results.push({ ok: response.ok, url: targetUrl, status: response.status });
+          let messageId: string | undefined;
+          if (ephemeral && response.ok) {
+            const posted = await response.json().catch(() => null);
+            messageId = posted?.id;
+            scheduleWebhookMessageDeletion(targetUrl, messageId, ephemeralDelayMs);
+          }
+          results.push({ ok: response.ok, url: targetUrl, status: response.status, messageId });
         } catch (err) {
           console.error(`[discord-bridge] webhook error for ${targetUrl}:`, err);
           results.push({ ok: false, url: targetUrl });
         }
       }
 
-      return jsonResponse({ success: results.some((r) => r.ok), results });
+      return jsonResponse({ success: results.some((r) => r.ok), ephemeral, results });
     }
 
     if (requestType === "announce_matchmaking") {
@@ -518,7 +549,7 @@ serve(async (req) => {
           body: JSON.stringify(webhookPayload),
         });
         const posted = await response.json().catch(() => null);
-        if (response.ok) deleteWebhookMessageSoon(server.webhookUrl, posted?.id);
+        if (response.ok) scheduleWebhookMessageDeletion(server.webhookUrl, posted?.id, 10000);
         results.push({ ok: response.ok, status: response.status, messageId: posted?.id });
       }
       return jsonResponse({ success: results.some((r) => r.ok), temporary: true, inviteId: invite.id, link, results });

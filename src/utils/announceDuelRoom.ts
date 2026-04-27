@@ -48,6 +48,8 @@ export async function announceDuelRoom({
     if (chatError) console.warn("[announceDuelRoom] chat insert error:", chatError);
 
     // 2. Disparar para o Discord via bridge (envia para todos os servidores parceiros)
+    //    A mensagem é marcada como efêmera: o bot remove do canal Discord após ~10s
+    //    apenas servindo como gatilho/notificação.
     try {
       await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/discord-bridge`,
@@ -60,6 +62,8 @@ export async function announceDuelRoom({
             username,
             avatarUrl,
             userId,
+            ephemeral: true,
+            ephemeralDelayMs: 10000,
           }),
         },
       );
