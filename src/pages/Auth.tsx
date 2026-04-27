@@ -39,6 +39,7 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [selectedTcg, setSelectedTcg] = useState<TcgType>('yugioh');
   const [signupCountry, setSignupCountry] = useState<string | null>(null);
+  const insideDiscord = isInsideDiscord();
 
   // Pre-detect country via IP for signup convenience
   useEffect(() => {
