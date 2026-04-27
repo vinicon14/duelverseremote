@@ -8,7 +8,8 @@
  */
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Headphones, Hash } from "lucide-react";
+import { Headphones, Hash, ExternalLink } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface VoiceParticipant {
   id: string;
@@ -21,8 +22,11 @@ interface VoiceParticipant {
 
 interface VoiceRoom {
   id: string;
+  guild_id: string;
   guild_name: string | null;
+  channel_id: string;
   channel_name: string | null;
+  invite_url: string | null;
 }
 
 interface Props {
