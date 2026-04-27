@@ -399,17 +399,17 @@
     "noNewsDesc": "News will appear here as soon as they are published"
   },
   "seo": {
-    "homeTitle": "Duelverse — مبارزات TCG مباشرة مع دردشة فيديو",
-    "homeDescription": "العب YGO Advanced و Genesis و Rush Duel مباشرة عبر دردشة الفيديو. مطابقة مجانية، بطولات أسبوعية وتصنيف عالمي.",
-    "homeKeywords": "TCG عبر الإنترنت, مبارزة YGO Advanced, Genesis, Rush Duel, مبارزة عن بُعد, لعبة بطاقات أونلاين, بطولات",
-    "tournamentsTitle": "بطولات TCG — Duelverse",
-    "tournamentsDescription": "انضم إلى بطولات TCG المجانية والمدفوعة. فعاليات أسبوعية لـ YGO Advanced و Genesis و Rush Duel بجوائز حقيقية.",
-    "rankingTitle": "التصنيف العالمي لـ TCG — Duelverse",
-    "rankingDescription": "تسلق التصنيف العالمي لـ YGO Advanced و Genesis و Rush Duel. تنافس ضد أفضل المبارزين في العالم.",
-    "newsTitle": "أخبار TCG — Duelverse",
-    "newsDescription": "آخر الأخبار والتحديثات وتحليلات الميتا لـ YGO Advanced و Genesis و Rush Duel.",
-    "authTitle": "التسجيل — Duelverse",
-    "authDescription": "أنشئ حساب Duelverse المجاني وابدأ المبارزة مع لاعبين من جميع أنحاء العالم."
+    "homeTitle": "Duelverse — مبارزات Yu-Gi-Oh مباشرة بمكالمة فيديو",
+    "homeDescription": "العب Yu-Gi-Oh عبر الإنترنت بمكالمة فيديو. مبارزات عن بعد مباشرة YGO Advanced و Rush Duel و Genesis، مطابقة مجانية، بطولات أسبوعية وتصنيف عالمي.",
+    "homeKeywords": "Yu-Gi-Oh أونلاين, YGO Advanced, Rush Duel, Genesis YGO, مبارزة Yu-Gi-Oh, بطولة Yu-Gi-Oh",
+    "tournamentsTitle": "بطولات Yu-Gi-Oh — Duelverse",
+    "tournamentsDescription": "شارك في بطولات Yu-Gi-Oh المجانية والمدفوعة — YGO Advanced و Rush Duel و Genesis.",
+    "rankingTitle": "التصنيف العالمي لـ Yu-Gi-Oh — Duelverse",
+    "rankingDescription": "اصعد في التصنيف العالمي لـ Yu-Gi-Oh في YGO Advanced و Rush Duel و Genesis.",
+    "newsTitle": "أخبار Yu-Gi-Oh — Duelverse",
+    "newsDescription": "آخر أخبار وتحديثات Yu-Gi-Oh — YGO Advanced و Rush Duel و Genesis.",
+    "authTitle": "سجّل — Duelverse",
+    "authDescription": "أنشئ حسابك المجاني في Duelverse وابدأ مبارزة Yu-Gi-Oh مع لاعبين من جميع أنحاء العالم."
   },
   "store": {
     "tabPlans": "خطط PRO",

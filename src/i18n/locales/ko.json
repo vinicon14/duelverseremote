@@ -399,17 +399,17 @@
     "noNewsDesc": "News will appear here as soon as they are published"
   },
   "seo": {
-    "homeTitle": "Duelverse — 화상 채팅으로 즐기는 라이브 TCG 듀얼",
-    "homeDescription": "유희왕, 매직 더 개더링, 포켓몬 TCG를 화상 통화로 라이브 대전. 무료 매치메이킹, 주간 토너먼트, 글로벌 랭킹.",
-    "homeKeywords": "TCG 온라인, 유희왕 듀얼, 매직 더 개더링 온라인, 포켓몬 TCG 온라인, 원격 듀얼, 카드 게임 토너먼트, 랭킹",
-    "tournamentsTitle": "TCG 토너먼트 — Duelverse",
-    "tournamentsDescription": "무료 및 유료 TCG 토너먼트에 참가하세요. 유희왕, MTG, 포켓몬의 주간 이벤트와 실제 상금.",
-    "rankingTitle": "글로벌 TCG 랭킹 — Duelverse",
-    "rankingDescription": "유희왕, MTG, 포켓몬 TCG의 글로벌 랭킹에 올라보세요. 세계 최고의 듀얼리스트와 경쟁하세요.",
-    "newsTitle": "TCG 뉴스 — Duelverse",
-    "newsDescription": "유희왕, 매직 더 개더링, 포켓몬 TCG의 최신 뉴스, 업데이트 및 메타 분석.",
+    "homeTitle": "Duelverse — 화상통화로 즐기는 유희왕 라이브 듀얼",
+    "homeDescription": "화상통화로 유희왕 온라인. YGO Advanced, 러시 듀얼, Genesis 라이브 원격 듀얼, 무료 매치메이킹, 주간 토너먼트, 글로벌 랭킹.",
+    "homeKeywords": "유희왕 온라인, YGO Advanced, 러시 듀얼, Genesis YGO, 유희왕 듀얼, 유희왕 토너먼트",
+    "tournamentsTitle": "유희왕 토너먼트 — Duelverse",
+    "tournamentsDescription": "무료 및 유료 유희왕 토너먼트에 참가하세요 — YGO Advanced, 러시 듀얼, Genesis.",
+    "rankingTitle": "유희왕 글로벌 랭킹 — Duelverse",
+    "rankingDescription": "YGO Advanced, 러시 듀얼, Genesis 글로벌 랭킹을 정복하세요.",
+    "newsTitle": "유희왕 뉴스 — Duelverse",
+    "newsDescription": "최신 유희왕 뉴스와 업데이트 — YGO Advanced, 러시 듀얼, Genesis.",
     "authTitle": "회원가입 — Duelverse",
-    "authDescription": "무료 Duelverse 계정을 만들고 전 세계 플레이어와 듀얼을 시작하세요."
+    "authDescription": "무료 Duelverse 계정을 만들고 전 세계 플레이어들과 유희왕 듀얼을 시작하세요."
   },
   "store": {
     "tabPlans": "PRO 플랜",

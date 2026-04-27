@@ -140,42 +140,11 @@ serve(async (req) => {
       });
     }
 
-    // When user goes online, send a one-shot DM inviting them to launch the
-    // DuelVerse Discord Activity (the Embedded App version that runs inside
-    // Discord with the minimized DuelVerse window). We dedupe by storing a
-    // timestamp on the discord_links row so we don't spam.
-    if (playing) {
-      try {
-        const { data: lastSent } = await admin
-          .from("discord_links")
-          .select("updated_at")
-          .eq("user_id", user.id)
-          .maybeSingle();
-
-        const clientId = Deno.env.get("DISCORD_CLIENT_ID");
-        if (clientId) {
-          // Open DM channel
-          const dmRes = await discordFetch(botToken, `/users/@me/channels`, {
-            method: "POST",
-            body: JSON.stringify({ recipient_id: discordId }),
-          });
-          if (dmRes.ok && dmRes.data?.id) {
-            const activityUrl = `https://discord.com/activities/${clientId}`;
-            await discordFetch(botToken, `/channels/${dmRes.data.id}/messages`, {
-              method: "POST",
-              body: JSON.stringify({
-                content:
-                  `🎮 Você está jogando **DuelVerse**!\n` +
-                  `Abra a janela do DuelVerse direto no Discord: ${activityUrl}\n` +
-                  `_Ela fica minimizada mostrando o contador de jogadores online._`,
-              }),
-            });
-          }
-        }
-      } catch (dmErr) {
-        console.warn("[discord-presence] DM failed", dmErr);
-      }
-    }
+    // Note: We intentionally do NOT send a DM with a Discord Activity launch
+    // link when the user goes online. The presence is communicated only via
+    // the "🎮 Jogando DuelVerse" role (handled above), which makes the user
+    // appear as playing DuelVerse in the member list without spamming DMs or
+    // launching a separate Discord Activity window.
 
     return json({ success: true, playing, results });
   } catch (err: any) {

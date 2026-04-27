@@ -399,17 +399,17 @@
     "noNewsDesc": "News will appear here as soon as they are published"
   },
   "seo": {
-    "homeTitle": "Duelverse — Живые ККИ-дуэли с видеочатом",
-    "homeDescription": "Играй в YGO Advanced, Genesis и Rush Duel в прямом эфире с видеочатом. Бесплатный матчмейкинг, еженедельные турниры и глобальный рейтинг.",
-    "homeKeywords": "ККИ онлайн, дуэль YGO Advanced, Genesis онлайн, Rush Duel онлайн, удалённая дуэль, карточная игра онлайн, турниры ККИ",
-    "tournamentsTitle": "Турниры ККИ — Duelverse",
-    "tournamentsDescription": "Участвуй в бесплатных и платных ККИ-турнирах. Еженедельные события по YGO Advanced, Genesis и Rush Duel с реальными призами.",
-    "rankingTitle": "Глобальный рейтинг ККИ — Duelverse",
-    "rankingDescription": "Поднимайся в глобальном рейтинге YGO Advanced, Genesis и Rush Duel. Сражайся с лучшими дуэлянтами мира.",
-    "newsTitle": "Новости ККИ — Duelverse",
-    "newsDescription": "Последние новости, обновления и мета-анализ YGO Advanced, Genesis и Rush Duel.",
+    "homeTitle": "Duelverse — Дуэли Yu-Gi-Oh в прямом эфире с видеосвязью",
+    "homeDescription": "Играйте в Yu-Gi-Oh онлайн с видеосвязью. Удалённые дуэли YGO Advanced, Rush Duel и Genesis, бесплатный матчмейкинг, еженедельные турниры и глобальный рейтинг.",
+    "homeKeywords": "Yu-Gi-Oh онлайн, YGO Advanced, Rush Duel, Genesis YGO, дуэль Yu-Gi-Oh, турнир Yu-Gi-Oh",
+    "tournamentsTitle": "Турниры Yu-Gi-Oh — Duelverse",
+    "tournamentsDescription": "Участвуйте в бесплатных и платных турнирах Yu-Gi-Oh — YGO Advanced, Rush Duel и Genesis.",
+    "rankingTitle": "Глобальный Рейтинг Yu-Gi-Oh — Duelverse",
+    "rankingDescription": "Поднимайтесь в глобальном рейтинге Yu-Gi-Oh в YGO Advanced, Rush Duel и Genesis.",
+    "newsTitle": "Новости Yu-Gi-Oh — Duelverse",
+    "newsDescription": "Последние новости и обновления Yu-Gi-Oh — YGO Advanced, Rush Duel и Genesis.",
     "authTitle": "Регистрация — Duelverse",
-    "authDescription": "Создай бесплатный аккаунт Duelverse и начни дуэли с игроками со всего мира."
+    "authDescription": "Создайте бесплатный аккаунт Duelverse и начните дуэли Yu-Gi-Oh с игроками со всего мира."
   },
   "store": {
     "tabPlans": "PRO Планы",

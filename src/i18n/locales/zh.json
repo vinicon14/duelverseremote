@@ -399,17 +399,17 @@
     "noNewsDesc": "News will appear here as soon as they are published"
   },
   "seo": {
-    "homeTitle": "Duelverse — 视频聊天实时 TCG 对决",
-    "homeDescription": "通过视频通话实时对战游戏王、万智牌和宝可梦集换式卡牌游戏。免费匹配、每周锦标赛和全球排名。",
-    "homeKeywords": "TCG 在线, 游戏王 对决, 万智牌 在线, 宝可梦 TCG 在线, 远程对决, 卡牌游戏 锦标赛, 排名",
-    "tournamentsTitle": "TCG 锦标赛 — Duelverse",
-    "tournamentsDescription": "参加免费和付费的 TCG 锦标赛。每周举办游戏王、万智牌和宝可梦的赛事,提供真实奖金。",
-    "rankingTitle": "全球 TCG 排名 — Duelverse",
-    "rankingDescription": "在游戏王、万智牌和宝可梦 TCG 的全球排名中攀升。挑战世界顶级对决者。",
-    "newsTitle": "TCG 新闻 — Duelverse",
-    "newsDescription": "游戏王、万智牌和宝可梦集换式卡牌游戏的最新新闻、更新和环境分析。",
+    "homeTitle": "Duelverse — 视频通话游戏王实时决斗",
+    "homeDescription": "通过视频通话在线游戏王。YGO Advanced、Rush Duel 和 Genesis 实时远程决斗，免费匹配，每周锦标赛和全球排名。",
+    "homeKeywords": "游戏王在线, YGO Advanced, Rush Duel, Genesis YGO, 游戏王决斗, 游戏王锦标赛",
+    "tournamentsTitle": "游戏王锦标赛 — Duelverse",
+    "tournamentsDescription": "参加免费和付费的游戏王锦标赛 — YGO Advanced、Rush Duel 和 Genesis。",
+    "rankingTitle": "游戏王全球排名 — Duelverse",
+    "rankingDescription": "在 YGO Advanced、Rush Duel 和 Genesis 中攀登全球排名。",
+    "newsTitle": "游戏王新闻 — Duelverse",
+    "newsDescription": "最新游戏王新闻和更新 — YGO Advanced、Rush Duel 和 Genesis。",
     "authTitle": "注册 — Duelverse",
-    "authDescription": "创建免费的 Duelverse 账户,开始与世界各地的玩家对决。"
+    "authDescription": "创建免费 Duelverse 账户，开始与全球玩家进行游戏王决斗。"
   },
   "store": {
     "tabPlans": "PRO计划",
