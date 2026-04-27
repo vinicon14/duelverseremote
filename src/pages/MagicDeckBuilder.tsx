@@ -1,7 +1,7 @@
 /**
- * DuelVerse - Magic: The Gathering Deck Builder
+ * DuelVerse - Genesis Deck Builder
  * 
- * Interface para criar decks de MTG usando a API Scryfall.
+ * Interface para criar decks de Genesis usando a API YGOPRODeck (formato Genesys).
  */
 import { useState, useCallback, useEffect } from 'react';
 import { Navbar } from '@/components/Navbar';
@@ -17,52 +17,60 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Textarea } from '@/components/ui/textarea';
 import { useTranslation } from 'react-i18next';
 
-interface ScryfallCard {
-  id: string;
+interface YugiohCard {
+  id: number;
   name: string;
-  mana_cost: string;
-  type_line: string;
-  oracle_text?: string;
-  image_uris?: { small: string; normal: string; large: string };
-  card_faces?: { image_uris?: { small: string; normal: string } }[];
-  colors?: string[];
-  rarity: string;
-  set_name: string;
+  type: string;
+  desc: string;
+  atk?: number;
+  def?: number;
+  level?: number;
+  race: string;
+  attribute?: string;
+  archetype?: string;
+  scale?: number;
+  linkval?: number;
+  card_images: {
+    id: number;
+    image_url: string;
+    image_url_small: string;
+    image_url_cropped: string;
+  }[];
 }
 
 interface DeckCard {
-  card: ScryfallCard;
+  card: YugiohCard;
   quantity: number;
 }
 
+// Color map adapted for YGO attributes for visual compatibility
 const COLOR_MAP: Record<string, string> = {
-  W: 'bg-yellow-100 text-yellow-800',
-  U: 'bg-blue-500 text-white',
-  B: 'bg-gray-800 text-white',
-  R: 'bg-red-500 text-white',
-  G: 'bg-green-600 text-white',
+  LIGHT: 'bg-yellow-100 text-yellow-800',
+  DARK: 'bg-purple-800 text-white',
+  FIRE: 'bg-red-500 text-white',
+  WATER: 'bg-blue-500 text-white',
+  EARTH: 'bg-amber-700 text-white',
+  WIND: 'bg-green-500 text-white',
 };
 
-const getCardImage = (card: ScryfallCard): string => {
-  if (card.image_uris?.small) return card.image_uris.small;
-  if (card.card_faces?.[0]?.image_uris?.small) return card.card_faces[0].image_uris.small;
+const getCardImage = (card: YugiohCard): string => {
+  if (card.card_images?.[0]?.image_url_small) return card.card_images[0].image_url_small;
   return '';
 };
 
-const getCardImageLarge = (card: ScryfallCard): string => {
-  if (card.image_uris?.normal) return card.image_uris.normal;
-  if (card.card_faces?.[0]?.image_uris?.normal) return card.card_faces[0].image_uris.normal;
+const getCardImageLarge = (card: YugiohCard): string => {
+  if (card.card_images?.[0]?.image_url) return card.card_images[0].image_url;
   return '';
 };
 
 export default function MagicDeckBuilder() {
   const { t } = useTranslation();
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<ScryfallCard[]>([]);
+  const [results, setResults] = useState<YugiohCard[]>([]);
   const [searching, setSearching] = useState(false);
   const [mainDeck, setMainDeck] = useState<DeckCard[]>([]);
   const [sideboard, setSideboard] = useState<DeckCard[]>([]);
-  const [selectedCard, setSelectedCard] = useState<ScryfallCard | null>(null);
+  const [selectedCard, setSelectedCard] = useState<YugiohCard | null>(null);
   const [saveOpen, setSaveOpen] = useState(false);
   const [loadOpen, setLoadOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -78,12 +86,10 @@ export default function MagicDeckBuilder() {
     if (!query.trim()) return;
     setSearching(true);
     try {
-      const res = await fetch(`https://api.scryfall.com/cards/search?q=${encodeURIComponent(query)}&order=name`);
+      // Use YGO API with Genesis format instead of Scryfall
+      const res = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?format=genesys&fname=${encodeURIComponent(query)}&num=30`);
       if (!res.ok) {
-        if (res.status === 404) {
-          setResults([]);
-          toast.info('Nenhuma carta encontrada');
-        }
+        setResults([]);
         return;
       }
       const data = await res.json();
@@ -96,13 +102,13 @@ export default function MagicDeckBuilder() {
     }
   }, [query]);
 
-  const addToDeck = (card: ScryfallCard, target: 'main' | 'side') => {
+  const addToDeck = (card: YugiohCard, target: 'main' | 'side') => {
     const setter = target === 'main' ? setMainDeck : setSideboard;
     setter(prev => {
       const existing = prev.find(c => c.card.id === card.id);
       if (existing) {
-        if (existing.quantity >= 4 && !card.type_line.includes('Basic Land')) {
-          toast.error('Máximo de 4 cópias (exceto terrenos básicos)');
+        if (existing.quantity >= 3) {
+          toast.error('Máximo de 3 cópias por carta');
           return prev;
         }
         return prev.map(c => c.card.id === card.id ? { ...c, quantity: c.quantity + 1 } : c);
@@ -111,7 +117,7 @@ export default function MagicDeckBuilder() {
     });
   };
 
-  const removeFromDeck = (cardId: string, target: 'main' | 'side') => {
+  const removeFromDeck = (cardId: number, target: 'main' | 'side') => {
     const setter = target === 'main' ? setMainDeck : setSideboard;
     setter(prev => {
       const existing = prev.find(c => c.card.id === cardId);
@@ -352,7 +358,7 @@ export default function MagicDeckBuilder() {
       <main className="container mx-auto px-4 pt-20 pb-8">
         <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
           <h1 className="text-2xl font-bold text-gradient-gold flex items-center gap-2">
-            ✨ Genesis {t('deckBuilder.title')}
+            ✨ Genesis Deck Builder
           </h1>
           <div className="flex gap-2 flex-wrap">
             <Button variant="outline" size="sm" onClick={exportDeck} className="gap-1">
