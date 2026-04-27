@@ -11,7 +11,6 @@ export const isDiscordEmbedded = () => {
   return (
     hasDiscordActivityParams ||
     platform.includes("discord") ||
-    userAgent.includes("discord") ||
-    window.self !== window.top
+    userAgent.includes("discord")
   );
 };
