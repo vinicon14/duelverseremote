@@ -1400,6 +1400,9 @@ const DuelRoom = () => {
         />
       )}
 
+      {/* Roster do Discord (se a sala foi criada/sincronizada via call de voz) */}
+      {duel?.id && <DiscordVoiceRoster duelId={duel.id} />}
+
     </div>
   );
 };
