@@ -578,6 +578,7 @@ serve(async (req) => {
       return jsonResponse({ success: results.some((r) => r.ok), link, results });
     }
 
+    if (requestType === "get_config") {
       const servers = Array.isArray(botStatus.servers) ? botStatus.servers : [];
       let inviteLink = botStatus.inviteLink;
       if (!inviteLink && servers.length > 0) {
