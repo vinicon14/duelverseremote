@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Users, Clock, Trophy, Swords, Crown, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { announceDuelRoom } from "@/utils/announceDuelRoom";
 
 export default function ProDuels() {
   const navigate = useNavigate();
@@ -76,6 +77,28 @@ export default function ProDuels() {
         .single();
 
       if (error) throw error;
+
+      // Anuncia a nova sala no chat global e Discord
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('username, avatar_url, language_code')
+          .eq('user_id', currentUser.id)
+          .maybeSingle();
+        if (profile?.username) {
+          announceDuelRoom({
+            duelId: data.id,
+            username: profile.username,
+            avatarUrl: profile.avatar_url,
+            userId: currentUser.id,
+            tcgType: data.tcg_type || 'yugioh',
+            languageCode: profile.language_code || 'en',
+            roomName,
+          });
+        }
+      } catch (e) {
+        console.warn('announceDuelRoom skipped:', e);
+      }
 
       navigate(`/duel/${data.id}`);
     } catch (error: any) {
