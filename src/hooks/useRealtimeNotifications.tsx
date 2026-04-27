@@ -89,7 +89,7 @@ export const useRealtimeNotifications = (userId: string | undefined) => {
             .eq('user_id', userId)
             .single();
           const myUsername = myProfile?.username?.toLowerCase() || '';
-          const hasMention = msgText.includes('@todos') ||
+          const hasMention = msgText.includes('@everyone') ||
             (myUsername && msgText.toLowerCase().includes(`@${myUsername}`));
 
           if (!hasMention) return;

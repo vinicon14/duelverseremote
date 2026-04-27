@@ -39,6 +39,7 @@ export const GlobalChat = () => {
   const [bridgeEnabled, setBridgeEnabled] = useState(false);
   const [inviteLink, setInviteLink] = useState("https://discord.gg/A7GqCGNGNn");
   const [discordDialogOpen, setDiscordDialogOpen] = useState(false);
+  const [partnerServersOpen, setPartnerServersOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -90,7 +91,7 @@ export const GlobalChat = () => {
               .single();
 
             const myUsername = myProfile?.username?.toLowerCase() || "";
-            const hasMention = msgText.includes("@todos") || (myUsername && msgText.toLowerCase().includes(`@${myUsername}`));
+            const hasMention = msgText.includes("@everyone") || (myUsername && msgText.toLowerCase().includes(`@${myUsername}`));
 
             if (hasMention) {
               const senderName = userData?.username || "Anônimo";
@@ -149,8 +150,46 @@ export const GlobalChat = () => {
     }
   };
 
+  interface PartnerServer {
+    id: string;
+    name: string;
+    inviteLink: string;
+    description?: string;
+    iconUrl?: string;
+  }
+
+  const [partnerServers, setPartnerServers] = useState<PartnerServer[]>([]);
+
+  const fetchPartnerServers = async () => {
+    try {
+      const { data: cfg } = await supabase
+        .from("system_settings")
+        .select("value")
+        .eq("key", "discord_bot_status")
+        .maybeSingle();
+
+      if (cfg?.value) {
+        const status = typeof cfg.value === "string" ? JSON.parse(cfg.value) : cfg.value;
+        const servers = Array.isArray(status?.servers) ? status.servers : [];
+        const formatted = servers
+          .filter((s: any) => s.enabled && s.inviteLink)
+          .map((s: any) => ({
+            id: s.id,
+            name: s.name,
+            inviteLink: s.inviteLink,
+            description: s.description || "",
+            iconUrl: s.iconUrl || s.icon_url,
+          }));
+        setPartnerServers(formatted);
+      }
+    } catch (error) {
+      console.error("Erro ao buscar servidores parceiros:", error);
+    }
+  };
+
   useEffect(() => {
     fetchDiscordServers();
+    fetchPartnerServers();
   }, []);
 
   const checkAuth = async () => {
@@ -304,8 +343,8 @@ export const GlobalChat = () => {
 
   const fetchMentionSuggestions = async (query: string) => {
     const staticOptions: { username: string; user_id: string }[] = [];
-    if ("todos".startsWith(query)) {
-      staticOptions.push({ username: "todos", user_id: "todos" });
+    if ("everyone".startsWith(query)) {
+      staticOptions.push({ username: "everyone", user_id: "everyone" });
     }
 
     if (query.length === 0) {
@@ -390,6 +429,10 @@ export const GlobalChat = () => {
                 <DropdownMenuItem onSelect={() => window.open(inviteLink || "https://discord.gg/A7GqCGNGNn", "_blank", "noopener,noreferrer")}>
                   <ExternalLink className="mr-2 h-4 w-4" />
                   Adicionar servidor
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setPartnerServersOpen(true)}>
+                  <Link2 className="mr-2 h-4 w-4" />
+                  Servidores parceiros
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={handleOpenDiscordConnect}>
                   <Link2 className="mr-2 h-4 w-4" />
@@ -503,6 +546,58 @@ export const GlobalChat = () => {
             </DialogDescription>
           </DialogHeader>
           <DiscordLinkCard embedded />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={partnerServersOpen} onOpenChange={setPartnerServersOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Servidores Parceiros</DialogTitle>
+            <DialogDescription>
+              Lista de servidores Discord conectados ao DuelVerse. Clique para entrar.
+            </DialogDescription>
+          </DialogHeader>
+          {partnerServers.length === 0 ? (
+            <p className="text-muted-foreground py-4 text-center">
+              Nenhum servidor parceiro disponível no momento.
+            </p>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {partnerServers.map((server) => (
+                <div
+                  key={server.id}
+                  className="flex cursor-pointer flex-col gap-3 rounded-lg border border-border bg-card p-4 transition-colors hover:bg-accent"
+                  onClick={() => {
+                    window.open(server.inviteLink, "_blank", "noopener,noreferrer");
+                  }}
+                >
+                  <div className="flex items-center gap-3">
+                    {server.iconUrl ? (
+                      <img
+                        src={server.iconUrl}
+                        alt={server.name}
+                        className="h-12 w-12 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/20 text-xl font-bold">
+                        {server.name[0]?.toUpperCase()}
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="truncate font-semibold">{server.name}</h3>
+                      {server.description && (
+                        <p className="text-muted-foreground truncate text-sm">{server.description}</p>
+                      )}
+                    </div>
+                  </div>
+                  <Button className="w-full" size="sm">
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    Entrar no servidor
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </>

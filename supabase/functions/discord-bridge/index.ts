@@ -258,6 +258,8 @@ serve(async (req) => {
         channelId,
         inviteLink,
         webhookUrl,
+        description: body?.description || "",
+        iconUrl: body?.iconUrl || null,
       });
       status.servers = filtered;
 
@@ -356,10 +358,10 @@ serve(async (req) => {
       }
 
       const webhookPayload = {
-        content: body.content,
+        content: "/dv " + body.content,
         username: finalUsername || "DuelVerse Player",
         avatar_url: finalAvatar || undefined,
-        allowed_mentions: { parse: ["users"] },
+        allowed_mentions: { parse: ["users", "everyone"], users: [], roles: [] },
       };
 
       const results: Array<{ ok: boolean; url: string; status?: number }> = [];
