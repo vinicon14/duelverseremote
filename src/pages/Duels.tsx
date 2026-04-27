@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Navbar } from "@/components/Navbar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { Swords, Plus, Users, Clock, Download, Search, Sparkles } from "lucide-react";
+import { Swords, Plus, Users, Clock, Download, Search, Sparkles, Lock } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Link } from "react-router-dom";
 import { useBanCheck } from "@/hooks/useBanCheck";
@@ -38,10 +38,15 @@ const Duels = () => {
   const [isRanked, setIsRanked] = useState(true);
   const [maxPlayers, setMaxPlayers] = useState(2);
   const [durationMinutes, setDurationMinutes] = useState(50);
+  const [isPrivate, setIsPrivate] = useState(false);
+  const [roomPassword, setRoomPassword] = useState("");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showAdPopup, setShowAdPopup] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [pendingAction, setPendingAction] = useState<{ type: 'create' | 'join', duelId?: string } | null>(null);
+  // Password prompt for joining private rooms
+  const [passwordPrompt, setPasswordPrompt] = useState<{ duelId: string; expected: string } | null>(null);
+  const [enteredPassword, setEnteredPassword] = useState("");
 
   const platform = detectPlatform();
   const isWebBrowser = !platform.isStandalone && !(window as any).electronAPI?.isElectron && !platform.isNativeApp;
@@ -124,7 +129,15 @@ const Duels = () => {
       });
       return;
     }
-    
+    if (isPrivate && roomPassword.trim().length < 3) {
+      toast({
+        title: "Senha obrigatória",
+        description: "Defina uma senha com pelo menos 3 caracteres para a sala privada.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Mostrar anúncio antes de criar
     setPendingAction({ type: 'create' });
     setShowCreateDialog(false);
@@ -168,7 +181,9 @@ const Duels = () => {
           player3_lp: defaultLP,
           player4_lp: defaultLP,
           max_players: playerCount,
-        })
+          is_private: isPrivate,
+          password: isPrivate ? roomPassword.trim() : null,
+        } as any)
         .select()
         .single();
 
@@ -176,30 +191,38 @@ const Duels = () => {
 
       toast({
         title: t('duels.roomCreated'),
-        description: t('duels.roomCreatedDesc'),
+        description: isPrivate
+          ? `Sala privada criada. Senha: ${roomPassword.trim()}`
+          : t('duels.roomCreatedDesc'),
       });
 
-      // Anuncia a nova sala no chat global e Discord
-      try {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('username, avatar_url, language_code')
-          .eq('user_id', user.id)
-          .maybeSingle();
-        if (profile?.username) {
-          announceDuelRoom({
-            duelId: data.id,
-            username: profile.username,
-            avatarUrl: profile.avatar_url,
-            userId: user.id,
-            tcgType: activeTcg,
-            languageCode: profile.language_code || 'en',
-            roomName,
-          });
+      // Anuncia a nova sala no chat global e Discord — apenas para salas públicas
+      if (!isPrivate) {
+        try {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('username, avatar_url, language_code')
+            .eq('user_id', user.id)
+            .maybeSingle();
+          if (profile?.username) {
+            announceDuelRoom({
+              duelId: data.id,
+              username: profile.username,
+              avatarUrl: profile.avatar_url,
+              userId: user.id,
+              tcgType: activeTcg,
+              languageCode: profile.language_code || 'en',
+              roomName,
+            });
+          }
+        } catch (e) {
+          console.warn('announceDuelRoom skipped:', e);
         }
-      } catch (e) {
-        console.warn('announceDuelRoom skipped:', e);
       }
+
+      // Reset campos de privacidade
+      setIsPrivate(false);
+      setRoomPassword("");
 
       // Redirecionar diretamente para a sala
       navigate(`/duel/${data.id}`);
@@ -212,7 +235,28 @@ const Duels = () => {
     }
   };
 
-  const handleJoinDuel = (duelId: string) => {
+  const handleJoinDuel = async (duelId: string) => {
+    // Verifica se a sala é privada — se for, pede a senha antes de tudo
+    try {
+      const { data: roomInfo } = await supabase
+        .from('live_duels')
+        .select('is_private, password, creator_id')
+        .eq('id', duelId)
+        .maybeSingle();
+      const room = roomInfo as any;
+      if (room?.is_private) {
+        const { data: { user } } = await supabase.auth.getUser();
+        // O criador entra livremente na própria sala privada
+        if (user && room.creator_id !== user.id) {
+          setEnteredPassword("");
+          setPasswordPrompt({ duelId, expected: room.password || "" });
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('Falha ao checar privacidade da sala:', e);
+    }
+
     // Mostrar anúncio antes de entrar
     setPendingAction({ type: 'join', duelId });
     setShowAdPopup(true);
@@ -479,6 +523,38 @@ const Duels = () => {
                       </div>
                     )}
 
+                    {/* Sala Privada com senha */}
+                    <div className="space-y-2 border-t border-border/40 pt-4">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="is-private" className="flex items-center gap-2">
+                          <Lock className="h-4 w-4" />
+                          Sala privada
+                        </Label>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={isPrivate ? "default" : "outline"}
+                          onClick={() => setIsPrivate((v) => !v)}
+                          className={isPrivate ? "btn-mystic text-white" : ""}
+                        >
+                          {isPrivate ? "Ativada" : "Desativada"}
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Salas privadas não aparecem no matchmaking automático e exigem senha para entrar.
+                      </p>
+                      {isPrivate && (
+                        <Input
+                          id="room-password"
+                          type="text"
+                          placeholder="Defina uma senha (mín. 3 caracteres)"
+                          value={roomPassword}
+                          onChange={(e) => setRoomPassword(e.target.value)}
+                          className="bg-background/50"
+                        />
+                      )}
+                    </div>
+
                     <Button onClick={handleCreateDuel} className="w-full btn-mystic text-white">
                       {t('duels.createAndEnter')}
                     </Button>
@@ -549,6 +625,11 @@ const Duels = () => {
                           ) : (
                             <span className="text-xs px-2 py-1 rounded-full bg-accent/20 text-accent">
                               Em andamento
+                            </span>
+                          )}
+                          {(duel as any).is_private && (
+                            <span className="text-xs px-2 py-1 rounded-full bg-purple-500/20 text-purple-400 flex items-center gap-1">
+                              <Lock className="h-3 w-3" /> Privada
                             </span>
                           )}
                         </div>
@@ -650,6 +731,79 @@ const Duels = () => {
       {showAdPopup && (
         <AdPopup onClose={handleAdClose} />
       )}
+
+      {/* Prompt de senha para sala privada */}
+      <Dialog
+        open={!!passwordPrompt}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPasswordPrompt(null);
+            setEnteredPassword("");
+          }
+        }}
+      >
+        <DialogContent className="card-mystic">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Lock className="h-5 w-5" /> Sala privada
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Esta sala requer senha. Solicite-a ao criador para entrar.
+            </p>
+            <Input
+              type="text"
+              placeholder="Digite a senha"
+              value={enteredPassword}
+              onChange={(e) => setEnteredPassword(e.target.value)}
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && passwordPrompt) {
+                  if (enteredPassword === passwordPrompt.expected) {
+                    const id = passwordPrompt.duelId;
+                    setPasswordPrompt(null);
+                    setEnteredPassword("");
+                    setPendingAction({ type: 'join', duelId: id });
+                    setShowAdPopup(true);
+                  } else {
+                    toast({ title: 'Senha incorreta', variant: 'destructive' });
+                  }
+                }
+              }}
+            />
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  setPasswordPrompt(null);
+                  setEnteredPassword("");
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                className="flex-1 btn-mystic text-white"
+                onClick={() => {
+                  if (!passwordPrompt) return;
+                  if (enteredPassword === passwordPrompt.expected) {
+                    const id = passwordPrompt.duelId;
+                    setPasswordPrompt(null);
+                    setEnteredPassword("");
+                    setPendingAction({ type: 'join', duelId: id });
+                    setShowAdPopup(true);
+                  } else {
+                    toast({ title: 'Senha incorreta', variant: 'destructive' });
+                  }
+                }}
+              >
+                Entrar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

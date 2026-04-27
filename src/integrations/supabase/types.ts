@@ -738,10 +738,12 @@ export type Database = {
           duration_minutes: number
           finished_at: string | null
           id: string
+          is_private: boolean
           is_ranked: boolean
           is_timer_paused: boolean
           max_players: number
           opponent_id: string | null
+          password: string | null
           player1_lp: number
           player2_lp: number
           player3_id: string | null
@@ -763,10 +765,12 @@ export type Database = {
           duration_minutes?: number
           finished_at?: string | null
           id?: string
+          is_private?: boolean
           is_ranked?: boolean
           is_timer_paused?: boolean
           max_players?: number
           opponent_id?: string | null
+          password?: string | null
           player1_lp?: number
           player2_lp?: number
           player3_id?: string | null
@@ -788,10 +792,12 @@ export type Database = {
           duration_minutes?: number
           finished_at?: string | null
           id?: string
+          is_private?: boolean
           is_ranked?: boolean
           is_timer_paused?: boolean
           max_players?: number
           opponent_id?: string | null
+          password?: string | null
           player1_lp?: number
           player2_lp?: number
           player3_id?: string | null
