@@ -103,6 +103,7 @@ export function AdminDiscord() {
   const [editDescription, setEditDescription] = useState("");
   const [editIconUrl, setEditIconUrl] = useState("");
   const [editVoiceChannelIds, setEditVoiceChannelIds] = useState<string[]>([]);
+  const [editStatsChannelId, setEditStatsChannelId] = useState<string>("");
 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
