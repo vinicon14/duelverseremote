@@ -290,9 +290,9 @@ export const AdminSettings = () => {
         </CardHeader>
         <CardContent className="space-y-6">
           {([
-            { key: 'ygo' as const, label: '🎴 YGO (Yu-Gi-Oh!)', url: ringtoneYgo, file: ringtoneFileYgo, setFile: setRingtoneFileYgo },
-            { key: 'mtg' as const, label: '🧙 MTG (Magic: The Gathering)', url: ringtoneMtg, file: ringtoneFileMtg, setFile: setRingtoneFileMtg },
-            { key: 'pkm' as const, label: '⚡ PKM (Pokémon TCG)', url: ringtonePkm, file: ringtoneFilePkm, setFile: setRingtoneFilePkm },
+            { key: 'ygo' as const, label: '🃏 YGO Advanced', url: ringtoneYgo, file: ringtoneFileYgo, setFile: setRingtoneFileYgo },
+            { key: 'mtg' as const, label: '⚛️ Genesis', url: ringtoneMtg, file: ringtoneFileMtg, setFile: setRingtoneFileMtg },
+            { key: 'pkm' as const, label: '⚡ Rush Duel', url: ringtonePkm, file: ringtoneFilePkm, setFile: setRingtoneFilePkm },
           ]).map((tcg) => (
             <div key={tcg.key} className="rounded-lg border border-border p-4 space-y-3">
               <div className="flex items-center gap-2">

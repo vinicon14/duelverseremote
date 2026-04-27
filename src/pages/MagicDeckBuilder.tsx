@@ -352,7 +352,7 @@ export default function MagicDeckBuilder() {
       <main className="container mx-auto px-4 pt-20 pb-8">
         <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
           <h1 className="text-2xl font-bold text-gradient-gold flex items-center gap-2">
-            ✨ MTG {t('deckBuilder.title')}
+            ✨ Genesis {t('deckBuilder.title')}
           </h1>
           <div className="flex gap-2 flex-wrap">
             <Button variant="outline" size="sm" onClick={exportDeck} className="gap-1">
@@ -546,7 +546,7 @@ export default function MagicDeckBuilder() {
               {loadingDecks ? (
                 <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin" /></div>
               ) : savedDecks.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">Nenhum deck MTG salvo</p>
+                <p className="text-center text-muted-foreground py-8">Nenhum deck Genesis salvo</p>
               ) : (
                 <div className="space-y-2">
                   {savedDecks.map(deck => {
