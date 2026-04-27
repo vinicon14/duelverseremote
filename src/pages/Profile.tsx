@@ -14,7 +14,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Trophy, Swords, Star, Calendar, Video, Eye, Play } from "lucide-react";
 import { AvatarUpload } from "@/components/AvatarUpload";
-import { BrowserNotificationTest } from "@/components/BrowserNotificationTest";
 import { ChangePasswordForm } from "@/components/ChangePasswordForm";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { DiscordLinkCard } from "@/components/DiscordLinkCard";
@@ -200,9 +199,6 @@ const Profile = () => {
       <Navbar />
       
       <main className="container mx-auto px-4 pt-20 sm:pt-24 pb-12">
-        {/* Push Notification Test - Only for own profile */}
-        {isOwnProfile && <BrowserNotificationTest />}
-
         {/* Profile Header */}
         <Card className="card-mystic mb-6 sm:mb-8 animate-fade-in-up">
           <CardContent className="pt-4 sm:pt-6">
