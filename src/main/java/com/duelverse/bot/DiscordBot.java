@@ -18,6 +18,8 @@ import net.dv8tion.jda.api.utils.cache.CacheFlag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.concurrent.TimeUnit;
+
 import javax.security.auth.login.LoginException;
 import java.util.EnumSet;
 import java.util.List;
@@ -148,6 +150,10 @@ public class DiscordBot extends ListenerAdapter {
     }
 
     public void sendMessageToDiscord(String username, String content) {
+        sendMessageToDiscord(username, content, true);
+    }
+
+    public void sendMessageToDiscord(String username, String content, boolean autoDelete) {
         if (serverManager == null) {
             return;
         }
@@ -156,11 +162,29 @@ public class DiscordBot extends ListenerAdapter {
             TextChannel channel = getOrCreateChannel(serverId);
             if (channel != null) {
                 String formattedMessage = String.format("**%s**: %s", username, content);
-                channel.sendMessage(formattedMessage).queue(
-                    success -> logger.info("Mensagem enviada para Discord ({}): {}", 
-                        channel.getGuild().getName(), username),
-                    error -> logger.error("Erro ao enviar mensagem para Discord", error)
-                );
+                
+                if (autoDelete) {
+                    // Enviar e agendar delete após 10 minutos
+                    channel.sendMessage(formattedMessage).queue(
+                        success -> {
+                            // Agendar exclusão após 10 minutos (600000 ms)
+                            success.delete().queueAfter(10, TimeUnit.MINUTES, 
+                                null, // sucesso não precisa tratar
+                                error -> logger.debug("Mensagem expirada ou já deletada")
+                            );
+                            logger.info("Mensagem enviada para Discord ({}): {} (será deletada em 10min)", 
+                                channel.getGuild().getName(), username);
+                        },
+                        error -> logger.error("Erro ao enviar mensagem para Discord", error)
+                    );
+                } else {
+                    // Mensagem persistente sem auto-delete
+                    channel.sendMessage(formattedMessage).queue(
+                        success -> logger.info("Mensagem persistente enviada para Discord ({}): {}", 
+                            channel.getGuild().getName(), username),
+                        error -> logger.error("Erro ao enviar mensagem para Discord", error)
+                    );
+                }
             }
         }
     }

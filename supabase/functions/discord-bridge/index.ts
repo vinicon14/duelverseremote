@@ -617,11 +617,23 @@ serve(async (req) => {
           body: JSON.stringify(webhookPayload),
         });
         const posted = await response.json().catch(() => null);
-        // IMPORTANT: do NOT auto-delete the matchmaking message.
-        // It must remain visible in Discord until somebody actually accepts
-        // the invite (handled by accept-match-invite, which clears it).
+        
+        // Auto-delete matchmaking message after 10 minutes
         if (response.ok && posted?.id) {
           postedMessages.push({ webhookUrl: server.webhookUrl, messageId: posted.id });
+          
+          // Schedule deletion after 10 minutes (600000ms)
+          setTimeout(async () => {
+            try {
+              await fetch(server.webhookUrl + `?wait=true`, {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+              });
+              console.log("[discord-bridge] Matchmaking message deleted after 10min");
+            } catch (e) {
+              console.log("[discord-bridge] Failed to delete message:", e.message);
+            }
+          }, 600000);
         }
         results.push({ ok: response.ok, status: response.status, messageId: posted?.id, webhookUrl: server.webhookUrl });
       }
