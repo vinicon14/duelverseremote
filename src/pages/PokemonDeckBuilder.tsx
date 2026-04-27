@@ -37,7 +37,7 @@ interface YugiohCard {
   scale?: number;
   linkval?: number;
   card_images: {
-id: number;
+    id: number;
     image_url: string;
     image_url_small: string;
     image_url_cropped: string;
