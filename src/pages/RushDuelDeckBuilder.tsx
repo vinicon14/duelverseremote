@@ -46,9 +46,9 @@ interface DeckCard extends YugiohCard {
   quantity: number;
 }
 
-const RUSH_DUEL_TYPES = ['All', 'Normal Monster', 'Effect Monster', 'Spell', 'Trap'];
+const RUSH_DUEL_TYPES = ['All', 'Normal Monster', 'Effect Monster', 'Fusion Monster', 'Spell', 'Trap'];
 const RUSH_ATTRIBUTES = ['All', 'DARK', 'DIVINE', 'EARTH', 'FIRE', 'LIGHT', 'WATER', 'WIND'];
-const RUSH_FORMAT = 'Rush Duel';
+const RUSH_FORMAT = 'rush duel';
 
 export default function RushDuelDeckBuilder() {
   const { toast } = useToast();
@@ -83,16 +83,23 @@ export default function RushDuelDeckBuilder() {
     if (!searchQuery.trim() && typeFilter === 'All' && attributeFilter === 'All') return;
     setLoading(true);
     try {
-      let query = `https://db.ygoprodeck.com/api/v7/cardinfo.php?format=${encodeURIComponent(RUSH_FORMAT)}&num=40`;
-      const params: string[] = [];
-      if (searchQuery.trim()) params.push(`fname=${encodeURIComponent(searchQuery.trim())}`);
-      if (typeFilter !== 'All') params.push(`type=${encodeURIComponent(typeFilter)}`);
-      if (attributeFilter !== 'All') params.push(`attribute=${encodeURIComponent(attributeFilter)}`);
-      if (params.length > 0) query += '&' + params.join('&');
+      const query = `https://rushcard.io/api/card/?search=${encodeURIComponent(searchQuery)}&num=40`;
       const res = await fetch(query);
       const data = await res.json();
-      setSearchResults(data.data || []);
+      
+      const cards: YugiohCard[] = Array.isArray(data) ? data : data.cards || [];
+      
+      let filtered = cards;
+      if (typeFilter !== 'All') {
+        filtered = filtered.filter(c => c.type.includes(typeFilter));
+      }
+      if (attributeFilter !== 'All') {
+        filtered = filtered.filter(c => c.attribute === attributeFilter);
+      }
+      
+      setSearchResults(filtered.slice(0, 40));
     } catch (error) {
+      console.error('Rush Duel search error:', error);
       toast({ title: 'Erro na busca', description: 'Não foi possível buscar cartas', variant: 'destructive' });
     } finally {
       setLoading(false);
@@ -256,7 +263,7 @@ export default function RushDuelDeckBuilder() {
             Rush Duel Deck Builder
           </h1>
           <p className="text-sm text-muted-foreground">
-            {currentDeckName ? `Deck: ${currentDeckName}` : 'Deck vazio'} • Formato: Rush Duel
+            {currentDeckName ? `Deck: ${currentDeckName}` : 'Deck vazio'} • Formato Rush Duel (SEVENS ROAD)
           </p>
         </div>
 
@@ -267,7 +274,7 @@ export default function RushDuelDeckBuilder() {
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input 
-                    placeholder="Buscar cartas Rush Duel..." 
+                    placeholder="Buscar cartas Rush Duel... (ex: Yuga, Sevens Road)" 
                     value={searchQuery} 
                     onChange={e => setSearchQuery(e.target.value)} 
                     onKeyDown={e => e.key === 'Enter' && searchCards()} 
