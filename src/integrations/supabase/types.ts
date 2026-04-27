@@ -566,6 +566,33 @@ export type Database = {
           },
         ]
       }
+      genesis_card_costs: {
+        Row: {
+          card_id: string
+          card_name: string | null
+          created_at: string
+          id: string
+          points: number
+          updated_at: string
+        }
+        Insert: {
+          card_id: string
+          card_name?: string | null
+          created_at?: string
+          id?: string
+          points: number
+          updated_at?: string
+        }
+        Update: {
+          card_id?: string
+          card_name?: string | null
+          created_at?: string
+          id?: string
+          points?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       global_chat_messages: {
         Row: {
           created_at: string

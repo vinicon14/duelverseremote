@@ -597,7 +597,7 @@ export const FloatingOpponentViewer = ({
                   <div className="absolute inset-0 bg-black/40 rounded-lg pointer-events-none z-0" />
                 )}
                 <div className="relative z-10">
-                  <span className="text-[10px] font-medium text-muted-foreground">Campo MTG do Oponente</span>
+                  <span className="text-[10px] font-medium text-muted-foreground">Campo Genesis do Oponente</span>
                   {opponentState.battlefield && opponentState.battlefield.length > 0 && (
                     <ZoneDisplay title="Campo de Batalha" cards={opponentState.battlefield} icon={Layers} color="text-primary" />
                   )}
@@ -633,7 +633,7 @@ export const FloatingOpponentViewer = ({
                   <div className="absolute inset-0 bg-black/40 rounded-lg pointer-events-none z-0" />
                 )}
                 <div className="relative z-10">
-                  <span className="text-[10px] font-medium text-muted-foreground">Campo Pokémon do Oponente</span>
+                  <span className="text-[10px] font-medium text-muted-foreground">Campo Rush Duel do Oponente</span>
                   
                   {/* Stadium */}
                   {opponentState.stadium && (

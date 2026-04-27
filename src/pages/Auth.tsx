@@ -31,10 +31,11 @@ const DiscordIcon = ({ className = "" }: { className?: string }) => (
   </svg>
 );
 
+// Rebranding (apenas display): YGO Advanced é destaque, Genesis e Rush Duel completam o menu.
 const TCG_OPTIONS: { value: TcgType; label: string; icon: React.ReactNode; color: string; bgGradient: string }[] = [
-  { value: 'yugioh', label: 'Yu-Gi-Oh!', icon: <Swords className="w-5 h-5" />, color: 'border-purple-500 bg-purple-500/10', bgGradient: 'from-purple-500/20 via-background to-pink-500/10' },
-  { value: 'magic', label: 'Magic: The Gathering', icon: <Sparkles className="w-5 h-5" />, color: 'border-amber-500 bg-amber-500/10', bgGradient: 'from-amber-500/20 via-background to-red-700/10' },
-  { value: 'pokemon', label: 'Pokémon TCG', icon: <Zap className="w-5 h-5" />, color: 'border-yellow-500 bg-yellow-500/10', bgGradient: 'from-yellow-500/20 via-background to-blue-500/10' },
+  { value: 'yugioh', label: 'YGO Advanced', icon: <Swords className="w-5 h-5" />, color: 'border-purple-500 bg-purple-500/10', bgGradient: 'from-purple-500/20 via-background to-pink-500/10' },
+  { value: 'magic', label: 'Genesis', icon: <Sparkles className="w-5 h-5" />, color: 'border-amber-500 bg-amber-500/10', bgGradient: 'from-amber-500/20 via-background to-red-700/10' },
+  { value: 'pokemon', label: 'Rush Duel', icon: <Zap className="w-5 h-5" />, color: 'border-yellow-500 bg-yellow-500/10', bgGradient: 'from-yellow-500/20 via-background to-blue-500/10' },
 ];
 
 const Auth = () => {

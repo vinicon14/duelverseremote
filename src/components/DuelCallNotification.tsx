@@ -25,16 +25,17 @@ interface DuelCallInvite {
   };
 }
 
+// Rebranding: chaves internas mantidas, somente o display muda.
 const TCG_LABELS: Record<string, string> = {
-  yugioh: '🎴 YGO',
-  magic: '🧙 MTG',
-  pokemon: '⚡ PKM',
+  yugioh: '🃏 Advanced',
+  magic: '⚛️ Genesis',
+  pokemon: '⚡ Rush',
 };
 
 const TCG_FULL: Record<string, string> = {
-  yugioh: 'Yu-Gi-Oh!',
-  magic: 'Magic: The Gathering',
-  pokemon: 'Pokémon TCG',
+  yugioh: 'YGO Advanced',
+  magic: 'Genesis',
+  pokemon: 'Rush Duel',
 };
 
 const TCG_SETTINGS_KEY: Record<string, string> = {

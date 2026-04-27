@@ -188,7 +188,7 @@ export const ShareVideoButton = ({
           </div>
 
           <p className="text-xs text-muted-foreground text-center pt-2">
-            💎 DuelVerse - A melhor plataforma de duelos de Yu-Gi-Oh!
+            💎 DuelVerse - A melhor plataforma de duelos de YGO Advanced!
           </p>
         </div>
       </DialogContent>

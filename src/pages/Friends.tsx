@@ -583,21 +583,21 @@ const Friends = () => {
               className="w-full h-14 text-lg"
               variant="outline"
             >
-              🎴 YGO — Yu-Gi-Oh!
+              🃏 YGO Advanced
             </Button>
             <Button
               onClick={() => challengeTarget && challengeFriend(challengeTarget, 'magic')}
               className="w-full h-14 text-lg"
               variant="outline"
             >
-              🧙 MTG — Magic: The Gathering
+              ⚛️ Genesis
             </Button>
             <Button
               onClick={() => challengeTarget && challengeFriend(challengeTarget, 'pokemon')}
               className="w-full h-14 text-lg"
               variant="outline"
             >
-              ⚡ PKM — Pokémon TCG
+              ⚡ Rush Duel
             </Button>
           </div>
           <Button variant="ghost" className="mt-2" onClick={() => setChallengeTarget(null)}>

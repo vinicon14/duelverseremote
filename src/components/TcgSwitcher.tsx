@@ -20,10 +20,12 @@ const TCG_ICONS: Record<TcgType, React.ReactNode> = {
   pokemon: <Zap className="w-4 h-4" />,
 };
 
+// Nomes exibidos: rebranding para YGO Advanced / Genesis / Rush Duel.
+// Mantém as chaves internas yugioh/magic/pokemon.
 const TCG_NAMES: Record<TcgType, string> = {
-  yugioh: 'YGO',
-  magic: 'MTG',
-  pokemon: 'PKM',
+  yugioh: 'Advanced',
+  magic: 'Genesis',
+  pokemon: 'Rush',
 };
 
 export const TcgSwitcher = () => {
