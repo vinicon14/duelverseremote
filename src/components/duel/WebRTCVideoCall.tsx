@@ -335,17 +335,27 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       const remotePeerId = payload.senderId;
 
       if (payload.type === "ready") {
-        // New peer announced itself, create connection and send offer
-        if (!peersRef.current.has(remotePeerId)) {
+        const isNewPeer = !peersRef.current.has(remotePeerId);
+        if (isNewPeer) {
           createPeerConnection(remotePeerId);
         }
         const peer = peersRef.current.get(remotePeerId);
         if (!peer) return;
 
-        // Spectator handling:
-        // - If WE are spectator: never create offer, wait for player's offer.
-        // - If REMOTE is spectator (announced via payload.isSpectator): WE always create offer.
-        // - Otherwise: standard glare-avoidance via id comparison.
+        // Spectator handshake: if we are spectator and this is a new player peer,
+        // reply with our own targeted "ready" so the player knows to create an offer.
+        if (isSpectator && isNewPeer && payload.isSpectator !== true) {
+          channelRef.current?.send({
+            type: "broadcast",
+            event: "webrtc-signal",
+            payload: { type: "ready", senderId: userId, targetId: remotePeerId, isSpectator: true },
+          });
+        }
+
+        // Decide who creates the offer:
+        // - Spectator never creates the offer.
+        // - If remote is spectator, we (player) always create it.
+        // - Otherwise, glare-avoidance via id comparison.
         const remoteIsSpectator = payload.isSpectator === true;
         let shouldCreateOffer: boolean;
         if (isSpectator) {
