@@ -50,6 +50,75 @@ const Auth = () => {
 
   const returnTo = (location.state as any)?.returnTo;
 
+  // Handle Discord OAuth login redirect: ?discord=success&flow=login&token_hash=...&email=...
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const discordStatus = params.get('discord');
+    const flow = params.get('flow');
+    const tokenHash = params.get('token_hash');
+    const email = params.get('email');
+
+    if (discordStatus === 'success' && flow === 'login' && tokenHash && email) {
+      (async () => {
+        try {
+          setLoading(true);
+          const { error } = await supabase.auth.verifyOtp({
+            type: 'magiclink',
+            token_hash: tokenHash,
+            email,
+          } as any);
+          if (error) throw error;
+          // Clean URL params after consuming them
+          window.history.replaceState({}, '', window.location.pathname);
+          toast({ title: t('auth.loginSuccess'), description: t('auth.welcomeBack') });
+          // onAuthStateChange will handle navigation
+        } catch (err: any) {
+          console.error('[AUTH] Discord login finalize failed:', err);
+          toast({
+            title: t('auth.loginError'),
+            description: err.message || 'Discord login failed',
+            variant: 'destructive',
+          });
+        } finally {
+          setLoading(false);
+        }
+      })();
+    } else if (discordStatus === 'error') {
+      const message = params.get('message') || 'unknown_error';
+      toast({
+        title: t('auth.loginError'),
+        description: `Discord: ${message}`,
+        variant: 'destructive',
+      });
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleDiscordSignIn = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase.functions.invoke('discord-oauth-start', {
+        body: {
+          mode: 'login',
+          origin: window.location.origin,
+          returnPath: returnTo || '/',
+        },
+      });
+      if (error) throw error;
+      if (!data?.url) throw new Error('Discord URL not returned');
+      window.location.href = data.url;
+    } catch (err: any) {
+      console.error('[AUTH] Discord sign-in error:', err);
+      toast({
+        title: t('auth.loginError'),
+        description: err.message || 'Discord login failed',
+        variant: 'destructive',
+      });
+      setLoading(false);
+    }
+  };
+
   // Verificar se usuário já está logado e redirecionar
   useEffect(() => {
     const defaultRedirect = returnTo || '/';
