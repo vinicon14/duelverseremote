@@ -324,16 +324,29 @@ export const DiscordScreenshareButton = ({
                   <SelectContent>
                     {partnerServers.map((server) => (
                       <SelectItem key={server.id} value={server.id}>
-                        <div className="flex items-center gap-2">
-                          <img
-                            src={server.coverImageUrl || `https://cdn.discordapp.com/icons/${server.id}/default_icon.png`}
-                            alt={server.name}
-                            className="w-5 h-5 rounded-full bg-indigo-500/20"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).src = "/placeholder.svg";
-                            }}
-                          />
-                          {server.name}
+                        <div className="flex items-center justify-between w-full gap-2">
+                          <div className="flex items-center gap-2">
+                            <img
+                              src={server.coverImageUrl || `https://cdn.discordapp.com/icons/${server.id}/default_icon.png`}
+                              alt={server.name}
+                              className="w-5 h-5 rounded-full bg-indigo-500/20"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = "/placeholder.svg";
+                              }}
+                            />
+                            <span>{server.name}</span>
+                          </div>
+                          {server.inviteLink && (
+                            <div 
+                              className="p-1 hover:bg-accent rounded-md"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                window.open(server.inviteLink, "_blank", "noopener,noreferrer");
+                              }}
+                            >
+                              <ExternalLink className="w-3 h-3 text-muted-foreground" />
+                            </div>
+                          )}
                         </div>
                       </SelectItem>
                     ))}

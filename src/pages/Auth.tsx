@@ -140,50 +140,54 @@ const Auth = () => {
   const handleDiscordSignIn = async () => {
     try {
       setLoading(true);
-      const { data: { session } } = await supabase.auth.getSession();
       
-      if (!session) {
-        const tempEmail = `discord-user-${Date.now()}@duelverse.local`;
-        const tempPassword = crypto.randomUUID();
-        
-        const { data, error: signUpError } = await supabase.auth.signUp({
-          email: tempEmail,
-          password: tempPassword,
-          options: {
-            data: {
-              selected_tcg: selectedTcg,
-              country_code: signupCountry || 'BR',
-              language_code: 'pt-BR',
-            }
-          }
-        });
+      // Tentativa 1: Usar o OAuth nativo do Supabase (mais estável)
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'discord',
+        options: {
+          redirectTo: window.location.origin,
+          queryParams: {
+            prompt: 'consent',
+          },
+        }
+      });
 
-        if (signUpError) throw signUpError;
-        if (!data.user) throw new Error('Falha ao criar usuario');
+      if (error) {
+        console.warn('Supabase Native OAuth failed, falling back to custom bridge:', error);
         
-        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-          email: tempEmail,
-          password: tempPassword,
-        });
-        
-        if (signInError) throw signInError;
-        if (!signInData.session?.access_token) throw new Error('Sem sessao');
-        
-        await initiateDiscordOAuth(signInData.session.access_token);
-      } else {
-        await initiateDiscordOAuth(session.access_token);
+        // Tentativa 2: Fallback para o nosso Custom Bridge (Edge Function)
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          await initiateDiscordOAuth(session.access_token);
+        } else {
+          // Se não houver sessão, o usuário precisa se autenticar primeiro para vincular
+          // ou usamos o fluxo de criação de conta temporária que você já tinha
+          const tempEmail = `discord-user-${Date.now()}@duelverse.local`;
+          const tempPassword = crypto.randomUUID();
+          
+          await supabase.auth.signUp({
+            email: tempEmail,
+            password: tempPassword,
+            options: { data: { selected_tcg: selectedTcg, country_code: signupCountry || 'BR' } }
+          });
+
+          const { data: signInData } = await supabase.auth.signInWithPassword({
+            email: tempEmail,
+            password: tempPassword,
+          });
+
+          if (signInData.session) {
+            await initiateDiscordOAuth(signInData.session.access_token);
+          } else {
+            throw new Error('Falha ao iniciar sessão para vinculação Discord');
+          }
+        }
       }
     } catch (error: any) {
       console.error('Erro no login com Discord:', error);
-      
-      let errorMessage = error.message || 'Erro desconhecido';
-      if (error.message?.includes('Failed to fetch') || error.message?.includes('fetch')) {
-        errorMessage = 'Erro de conexao com Discord. Verifique sua internet e tente novamente.';
-      }
-      
       toast({
         title: t('auth.loginError'),
-        description: errorMessage,
+        description: error.message || 'Não foi possível validar com o Discord.',
         variant: "destructive"
       });
     } finally {

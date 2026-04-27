@@ -69,23 +69,9 @@ serve(async (req) => {
     const scopes = [
       "identify",
       "email",
-      "connections",
       "guilds",
-      "guilds.members.read",
-      "rpc.voice.read",
-      "rpc.voice.write",
-      "rpc.screenshare.read",
-      "rpc.screenshare.write",
-      "rpc.video.read",
-      "rpc.video.write",
-      "activities.read",
-      "activities.write",
-      "relationships.read",
-      "role_connections.write",
-      "openid",
-      "gateway.connect",
-      "bot",
-      "guilds.join"
+      "guilds.join",
+      "connections"
     ].join(" ");
 
     const oauthUrl = new URL("https://discord.com/oauth2/authorize");
