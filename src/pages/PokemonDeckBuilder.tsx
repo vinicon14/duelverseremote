@@ -47,16 +47,6 @@ id: number;
 interface DeckCard extends YugiohCard {
   quantity: number;
 }
-  set: {
-    name: string;
-    id: string;
-  };
-  quantity?: number;
-}
-
-interface DeckCard extends YugiohCard {
-  quantity: number;
-}
 
 // Rush Duel card types (from YGO API format)
 const RUSH_DUEL_TYPES = [
