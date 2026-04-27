@@ -17,7 +17,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SEOHead } from "@/components/SEOHead";
 import { useTranslation } from "react-i18next";
 
-const TCG_LABELS: Record<string, string> = { yugioh: 'YGO', magic: 'MTG', pokemon: 'PKM' };
+const TCG_LABELS: Record<string, string> = { yugioh: 'YGO Advanced', magic: 'Genesis', pokemon: 'Rush Duel' };
 
 const Ranking = () => {
   const { t } = useTranslation();
@@ -78,9 +78,9 @@ const Ranking = () => {
           </p>
           <Tabs value={selectedTcg} onValueChange={setSelectedTcg} className="mt-4">
             <TabsList>
-              <TabsTrigger value="yugioh">YGO</TabsTrigger>
-              <TabsTrigger value="magic">MTG</TabsTrigger>
-              <TabsTrigger value="pokemon">PKM</TabsTrigger>
+              <TabsTrigger value="yugioh">YGO Advanced</TabsTrigger>
+              <TabsTrigger value="magic">Genesis</TabsTrigger>
+              <TabsTrigger value="pokemon">Rush Duel</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>

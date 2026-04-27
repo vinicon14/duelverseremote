@@ -1,12 +1,11 @@
 /**
- * DuelVerse - Pokémon Deck Builder
+ * DuelVerse - Rush Duel Deck Builder
  * 
- * Deck builder integrado com a API Pokémon TCG.
- * Segue regras oficiais do Pokémon TCG:
- * - Deck de exatamente 60 cartas
- * - Máximo 4 cópias (exceto Energia Básica)
- * - Precisa de pelo menos 1 Pokémon Básico
- * - Categorias: Pokémon, Treinador, Energia
+ * Deck builder usando a API YGOPRODeck com filtro Rush Duel.
+ * Segue regras oficiais do Rush Duel (Yu-Gi-Oh!):
+ * - Deck mínimo 20 cartas, máximo 30
+ * - Máximo 3 cópias por carta (exceto Token)
+ * - Pode usar cartas específicas do formato Rush Duel
  */
 import { useState, useEffect, useCallback } from 'react';
 import { Navbar } from '@/components/Navbar';
@@ -24,10 +23,26 @@ import { SaveDeckModal } from '@/components/deckbuilder/SaveDeckModal';
 import { LoadDeckModal } from '@/components/deckbuilder/LoadDeckModal';
 import { useTranslation } from 'react-i18next';
 
-interface PokemonCard {
-  id: string;
+interface YugiohCard {
+  id: number;
   name: string;
-  supertype: string;
+  type: string;
+  desc: string;
+  atk?: number;
+  def?: number;
+  level?: number;
+  race: string;
+  attribute?: string;
+  archetype?: string;
+  scale?: number;
+  linkval?: number;
+  card_images: {
+    id: number;
+    image_url: string;
+    image_url_small: string;
+    image_url_cropped: string;
+  }[];
+}
   subtypes?: string[];
   types?: string[];
   hp?: string;
@@ -49,13 +64,13 @@ interface PokemonCard {
   quantity?: number;
 }
 
-interface DeckCard extends PokemonCard {
+interface DeckCard extends YugiohCard {
   quantity: number;
 }
 
-const POKEMON_TYPES = [
-  'All', 'Colorless', 'Darkness', 'Dragon', 'Fairy', 'Fighting',
-  'Fire', 'Grass', 'Lightning', 'Metal', 'Psychic', 'Water'
+// Rush Duel card types (from YGO API format)
+const RUSH_DUEL_TYPES = [
+  'All', 'Normal Monster', 'Effect Monster', 'Spell', 'Trap'
 ];
 
 const SUPERTYPES = ['All', 'Pokémon', 'Trainer', 'Energy'];
@@ -66,12 +81,11 @@ export default function PokemonDeckBuilder() {
   const { toast } = useToast();
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<PokemonCard[]>([]);
+  const [searchResults, setSearchResults] = useState<YugiohCard[]>([]);
   const [deck, setDeck] = useState<DeckCard[]>([]);
   const [loading, setLoading] = useState(false);
   const [typeFilter, setTypeFilter] = useState('All');
-  const [supertypeFilter, setSupertypeFilter] = useState('All');
-  const [subtypeFilter, setSubtypeFilter] = useState('All');
+  const [attributeFilter, setAttributeFilter] = useState('All');
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showLoadModal, setShowLoadModal] = useState(false);
   const [savedDecks, setSavedDecks] = useState<any[]>([]);
@@ -80,7 +94,7 @@ export default function PokemonDeckBuilder() {
   const [currentDeckId, setCurrentDeckId] = useState<string | null>(null);
   const [currentDeckName, setCurrentDeckName] = useState('');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [previewCard, setPreviewCard] = useState<PokemonCard | null>(null);
+  const [previewCard, setPreviewCard] = useState<YugiohCard | null>(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -90,28 +104,25 @@ export default function PokemonDeckBuilder() {
     checkAuth();
   }, []);
 
-  const searchCards = useCallback(async () => {
-    if (!searchQuery.trim() && typeFilter === 'All' && supertypeFilter === 'All') return;
+const searchCards = useCallback(async () => {
+    if (!searchQuery.trim() && typeFilter === 'All' && attributeFilter === 'All') return;
     setLoading(true);
     try {
-      let query = 'https://api.pokemontcg.io/v2/cards?pageSize=40&orderBy=-set.releaseDate';
-      const filters: string[] = [];
+      let query = 'https://db.ygoprodeck.com/api/v7/cardinfo.php?format=Rush%20Duel&num=40';
+      const params: string[] = [];
       
       if (searchQuery.trim()) {
-        filters.push(`name:"*${searchQuery.trim()}*"`);
+        params.push(`fname=${encodeURIComponent(searchQuery.trim())}`);
       }
       if (typeFilter !== 'All') {
-        filters.push(`types:"${typeFilter}"`);
+        params.push(`type=${encodeURIComponent(typeFilter)}`);
       }
-      if (supertypeFilter !== 'All') {
-        filters.push(`supertype:"${supertypeFilter}"`);
-        if (supertypeFilter === 'Trainer' && subtypeFilter !== 'All') {
-          filters.push(`subtypes:"${subtypeFilter}"`);
-        }
+      if (attributeFilter !== 'All') {
+        params.push(`attribute=${encodeURIComponent(attributeFilter)}`);
       }
       
-      if (filters.length > 0) {
-        query += `&q=${encodeURIComponent(filters.join(' '))}`;
+      if (params.length > 0) {
+        query += '&' + params.join('&');
       }
 
       const res = await fetch(query);
@@ -122,21 +133,20 @@ export default function PokemonDeckBuilder() {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, typeFilter, supertypeFilter, subtypeFilter]);
+  }, [searchQuery, typeFilter, attributeFilter]);
 
-  const addToDeck = (card: PokemonCard) => {
+  const addToDeck = (card: YugiohCard) => {
     const totalCards = deck.reduce((sum, c) => sum + c.quantity, 0);
-    if (totalCards >= 60) {
-      toast({ title: 'Deck cheio', description: 'O deck já tem 60 cartas', variant: 'destructive' });
+    if (totalCards >= 30) {
+      toast({ title: 'Deck cheio', description: 'O deck já tem 30 cartas (máximo Rush Duel)', variant: 'destructive' });
       return;
     }
 
     const existing = deck.find(c => c.id === card.id);
-    const isBasicEnergy = card.supertype === 'Energy' && card.subtypes?.includes('Basic');
     
     if (existing) {
-      if (!isBasicEnergy && existing.quantity >= 4) {
-        toast({ title: 'Limite atingido', description: 'Máximo 4 cópias por carta (exceto Energia Básica)', variant: 'destructive' });
+      if (existing.quantity >= 3) {
+        toast({ title: 'Limite atingido', description: 'Máximo 3 cópias por carta', variant: 'destructive' });
         return;
       }
       setDeck(deck.map(c => c.id === card.id ? { ...c, quantity: c.quantity + 1 } : c));
@@ -145,7 +155,7 @@ export default function PokemonDeckBuilder() {
     }
   };
 
-  const removeFromDeck = (cardId: string) => {
+  const removeFromDeck = (cardId: number) => {
     setDeck(deck.map(c => {
       if (c.id === cardId) {
         if (c.quantity <= 1) return null as any;
@@ -158,27 +168,17 @@ export default function PokemonDeckBuilder() {
   const clearDeck = () => setDeck([]);
 
   const totalCards = deck.reduce((sum, c) => sum + c.quantity, 0);
-  const pokemonCards = deck.filter(c => c.supertype === 'Pokémon');
-  const pokemonCount = pokemonCards.reduce((s, c) => s + c.quantity, 0);
-  const trainerCount = deck.filter(c => c.supertype === 'Trainer').reduce((s, c) => s + c.quantity, 0);
-  const energyCount = deck.filter(c => c.supertype === 'Energy').reduce((s, c) => s + c.quantity, 0);
+  const monsterCards = deck.filter(c => c.type?.includes('Monster'));
+  const spellCount = deck.filter(c => c.type?.includes('Spell') || c.type === 'Spell').reduce((s, c) => s + c.quantity, 0);
+  const trapCount = deck.filter(c => c.type?.includes('Trap') || c.type === 'Trap').reduce((s, c) => s + c.quantity, 0);
   
-  // PKM validation
-  const basicPokemonCount = pokemonCards
-    .filter(c => c.subtypes?.includes('Basic'))
-    .reduce((s, c) => s + c.quantity, 0);
-  
-  const hasBasicPokemon = basicPokemonCount > 0;
-  const isDeckComplete = totalCards === 60;
-  const isDeckValid = isDeckComplete && hasBasicPokemon;
+  // Rush Duel validation
+  const isDeckComplete = totalCards >= 20 && totalCards <= 30;
+  const hasMonsters = monsterCards.length > 0;
+  const isDeckValid = isDeckComplete && hasMonsters;
 
-  // Check for evolution cards without their basic
-  const evolutionWarnings: string[] = [];
-  pokemonCards.forEach(card => {
-    if (card.evolvesFrom && !pokemonCards.some(c => c.name === card.evolvesFrom)) {
-      evolutionWarnings.push(`${card.name} evolui de ${card.evolvesFrom} (não está no deck)`);
-    }
-  });
+  // Display as Rush Duel
+  const title = 'Rush Duel Deck Builder';
 
   const saveDeck = async (name: string, description: string, isPublic: boolean) => {
     setSavingDeck(true);
@@ -191,7 +191,7 @@ export default function PokemonDeckBuilder() {
         name,
         description,
         is_public: isPublic,
-        tcg_type: 'pokemon',
+        tcg_type: 'pokemon', // Using 'pokemon' as Rush Duel identifier in DB
         main_deck: JSON.parse(JSON.stringify(deck)),
         extra_deck: [] as any[],
         side_deck: [] as any[],
@@ -267,7 +267,7 @@ export default function PokemonDeckBuilder() {
         <div className="mb-6">
           <h1 className="text-2xl sm:text-3xl font-bold text-gradient-mystic mb-1 flex items-center gap-2">
             <Zap className="w-7 h-7" />
-            {t('deckBuilder.title')} — PKM
+            {t('deckBuilder.title')} — Rush Duel
           </h1>
           <p className="text-sm text-muted-foreground">
             {currentDeckName ? `${t('deckBuilder.deckName')}: ${currentDeckName}` : t('deckBuilder.empty')}
@@ -339,7 +339,7 @@ export default function PokemonDeckBuilder() {
                 >
                   <div className="relative">
                     <img
-                      src={card.images.small}
+                      src={card.card_images?.[0]?.image_url_small}
                       alt={card.name}
                       className="w-full h-auto rounded-t-lg"
                       loading="lazy"
@@ -359,16 +359,15 @@ export default function PokemonDeckBuilder() {
                   <CardContent className="p-2">
                     <p className="text-xs font-medium truncate">{card.name}</p>
                     <div className="flex gap-1 mt-1 flex-wrap">
-                      <Badge variant="outline" className={`text-[10px] ${getSupertypeBadgeClass(card.supertype)}`}>
-                        {card.supertype}
+                      <Badge variant="outline" className="text-[10px]">
+                        {card.type}
                       </Badge>
-                      {card.hp && <Badge variant="secondary" className="text-[10px]">{card.hp} HP</Badge>}
-                      {card.subtypes?.includes('Basic') && (
-                        <Badge variant="outline" className="text-[10px] border-green-500/30 text-green-500">Básico</Badge>
+                      {card.atk !== undefined && (
+                        <Badge variant="secondary" className="text-[10px]">ATK {card.atk}</Badge>
                       )}
-                      {card.evolvesFrom && (
-                        <Badge variant="outline" className="text-[10px] border-blue-500/30 text-blue-400">
-                          ↑ {card.evolvesFrom}
+                      {card.level && (
+                        <Badge variant="outline" className="text-[10px] border-purple-500/30 text-purple-500">
+                          ★{card.level}
                         </Badge>
                       )}
                     </div>
@@ -380,8 +379,8 @@ export default function PokemonDeckBuilder() {
             {searchResults.length === 0 && !loading && (
               <div className="text-center py-12 text-muted-foreground">
                 <Zap className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                <p>Busque cartas Pokémon para começar</p>
-                <p className="text-xs mt-1">Dica: busque por "Pikachu", "Charizard" ou filtre por tipo</p>
+                <p>Busque cartas Rush Duel para começar</p>
+                <p className="text-xs mt-1">Dica: busque por nomes de cartas YGO</p>
               </div>
             )}
           </div>
@@ -391,7 +390,7 @@ export default function PokemonDeckBuilder() {
             <Card className="card-mystic">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <h2 className="font-bold text-lg">Deck ({totalCards}/60)</h2>
+                  <h2 className="font-bold text-lg">Deck ({totalCards}/30)</h2>
                   <div className="flex gap-1">
                     <Button size="icon" variant="ghost" onClick={() => { loadSavedDecks(); setShowLoadModal(true); }}>
                       <FolderOpen className="w-4 h-4" />
