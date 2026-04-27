@@ -36,6 +36,7 @@ const Auth = lazy(() => import("./pages/Auth"));
 const Duels = lazy(() => import("./pages/Duels"));
 const DuelRoom = lazy(() => import("./pages/DuelRoom"));
 const JoinDuel = lazy(() => import("./pages/JoinDuel"));
+const MatchInvite = lazy(() => import("./pages/MatchInvite"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Ranking = lazy(() => import("./pages/Ranking"));
 const Friends = lazy(() => import("./pages/Friends"));
