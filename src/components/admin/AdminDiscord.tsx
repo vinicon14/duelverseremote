@@ -376,10 +376,16 @@ export function AdminDiscord() {
                   className="p-4 flex items-center justify-between"
                 >
                   <div className="flex items-center gap-3">
-                    {server.coverImageUrl && (
+                    {server.coverImageUrl ? (
                       <img
                         src={server.coverImageUrl}
                         alt={`${server.name} cover`}
+                        className="h-8 w-8 rounded object-cover"
+                      />
+                    ) : (
+                      <img
+                        src="/placeholder.svg"
+                        alt={`${server.name} cover placeholder`}
                         className="h-8 w-8 rounded object-cover"
                       />
                     )}

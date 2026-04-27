@@ -11,7 +11,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { PhoneOff, Loader2, Scale, Layers, Sparkles, Zap, Clock, Coins, Discord } from "lucide-react";
+import { PhoneOff, Loader2, Scale, Layers, Sparkles, Zap, Clock, Coins, Mic, MicOff } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Navbar } from "@/components/Navbar";
 import { DuelChat } from "@/components/DuelChat";
@@ -1359,23 +1359,16 @@ const DuelRoom = () => {
                 
                 {/* Badge de Conexão Discord */}
                 {!isJudge && !isSpectator && currentUser && (
-                  <div className="px-2 sm:px-3 py-1 sm:py-2 rounded-lg backdrop-blur-sm text-xs sm:text-sm font-bold ${
-                    discordConnectionLoading
-                      ? 'bg-gray-500/95 text-white'
-                      : discordConnection
-                        ? 'bg-green-500/95 text-white'
-                        : 'bg-red-500/95 text-white'
-                  }">
+                  <div className={`px-2 sm:px-3 py-1 sm:py-2 rounded-lg backdrop-blur-sm text-xs sm:text-sm font-bold ${discordConnectionLoading ? 'bg-gray-500/95 text-white' : (discordConnection ? 'bg-green-500/95 text-white' : 'bg-red-500/95 text-white')}`}>
                     {discordConnectionLoading ? (
                       <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                     ) : discordConnection ? (
                       <>
-                        <Discord className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                         {t('duelRoom.discordConnected')}
                       </>
                     ) : (
                       <>
-                        <Discord className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                        <span className="mr-1" aria-label="discord">💬</span>
                         {t('duelRoom.discordNotConnected')}
                       </>
                     )}
