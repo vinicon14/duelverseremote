@@ -23,6 +23,7 @@ import { GlobalChat } from "@/components/GlobalChat";
 import { cleanupAllEmptyDuels } from "@/hooks/useDuelPresence";
 import { useTcg } from "@/contexts/TcgContext";
 import { detectPlatform } from "@/utils/platformDetection";
+import { announceDuelRoom } from "@/utils/announceDuelRoom";
 import { useTranslation } from "react-i18next";
 
 const Duels = () => {
@@ -177,6 +178,28 @@ const Duels = () => {
         title: t('duels.roomCreated'),
         description: t('duels.roomCreatedDesc'),
       });
+
+      // Anuncia a nova sala no chat global e Discord
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('username, avatar_url, language_code')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        if (profile?.username) {
+          announceDuelRoom({
+            duelId: data.id,
+            username: profile.username,
+            avatarUrl: profile.avatar_url,
+            userId: user.id,
+            tcgType: activeTcg,
+            languageCode: profile.language_code || 'en',
+            roomName,
+          });
+        }
+      } catch (e) {
+        console.warn('announceDuelRoom skipped:', e);
+      }
 
       // Redirecionar diretamente para a sala
       navigate(`/duel/${data.id}`);
