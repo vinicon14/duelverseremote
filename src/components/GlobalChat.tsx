@@ -564,12 +564,12 @@ export const GlobalChat = () => {
           ) : (
             <div className="grid gap-4 sm:grid-cols-2">
               {partnerServers.map((server) => (
-                <div
+                <a
                   key={server.id}
-                  className="flex cursor-pointer flex-col gap-3 rounded-lg border border-border bg-card p-4 transition-colors hover:bg-accent"
-                  onClick={() => {
-                    window.open(server.inviteLink, "_blank", "noopener,noreferrer");
-                  }}
+                  href={server.inviteLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex cursor-pointer flex-col gap-3 rounded-lg border border-border bg-card p-4 transition-colors hover:bg-accent no-underline text-foreground"
                 >
                   <div className="flex items-center gap-3">
                     {server.iconUrl ? (
@@ -590,11 +590,11 @@ export const GlobalChat = () => {
                       )}
                     </div>
                   </div>
-                  <Button className="w-full" size="sm">
+                  <Button className="w-full pointer-events-none" size="sm">
                     <ExternalLink className="mr-2 h-4 w-4" />
                     Entrar no servidor
                   </Button>
-                </div>
+                </a>
               ))}
             </div>
           )}
