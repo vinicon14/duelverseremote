@@ -29,7 +29,9 @@ import { PokemonDuelViewer } from "@/components/duel/PokemonDuelViewer";
 import { WebRTCVideoCall, type VideoLayout, type WebRTCVideoCallHandle } from "@/components/duel/WebRTCVideoCall";
 import { useDuelDeck } from "@/hooks/useDuelDeck";
 import { useDiscordRichPresence } from "@/hooks/useDiscordRichPresence";
+import { useDiscordVoiceRoom } from "@/hooks/useDiscordVoiceRoom";
 import { useDuelPresence, useDuelCleanup } from "@/hooks/useDuelPresence";
+import { DiscordScreenshareButton } from "@/components/DiscordScreenshareButton";
 
 const DuelRoom = () => {
   useBanCheck(); // Proteger contra usuários banidos
@@ -62,6 +64,24 @@ const DuelRoom = () => {
    const [discordConnection, setDiscordConnection] = useState<{ discord_id: string; discord_username: string } | null>(null);
    const [discordConnectionLoading, setDiscordConnectionLoading] = useState(true);
    const { setDuelPresence, setIdlePresence, clearPresence } = useDiscordRichPresence(discordConnection);
+  // Estado de transmissão Discord
+  const [discordScreenshareActive, setDiscordScreenshareActive] = useState(false);
+  const [discordScreenshareGuildId, setDiscordScreenshareGuildId] = useState<string | null>(null);
+  const [discordScreenshareChannelId, setDiscordScreenshareChannelId] = useState<string | null>(null);
+
+  // Hook de sala de voz Discord — escuta usuários Discord entrando/saindo
+  const discordVoiceChannelId = (duel as any)?.discord_channel_id || discordScreenshareChannelId;
+  const { discordUsers, discordUsersCount, hasDiscordUsers } = useDiscordVoiceRoom({
+    duelId: id,
+    discordChannelId: discordVoiceChannelId,
+    onUserJoined: (user) => {
+      console.log("[DuelRoom] Discord user joined:", user.displayUsername);
+    },
+    onUserLeft: (discordUserId, displayUsername) => {
+      console.log("[DuelRoom] Discord user left:", displayUsername);
+    },
+  });
+
   const isTimerPausedRef = useRef(false);
   const timerInterval = useRef<ReturnType<typeof setInterval> | null>(null);
   const timerInitialized = useRef(false);
@@ -1430,6 +1450,28 @@ const handleDiscordVoiceChannel = async () => {
                       </>
                     )}
                   </Button>
+                )}
+
+                {/* Botão de Transmissão de Tela para Discord */}
+                {!isJudge && isParticipant && currentUser && id && (
+                  <DiscordScreenshareButton
+                    duelId={id}
+                    currentUserId={currentUser.id}
+                    discordConnection={discordConnection}
+                    isRanked={Boolean(duel?.is_ranked)}
+                    onScreenshareStarted={(guildId, channelId, inviteLink) => {
+                      setDiscordScreenshareActive(true);
+                      setDiscordScreenshareGuildId(guildId);
+                      setDiscordScreenshareChannelId(channelId);
+                    }}
+                  />
+                )}
+
+                {/* Badge de usuários Discord na sala */}
+                {hasDiscordUsers && (
+                  <div className="px-2 py-1 rounded-lg backdrop-blur-sm bg-indigo-500/90 text-white text-xs font-bold flex items-center gap-1">
+                    🎮 {discordUsersCount} Discord
+                  </div>
                 )}
 
                 {/* Timer Display - Contagem Regressiva */}

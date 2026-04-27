@@ -28,6 +28,7 @@ import { UnifiedPageLoader } from "@/components/UnifiedPageLoader";
 import { useRealtimeNotifications } from "@/hooks/useRealtimeNotifications";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useSubscriptionExpirationCheck } from "@/hooks/useSubscriptionExpirationCheck";
+import { useDiscordAutoRoom } from "@/hooks/useDiscordAutoRoom";
 import { TcgProvider, useTcg } from "./contexts/TcgContext";
 const Home = lazy(() => import("./pages/Home"));
 const Landing = lazy(() => import("./pages/Landing"));
@@ -161,7 +162,11 @@ const AppContent = () => {
   
   // Listen for duel invite responses (accepted/rejected)
   useDuelInviteResponse(user?.id);
-  
+
+  // Escutar criação automática de DuelRooms via Discord (bot de voz)
+  // Notifica o usuário quando alguém entra em canal de voz Discord e cria uma sala
+  useDiscordAutoRoom();
+
   // Enable online status tracking
   useOnlineStatus();
 

@@ -47,6 +47,7 @@ interface DiscordServer {
   name: string;
   enabled: boolean;
   channelId: string;
+  voiceChannelId?: string;
   inviteLink?: string;
   webhookUrl?: string;
   coverImageUrl?: string;
@@ -84,6 +85,7 @@ export function AdminDiscord() {
   const [newServerId, setNewServerId] = useState("");
   const [newServerName, setNewServerName] = useState("");
   const [newChannelId, setNewChannelId] = useState("");
+  const [newVoiceChannelId, setNewVoiceChannelId] = useState("");
   const [newInviteLink, setNewInviteLink] = useState("");
   const [newWebhookUrl, setNewWebhookUrl] = useState("");
 
@@ -278,6 +280,7 @@ export function AdminDiscord() {
           name: newServerName || `Server ${newServerId}`,
           enabled: true,
           channelId: newChannelId,
+          voiceChannelId: newVoiceChannelId || undefined,
           inviteLink: newInviteLink || `https://discord.gg/${newChannelId}`,
           webhookUrl: newWebhookUrl,
         },
@@ -286,6 +289,7 @@ export function AdminDiscord() {
       setNewServerId("");
       setNewServerName("");
       setNewChannelId("");
+      setNewVoiceChannelId("");
       setNewInviteLink("");
       setNewWebhookUrl("");
       setSuccess("Servidor adicionado");
@@ -399,7 +403,12 @@ export function AdminDiscord() {
                       <p className="text-sm text-muted-foreground">ID: {server.id}</p>
                       {server.channelId && (
                         <p className="text-sm text-muted-foreground">
-                          Canal: {server.channelId}
+                          Canal texto: {server.channelId}
+                        </p>
+                      )}
+                      {(server as any).voiceChannelId && (
+                        <p className="text-sm text-muted-foreground">
+                          Canal voz: {(server as any).voiceChannelId}
                         </p>
                       )}
                     </div>
@@ -547,12 +556,21 @@ export function AdminDiscord() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="channelId">ID do canal</Label>
+                    <Label htmlFor="channelId">ID do canal de texto</Label>
                     <Input
                       id="channelId"
                       value={newChannelId}
                       onChange={(e) => setNewChannelId(e.target.value)}
-                      placeholder="Channel ID"
+                      placeholder="Channel ID (texto/chat)"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="voiceChannelId">ID do canal de voz (DuelRoom)</Label>
+                    <Input
+                      id="voiceChannelId"
+                      value={newVoiceChannelId}
+                      onChange={(e) => setNewVoiceChannelId(e.target.value)}
+                      placeholder="Voice Channel ID (opcional)"
                     />
                   </div>
                   <div>
