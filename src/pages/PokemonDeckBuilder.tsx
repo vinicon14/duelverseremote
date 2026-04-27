@@ -48,7 +48,7 @@ interface DeckCard extends YugiohCard {
   quantity: number;
 }
 
-// Rush Duel card types (from YGO API format)
+// Rush Duel Deck Builder - uses YGO API with format=Rush Duel
 const RUSH_DUEL_TYPES = [
   'All', 'Normal Monster', 'Effect Monster', 'Spell', 'Trap'
 ];
