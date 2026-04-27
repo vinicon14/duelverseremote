@@ -448,6 +448,85 @@ serve(async (req) => {
       return jsonResponse({ success: results.some((r) => r.ok), results });
     }
 
+    if (requestType === "announce_matchmaking") {
+      // Broadcasts a "looking for match" message into every configured Discord
+      // text channel, with a deep link other users can click to be paired.
+      const username: string = body?.username || "Duelista";
+      const matchType: string = body?.match_type === "ranked" ? "rankeada" : "casual";
+      const tcgType: string = body?.tcg_type || "yugioh";
+      const joinUrl: string = body?.join_url;
+      const userId: string | undefined = body?.userId;
+      const avatarUrl: string | undefined = body?.avatarUrl;
+
+      if (!joinUrl) {
+        return jsonResponse({ error: "Missing join_url" }, 400);
+      }
+
+      const servers = Array.isArray(botStatus.servers) ? botStatus.servers : [];
+      const activeServers = servers.filter(
+        (s: any) => s.enabled && s.webhookUrl,
+      );
+      if (activeServers.length === 0) {
+        return jsonResponse({ ok: true, skipped: "no_active_servers", results: [] });
+      }
+
+      // Use linked Discord identity when available
+      let finalUsername = username;
+      let finalAvatar = avatarUrl;
+      if (userId) {
+        try {
+          const { data: discordLink } = await supabase.rpc(
+            "get_discord_link_for_user",
+            { p_user_id: userId },
+          );
+          if (discordLink && discordLink.length > 0) {
+            finalUsername = discordLink[0].discord_username || username;
+            finalAvatar = discordLink[0].discord_avatar_url || avatarUrl;
+          }
+        } catch (err) {
+          console.warn("[announce_matchmaking] discord link lookup failed:", err);
+        }
+      }
+
+      const tcgEmoji: Record<string, string> = {
+        yugioh: "🎴",
+        magic: "🧙",
+        pokemon: "⚡",
+      };
+      const emoji = tcgEmoji[tcgType] || "🎮";
+
+      const content =
+        `/dv @everyone ${emoji} **${finalUsername}** está buscando partida **${matchType}** ` +
+        `(${tcgType.toUpperCase()}) — clique para entrar:\n${joinUrl}`;
+
+      const payload = {
+        content,
+        username: finalUsername || "DuelVerse Matchmaking",
+        avatar_url: finalAvatar || undefined,
+        allowed_mentions: { parse: ["everyone"], users: [], roles: [] },
+      };
+
+      const results: Array<{ ok: boolean; status?: number }> = [];
+      for (const server of activeServers) {
+        try {
+          const res = await fetch(server.webhookUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          results.push({ ok: res.ok, status: res.status });
+        } catch (err) {
+          console.error(
+            `[announce_matchmaking] webhook failed for ${server.id}:`,
+            err,
+          );
+          results.push({ ok: false });
+        }
+      }
+
+      return jsonResponse({ success: results.some((r) => r.ok), results });
+    }
+
     if (requestType === "get_config") {
       const servers = Array.isArray(botStatus.servers) ? botStatus.servers : [];
       let inviteLink = botStatus.inviteLink;
