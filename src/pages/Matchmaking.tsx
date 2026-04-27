@@ -234,6 +234,47 @@ export default function Matchmaking() {
         }
       }
 
+      // No instant match — create an invite and announce it on Discord channels
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('username, avatar_url')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        const { data: invite, error: invErr } = await supabase
+          .from('matchmaking_invites')
+          .insert({
+            host_user_id: userId,
+            match_type: matchType,
+            tcg_type: activeTcg,
+            max_players: playerCount,
+            language_code: languageCode,
+          })
+          .select('id')
+          .single();
+
+        if (!invErr && invite?.id) {
+          const joinUrl = `${window.location.origin}/m/${invite.id}`;
+          // Fire-and-forget — don't block matchmaking on Discord
+          supabase.functions.invoke('discord-bridge', {
+            body: {
+              type: 'announce_matchmaking',
+              userId,
+              username: profile?.username || 'Duelista',
+              avatarUrl: profile?.avatar_url || null,
+              match_type: matchType,
+              tcg_type: activeTcg,
+              join_url: joinUrl,
+            },
+          }).catch((err) => console.warn('[Matchmaking] discord announce failed', err));
+        } else if (invErr) {
+          console.warn('[Matchmaking] failed to create invite:', invErr);
+        }
+      } catch (err) {
+        console.warn('[Matchmaking] discord invite flow error:', err);
+      }
+
       fetchQueueStats();
       pollingInterval.current = setInterval(async () => {
         const found = await checkForRedirect();
@@ -261,6 +302,12 @@ export default function Matchmaking() {
     if (pollingInterval.current) { clearInterval(pollingInterval.current); pollingInterval.current = null; }
     if (currentUserId.current) {
       await supabase.from('matchmaking_queue').delete().eq('user_id', currentUserId.current);
+      // Cancel any open Discord matchmaking invite
+      await supabase
+        .from('matchmaking_invites')
+        .update({ status: 'cancelled' })
+        .eq('host_user_id', currentUserId.current)
+        .eq('status', 'open');
     }
     setSearching(false);
     setElapsedTime(0);
