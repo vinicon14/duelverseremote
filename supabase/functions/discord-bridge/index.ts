@@ -460,13 +460,50 @@ serve(async (req) => {
     }
 
     if (requestType === "announce_matchmaking") {
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader) return jsonResponse({ error: "No auth header" }, 401);
+      const token = authHeader.replace("Bearer ", "");
+      const { data: userData, error: userError } = await supabase.auth.getUser(token);
+      if (userError || !userData.user) return jsonResponse({ error: "Invalid user token" }, 401);
+
+      const userId = userData.user.id;
+      const matchType = body.matchType === "ranked" ? "ranked" : "casual";
+      const tcgType = typeof body.tcgType === "string" ? body.tcgType : "yugioh";
+      const maxPlayers = typeof body.maxPlayers === "number" ? body.maxPlayers : 2;
+      const languageCode = typeof body.languageCode === "string" ? body.languageCode : "en";
+
+      await supabase
+        .from("matchmaking_invites")
+        .update({ status: "cancelled" })
+        .eq("host_user_id", userId)
+        .eq("status", "open");
+
+      const { data: invite, error: inviteError } = await supabase
+        .from("matchmaking_invites")
+        .insert({
+          host_user_id: userId,
+          match_type: matchType,
+          tcg_type: tcgType,
+          max_players: maxPlayers,
+          language_code: languageCode,
+        })
+        .select("id")
+        .single();
+      if (inviteError || !invite) return jsonResponse({ error: inviteError?.message || "Failed to create invite" }, 500);
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("username")
+        .eq("user_id", userId)
+        .maybeSingle();
+
       const servers = Array.isArray(botStatus.servers) ? botStatus.servers : [];
       const activeServers = servers.filter((server: any) => server.enabled && server.webhookUrl);
       if (activeServers.length === 0) return jsonResponse({ error: "No active Discord server configured" }, 400);
 
-      const username = String(body.username || "Duelista");
-      const mode = body.matchType === "ranked" ? "rankeada" : "casual";
-      const link = String(body.link || "https://duelverse.site/matchmaking");
+      const username = String(body.username || profile?.username || "Duelista");
+      const mode = matchType === "ranked" ? "rankeada" : "casual";
+      const link = `https://duelverse.site/m/${invite.id}`;
       const webhookPayload = {
         content: `/dv @everyone usuario ${username} está buscando partida ${mode} ${link}`,
         username: "DuelVerse Matchmaking",
@@ -484,7 +521,7 @@ serve(async (req) => {
         if (response.ok) deleteWebhookMessageSoon(server.webhookUrl, posted?.id);
         results.push({ ok: response.ok, status: response.status, messageId: posted?.id });
       }
-      return jsonResponse({ success: results.some((r) => r.ok), temporary: true, results });
+      return jsonResponse({ success: results.some((r) => r.ok), temporary: true, inviteId: invite.id, link, results });
     }
 
     if (requestType === "get_config") {
