@@ -1,6 +1,7 @@
 package com.duelverse.bot;
 
 import com.duelverse.admin.DiscordServerManager;
+import com.duelverse.discord.VoiceStateListener;
 import com.duelverse.config.BotConfig;
 import com.duelverse.discord.DiscordMessageHandler;
 import com.duelverse.duelverse.DuelverseClient;
@@ -51,12 +52,25 @@ public class DiscordBot extends ListenerAdapter {
         EnumSet<GatewayIntent> intents = EnumSet.of(
             GatewayIntent.GUILD_MESSAGES,
             GatewayIntent.MESSAGE_CONTENT,
-            GatewayIntent.GUILD_MEMBERS
+            GatewayIntent.GUILD_MEMBERS,
+            GatewayIntent.GUILD_VOICE_STATES
         );
 
+        // Voice-state bridge → DuelVerse (auto-create DuelRoom + sync roster)
+        String voiceEndpoint = System.getenv().getOrDefault(
+            "DUELVERSE_VOICE_EVENTS_URL",
+            "https://xxttwzewtqxvpgefggah.supabase.co/functions/v1/discord-voice-events");
+        String voiceSecret = System.getenv("DUELVERSE_BOT_BRIDGE_SECRET");
+        VoiceStateListener voiceListener = new VoiceStateListener(voiceEndpoint, voiceSecret);
+        if (voiceSecret == null || voiceSecret.isEmpty()) {
+            logger.warn("DUELVERSE_BOT_BRIDGE_SECRET not set — voice events will NOT be sent to DuelVerse");
+        } else {
+            logger.info("Voice-state bridge enabled → {}", voiceEndpoint);
+        }
+
         jda = JDABuilder.createDefault(config.getDiscordToken(), intents)
-            .enableCache(CacheFlag.MEMBER_OVERRIDES)
-            .addEventListeners(this)
+            .enableCache(CacheFlag.MEMBER_OVERRIDES, CacheFlag.VOICE_STATE)
+            .addEventListeners(this, voiceListener)
             .build();
 
         jda.awaitReady();
