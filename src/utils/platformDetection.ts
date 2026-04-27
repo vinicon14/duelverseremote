@@ -1,13 +1,11 @@
 export const detectPlatform = () => {
   const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
-  const hostname = window.location.hostname || '';
-  const isDiscord = hostname.includes('discord') || /Discord/.test(userAgent) || /DiscordInterop/.test(userAgent);
   
   const isIOS = /iPad|iPhone|iPod/.test(userAgent) && !(window as any).MSStream;
   const isAndroid = /android/i.test(userAgent);
   const isMobile = isIOS || isAndroid || /Mobile/.test(userAgent);
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
-                       (window.navigator as any).standalone === true;
+                      (window.navigator as any).standalone === true;
   const isNativeApp = /DuelVerseApp/i.test(userAgent);
   
   return {
@@ -16,7 +14,6 @@ export const detectPlatform = () => {
     isMobile,
     isStandalone,
     isNativeApp,
-    isDiscord,
     supportsWebPush: 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window
   };
 };

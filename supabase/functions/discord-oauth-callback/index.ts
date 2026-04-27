@@ -94,7 +94,6 @@ serve(async (req) => {
     const tokenData = await tokenResp.json();
     const { access_token, refresh_token, expires_in } = tokenData;
 
-    // Fetch user info from Discord
     const userResp = await fetch("https://discord.com/api/users/@me", {
       headers: { Authorization: `Bearer ${access_token}` },
     });
@@ -107,32 +106,6 @@ serve(async (req) => {
     const avatarUrl = discordUser.avatar
       ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png?size=256`
       : null;
-
-    // Fetch user connections (for rich presence and gaming status)
-    let connections: any[] = [];
-    try {
-      const connResp = await fetch("https://discord.com/api/users/@me/connections", {
-        headers: { Authorization: `Bearer ${access_token}` },
-      });
-      if (connResp.ok) {
-        connections = await connResp.json();
-      }
-    } catch (e) {
-      console.log("Could not fetch connections:", e);
-    }
-
-    // Fetch user's mutual guilds
-    let mutualGuilds: any[] = [];
-    try {
-      const guildsResp = await fetch("https://discord.com/api/users/@me/guilds", {
-        headers: { Authorization: `Bearer ${access_token}` },
-      });
-      if (guildsResp.ok) {
-        mutualGuilds = await guildsResp.json();
-      }
-    } catch (e) {
-      console.log("Could not fetch guilds:", e);
-    }
 
     const supabase = createClient(supabaseUrl, serviceKey);
 
@@ -159,9 +132,6 @@ serve(async (req) => {
         refresh_token,
         token_expires_at: new Date(Date.now() + (expires_in || 604800) * 1000).toISOString(),
         updated_at: new Date().toISOString(),
-        // Store additional data from new scopes
-        discord_connections: connections,
-        discord_guilds: mutualGuilds,
       }, { onConflict: "user_id" });
 
     if (upsertError) {

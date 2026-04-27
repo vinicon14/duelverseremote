@@ -50,33 +50,6 @@ const Auth = () => {
 
   const returnTo = (location.state as any)?.returnTo;
 
-  // Capturar erros de redirecionamento do Discord OAuth
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const discordStatus = params.get('discord');
-    const message = params.get('message');
-
-    if (discordStatus === 'error') {
-      const errorMessages: Record<string, string> = {
-        discord_already_linked: "Esta conta Discord já está vinculada a outro usuário.",
-        state_expired: "A solicitação expirou. Tente novamente.",
-        token_exchange_failed: "Falha ao validar com o Discord.",
-        user_fetch_failed: "Não foi possível obter dados do Discord.",
-        save_failed: "Erro ao salvar a vinculação.",
-      };
-
-      toast({
-        title: "Erro na Autenticação Discord",
-        description: errorMessages[message || ""] || message || "Não foi possível validar sua conta Discord.",
-        variant: "destructive",
-      });
-
-      // Limpar parâmetros da URL
-      const newUrl = window.location.pathname + (returnTo ? `?returnTo=${returnTo}` : '');
-      window.history.replaceState({}, '', newUrl);
-    }
-  }, [toast, returnTo]);
-
   // Verificar se usuário já está logado e redirecionar
   useEffect(() => {
     const defaultRedirect = returnTo || '/';
@@ -137,100 +110,6 @@ const Auth = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  const handleDiscordSignIn = async () => {
-    try {
-      setLoading(true);
-      
-      // Tentativa 1: Usar o OAuth nativo do Supabase (mais estável)
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'discord',
-        options: {
-          redirectTo: window.location.origin,
-          queryParams: {
-            prompt: 'consent',
-          },
-        }
-      });
-
-      if (error) {
-        console.warn('Supabase Native OAuth failed, falling back to custom bridge:', error);
-        
-        // Tentativa 2: Fallback para o nosso Custom Bridge (Edge Function)
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          await initiateDiscordOAuth(session.access_token);
-        } else {
-          // Se não houver sessão, o usuário precisa se autenticar primeiro para vincular
-          // ou usamos o fluxo de criação de conta temporária que você já tinha
-          const tempEmail = `discord-user-${Date.now()}@duelverse.local`;
-          const tempPassword = crypto.randomUUID();
-          
-          await supabase.auth.signUp({
-            email: tempEmail,
-            password: tempPassword,
-            options: { data: { selected_tcg: selectedTcg, country_code: signupCountry || 'BR' } }
-          });
-
-          const { data: signInData } = await supabase.auth.signInWithPassword({
-            email: tempEmail,
-            password: tempPassword,
-          });
-
-          if (signInData.session) {
-            await initiateDiscordOAuth(signInData.session.access_token);
-          } else {
-            throw new Error('Falha ao iniciar sessão para vinculação Discord');
-          }
-        }
-      }
-    } catch (error: any) {
-      console.error('Erro no login com Discord:', error);
-      toast({
-        title: t('auth.loginError'),
-        description: error.message || 'Não foi possível validar com o Discord.',
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const initiateDiscordOAuth = async (accessToken: string) => {
-    try {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      if (!supabaseUrl) throw new Error('Supabase URL nao configurada');
-      
-      const response = await fetch(
-        `${supabaseUrl}/functions/v1/discord-oauth-start`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          },
-          body: JSON.stringify({
-            origin: window.location.origin,
-            returnPath: returnTo || '/',
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
-        throw new Error(error.error || 'Falha ao iniciar Discord OAuth');
-      }
-
-      const { url } = await response.json();
-      if (!url) throw new Error('URL de OAuth nao retornada');
-      
-      window.location.href = url;
-    } catch (error: any) {
-      console.error('Erro ao iniciar Discord OAuth:', error);
-      throw error;
-    }
-  };
-
   const handleGoogleSignIn = async () => {
     try {
       setLoading(true);
@@ -244,16 +123,9 @@ const Auth = () => {
       if (error) throw error;
     } catch (error: any) {
       console.error('❌ [AUTH] Erro no login com Google:', error);
-      
-      // Provide user-friendly error messages
-      let errorMessage = error.message;
-      if (error.message?.includes('Failed to fetch') || error.message?.includes('fetch')) {
-        errorMessage = 'Erro de conexão. Verifique sua internet e tente novamente.';
-      }
-      
       toast({
         title: t('auth.loginError'),
-        description: errorMessage,
+        description: error.message,
         variant: "destructive"
       });
       setLoading(false);
@@ -519,7 +391,7 @@ const Auth = () => {
                 </Button>
               </form>
 
-              {!detectPlatform().isNativeApp && !detectPlatform().isDiscord && (
+              {!detectPlatform().isNativeApp && (
                 <>
                   <div className="relative my-4">
                     <div className="absolute inset-0 flex items-center">

@@ -103,7 +103,6 @@ export const DiscordLinkCard = ({ embedded = false }: DiscordLinkCardProps) => {
       });
 
       const data = await resp.json();
-      console.log("[DiscordLinkCard] OAuth response:", data);
       if (data.url) {
         window.location.href = data.url;
       } else {

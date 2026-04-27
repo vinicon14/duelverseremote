@@ -47,10 +47,8 @@ interface DiscordServer {
   name: string;
   enabled: boolean;
   channelId: string;
-  voiceChannelId?: string;
   inviteLink?: string;
   webhookUrl?: string;
-  coverImageUrl?: string;
 }
 
 interface DiscordBotStatus {
@@ -85,7 +83,6 @@ export function AdminDiscord() {
   const [newServerId, setNewServerId] = useState("");
   const [newServerName, setNewServerName] = useState("");
   const [newChannelId, setNewChannelId] = useState("");
-  const [newVoiceChannelId, setNewVoiceChannelId] = useState("");
   const [newInviteLink, setNewInviteLink] = useState("");
   const [newWebhookUrl, setNewWebhookUrl] = useState("");
 
@@ -280,7 +277,6 @@ export function AdminDiscord() {
           name: newServerName || `Server ${newServerId}`,
           enabled: true,
           channelId: newChannelId,
-          voiceChannelId: newVoiceChannelId || undefined,
           inviteLink: newInviteLink || `https://discord.gg/${newChannelId}`,
           webhookUrl: newWebhookUrl,
         },
@@ -289,7 +285,6 @@ export function AdminDiscord() {
       setNewServerId("");
       setNewServerName("");
       setNewChannelId("");
-      setNewVoiceChannelId("");
       setNewInviteLink("");
       setNewWebhookUrl("");
       setSuccess("Servidor adicionado");
@@ -380,19 +375,6 @@ export function AdminDiscord() {
                   className="p-4 flex items-center justify-between"
                 >
                   <div className="flex items-center gap-3">
-                    {server.coverImageUrl ? (
-                      <img
-                        src={server.coverImageUrl}
-                        alt={`${server.name} cover`}
-                        className="h-8 w-8 rounded object-cover"
-                      />
-                    ) : (
-                      <img
-                        src="/placeholder.svg"
-                        alt={`${server.name} cover placeholder`}
-                        className="h-8 w-8 rounded object-cover"
-                      />
-                    )}
                     {server.enabled ? (
                       <CheckCircle className="w-4 h-4 text-green-500" />
                     ) : (
@@ -403,12 +385,7 @@ export function AdminDiscord() {
                       <p className="text-sm text-muted-foreground">ID: {server.id}</p>
                       {server.channelId && (
                         <p className="text-sm text-muted-foreground">
-                          Canal texto: {server.channelId}
-                        </p>
-                      )}
-                      {(server as any).voiceChannelId && (
-                        <p className="text-sm text-muted-foreground">
-                          Canal voz: {(server as any).voiceChannelId}
+                          Canal: {server.channelId}
                         </p>
                       )}
                     </div>
@@ -556,21 +533,12 @@ export function AdminDiscord() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="channelId">ID do canal de texto</Label>
+                    <Label htmlFor="channelId">ID do canal</Label>
                     <Input
                       id="channelId"
                       value={newChannelId}
                       onChange={(e) => setNewChannelId(e.target.value)}
-                      placeholder="Channel ID (texto/chat)"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="voiceChannelId">ID do canal de voz (DuelRoom)</Label>
-                    <Input
-                      id="voiceChannelId"
-                      value={newVoiceChannelId}
-                      onChange={(e) => setNewVoiceChannelId(e.target.value)}
-                      placeholder="Voice Channel ID (opcional)"
+                      placeholder="Channel ID"
                     />
                   </div>
                   <div>

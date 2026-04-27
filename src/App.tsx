@@ -28,7 +28,6 @@ import { UnifiedPageLoader } from "@/components/UnifiedPageLoader";
 import { useRealtimeNotifications } from "@/hooks/useRealtimeNotifications";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useSubscriptionExpirationCheck } from "@/hooks/useSubscriptionExpirationCheck";
-import { useDiscordAutoRoom } from "@/hooks/useDiscordAutoRoom";
 import { TcgProvider, useTcg } from "./contexts/TcgContext";
 const Home = lazy(() => import("./pages/Home"));
 const Landing = lazy(() => import("./pages/Landing"));
@@ -89,10 +88,6 @@ const ActiveDeckBuilderRoute = () => {
 
 // Componente interno que fica dentro do Router para usar useNavigate
 const RouterContent = ({ user }: { user: User | null }) => {
-  // Escutar criação automática de DuelRooms via Discord (bot de voz)
-  // Notifica o usuário quando alguém entra em canal de voz Discord e cria uma sala
-  useDiscordAutoRoom();
-
   return (
     <Suspense fallback={
       <div className="flex-1 w-full flex items-center justify-center min-h-screen">

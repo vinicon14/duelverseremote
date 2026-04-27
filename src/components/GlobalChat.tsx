@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { Send, MessageCircle, Trash2, ExternalLink, Link2, Server } from "lucide-react";
+import { Send, MessageCircle, Trash2, ExternalLink, Link2 } from "lucide-react";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useTcg } from "@/contexts/TcgContext";
 import { DiscordLinkCard } from "@/components/DiscordLinkCard";
@@ -168,11 +168,9 @@ export const GlobalChat = () => {
         .eq("key", "discord_bot_status")
         .maybeSingle();
 
-      console.log("[GlobalChat] Partner servers config:", cfg);
       if (cfg?.value) {
         const status = typeof cfg.value === "string" ? JSON.parse(cfg.value) : cfg.value;
         const servers = Array.isArray(status?.servers) ? status.servers : [];
-        console.log("[GlobalChat] Raw servers from DB:", servers);
         const formatted = servers
           .filter((s: any) => s.enabled && s.inviteLink)
           .map((s: any) => ({
@@ -182,7 +180,6 @@ export const GlobalChat = () => {
             description: s.description || "",
             iconUrl: s.iconUrl || s.icon_url,
           }));
-        console.log("[GlobalChat] Formatted partner servers:", formatted);
         setPartnerServers(formatted);
       }
     } catch (error) {
@@ -560,30 +557,45 @@ export const GlobalChat = () => {
               Lista de servidores Discord conectados ao DuelVerse. Clique para entrar.
             </DialogDescription>
           </DialogHeader>
-{partnerServers.length === 0 ? (
+          {partnerServers.length === 0 ? (
             <p className="text-muted-foreground py-4 text-center">
               Nenhum servidor parceiro disponível no momento.
             </p>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2">
-              {partnerServers.map((server) => {
-                const inviteUrl = server.inviteLink || `https://discord.gg/${server.id}`;
-                return (
-                  <div
-                    key={server.id}
-                    className="flex flex-col items-center p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-                    onClick={() => window.open(inviteUrl, "_blank", "noopener,noreferrer")}
-                  >
+              {partnerServers.map((server) => (
+                <div
+                  key={server.id}
+                  className="flex cursor-pointer flex-col gap-3 rounded-lg border border-border bg-card p-4 transition-colors hover:bg-accent"
+                  onClick={() => {
+                    window.open(server.inviteLink, "_blank", "noopener,noreferrer");
+                  }}
+                >
+                  <div className="flex items-center gap-3">
                     {server.iconUrl ? (
-                      <img src={server.iconUrl} alt={server.name} className="w-16 h-16 rounded-full mb-2 object-cover" />
+                      <img
+                        src={server.iconUrl}
+                        alt={server.name}
+                        className="h-12 w-12 rounded-full object-cover"
+                      />
                     ) : (
-                      <Server className="w-16 h-16 mb-2 text-muted-foreground" />
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/20 text-xl font-bold">
+                        {server.name[0]?.toUpperCase()}
+                      </div>
                     )}
-                    <span className="font-medium text-center">{server.name}</span>
-                    <span className="text-xs text-muted-foreground text-center mt-1">Clique para entrar</span>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="truncate font-semibold">{server.name}</h3>
+                      {server.description && (
+                        <p className="text-muted-foreground truncate text-sm">{server.description}</p>
+                      )}
+                    </div>
                   </div>
-                );
-              })}
+                  <Button className="w-full" size="sm">
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    Entrar no servidor
+                  </Button>
+                </div>
+              ))}
             </div>
           )}
         </DialogContent>
