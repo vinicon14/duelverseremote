@@ -28,6 +28,7 @@ import { UnifiedPageLoader } from "@/components/UnifiedPageLoader";
 import { useRealtimeNotifications } from "@/hooks/useRealtimeNotifications";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useSubscriptionExpirationCheck } from "@/hooks/useSubscriptionExpirationCheck";
+import { useDiscordPresence } from "@/hooks/useDiscordPresence";
 import { TcgProvider, useTcg } from "./contexts/TcgContext";
 const Home = lazy(() => import("./pages/Home"));
 const Landing = lazy(() => import("./pages/Landing"));
@@ -168,6 +169,9 @@ const AppContent = () => {
   
   // Enable online status tracking
   useOnlineStatus();
+
+  // Mark user as "Jogando DuelVerse" on linked Discord servers while logged in
+  useDiscordPresence(user?.id);
 
   const syncNativeAuth = (session: { access_token: string; refresh_token?: string; user?: { id?: string } } | null) => {
     const nativeBridge = (window as any).DuelVerseNative;
