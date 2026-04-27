@@ -302,6 +302,12 @@ export default function Matchmaking() {
     if (pollingInterval.current) { clearInterval(pollingInterval.current); pollingInterval.current = null; }
     if (currentUserId.current) {
       await supabase.from('matchmaking_queue').delete().eq('user_id', currentUserId.current);
+      // Cancel any open Discord matchmaking invite
+      await supabase
+        .from('matchmaking_invites')
+        .update({ status: 'cancelled' })
+        .eq('host_user_id', currentUserId.current)
+        .eq('status', 'open');
     }
     setSearching(false);
     setElapsedTime(0);
