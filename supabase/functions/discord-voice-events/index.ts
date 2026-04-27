@@ -97,9 +97,43 @@ async function handleJoin(
   // 1. Find or create the voice room mapping (1 sala por canal de voz)
   let { data: room } = await supabase
     .from("discord_voice_rooms")
-    .select("id, duel_id, is_active")
+    .select("id, duel_id, is_active, invite_url")
     .eq("channel_id", body.channel_id)
     .maybeSingle();
+
+  // Try to create / refresh an invite for this voice channel
+  // (uses the bot token; falls back to channel deeplink only if it fails)
+  let inviteUrl: string | null = (room as any)?.invite_url ?? null;
+  if (!inviteUrl) {
+    try {
+      const botToken = Deno.env.get("DISCORD_BOT_TOKEN");
+      if (botToken) {
+        const inviteRes = await fetch(
+          `https://discord.com/api/v10/channels/${body.channel_id}/invites`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bot ${botToken}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ max_age: 0, max_uses: 0, unique: false }),
+          },
+        );
+        if (inviteRes.ok) {
+          const invData = await inviteRes.json();
+          if (invData?.code) inviteUrl = `https://discord.gg/${invData.code}`;
+        } else {
+          console.warn(
+            "[discord-voice-events] failed to create invite:",
+            inviteRes.status,
+            await inviteRes.text(),
+          );
+        }
+      }
+    } catch (err) {
+      console.warn("[discord-voice-events] invite creation error:", err);
+    }
+  }
 
   let duelId = room?.duel_id ?? null;
 
