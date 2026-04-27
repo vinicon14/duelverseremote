@@ -126,6 +126,9 @@ const RouterContent = ({ user }: { user: User | null }) => {
         <Route path="/deck-builder" element={<ActiveDeckBuilderRoute />} />
         <Route path="/magic-deck-builder" element={<MagicDeckBuilder />} />
         <Route path="/pokemon-deck-builder" element={<PokemonDeckBuilder />} />
+        <Route path="/genesis" element={<MagicDeckBuilder />} />
+        <Route path="/rush-duel" element={<PokemonDeckBuilder />} />
+        <Route path="/advanced" element={<DeckBuilder />} />
         <Route path="/profile-select" element={<ProfileSelect />} />
         <Route path="/weekly-tournaments" element={<WeeklyTournaments />} />
         <Route path="/create-weekly-tournament" element={<CreateWeeklyTournament />} />

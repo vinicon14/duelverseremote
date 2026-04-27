@@ -144,6 +144,22 @@ export default function MagicDeckBuilder() {
       return;
     }
 
+    if (totalMain < 40) {
+      toast.error(`Main Deck precisa de no mínimo 40 cartas (atual: ${totalMain})`);
+      setSaving(false);
+      return;
+    }
+    if (totalMain > 60) {
+      toast.error(`Main Deck máximo de 60 cartas (atual: ${totalMain})`);
+      setSaving(false);
+      return;
+    }
+    if (totalSide < 0 || totalSide > 15) {
+      toast.error(`Side Deck deve ter entre 0 e 15 cartas (atual: ${totalSide})`);
+      setSaving(false);
+      return;
+    }
+
     const deckData = {
       user_id: user.id,
       name: deckName,

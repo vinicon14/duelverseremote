@@ -52,69 +52,35 @@ const Auth = () => {
   const returnToParam = new URLSearchParams(window.location.search).get('redirect');
   const returnTo = (location.state as any)?.returnTo || (returnToParam === 'duels' ? '/duels' : null);
 
-  // Handle Discord sign-in - defined early so it can be called from useEffect
+// Handle Discord sign-in - defined early so it can be called from useEffect
   const handleDiscordSignIn = async () => {
     try {
       setLoading(true);
       console.log('[AUTH] Starting Discord sign-in...');
-      console.log('[AUTH] window.location:', window.location.href);
-      console.log('[AUTH] Supabase URL:', import.meta.env.VITE_SUPABASE_URL);
       
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const publishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      const DISCORD_CLIENT_ID = '1495723127357833256';
+      const supabaseUrl = 'https://duelverse.supabase.co';
       
-      if (!supabaseUrl || !publishableKey) {
-        throw new Error('Supabase não configurado no ambiente');
-      }
+      // Direct Discord OAuth URL (works in Discord Embedded App)
+      const redirectUri = `${supabaseUrl}/functions/v1/discord-oauth-callback`;
+      const scopes = 'identify email';
+      const oauthUrl = `https://discord.com/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scopes)}&state=${encodeURIComponent(JSON.stringify({ mode: 'login', origin: 'https://duelverse.site', return_path: '/duels' }))}&prompt=consent`;
       
-      const funcUrl = `${supabaseUrl}/functions/v1/discord-oauth-start`;
-      console.log('[AUTH] Calling:', funcUrl);
+      console.log('[AUTH] Redirecting to Discord OAuth...');
       
-      const response = await fetch(funcUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': publishableKey,
-          'Authorization': `Bearer ${publishableKey}`,
-        },
-        body: JSON.stringify({
-          mode: 'login',
-          origin: 'https://duelverse.site',
-          returnPath: '/duels',
-        }),
-      });
-      
-      const text = await response.text();
-      console.log('[AUTH] Raw response:', response.status, text);
-      
-      let data;
+      // Try window.location first, fallback to open
       try {
-        data = JSON.parse(text);
-      } catch {
-        data = { error: text };
+        window.location.href = oauthUrl;
+      } catch (e) {
+        window.open(oauthUrl, '_blank');
       }
       
-      console.log('[AUTH] Discord sign-in response:', data);
-      
-      if (!response.ok) {
-        throw new Error(data?.error || `Erro: ${response.status}`);
-      }
-      
-      if (!data?.url) {
-        throw new Error('URL não retornada');
-      }
-      
-      window.location.href = data.url;
     } catch (err: any) {
       console.error('[AUTH] Error:', err);
-      
-      // If fetch fails in Discord, show clear message
-      const isNetworkError = err.name === 'TypeError' && err.message === 'Failed to fetch';
-      
       toast({
-        title: t('auth.loginError'),
-        description: isNetworkError
-          ? 'Rede bloqueada no Discord. Acesse duelverse.site para jogar.'
+        title: 'Erro ao conectar com Discord',
+        description: runningInDiscord 
+          ? 'Tente acessar pelo navegador: duelverse.site/auth'
           : err.message,
         variant: 'destructive',
       });
