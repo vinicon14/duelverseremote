@@ -187,6 +187,7 @@ async function handleJoin(
         channel_name: body.channel_name ?? null,
         duel_id: duelId,
         is_active: true,
+        invite_url: inviteUrl,
       })
       .select("id")
       .single();
@@ -194,7 +195,7 @@ async function handleJoin(
       console.error("[discord-voice-events] failed to create voice room:", roomErr);
       return json({ error: roomErr.message }, 500);
     }
-    room = { id: created.id, duel_id: duelId, is_active: true };
+    room = { id: created.id, duel_id: duelId, is_active: true, invite_url: inviteUrl } as any;
   } else {
     await supabase
       .from("discord_voice_rooms")
@@ -204,6 +205,7 @@ async function handleJoin(
         duel_id: duelId,
         guild_name: body.guild_name ?? null,
         channel_name: body.channel_name ?? null,
+        invite_url: inviteUrl ?? (room as any).invite_url ?? null,
       })
       .eq("id", room.id);
   }
