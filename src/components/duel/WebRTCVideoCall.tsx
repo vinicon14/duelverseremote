@@ -324,7 +324,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     };
 
     return pc;
-  }, [userId]);
+  }, [userId, isSpectator]);
 
   const handleSignal = useCallback(
     async (payload: any) => {
