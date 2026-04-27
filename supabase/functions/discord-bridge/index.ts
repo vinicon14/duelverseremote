@@ -275,7 +275,48 @@ serve(async (req) => {
         ? `https://discord.gg/${inviteRes.data.code}`
         : `https://discord.gg/${channelId}`;
 
-      // 4. Persist to system_settings
+      // 4. Auto-create a voice "stats" channel that displays the live online counter.
+      //    Voice channels can't be joined by regular members for stats display, so we
+      //    deny CONNECT permission for @everyone (id == guildId) but allow VIEW_CHANNEL.
+      //    CONNECT = 0x0000000000100000 (1048576), VIEW_CHANNEL = 0x0000000000000400 (1024)
+      let statsChannelId: string | null = null;
+      try {
+        // Reuse pre-existing DuelVerse stats channel if a previous setup created it
+        const existingChannelsRes = await discordFetch(`/guilds/${guildId}/channels`);
+        if (existingChannelsRes.ok && Array.isArray(existingChannelsRes.data)) {
+          const found = existingChannelsRes.data.find(
+            (c: any) => c.type === 2 && typeof c.name === "string" && c.name.startsWith("👥 Online:"),
+          );
+          if (found) statsChannelId = found.id;
+        }
+        if (!statsChannelId) {
+          const statsRes = await discordFetch(`/guilds/${guildId}/channels`, {
+            method: "POST",
+            body: JSON.stringify({
+              name: "👥 Online: 0",
+              type: 2, // GUILD_VOICE
+              position: 0,
+              permission_overwrites: [
+                {
+                  id: guildId, // @everyone role id == guild id
+                  type: 0, // role
+                  allow: "1024", // VIEW_CHANNEL
+                  deny: "1048576", // CONNECT — display only
+                },
+              ],
+            }),
+          });
+          if (statsRes.ok && statsRes.data?.id) {
+            statsChannelId = statsRes.data.id;
+          } else {
+            console.error("[discord-bridge] failed to create stats channel:", statsRes.data);
+          }
+        }
+      } catch (err) {
+        console.error("[discord-bridge] stats channel error:", err);
+      }
+
+      // 5. Persist to system_settings
       const { data: cfg } = await supabase
         .from("system_settings")
         .select("value")
@@ -313,6 +354,7 @@ serve(async (req) => {
         voiceChannelIds: voiceChannelIds.length > 0
           ? voiceChannelIds
           : existing?.voiceChannelIds ?? [],
+        statsChannelId: statsChannelId ?? existing?.statsChannelId ?? null,
       });
       status.servers = filtered;
 
@@ -322,6 +364,27 @@ serve(async (req) => {
 
       if (upsertErr) {
         return jsonResponse({ error: upsertErr.message }, 500);
+      }
+
+      // 6. Trigger an immediate counter refresh so the channel name shows real numbers right away
+      try {
+        const counterUrl = `${supabaseUrl}/functions/v1/discord-presence-counter`;
+        const refreshTask = fetch(counterUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${supabaseKey}`,
+            apikey: supabaseKey,
+          },
+          body: JSON.stringify({}),
+        }).catch((err) => console.error("[discord-bridge] counter refresh failed:", err));
+        // @ts-ignore EdgeRuntime
+        if (typeof EdgeRuntime !== "undefined" && typeof EdgeRuntime.waitUntil === "function") {
+          // @ts-ignore
+          EdgeRuntime.waitUntil(refreshTask);
+        }
+      } catch (err) {
+        console.error("[discord-bridge] failed to schedule counter refresh:", err);
       }
 
       return jsonResponse({
@@ -335,6 +398,7 @@ serve(async (req) => {
           webhookUrl,
           iconUrl: autoIconUrl,
           voiceChannelIds,
+          statsChannelId,
         },
       });
     }
