@@ -627,6 +627,11 @@ const Duels = () => {
                               Em andamento
                             </span>
                           )}
+                          {(duel as any).is_private && (
+                            <span className="text-xs px-2 py-1 rounded-full bg-purple-500/20 text-purple-400 flex items-center gap-1">
+                              <Lock className="h-3 w-3" /> Privada
+                            </span>
+                          )}
                         </div>
                       </CardTitle>
                       <CardDescription>
@@ -726,6 +731,79 @@ const Duels = () => {
       {showAdPopup && (
         <AdPopup onClose={handleAdClose} />
       )}
+
+      {/* Prompt de senha para sala privada */}
+      <Dialog
+        open={!!passwordPrompt}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPasswordPrompt(null);
+            setEnteredPassword("");
+          }
+        }}
+      >
+        <DialogContent className="card-mystic">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Lock className="h-5 w-5" /> Sala privada
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Esta sala requer senha. Solicite-a ao criador para entrar.
+            </p>
+            <Input
+              type="text"
+              placeholder="Digite a senha"
+              value={enteredPassword}
+              onChange={(e) => setEnteredPassword(e.target.value)}
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && passwordPrompt) {
+                  if (enteredPassword === passwordPrompt.expected) {
+                    const id = passwordPrompt.duelId;
+                    setPasswordPrompt(null);
+                    setEnteredPassword("");
+                    setPendingAction({ type: 'join', duelId: id });
+                    setShowAdPopup(true);
+                  } else {
+                    toast({ title: 'Senha incorreta', variant: 'destructive' });
+                  }
+                }
+              }}
+            />
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  setPasswordPrompt(null);
+                  setEnteredPassword("");
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                className="flex-1 btn-mystic text-white"
+                onClick={() => {
+                  if (!passwordPrompt) return;
+                  if (enteredPassword === passwordPrompt.expected) {
+                    const id = passwordPrompt.duelId;
+                    setPasswordPrompt(null);
+                    setEnteredPassword("");
+                    setPendingAction({ type: 'join', duelId: id });
+                    setShowAdPopup(true);
+                  } else {
+                    toast({ title: 'Senha incorreta', variant: 'destructive' });
+                  }
+                }}
+              >
+                Entrar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
