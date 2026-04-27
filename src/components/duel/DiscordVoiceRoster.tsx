@@ -162,9 +162,32 @@ export const DiscordVoiceRoster = ({ duelId }: Props) => {
           ))
         )}
       </div>
-      <p className="mt-2 text-[10px] italic text-muted-foreground">
-        Áudio/vídeo permanece no Discord (limitação da API).
-      </p>
+
+      {(room.invite_url || (room.guild_id && room.channel_id)) && (
+        <div className="mt-3 flex flex-col gap-1.5">
+          <Button
+            size="sm"
+            variant="default"
+            className="h-8 w-full gap-1.5 text-xs"
+            onClick={() => {
+              // Try desktop deeplink first; fallback to web invite
+              const deepLink = `discord://discord.com/channels/${room.guild_id}/${room.channel_id}`;
+              const webFallback =
+                room.invite_url ?? `https://discord.com/channels/${room.guild_id}/${room.channel_id}`;
+              window.location.href = deepLink;
+              window.setTimeout(() => {
+                window.open(webFallback, "_blank", "noopener,noreferrer");
+              }, 600);
+            }}
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            Entrar no canal de voz no Discord
+          </Button>
+          <p className="text-[10px] italic text-muted-foreground">
+            Áudio e vídeo continuam no Discord — a API não permite espelhar a câmera dos usuários para fora do app.
+          </p>
+        </div>
+      )}
     </div>
   );
 };
