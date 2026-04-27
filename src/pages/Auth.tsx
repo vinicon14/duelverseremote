@@ -18,6 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Swords, Sparkles, Zap } from "lucide-react";
 import { detectPlatform } from "@/utils/platformDetection";
+import { isInsideDiscord } from "@/utils/discordEmbed";
 import { TcgType } from "@/contexts/TcgContext";
 import { CountrySelect } from "@/components/CountrySelect";
 import { getLanguageForCountry, normalizeBrowserLanguage } from "@/i18n/countries";
