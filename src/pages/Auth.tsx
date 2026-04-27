@@ -112,11 +112,11 @@ const Auth = () => {
           'Content-Type': 'application/json',
           apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
         },
-        body: {
+        body: JSON.stringify({
           mode: 'login',
           origin: window.location.origin,
           returnPath: returnTo || '/',
-        },
+        }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data?.error || 'Discord login failed');
@@ -453,6 +453,24 @@ const Auth = () => {
         </CardHeader>
 
         <CardContent>
+          {insideDiscord ? (
+            <div className="space-y-5">
+              <p className="text-sm text-muted-foreground text-center">
+                Entre com sua conta Discord para acessar o DuelVerse.
+              </p>
+              <Button type="button" className="w-full bg-[#5865F2] text-white hover:bg-[#4752C4]" onClick={handleDiscordSignIn} disabled={loading}>
+                <DiscordIcon className="mr-2 h-4 w-4" />
+                Continuar com Discord
+              </Button>
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+                <div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-2 text-muted-foreground">ou</span></div>
+              </div>
+              <Button type="button" variant="outline" className="w-full" onClick={() => window.open("https://duelverse.site/auth", "_blank") }>
+                Criar conta em duelverse.site
+              </Button>
+            </div>
+          ) : (
           <Tabs defaultValue="signin" className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-6">
               <TabsTrigger value="signin">{t('auth.tabSignIn')}</TabsTrigger>
@@ -493,19 +511,6 @@ const Auth = () => {
                       <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                     </svg>
                     {t('auth.google')}
-                  </Button>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full mt-2 border-[#5865F2]/40 hover:bg-[#5865F2]/10 hover:text-[#5865F2]"
-                    onClick={handleDiscordSignIn}
-                    disabled={loading}
-                  >
-                    <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="#5865F2">
-                      <path d="M20.317 4.369A19.79 19.79 0 0 0 16.558 3a14.49 14.49 0 0 0-.69 1.422 18.27 18.27 0 0 0-5.487 0A14.49 14.49 0 0 0 9.69 3a19.74 19.74 0 0 0-3.76 1.37C2.66 8.86 1.84 13.236 2.27 17.55a19.9 19.9 0 0 0 6.073 3.07 14.7 14.7 0 0 0 1.27-2.06 12.94 12.94 0 0 1-2.005-.96c.168-.124.333-.253.493-.386 3.86 1.78 8.05 1.78 11.86 0 .16.133.325.262.493.386-.643.382-1.32.71-2.005.96.378.738.808 1.43 1.27 2.06a19.85 19.85 0 0 0 6.073-3.07c.5-5.04-.86-9.38-3.42-13.18zM9.55 15.45c-1.183 0-2.156-1.085-2.156-2.42 0-1.336.96-2.43 2.156-2.43 1.205 0 2.176 1.094 2.156 2.43 0 1.335-.96 2.42-2.156 2.42zm4.9 0c-1.184 0-2.156-1.085-2.156-2.42 0-1.336.96-2.43 2.156-2.43 1.205 0 2.176 1.094 2.156 2.43 0 1.335-.95 2.42-2.156 2.42z" />
-                    </svg>
-                    Continuar com Discord
                   </Button>
                 </>
               )}
@@ -571,6 +576,7 @@ const Auth = () => {
               </form>
             </TabsContent>
           </Tabs>
+          )}
         </CardContent>
       </Card>
     </div>
