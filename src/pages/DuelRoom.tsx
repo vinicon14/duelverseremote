@@ -29,6 +29,7 @@ import { PokemonDuelViewer } from "@/components/duel/PokemonDuelViewer";
 import { WebRTCVideoCall, type VideoLayout, type WebRTCVideoCallHandle } from "@/components/duel/WebRTCVideoCall";
 import { useDuelDeck } from "@/hooks/useDuelDeck";
 import { useDuelPresence, useDuelCleanup } from "@/hooks/useDuelPresence";
+import { DiscordVoiceRoster } from "@/components/duel/DiscordVoiceRoster";
 
 const DuelRoom = () => {
   useBanCheck(); // Proteger contra usuários banidos
