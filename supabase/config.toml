@@ -31,3 +31,5 @@ project_id = "xxttwzewtqxvpgefggah"
     verify_jwt = false
   [functions.discord-voice-events]
     verify_jwt = false
+  [functions.discord-presence]
+    verify_jwt = false
