@@ -1376,7 +1376,7 @@ const handleDiscordVoiceChannel = async () => {
           </div>
 
           {/* Botão de Sair e Timer - Fixo no canto superior direito */}
-          <div className="absolute top-2 sm:top-4 right-2 sm:right-4 z-50 flex flex-col sm:flex-row gap-2 items-end sm:items-center">
+          <div className="absolute top-2 sm:top-4 right-2 sm:right-4 z-50 flex flex-wrap justify-end gap-1 sm:gap-2 max-w-[90%] sm:max-w-none">
             {!hideControls && (
               <>
                 {/* Badge de juiz + Timer */}
@@ -1413,7 +1413,7 @@ const handleDiscordVoiceChannel = async () => {
 
                 {/* Badge de Tipo de Partida */}
                 {duel && (
-                  <div className={`px-2 sm:px-3 py-1 sm:py-2 rounded-lg backdrop-blur-sm text-xs sm:text-sm font-bold ${
+                  <div className={`px-2 py-1 rounded-lg backdrop-blur-sm text-[10px] sm:text-xs font-bold ${
                     duel.is_ranked
                       ? 'bg-yellow-500/95 text-black'
                       : 'bg-blue-500/95 text-white'
@@ -1424,18 +1424,16 @@ const handleDiscordVoiceChannel = async () => {
                 
                 {/* Badge de Conexão Discord */}
                 {!isJudge && !isSpectator && currentUser && (
-                  <div className={`px-2 sm:px-3 py-1 sm:py-2 rounded-lg backdrop-blur-sm text-xs sm:text-sm font-bold ${discordConnectionLoading ? 'bg-gray-500/95 text-white' : (discordConnection ? 'bg-green-500/95 text-white' : 'bg-red-500/95 text-white')}`}>
+                  <div className={`px-2 py-1 rounded-lg backdrop-blur-sm text-[10px] sm:text-xs font-bold ${discordConnectionLoading ? 'bg-gray-500/95 text-white' : (discordConnection ? 'bg-green-500/95 text-white' : 'bg-red-500/95 text-white')}`}>
                     {discordConnectionLoading ? (
-                      <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                      <Loader2 className="w-3 h-3 animate-spin" />
                     ) : discordConnection ? (
-                      <>
-                        {t('duelRoom.discordConnected')}
-                      </>
+                      t('duelRoom.discordConnected')
                     ) : (
-                      <>
-                        <span className="mr-1" aria-label="discord">💬</span>
-                        {t('duelRoom.discordNotConnected')}
-                      </>
+                      <span className="flex items-center gap-1">
+                        <span aria-label="discord">💬</span>
+                        <span className="hidden sm:inline">{t('duelRoom.discordNotConnected')}</span>
+                      </span>
                     )}
                   </div>
                 )}
@@ -1446,23 +1444,22 @@ const handleDiscordVoiceChannel = async () => {
                     onClick={handleDiscordVoiceChannel}
                     variant="outline"
                     size="sm"
-                    className="bg-blue-600/95 hover:bg-blue-700 text-white backdrop-blur-sm text-xs sm:text-sm"
+                    className="bg-blue-600/95 hover:bg-blue-700 text-white backdrop-blur-sm h-8 sm:h-10 px-2 sm:px-3 text-[10px] sm:text-xs"
                     disabled={discordConnectionLoading}
                   >
                     {discordConnectionLoading ? (
-                      <>
-                        <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                        {t('duelRoom.discordConnecting')}
-                      </>
+                      <Loader2 className="w-3 h-3 animate-spin" />
                     ) : discordConnection ? (
                       <>
-                        <Mic className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                        {t('duelRoom.joinDiscordVoice')}
+                        <Mic className="w-3 h-3 sm:mr-1" />
+                        <span className="hidden sm:inline">{t('duelRoom.joinDiscordVoice')}</span>
+                        <span className="sm:hidden">Voz</span>
                       </>
                     ) : (
                       <>
-                        <MicOff className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                        {t('duelRoom.connectDiscord')}
+                        <MicOff className="w-3 h-3 sm:mr-1" />
+                        <span className="hidden sm:inline">{t('duelRoom.connectDiscord')}</span>
+                        <span className="sm:hidden">Conectar</span>
                       </>
                     )}
                   </Button>
@@ -1491,7 +1488,7 @@ const handleDiscordVoiceChannel = async () => {
                 )}
 
                 {/* Timer Display - Contagem Regressiva */}
-                <div className={`px-2 sm:px-4 py-1 sm:py-2 rounded-lg backdrop-blur-sm font-mono text-xs sm:text-sm font-bold ${
+                <div className={`px-2 sm:px-3 py-1 rounded-lg backdrop-blur-sm font-mono text-[10px] sm:text-xs font-bold ${
                   callDuration <= 300 ? 'bg-destructive/95 text-destructive-foreground animate-pulse' :
                   callDuration <= 600 ? 'bg-yellow-500/95 text-black' :
                   'bg-card/95'
@@ -1510,10 +1507,10 @@ const handleDiscordVoiceChannel = async () => {
                   <Button
                     onClick={handleLeave}
                     variant="destructive"
-                    size="sm"
-                    className="bg-destructive/95 backdrop-blur-sm text-xs sm:text-sm"
+                    size="icon"
+                    className="bg-destructive/95 backdrop-blur-sm w-8 h-8 sm:w-10 sm:h-10 sm:px-4 sm:w-auto"
                   >
-                    <PhoneOff className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+                    <PhoneOff className="w-4 h-4 sm:mr-2" />
                     <span className="hidden sm:inline">{t('duelRoom.leave')}</span>
                   </Button>
                 </>
@@ -1524,11 +1521,6 @@ const handleDiscordVoiceChannel = async () => {
                     <>
                       <HideElementsButton onToggle={() => setHideControls(!hideControls)} isHidden={hideControls} />
                       {!(window as any).electronAPI?.isElectron && <RecordMatchButton duelId={id!} />}
-                      {isParticipant && (
-                        <span className="hidden sm:inline-flex">
-                          <YouTubeLiveButton duelId={id!} />
-                        </span>
-                      )}
                     </>
                   )}
 
@@ -1593,7 +1585,7 @@ const handleDiscordVoiceChannel = async () => {
                             onClick={() => endDuel()}
                             variant="outline"
                             size="sm"
-                            className="bg-green-600/95 hover:bg-green-700 text-white backdrop-blur-sm text-xs sm:text-sm"
+                            className="bg-green-600/95 hover:bg-green-700 text-white backdrop-blur-sm h-8 sm:h-10 px-2 sm:px-4"
                             title={t('duelRoom.endMatch')}
                           >
                             <span className="hidden sm:inline">{t('duelRoom.finish')}</span>
@@ -1604,10 +1596,10 @@ const handleDiscordVoiceChannel = async () => {
                       <Button
                         onClick={handleLeave}
                         variant="destructive"
-                        size="sm"
-                        className="bg-destructive/95 backdrop-blur-sm text-xs sm:text-sm"
+                        size="icon"
+                        className="bg-destructive/95 backdrop-blur-sm w-8 h-8 sm:w-10 sm:h-10 sm:px-4 sm:w-auto"
                       >
-                        <PhoneOff className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+                        <PhoneOff className="w-4 h-4 sm:mr-2" />
                         <span className="hidden sm:inline">{t('duelRoom.leave')}</span>
                       </Button>
                     </>
