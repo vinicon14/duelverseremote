@@ -363,6 +363,9 @@ serve(async (req) => {
       const updates: Record<string, unknown> = {};
       if (typeof body.description === "string") updates.description = body.description;
       if (typeof body.iconUrl === "string") updates.iconUrl = body.iconUrl;
+      if (typeof body.statsChannelId === "string" || body.statsChannelId === null) {
+        updates.statsChannelId = body.statsChannelId || null;
+      }
       if (Array.isArray(body.voiceChannelIds)) {
         updates.voiceChannelIds = body.voiceChannelIds.filter(
           (v: any) => typeof v === "string",

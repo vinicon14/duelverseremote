@@ -27,10 +27,31 @@ const callPresence = async (playing: boolean) => {
   }
 };
 
+const refreshOnlineCounter = async () => {
+  try {
+    await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/discord-presence-counter`,
+      {
+        method: "POST",
+        keepalive: true,
+        headers: {
+          "Content-Type": "application/json",
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: JSON.stringify({}),
+      },
+    );
+  } catch (err) {
+    console.warn("[discord-presence-counter] failed:", err);
+  }
+};
+
 export const useDiscordPresence = (userId: string | undefined) => {
   useEffect(() => {
     if (!userId) return;
     callPresence(true);
+    // Refresh the Discord "Online: N" stats channel right after login
+    refreshOnlineCounter();
 
     const handleUnload = () => {
       // Best-effort: notify presence off
@@ -44,11 +65,20 @@ export const useDiscordPresence = (userId: string | undefined) => {
         navigator.sendBeacon?.(url, blob);
       } catch { /* ignore */ }
       callPresence(false);
+      // Fire-and-forget counter refresh on unload
+      try {
+        const counterUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/discord-presence-counter`;
+        navigator.sendBeacon?.(
+          counterUrl,
+          new Blob(["{}"], { type: "application/json" }),
+        );
+      } catch { /* ignore */ }
     };
     window.addEventListener("beforeunload", handleUnload);
     return () => {
       window.removeEventListener("beforeunload", handleUnload);
       callPresence(false);
+      refreshOnlineCounter();
     };
   }, [userId]);
 };
