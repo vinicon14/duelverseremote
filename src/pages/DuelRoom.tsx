@@ -29,6 +29,7 @@ import { PokemonDuelViewer } from "@/components/duel/PokemonDuelViewer";
 import { WebRTCVideoCall, type VideoLayout, type WebRTCVideoCallHandle } from "@/components/duel/WebRTCVideoCall";
 import { useDuelDeck } from "@/hooks/useDuelDeck";
 import { useDuelPresence, useDuelCleanup } from "@/hooks/useDuelPresence";
+import { DiscordVoiceRoster } from "@/components/duel/DiscordVoiceRoster";
 
 const DuelRoom = () => {
   useBanCheck(); // Proteger contra usuários banidos
@@ -1398,6 +1399,9 @@ const DuelRoom = () => {
           onRemoveCustomCounter={removeCustomCounter}
         />
       )}
+
+      {/* Roster do Discord (se a sala foi criada/sincronizada via call de voz) */}
+      {duel?.id && <DiscordVoiceRoster duelId={duel.id} />}
 
     </div>
   );
