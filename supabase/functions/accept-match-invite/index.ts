@@ -52,6 +52,38 @@ serve(async (req) => {
     const status = result?.status || "unavailable";
     const duelId = result?.duel_id || null;
 
+    // When the invite is successfully matched, delete the announcement
+    // messages we posted to Discord so they don't linger in the channel.
+    if (status === "matched" || status === "already_matched") {
+      try {
+        const { data: invite } = await adminClient
+          .from("matchmaking_invites")
+          .select("discord_messages")
+          .eq("id", inviteId)
+          .maybeSingle();
+
+        const messages = Array.isArray(invite?.discord_messages) ? invite!.discord_messages : [];
+        if (messages.length > 0) {
+          await Promise.all(
+            messages.map(async (m: any) => {
+              if (!m?.webhookUrl || !m?.messageId) return;
+              try {
+                await fetch(`${m.webhookUrl}/messages/${m.messageId}`, { method: "DELETE" });
+              } catch (delErr) {
+                console.warn("[accept-match-invite] failed to delete discord message", delErr);
+              }
+            }),
+          );
+          await adminClient
+            .from("matchmaking_invites")
+            .update({ discord_messages: [] })
+            .eq("id", inviteId);
+        }
+      } catch (cleanupErr) {
+        console.warn("[accept-match-invite] cleanup error", cleanupErr);
+      }
+    }
+
     return jsonResponse({
       success: status === "matched" || status === "already_matched",
       status,

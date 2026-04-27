@@ -608,7 +608,8 @@ serve(async (req) => {
         allowed_mentions: { parse: ["everyone"] },
       };
 
-      const results: Array<{ ok: boolean; status?: number; messageId?: string }> = [];
+      const results: Array<{ ok: boolean; status?: number; messageId?: string; webhookUrl?: string }> = [];
+      const postedMessages: Array<{ webhookUrl: string; messageId: string }> = [];
       for (const server of activeServers) {
         const response = await fetch(`${server.webhookUrl}?wait=true`, {
           method: "POST",
@@ -616,10 +617,25 @@ serve(async (req) => {
           body: JSON.stringify(webhookPayload),
         });
         const posted = await response.json().catch(() => null);
-        if (response.ok) scheduleWebhookMessageDeletion(server.webhookUrl, posted?.id, 10000);
-        results.push({ ok: response.ok, status: response.status, messageId: posted?.id });
+        // IMPORTANT: do NOT auto-delete the matchmaking message.
+        // It must remain visible in Discord until somebody actually accepts
+        // the invite (handled by accept-match-invite, which clears it).
+        if (response.ok && posted?.id) {
+          postedMessages.push({ webhookUrl: server.webhookUrl, messageId: posted.id });
+        }
+        results.push({ ok: response.ok, status: response.status, messageId: posted?.id, webhookUrl: server.webhookUrl });
       }
-      return jsonResponse({ success: results.some((r) => r.ok), temporary: true, inviteId: invite.id, link, results });
+
+      // Persist webhook + message IDs on the invite so the accept handler
+      // can delete them once a player joins the duel.
+      if (postedMessages.length > 0) {
+        await supabase
+          .from("matchmaking_invites")
+          .update({ discord_messages: postedMessages })
+          .eq("id", invite.id);
+      }
+
+      return jsonResponse({ success: results.some((r) => r.ok), inviteId: invite.id, link, results });
     }
 
     // ============================================================
