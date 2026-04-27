@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Navbar } from "@/components/Navbar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { Swords, Plus, Users, Clock, Download, Search, Sparkles } from "lucide-react";
+import { Swords, Plus, Users, Clock, Download, Search, Sparkles, Lock } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Link } from "react-router-dom";
 import { useBanCheck } from "@/hooks/useBanCheck";
@@ -522,6 +522,38 @@ const Duels = () => {
                         </p>
                       </div>
                     )}
+
+                    {/* Sala Privada com senha */}
+                    <div className="space-y-2 border-t border-border/40 pt-4">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="is-private" className="flex items-center gap-2">
+                          <Lock className="h-4 w-4" />
+                          Sala privada
+                        </Label>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={isPrivate ? "default" : "outline"}
+                          onClick={() => setIsPrivate((v) => !v)}
+                          className={isPrivate ? "btn-mystic text-white" : ""}
+                        >
+                          {isPrivate ? "Ativada" : "Desativada"}
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Salas privadas não aparecem no matchmaking automático e exigem senha para entrar.
+                      </p>
+                      {isPrivate && (
+                        <Input
+                          id="room-password"
+                          type="text"
+                          placeholder="Defina uma senha (mín. 3 caracteres)"
+                          value={roomPassword}
+                          onChange={(e) => setRoomPassword(e.target.value)}
+                          className="bg-background/50"
+                        />
+                      )}
+                    </div>
 
                     <Button onClick={handleCreateDuel} className="w-full btn-mystic text-white">
                       {t('duels.createAndEnter')}
