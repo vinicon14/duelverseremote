@@ -29,6 +29,7 @@ import { PokemonDuelViewer } from "@/components/duel/PokemonDuelViewer";
 import { WebRTCVideoCall, type VideoLayout, type WebRTCVideoCallHandle } from "@/components/duel/WebRTCVideoCall";
 import { useDuelDeck } from "@/hooks/useDuelDeck";
 import { useDuelPresence, useDuelCleanup } from "@/hooks/useDuelPresence";
+import { getDefaultLifePoints, isLegacyMagicTcg, isLegacyPokemonTcg, isYgoStyleTcg } from "@/utils/tcgRules";
 import { DiscordVoiceRoster } from "@/components/duel/DiscordVoiceRoster";
 import { BroadcastDuelToDiscordButton } from "@/components/duel/BroadcastDuelToDiscordButton";
 
@@ -278,7 +279,7 @@ const DuelRoom = () => {
           console.log('🔴 [REALTIME] NEW:', payload.new);
           
           if (payload.new) {
-            const defaultLP = payload.new.tcg_type === 'magic' ? 40 : payload.new.tcg_type === 'pokemon' ? 6 : 8000;
+            const defaultLP = getDefaultLifePoints(payload.new.tcg_type);
             const newP1LP = payload.new.player1_lp ?? defaultLP;
             const newP2LP = payload.new.player2_lp ?? defaultLP;
             const newP3LP = (payload.new as any).player3_lp ?? defaultLP;
@@ -573,7 +574,7 @@ const DuelRoom = () => {
       }
 
       setDuel(data);
-      const defaultLP = data.tcg_type === 'magic' ? 40 : data.tcg_type === 'pokemon' ? 6 : 8000;
+      const defaultLP = getDefaultLifePoints(data.tcg_type);
       setPlayer1LP(data.player1_lp || defaultLP);
       setPlayer2LP(data.player2_lp || defaultLP);
       setPlayer3LP((data as any).player3_lp || defaultLP);
@@ -1103,7 +1104,7 @@ const DuelRoom = () => {
                     />
                   ) : myDeckIsOpen && isParticipant && !isJudge ? (
                     <>
-                      {duel?.tcg_type === 'yugioh' && showDeckViewer && (
+                      {isYgoStyleTcg(duel?.tcg_type) && showDeckViewer && (
                         <>
                           <input
                             ref={fileInputRef}
@@ -1134,7 +1135,7 @@ const DuelRoom = () => {
                           />
                         </>
                       )}
-                      {duel?.tcg_type === 'magic' && showMagicViewer && (
+                      {isLegacyMagicTcg(duel?.tcg_type) && showMagicViewer && (
                         <MagicDuelViewer
                           isOpen={showMagicViewer}
                           onClose={() => setShowMagicViewer(false)}
@@ -1143,7 +1144,7 @@ const DuelRoom = () => {
                           embedded
                         />
                       )}
-                      {duel?.tcg_type === 'pokemon' && showPokemonViewer && currentUser && id && (
+                      {isLegacyPokemonTcg(duel?.tcg_type) && showPokemonViewer && currentUser && id && (
                         <PokemonDuelViewer
                           duelId={id}
                           currentUserId={currentUser.id}
@@ -1299,8 +1300,8 @@ const DuelRoom = () => {
                     <>
                       {isParticipant && !isJudge && (
                         <>
-                          {/* Botão do Deck - YGO ou Magic */}
-                          {duel?.tcg_type === 'magic' ? (
+                          {/* Botão do Deck */}
+                          {isLegacyMagicTcg(duel?.tcg_type) ? (
                             <Button
                               onClick={() => setShowMagicViewer(!showMagicViewer)}
                               variant="outline"
@@ -1310,7 +1311,7 @@ const DuelRoom = () => {
                             >
                               <Sparkles className="w-3 h-3 sm:w-4 sm:h-4" />
                             </Button>
-                          ) : duel?.tcg_type === 'pokemon' ? (
+                          ) : isLegacyPokemonTcg(duel?.tcg_type) ? (
                             <Button
                               onClick={() => setShowPokemonViewer(!showPokemonViewer)}
                               variant="outline"
@@ -1412,4 +1413,3 @@ const DuelRoom = () => {
 };
 
 export default DuelRoom;
-

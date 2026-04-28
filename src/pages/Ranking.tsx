@@ -16,8 +16,9 @@ import { useTcg } from "@/contexts/TcgContext";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SEOHead } from "@/components/SEOHead";
 import { useTranslation } from "react-i18next";
+import { getTcgDisplayName } from "@/utils/tcgDisplay";
 
-const TCG_LABELS: Record<string, string> = { yugioh: 'YGO Advanced', magic: 'Genesis', pokemon: 'Rush Duel' };
+const TCG_OPTIONS = ['yugioh', 'genesis', 'rush_duel'];
 
 const Ranking = () => {
   const { t } = useTranslation();
@@ -71,16 +72,16 @@ const Ranking = () => {
       <main className="container mx-auto px-4 pt-20 sm:pt-24 pb-12">
         <div className="mb-6 sm:mb-8 animate-fade-in-up">
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gradient-mystic mb-2 pb-1 leading-normal">
-            {t('ranking.title')} — {TCG_LABELS[selectedTcg]}
+            {t('ranking.title')} — {getTcgDisplayName(selectedTcg)}
           </h1>
           <p className="text-sm sm:text-base text-muted-foreground">
-            {t('ranking.subtitle', { tcg: TCG_LABELS[selectedTcg] })}
+            {t('ranking.subtitle', { tcg: getTcgDisplayName(selectedTcg) })}
           </p>
           <Tabs value={selectedTcg} onValueChange={setSelectedTcg} className="mt-4">
             <TabsList>
-              <TabsTrigger value="yugioh">YGO Advanced</TabsTrigger>
-              <TabsTrigger value="magic">Genesis</TabsTrigger>
-              <TabsTrigger value="pokemon">Rush Duel</TabsTrigger>
+              {TCG_OPTIONS.map(tcg => (
+                <TabsTrigger key={tcg} value={tcg}>{getTcgDisplayName(tcg)}</TabsTrigger>
+              ))}
             </TabsList>
           </Tabs>
         </div>
@@ -166,4 +167,3 @@ const Ranking = () => {
 };
 
 export default Ranking;
-

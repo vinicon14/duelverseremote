@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Navbar } from "@/components/Navbar";
 import { supabase } from "@/integrations/supabase/client";
+import { getDefaultLifePoints } from "@/utils/tcgRules";
 import { useToast } from "@/hooks/use-toast";
 import { Trophy, Clock, Swords, Loader2 } from "lucide-react";
 
@@ -160,7 +161,7 @@ const MyTournaments = () => {
 
       const tournament = myTournaments.find((t) => t.id === tournamentId);
       const duelTcg = (tournament as any)?.tcg_type || 'yugioh';
-      const defaultLP = duelTcg === 'magic' ? 40 : duelTcg === 'pokemon' ? 6 : 8000;
+      const defaultLP = getDefaultLifePoints(duelTcg);
 
       const { data: duelData, error: duelError } = await supabase
         .from('live_duels')
@@ -385,4 +386,3 @@ const MyTournaments = () => {
 };
 
 export default MyTournaments;
-

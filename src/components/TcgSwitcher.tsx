@@ -13,19 +13,12 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Swords, Sparkles, Zap, ChevronDown } from 'lucide-react';
+import { getTcgDisplayName } from '@/utils/tcgDisplay';
 
 const TCG_ICONS: Record<TcgType, React.ReactNode> = {
   yugioh: <Swords className="w-4 h-4" />,
-  magic: <Sparkles className="w-4 h-4" />,
-  pokemon: <Zap className="w-4 h-4" />,
-};
-
-// Nomes exibidos: foco principal em YGO Advanced, Rush Duel e Genesis.
-// Mantém as chaves internas yugioh/magic/pokemon.
-const TCG_NAMES: Record<TcgType, string> = {
-  yugioh: 'YGO Advanced',
-  magic: 'Genesis',
-  pokemon: 'Rush Duel',
+  genesis: <Sparkles className="w-4 h-4" />,
+  rush_duel: <Zap className="w-4 h-4" />,
 };
 
 export const TcgSwitcher = () => {
@@ -41,7 +34,7 @@ export const TcgSwitcher = () => {
         onClick={() => navigate('/profile-select')}
       >
         {TCG_ICONS[activeTcg]}
-        {TCG_NAMES[activeTcg]}
+        {getTcgDisplayName(activeTcg)}
       </Button>
     );
   }
@@ -51,7 +44,7 @@ export const TcgSwitcher = () => {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="sm" className="gap-1 text-xs">
           {TCG_ICONS[activeTcg]}
-          {TCG_NAMES[activeTcg]}
+          {getTcgDisplayName(activeTcg)}
           <ChevronDown className="w-3 h-3" />
         </Button>
       </DropdownMenuTrigger>
@@ -63,7 +56,7 @@ export const TcgSwitcher = () => {
             className={p.tcg_type === activeTcg ? 'bg-primary/10' : ''}
           >
             {TCG_ICONS[p.tcg_type]}
-            <span className="ml-2">{TCG_NAMES[p.tcg_type]}</span>
+            <span className="ml-2">{getTcgDisplayName(p.tcg_type)}</span>
             <span className="ml-auto text-xs text-muted-foreground">{p.username}</span>
           </DropdownMenuItem>
         ))}

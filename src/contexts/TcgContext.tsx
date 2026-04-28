@@ -7,7 +7,22 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
-export type TcgType = 'yugioh' | 'magic' | 'pokemon';
+export type TcgType = 'yugioh' | 'genesis' | 'rush_duel';
+type LegacyTcgType = TcgType | 'magic' | 'pokemon';
+
+export const normalizeTcgType = (tcg: string | null | undefined): TcgType => {
+  switch (tcg as LegacyTcgType | undefined) {
+    case 'genesis':
+    case 'magic':
+      return 'genesis';
+    case 'rush_duel':
+    case 'pokemon':
+      return 'rush_duel';
+    case 'yugioh':
+    default:
+      return 'yugioh';
+  }
+};
 
 export interface TcgProfile {
   id: string;
@@ -19,6 +34,10 @@ export interface TcgProfile {
   losses: number;
   points: number;
   level: number;
+  xp_total: number;
+  xp_level: number;
+  xp_last_daily_claim: string | null;
+  xp_ads_watched: number;
 }
 
 interface TcgContextType {
@@ -42,8 +61,9 @@ export const useTcg = () => {
 
 export const TcgProvider = ({ children }: { children: ReactNode }) => {
   const [activeTcg, setActiveTcgState] = useState<TcgType>(() => {
-    const saved = localStorage.getItem('activeTcg');
-    return (saved as TcgType) || 'yugioh';
+    const normalized = normalizeTcgType(localStorage.getItem('activeTcg'));
+    localStorage.setItem('activeTcg', normalized);
+    return normalized;
   });
   const [activeProfile, setActiveProfile] = useState<TcgProfile | null>(null);
   const [profiles, setProfiles] = useState<TcgProfile[]>([]);
@@ -66,16 +86,31 @@ export const TcgProvider = ({ children }: { children: ReactNode }) => {
     if (!error && data) {
       const mapped = data.map(p => ({
         ...p,
-        tcg_type: p.tcg_type as TcgType
+        tcg_type: normalizeTcgType(p.tcg_type),
+        xp_total: (p as any).xp_total || 0,
+        xp_level: (p as any).xp_level || 1,
+        xp_last_daily_claim: (p as any).xp_last_daily_claim || null,
+        xp_ads_watched: (p as any).xp_ads_watched || 0,
       }));
-      setProfiles(mapped);
+      const deduped = Object.values(
+        mapped.reduce<Record<TcgType, TcgProfile>>((acc, profile) => {
+          const current = acc[profile.tcg_type];
+          if (!current || profile.points + profile.wins >= current.points + current.wins) {
+            acc[profile.tcg_type] = profile;
+          }
+          return acc;
+        }, {} as Record<TcgType, TcgProfile>)
+      );
+      setProfiles(deduped);
 
       // Set active profile based on saved TCG
-      const savedTcg = localStorage.getItem('activeTcg') || 'yugioh';
-      const match = mapped.find(p => p.tcg_type === savedTcg) || mapped[0];
+      const savedTcg = normalizeTcgType(localStorage.getItem('activeTcg'));
+      localStorage.setItem('activeTcg', savedTcg);
+      const match = deduped.find(p => p.tcg_type === savedTcg) || deduped[0];
       if (match) {
         setActiveProfile(match);
         setActiveTcgState(match.tcg_type);
+        localStorage.setItem('activeTcg', match.tcg_type);
       }
     }
     setIsLoading(false);
@@ -92,9 +127,10 @@ export const TcgProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const setActiveTcg = (tcg: TcgType) => {
-    setActiveTcgState(tcg);
-    localStorage.setItem('activeTcg', tcg);
-    const match = profiles.find(p => p.tcg_type === tcg);
+    const normalized = normalizeTcgType(tcg);
+    setActiveTcgState(normalized);
+    localStorage.setItem('activeTcg', normalized);
+    const match = profiles.find(p => p.tcg_type === normalized);
     if (match) setActiveProfile(match);
   };
 
@@ -135,8 +171,10 @@ export const TcgProvider = ({ children }: { children: ReactNode }) => {
       return false;
     }
 
+    const normalized = normalizeTcgType(tcg);
+    localStorage.setItem('activeTcg', normalized);
+    setActiveTcgState(normalized);
     await fetchProfiles();
-    setActiveTcg(tcg);
     return true;
   };
 

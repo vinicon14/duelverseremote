@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Phone, PhoneOff, Swords } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { getTcgDisplayName } from "@/utils/tcgDisplay";
 
 interface DuelCallInvite {
   id: string;
@@ -25,21 +26,18 @@ interface DuelCallInvite {
   };
 }
 
-// Rebranding: chaves internas mantidas, somente o display muda.
 const TCG_LABELS: Record<string, string> = {
   yugioh: '🃏 Advanced',
-  magic: '⚛️ Genesis',
+  genesis: '⚛️ Genesys',
+  rush_duel: '⚡ Rush',
+  magic: '⚛️ Genesys',
   pokemon: '⚡ Rush',
-};
-
-const TCG_FULL: Record<string, string> = {
-  yugioh: 'YGO Advanced',
-  magic: 'Genesis',
-  pokemon: 'Rush Duel',
 };
 
 const TCG_SETTINGS_KEY: Record<string, string> = {
   yugioh: 'ringtone_ygo',
+  genesis: 'ringtone_mtg',
+  rush_duel: 'ringtone_pkm',
   magic: 'ringtone_mtg',
   pokemon: 'ringtone_pkm',
 };
@@ -47,6 +45,8 @@ const TCG_SETTINGS_KEY: Record<string, string> = {
 // Fallback frequencies for different TCG ringtones
 const TCG_TONES: Record<string, number[]> = {
   yugioh: [523, 659, 784, 659, 523, 784],
+  genesis: [440, 523, 660, 523, 440, 660],
+  rush_duel: [587, 740, 880, 740, 587, 880],
   magic: [440, 523, 660, 523, 440, 660],
   pokemon: [587, 740, 880, 740, 587, 880],
 };
@@ -374,7 +374,7 @@ export const DuelCallNotification = ({ currentUserId }: { currentUserId?: string
           <h2 className="text-3xl font-bold text-white">{invite.sender.username}</h2>
           <p className="text-primary text-lg mt-1 flex items-center justify-center gap-2">
             <Swords className="w-5 h-5" />
-            Duelo de {TCG_FULL[tcgType] || tcgType}
+            Duelo de {getTcgDisplayName(tcgType)}
           </p>
         </div>
 

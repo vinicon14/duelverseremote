@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Heart, Shield, Minus, Plus, GripVertical, X, Maximize2, Minimize2, RotateCcw, PlusCircle, Trash2 } from "lucide-react";
+import { getDefaultLifePoints, isLegacyMagicTcg, isLegacyPokemonTcg } from "@/utils/tcgRules";
 
 type PlayerKey = 'player1' | 'player2' | 'player3' | 'player4';
 
@@ -66,9 +67,9 @@ export const FloatingCalculator = ({
   onRemoveCustomCounter,
 }: FloatingCalculatorProps) => {
   const { t } = useTranslation();
-  const isMagic = tcgType === 'magic';
-  const isPokemon = tcgType === 'pokemon';
-  const defaultLP = isPokemon ? 6 : isMagic ? 40 : 8000;
+  const isMagic = isLegacyMagicTcg(tcgType);
+  const isPokemon = isLegacyPokemonTcg(tcgType);
+  const defaultLP = getDefaultLifePoints(tcgType);
   const lpButtons = isPokemon
     ? { row1: [{ label: '-2', amount: -2 }, { label: '-1', amount: -1 }, { label: '+1', amount: 1 }, { label: '+2', amount: 2 }] }
     : isMagic

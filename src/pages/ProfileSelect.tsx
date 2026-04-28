@@ -19,14 +19,14 @@ const TCG_CONFIG: Record<TcgType, { name: string; icon: React.ReactNode; color: 
     gradient: "from-purple-600 to-pink-600",
     description: "O formato competitivo principal do Yu-Gi-Oh! com lista de banidas oficial."
   },
-  magic: {
-    name: "Genesis",
+  genesis: {
+    name: "Genesys",
     icon: <Sparkles className="w-10 h-10" />,
     color: "text-amber-400",
     gradient: "from-amber-600 to-red-700",
     description: "Formato Yu-Gi-Oh! por orçamento — cada carta tem um custo em pontos."
   },
-  pokemon: {
+  rush_duel: {
     name: "Rush Duel",
     icon: <Zap className="w-10 h-10" />,
     color: "text-yellow-400",

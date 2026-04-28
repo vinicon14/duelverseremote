@@ -586,14 +586,14 @@ const Friends = () => {
               🃏 YGO Advanced
             </Button>
             <Button
-              onClick={() => challengeTarget && challengeFriend(challengeTarget, 'magic')}
+              onClick={() => challengeTarget && challengeFriend(challengeTarget, 'genesis')}
               className="w-full h-14 text-lg"
               variant="outline"
             >
-              ⚛️ Genesis
+              ⚛️ Genesys
             </Button>
             <Button
-              onClick={() => challengeTarget && challengeFriend(challengeTarget, 'pokemon')}
+              onClick={() => challengeTarget && challengeFriend(challengeTarget, 'rush_duel')}
               className="w-full h-14 text-lg"
               variant="outline"
             >
@@ -610,4 +610,3 @@ const Friends = () => {
 };
 
 export default Friends;
-

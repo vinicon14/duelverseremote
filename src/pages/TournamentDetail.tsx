@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/Navbar";
 import { supabase } from "@/integrations/supabase/client";
+import { getDefaultLifePoints } from "@/utils/tcgRules";
 import { useToast } from "@/components/ui/use-toast";
 import { Trophy, Users, Calendar, Coins, ArrowLeft, Swords, AlertTriangle, CheckCircle, Clock, FileWarning, ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -303,8 +304,8 @@ const TournamentDetail = () => {
           status: 'waiting',
           is_ranked: false,
           tcg_type: tournament.tcg_type || 'yugioh',
-          player1_lp: tournament.tcg_type === 'magic' ? 40 : tournament.tcg_type === 'pokemon' ? 6 : 8000,
-          player2_lp: tournament.tcg_type === 'magic' ? 40 : tournament.tcg_type === 'pokemon' ? 6 : 8000,
+          player1_lp: getDefaultLifePoints(tournament.tcg_type),
+          player2_lp: getDefaultLifePoints(tournament.tcg_type),
         })
         .select()
         .single();
@@ -1077,4 +1078,3 @@ const TournamentDetail = () => {
 };
 
 export default TournamentDetail;
-

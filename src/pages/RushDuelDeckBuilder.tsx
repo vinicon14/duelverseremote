@@ -1,8 +1,8 @@
 /**
  * DuelVerse - Rush Duel Deck Builder
  * 
- * Deck builder usando a API YGOPRODeck com filtro Rush Duel.
- * Regras: 40+ cartas main, até 15 extra, máx 3 cópias por carta.
+ * Deck builder usando YAML Yugi, que publica um JSON especifico de Rush Duel.
+ * Regras DuelVerse: exatamente 40 cartas main, até 15 extra, até 15 side, máx 3 cópias por nome.
  */
 import { useState, useEffect, useCallback } from 'react';
 import { Navbar } from '@/components/Navbar';
@@ -46,9 +46,98 @@ interface DeckCard extends YugiohCard {
   quantity: number;
 }
 
-const RUSH_DUEL_TYPES = ['All', 'Normal Monster', 'Effect Monster', 'Fusion Monster', 'Spell', 'Trap'];
+const RUSH_DUEL_TYPES = ['All', 'Normal Monster', 'Effect Monster', 'Maximum Monster', 'Fusion Monster', 'Ritual Monster', 'Spell', 'Trap'];
 const RUSH_ATTRIBUTES = ['All', 'DARK', 'DIVINE', 'EARTH', 'FIRE', 'LIGHT', 'WATER', 'WIND'];
-const RUSH_FORMAT = 'rush duel';
+const RUSH_MAIN_DECK_SIZE = 40;
+const RUSH_CARDS_URL = 'https://dawnbrandbots.github.io/yaml-yugi/rush.json';
+
+interface RushYamlCard {
+  konami_id?: number;
+  yugipedia_page_id?: number;
+  name?: Record<string, string | null>;
+  requirement?: Record<string, string | null>;
+  effect?: Record<string, string | null>;
+  card_type?: string;
+  monster_type_line?: string;
+  attribute?: string;
+  level?: number;
+  atk?: number;
+  def?: number;
+  property?: string;
+  images?: { image?: string }[];
+}
+
+let rushCardCache: YugiohCard[] | null = null;
+
+const stripHtml = (value?: string | null) => (value || '').replace(/<[^>]*>/g, '').trim();
+
+const pickText = (field?: Record<string, string | null>) =>
+  stripHtml(field?.en) || stripHtml(field?.pt) || stripHtml(field?.ja_romaji) || stripHtml(field?.ja) || '';
+
+const getRushCardType = (card: RushYamlCard) => {
+  if (card.card_type === 'Monster') {
+    const line = card.monster_type_line || '';
+    if (line.includes('Fusion')) return 'Fusion Monster';
+    if (line.includes('Ritual')) return 'Ritual Monster';
+    if (line.includes('Maximum')) return 'Maximum Monster';
+    if (line.includes('Effect')) return 'Effect Monster';
+    return 'Normal Monster';
+  }
+
+  if (card.card_type === 'Spell') return 'Spell';
+  if (card.card_type === 'Trap') return 'Trap';
+  return card.card_type || 'Card';
+};
+
+const getRushRace = (card: RushYamlCard) => {
+  if (card.monster_type_line) return card.monster_type_line.split('/')[0].trim();
+  return card.property || card.card_type || 'Rush Duel';
+};
+
+const getRushImageUrl = (card: RushYamlCard) => {
+  const image = card.images?.[0]?.image;
+  if (!image) return '/placeholder.svg';
+  return `https://yugipedia.com/wiki/Special:Redirect/file/${encodeURIComponent(image)}`;
+};
+
+const normalizeRushCard = (card: RushYamlCard, index: number): YugiohCard => {
+  const name = pickText(card.name) || `Rush Card ${card.konami_id || index + 1}`;
+  const requirement = pickText(card.requirement);
+  const effect = pickText(card.effect);
+  const desc = [requirement && `Requirement: ${requirement}`, effect].filter(Boolean).join('\n\n');
+  const imageUrl = getRushImageUrl(card);
+
+  return {
+    id: card.konami_id || card.yugipedia_page_id || index + 1,
+    name,
+    type: getRushCardType(card),
+    desc,
+    atk: card.atk,
+    def: card.def,
+    level: card.level,
+    race: getRushRace(card),
+    attribute: card.attribute,
+    card_images: [{
+      id: card.konami_id || card.yugipedia_page_id || index + 1,
+      image_url: imageUrl,
+      image_url_small: imageUrl,
+      image_url_cropped: imageUrl,
+    }],
+  };
+};
+
+const loadRushCards = async () => {
+  if (rushCardCache) return rushCardCache;
+
+  const res = await fetch(RUSH_CARDS_URL);
+  if (!res.ok) {
+    throw new Error('Fonte Rush Duel indisponível no momento');
+  }
+
+  const data: RushYamlCard[] = await res.json();
+  rushCardCache = data.map(normalizeRushCard);
+  return rushCardCache;
+};
 
 export default function RushDuelDeckBuilder() {
   const { toast } = useToast();
@@ -57,6 +146,7 @@ export default function RushDuelDeckBuilder() {
   const [searchResults, setSearchResults] = useState<YugiohCard[]>([]);
   const [mainDeck, setMainDeck] = useState<DeckCard[]>([]);
   const [extraDeck, setExtraDeck] = useState<DeckCard[]>([]);
+  const [sideDeck, setSideDeck] = useState<DeckCard[]>([]);
   const [loading, setLoading] = useState(false);
   const [typeFilter, setTypeFilter] = useState('All');
   const [attributeFilter, setAttributeFilter] = useState('All');
@@ -69,7 +159,7 @@ export default function RushDuelDeckBuilder() {
   const [currentDeckName, setCurrentDeckName] = useState('');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [previewCard, setPreviewCard] = useState<YugiohCard | null>(null);
-  const [addTo, setAddTo] = useState<'main' | 'extra'>('main');
+  const [addTo, setAddTo] = useState<'main' | 'extra' | 'side'>('main');
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -83,13 +173,17 @@ export default function RushDuelDeckBuilder() {
     if (!searchQuery.trim() && typeFilter === 'All' && attributeFilter === 'All') return;
     setLoading(true);
     try {
-      const query = `https://rushcard.io/api/card/?search=${encodeURIComponent(searchQuery)}&num=40`;
-      const res = await fetch(query);
-      const data = await res.json();
-      
-      const cards: YugiohCard[] = Array.isArray(data) ? data : data.cards || [];
-      
-      let filtered = cards;
+      const cards = await loadRushCards();
+      const query = searchQuery.trim().toLowerCase();
+
+      let filtered = query
+        ? cards.filter(c =>
+            c.name.toLowerCase().includes(query) ||
+            c.race.toLowerCase().includes(query) ||
+            c.type.toLowerCase().includes(query)
+          )
+        : cards;
+
       if (typeFilter !== 'All') {
         filtered = filtered.filter(c => c.type.includes(typeFilter));
       }
@@ -100,7 +194,11 @@ export default function RushDuelDeckBuilder() {
       setSearchResults(filtered.slice(0, 40));
     } catch (error) {
       console.error('Rush Duel search error:', error);
-      toast({ title: 'Erro na busca', description: 'Não foi possível buscar cartas', variant: 'destructive' });
+      toast({
+        title: 'Erro na busca',
+        description: error instanceof Error ? error.message : 'Não foi possível buscar cartas Rush Duel',
+        variant: 'destructive'
+      });
     } finally {
       setLoading(false);
     }
@@ -108,46 +206,66 @@ export default function RushDuelDeckBuilder() {
 
   const getTotal = (deck: DeckCard[]) => deck.reduce((sum, c) => sum + c.quantity, 0);
 
-  const isExtraCard = (type: string) => type.includes('Fusion') || type.includes('Synchro') || type.includes('XYZ') || type.includes('Link');
+  const isExtraCard = (type: string) => type.includes('Fusion') || type.includes('Ritual');
+
+  const getTotalCopies = (cardName: string) => {
+    const normalizedName = cardName.trim().toLowerCase();
+    return [...mainDeck, ...extraDeck, ...sideDeck]
+      .filter(c => c.name.trim().toLowerCase() === normalizedName)
+      .reduce((sum, c) => sum + c.quantity, 0);
+  };
 
   const addToDeck = (card: YugiohCard) => {
-    const target = isExtraCard(card.type) ? extraDeck : mainDeck;
-    const setTarget = isExtraCard(card.type) ? setExtraDeck : setMainDeck;
+    if (addTo === 'extra' && !isExtraCard(card.type)) {
+      toast({ title: 'Carta inválida', description: 'Apenas Fusion e Ritual podem ir para o Extra Deck', variant: 'destructive' });
+      return;
+    }
+
+    const destination = addTo === 'side' ? 'side' : isExtraCard(card.type) ? 'extra' : 'main';
+    const target = destination === 'main' ? mainDeck : destination === 'extra' ? extraDeck : sideDeck;
+    const setTarget = destination === 'main' ? setMainDeck : destination === 'extra' ? setExtraDeck : setSideDeck;
     const total = getTotal(target);
 
-    if (!isExtraCard(card.type)) {
-      if (total >= 40) {
+    if (destination === 'main') {
+      if (total >= RUSH_MAIN_DECK_SIZE) {
         toast({ title: 'Main Deck cheio', description: 'Máximo 40 cartas', variant: 'destructive' });
         return;
       }
-    } else {
+    } else if (destination === 'extra') {
       if (total >= 15) {
         toast({ title: 'Extra Deck cheio', description: 'Máximo 15 cartas', variant: 'destructive' });
         return;
       }
+    } else if (total >= 15) {
+      toast({ title: 'Side Deck cheio', description: 'Máximo 15 cartas', variant: 'destructive' });
+      return;
+    }
+
+    if (getTotalCopies(card.name) >= 3) {
+      toast({ title: 'Limite atingido', description: 'Máximo 3 cópias por nome no deck inteiro', variant: 'destructive' });
+      return;
     }
 
     const existing = target.find(c => c.id === card.id);
-    if (existing && existing.quantity >= 3) {
-      toast({ title: 'Limite atingido', description: 'Máximo 3 cópias', variant: 'destructive' });
-      return;
-    }
     setTarget(prev => prev.map(c => c.id === card.id ? { ...c, quantity: c.quantity + 1 } : c).concat(!existing ? { ...card, quantity: 1 } : []));
   };
 
-  const removeFromDeck = (cardId: number, from: 'main' | 'extra') => {
+  const removeFromDeck = (cardId: number, from: 'main' | 'extra' | 'side') => {
     if (from === 'main') {
       setMainDeck(prev => prev.map(c => c.id === cardId ? (c.quantity <= 1 ? null : { ...c, quantity: c.quantity - 1 }) : c).filter(Boolean) as DeckCard[]);
-    } else {
+    } else if (from === 'extra') {
       setExtraDeck(prev => prev.map(c => c.id === cardId ? (c.quantity <= 1 ? null : { ...c, quantity: c.quantity - 1 }) : c).filter(Boolean) as DeckCard[]);
+    } else {
+      setSideDeck(prev => prev.map(c => c.id === cardId ? (c.quantity <= 1 ? null : { ...c, quantity: c.quantity - 1 }) : c).filter(Boolean) as DeckCard[]);
     }
   };
 
-  const clearDeck = () => { setMainDeck([]); setExtraDeck([]); setCurrentDeckId(null); setCurrentDeckName(''); };
+  const clearDeck = () => { setMainDeck([]); setExtraDeck([]); setSideDeck([]); setCurrentDeckId(null); setCurrentDeckName(''); };
 
   const totalMain = getTotal(mainDeck);
   const totalExtra = getTotal(extraDeck);
-  const isDeckComplete = totalMain >= 40;
+  const totalSide = getTotal(sideDeck);
+  const isDeckComplete = totalMain === RUSH_MAIN_DECK_SIZE && totalExtra <= 15 && totalSide <= 15;
 
   const saveDeck = async (name: string, description: string, isPublic: boolean) => {
     setSavingDeck(true);
@@ -155,8 +273,8 @@ export default function RushDuelDeckBuilder() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Não autenticado');
 
-      if (totalMain < 40) {
-        toast({ title: 'Main Deck incompleto', description: 'Mínimo 40 cartas necessárias', variant: 'destructive' });
+      if (totalMain !== RUSH_MAIN_DECK_SIZE) {
+        toast({ title: 'Main Deck inválido', description: 'Rush Duel usa exatamente 40 cartas no Main Deck', variant: 'destructive' });
         setSavingDeck(false);
         return;
       }
@@ -169,7 +287,7 @@ export default function RushDuelDeckBuilder() {
         tcg_type: 'rush_duel', 
         main_deck: mainDeck as any, 
         extra_deck: extraDeck as any, 
-        side_deck: [] as any, 
+        side_deck: sideDeck as any, 
         tokens_deck: [] as any 
       };
       
@@ -208,24 +326,25 @@ export default function RushDuelDeckBuilder() {
     setCurrentDeckName(savedDeck.name);
     setMainDeck(savedDeck.main_deck || []);
     setExtraDeck(savedDeck.extra_deck || []);
+    setSideDeck(savedDeck.side_deck || []);
     setShowLoadModal(false);
   };
 
-  const deleteDeck = async () => {
-    if (!currentDeckId) return false;
-    const { error } = await supabase.from('saved_decks').delete().eq('id', currentDeckId);
+  const deleteDeck = async (deckId: string) => {
+    const { error } = await supabase.from('saved_decks').delete().eq('id', deckId);
     if (error) return false;
-    clearDeck();
+    setSavedDecks(prev => prev.filter(d => d.id !== deckId));
+    if (deckId === currentDeckId) clearDeck();
     toast({ title: 'Deck deletado' });
     return true;
   };
 
-  const renderDeck = (deck: DeckCard[], from: 'main' | 'extra') => (
+  const renderDeck = (deck: DeckCard[], from: 'main' | 'extra' | 'side') => (
     <ScrollArea className="h-[250px]">
       <div className="space-y-1 pr-2">
         {deck.length === 0 ? (
           <p className="text-center text-muted-foreground py-8 text-sm">
-            {from === 'main' ? 'Nenhuma carta no Main Deck' : 'Nenhuma carta no Extra Deck'}
+            {from === 'main' ? 'Nenhuma carta no Main Deck' : from === 'extra' ? 'Nenhuma carta no Extra Deck' : 'Nenhuma carta no Side Deck'}
           </p>
         ) : (
           deck.map(card => (
@@ -315,6 +434,13 @@ export default function RushDuelDeckBuilder() {
               >
                 Extra Deck
               </Button>
+              <Button 
+                size="sm" 
+                variant={addTo === 'side' ? 'default' : 'outline'} 
+                onClick={() => setAddTo('side')}
+              >
+                Side Deck
+              </Button>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
@@ -357,7 +483,7 @@ export default function RushDuelDeckBuilder() {
                     <Button size="icon" variant="ghost" onClick={() => setShowSaveModal(true)} disabled={mainDeck.length === 0}>
                       <Save className="w-4 h-4" />
                     </Button>
-                    <Button size="icon" variant="ghost" onClick={clearDeck} disabled={mainDeck.length === 0 && extraDeck.length === 0}>
+                    <Button size="icon" variant="ghost" onClick={clearDeck} disabled={mainDeck.length === 0 && extraDeck.length === 0 && sideDeck.length === 0}>
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>
@@ -367,21 +493,25 @@ export default function RushDuelDeckBuilder() {
                   {isDeckComplete ? (
                     <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Deck válido</span>
                   ) : (
-                    <span className="flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Mínimo 40 cartas</span>
+                    <span className="flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Main 40 cartas</span>
                   )}
-                  <span>{totalMain} main • {totalExtra} extra</span>
+                  <span>{totalMain} main • {totalExtra} extra • {totalSide} side</span>
                 </div>
 
                 <Tabs defaultValue="main">
                   <TabsList className="w-full">
                     <TabsTrigger value="main" className="flex-1">Main ({totalMain}/40)</TabsTrigger>
                     <TabsTrigger value="extra" className="flex-1">Extra ({totalExtra}/15)</TabsTrigger>
+                    <TabsTrigger value="side" className="flex-1">Side ({totalSide}/15)</TabsTrigger>
                   </TabsList>
                   <TabsContent value="main" className="mt-2">
                     {renderDeck(mainDeck, 'main')}
                   </TabsContent>
                   <TabsContent value="extra" className="mt-2">
                     {renderDeck(extraDeck, 'extra')}
+                  </TabsContent>
+                  <TabsContent value="side" className="mt-2">
+                    {renderDeck(sideDeck, 'side')}
                   </TabsContent>
                 </Tabs>
               </CardContent>
@@ -424,7 +554,7 @@ export default function RushDuelDeckBuilder() {
         onClose={() => setShowLoadModal(false)} 
         decks={savedDecks} 
         onLoad={loadDeck} 
-        onDelete={async (_id: string) => deleteDeck()} 
+        onDelete={deleteDeck} 
         isLoading={loadingDecks} 
         isLoggedIn={isLoggedIn} 
       />

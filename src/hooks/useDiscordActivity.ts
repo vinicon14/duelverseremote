@@ -23,10 +23,33 @@ export interface DiscordActivityState {
   error: string | null;
 }
 
+type DiscordUrlMapping = { prefix: string; target: string };
+type PatchUrlMappings = (mappings: DiscordUrlMapping[]) => void;
+
 const isInsideDiscord = () => {
   if (typeof window === "undefined") return false;
   const params = new URLSearchParams(window.location.search);
   return params.has("frame_id") || params.has("instance_id");
+};
+
+const getDiscordActivityTokenEndpoint = () => {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  if (!supabaseUrl) return null;
+  return `${supabaseUrl.replace(/\/$/, "")}/functions/v1/discord-activity-token`;
+};
+
+const patchDiscordMappingsIfConfigured = (patchUrlMappings: PatchUrlMappings) => {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const supabasePrefix = import.meta.env.VITE_DISCORD_SUPABASE_MAPPING_PREFIX;
+
+  if (!supabaseUrl || !supabasePrefix || typeof patchUrlMappings !== "function") return;
+
+  try {
+    const target = new URL(supabaseUrl).host;
+    patchUrlMappings([{ prefix: supabasePrefix, target }]);
+  } catch (err) {
+    console.warn("[useDiscordActivity] mapping patch skipped", err);
+  }
 };
 
 export function useDiscordActivity(enabled: boolean = true): DiscordActivityState {
@@ -49,8 +72,11 @@ export function useDiscordActivity(enabled: boolean = true): DiscordActivityStat
     let cancelled = false;
     (async () => {
       try {
-        const projectId = (import.meta as any).env.VITE_SUPABASE_PROJECT_ID;
-        const tokenEndpoint = `https://${projectId}.supabase.co/functions/v1/discord-activity-token`;
+        const tokenEndpoint = getDiscordActivityTokenEndpoint();
+        if (!tokenEndpoint) throw new Error("missing_supabase_url");
+
+        const { DiscordSDK, patchUrlMappings } = await import("@discord/embedded-app-sdk");
+        patchDiscordMappingsIfConfigured(patchUrlMappings);
 
         // Fetch the public DISCORD_CLIENT_ID from our edge function so we
         // don't need to hardcode/expose it through Vite env at build time.
@@ -59,7 +85,6 @@ export function useDiscordActivity(enabled: boolean = true): DiscordActivityStat
         const clientId: string = cfg?.client_id;
         if (!clientId) throw new Error("missing_client_id");
 
-        const { DiscordSDK } = await import("@discord/embedded-app-sdk");
         const sdk = new DiscordSDK(clientId);
         await sdk.ready();
 
@@ -94,14 +119,14 @@ export function useDiscordActivity(enabled: boolean = true): DiscordActivityStat
           user: auth.user as DiscordActivityUser,
           error: null,
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("[useDiscordActivity] init failed", err);
         if (cancelled) return;
         setState({
           isDiscord: true,
           ready: true,
           user: null,
-          error: err?.message || "discord_init_error",
+          error: err instanceof Error ? err.message : "discord_init_error",
         });
       }
     })();

@@ -17,7 +17,7 @@ const TCG_THEMES: Record<TcgType, Record<string, string>> = {
     '--gradient-mystic': 'linear-gradient(135deg, hsl(270 80% 55%) 0%, hsl(315 85% 60%) 100%)',
     '--shadow-mystic': '0 10px 40px -10px hsl(270 80% 55% / 0.5)',
   },
-  magic: {
+  genesis: {
     '--primary': '35 90% 50%',
     '--primary-foreground': '0 0% 100%',
     '--primary-glow': '40 95% 65%',
@@ -27,7 +27,7 @@ const TCG_THEMES: Record<TcgType, Record<string, string>> = {
     '--gradient-mystic': 'linear-gradient(135deg, hsl(35 90% 50%) 0%, hsl(0 75% 50%) 100%)',
     '--shadow-mystic': '0 10px 40px -10px hsl(35 90% 50% / 0.5)',
   },
-  pokemon: {
+  rush_duel: {
     '--primary': '45 100% 50%',
     '--primary-foreground': '0 0% 10%',
     '--primary-glow': '50 100% 60%',

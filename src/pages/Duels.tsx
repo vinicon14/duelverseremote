@@ -3,7 +3,7 @@
  * Desenvolvido por Vinícius
  * 
  * Exibe salas de duelo disponíveis e permite criar novas salas.
- * Inclui chat global e popup de anúncio.
+ * Inclui chat global e criação/entrada de salas.
  */
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -18,12 +18,12 @@ import { Swords, Plus, Users, Clock, Download, Search, Sparkles, Lock } from "lu
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Link } from "react-router-dom";
 import { useBanCheck } from "@/hooks/useBanCheck";
-import { AdPopup } from "@/components/AdPopup";
 import { GlobalChat } from "@/components/GlobalChat";
 import { cleanupAllEmptyDuels } from "@/hooks/useDuelPresence";
 import { useTcg } from "@/contexts/TcgContext";
 import { detectPlatform } from "@/utils/platformDetection";
 import { announceDuelRoom } from "@/utils/announceDuelRoom";
+import { getDefaultLifePoints, isLegacyMagicTcg } from "@/utils/tcgRules";
 import { useTranslation } from "react-i18next";
 
 const Duels = () => {
@@ -41,9 +41,7 @@ const Duels = () => {
   const [isPrivate, setIsPrivate] = useState(false);
   const [roomPassword, setRoomPassword] = useState("");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [showAdPopup, setShowAdPopup] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [pendingAction, setPendingAction] = useState<{ type: 'create' | 'join', duelId?: string } | null>(null);
   // Password prompt for joining private rooms
   const [passwordPrompt, setPasswordPrompt] = useState<{ duelId: string; expected: string } | null>(null);
   const [enteredPassword, setEnteredPassword] = useState("");
@@ -138,10 +136,8 @@ const Duels = () => {
       return;
     }
 
-    // Mostrar anúncio antes de criar
-    setPendingAction({ type: 'create' });
     setShowCreateDialog(false);
-    setShowAdPopup(true);
+    createDuel();
   };
 
   const createDuel = async () => {
@@ -166,8 +162,8 @@ const Duels = () => {
         return;
       }
 
-      const defaultLP = activeTcg === 'magic' ? 40 : activeTcg === 'pokemon' ? 6 : 8000;
-      const playerCount = activeTcg === 'magic' ? maxPlayers : 2;
+      const defaultLP = getDefaultLifePoints(activeTcg);
+      const playerCount = isLegacyMagicTcg(activeTcg) ? maxPlayers : 2;
       const { data, error } = await supabase
         .from('live_duels')
         .insert({
@@ -257,23 +253,7 @@ const Duels = () => {
       console.warn('Falha ao checar privacidade da sala:', e);
     }
 
-    // Mostrar anúncio antes de entrar
-    setPendingAction({ type: 'join', duelId });
-    setShowAdPopup(true);
-  };
-
-  const handleAdClose = () => {
-    setShowAdPopup(false);
-    
-    // Executar ação pendente após fechar o anúncio
-    if (pendingAction) {
-      if (pendingAction.type === 'create') {
-        createDuel();
-      } else if (pendingAction.type === 'join' && pendingAction.duelId) {
-        joinDuel(pendingAction.duelId);
-      }
-      setPendingAction(null);
-    }
+    joinDuel(duelId);
   };
 
   const joinDuel = async (duelId: string) => {
@@ -494,7 +474,7 @@ const Duels = () => {
                       </p>
                     </div>
                     
-                    {activeTcg === 'magic' && (
+                    {isLegacyMagicTcg(activeTcg) && (
                       <div className="space-y-2">
                         <Label>{t('duels.playerCount')}</Label>
                         <div className="grid grid-cols-2 gap-2">
@@ -727,11 +707,6 @@ const Duels = () => {
         </div>
       </main>
 
-      {/* Popup de anúncio */}
-      {showAdPopup && (
-        <AdPopup onClose={handleAdClose} />
-      )}
-
       {/* Prompt de senha para sala privada */}
       <Dialog
         open={!!passwordPrompt}
@@ -764,8 +739,7 @@ const Duels = () => {
                     const id = passwordPrompt.duelId;
                     setPasswordPrompt(null);
                     setEnteredPassword("");
-                    setPendingAction({ type: 'join', duelId: id });
-                    setShowAdPopup(true);
+                    joinDuel(id);
                   } else {
                     toast({ title: 'Senha incorreta', variant: 'destructive' });
                   }
@@ -791,8 +765,7 @@ const Duels = () => {
                     const id = passwordPrompt.duelId;
                     setPasswordPrompt(null);
                     setEnteredPassword("");
-                    setPendingAction({ type: 'join', duelId: id });
-                    setShowAdPopup(true);
+                    joinDuel(id);
                   } else {
                     toast({ title: 'Senha incorreta', variant: 'destructive' });
                   }
@@ -809,4 +782,3 @@ const Duels = () => {
 };
 
 export default Duels;
-

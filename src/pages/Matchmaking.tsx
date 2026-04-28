@@ -15,6 +15,7 @@ import { Loader2, Swords, Users, Clock, Video, CheckCircle2 } from "lucide-react
 import { toast } from "sonner";
 import { useBanCheck } from "@/hooks/useBanCheck";
 import { useTcg } from "@/contexts/TcgContext";
+import { isLegacyMagicTcg } from "@/utils/tcgRules";
 import { useTranslation } from "react-i18next";
 
 interface MatchData {
@@ -73,6 +74,12 @@ export default function Matchmaking() {
     init();
     return () => { cleanup(); };
   }, [cleanup, navigate]);
+
+  useEffect(() => {
+    if (!isLegacyMagicTcg(activeTcg)) {
+      setPlayerCount(2);
+    }
+  }, [activeTcg]);
 
   useEffect(() => {
     if (searching && !matchFound) {
@@ -330,7 +337,7 @@ export default function Matchmaking() {
   };
   const remainingTime = Math.max(0, 120 - elapsedTime);
 
-  const isMagic = activeTcg === 'magic';
+  const isMagic = isLegacyMagicTcg(activeTcg);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-primary/5">
@@ -469,4 +476,3 @@ export default function Matchmaking() {
     </div>
   );
 }
-

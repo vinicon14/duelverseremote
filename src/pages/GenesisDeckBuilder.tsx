@@ -1,10 +1,10 @@
 /**
- * DuelVerse - Genesis Deck Builder
+ * DuelVerse - Genesys Deck Builder
  *
- * Formato Genesis (custom DuelVerse): usa o catálogo Yu-Gi-Oh! (ygoprodeck)
- * mas valida um ORÇAMENTO TOTAL DE PONTOS por deck. O custo de cada carta
- * vem da tabela `genesis_card_costs` (admin gerencia). Cartas sem custo
- * cadastrado contam como 0 pontos.
+ * Formato GENESYS: usa o catálogo Yu-Gi-Oh! (ygoprodeck) e valida
+ * o orçamento oficial de pontos por deck. A lista oficial embarcada vem
+ * da página da Konami, com fallback para `genesis_card_costs` em cartas
+ * que não baterem por nome.
  *
  * Regras:
  *  - Main deck: 40-60 cartas
@@ -28,8 +28,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { SaveDeckModal } from '@/components/deckbuilder/SaveDeckModal';
 import { LoadDeckModal } from '@/components/deckbuilder/LoadDeckModal';
 import { useTranslation } from 'react-i18next';
+import { GENESYS_POINT_ENTRIES } from '@/data/genesysPoints';
 
 const GENESIS_BUDGET = 100; // total de pontos permitidos por deck
+const GENESYS_POINTS_COUNT = GENESYS_POINT_ENTRIES.length;
 
 interface YugiohCard {
   id: number;
@@ -51,6 +53,19 @@ interface DeckCard extends YugiohCard {
 
 const isExtraCard = (type: string) =>
   type.includes('Fusion') || type.includes('Synchro') || type.includes('XYZ') || type.includes('Link');
+
+const normalizeCardName = (name: string) =>
+  name
+    .trim()
+    .toLowerCase()
+    .replace(/[‘’]/g, "'")
+    .replace(/[“”]/g, '"')
+    .replace(/\s+/g, ' ');
+
+const OFFICIAL_GENESYS_POINT_MAP = GENESYS_POINT_ENTRIES.reduce<Record<string, number>>((map, entry) => {
+  map[normalizeCardName(entry.name)] = entry.points;
+  return map;
+}, {});
 
 export default function GenesisDeckBuilder() {
   const { t } = useTranslation();
@@ -76,7 +91,7 @@ export default function GenesisDeckBuilder() {
     supabase.auth.getSession().then(({ data: { session } }) => setIsLoggedIn(!!session));
   }, []);
 
-  // Carrega o mapa de custos uma vez (admin pode atualizar a qualquer momento)
+  // Fallback por ID para cartas que não casarem com o nome oficial da Konami.
   useEffect(() => {
     (async () => {
       const { data } = await supabase.from('genesis_card_costs').select('card_id, points');
@@ -88,7 +103,11 @@ export default function GenesisDeckBuilder() {
     })();
   }, []);
 
-  const getCost = useCallback((cardId: number) => costMap[String(cardId)] ?? 0, [costMap]);
+  const getCost = useCallback((card: Pick<YugiohCard, 'id' | 'name'>) => {
+    const officialCost = OFFICIAL_GENESYS_POINT_MAP[normalizeCardName(card.name)];
+    if (officialCost !== undefined) return officialCost;
+    return costMap[String(card.id)] ?? 0;
+  }, [costMap]);
 
   const totalMain = useMemo(() => mainDeck.reduce((s, c) => s + c.quantity, 0), [mainDeck]);
   const totalExtra = useMemo(() => extraDeck.reduce((s, c) => s + c.quantity, 0), [extraDeck]);
@@ -96,12 +115,19 @@ export default function GenesisDeckBuilder() {
 
   const totalPoints = useMemo(() => {
     const sumDeck = (deck: DeckCard[]) =>
-      deck.reduce((s, c) => s + getCost(c.id) * c.quantity, 0);
+      deck.reduce((s, c) => s + getCost(c) * c.quantity, 0);
     return sumDeck(mainDeck) + sumDeck(extraDeck) + sumDeck(sideDeck);
   }, [mainDeck, extraDeck, sideDeck, getCost]);
 
   const overBudget = totalPoints > GENESIS_BUDGET;
   const deckValid = totalMain >= 40 && totalMain <= 60 && totalExtra <= 15 && totalSide <= 15 && !overBudget;
+
+  const getTotalCopies = (cardName: string) => {
+    const normalizedName = cardName.trim().toLowerCase();
+    return [...mainDeck, ...extraDeck, ...sideDeck]
+      .filter(c => c.name.trim().toLowerCase() === normalizedName)
+      .reduce((sum, c) => sum + c.quantity, 0);
+  };
 
   const searchCards = useCallback(async () => {
     if (!query.trim()) return;
@@ -125,7 +151,13 @@ export default function GenesisDeckBuilder() {
   }, [query]);
 
   const addToDeck = (card: YugiohCard, dest?: 'main' | 'extra' | 'side') => {
-    const where = dest ?? (isExtraCard(card.type) ? 'extra' : target);
+    const requested = dest ?? target;
+    if (requested === 'extra' && !isExtraCard(card.type)) {
+      toast.error('Apenas cartas de Extra Deck podem ir para o Extra Deck');
+      return;
+    }
+
+    const where = requested === 'side' ? 'side' : isExtraCard(card.type) ? 'extra' : requested;
     const setter =
       where === 'main' ? setMainDeck : where === 'extra' ? setExtraDeck : setSideDeck;
     const total = where === 'main' ? totalMain : where === 'extra' ? totalExtra : totalSide;
@@ -135,12 +167,12 @@ export default function GenesisDeckBuilder() {
       toast.error(`${where === 'main' ? 'Main' : where === 'extra' ? 'Extra' : 'Side'} deck cheio (max ${limit})`);
       return;
     }
+    if (getTotalCopies(card.name) >= 3) {
+      toast.error('Máximo 3 cópias por carta no deck inteiro');
+      return;
+    }
     setter(prev => {
       const existing = prev.find(c => c.id === card.id);
-      if (existing && existing.quantity >= 3) {
-        toast.error('Máximo 3 cópias por carta');
-        return prev;
-      }
       if (existing) {
         return prev.map(c => (c.id === card.id ? { ...c, quantity: c.quantity + 1 } : c));
       }
@@ -262,7 +294,7 @@ export default function GenesisDeckBuilder() {
                 <span className="text-[9px] text-muted-foreground">{card.type}</span>
               </div>
               <Badge variant="outline" className="text-[9px] px-1 py-0">
-                {getCost(card.id)} pt
+                {getCost(card)} pt
               </Badge>
               <div className="flex items-center gap-1">
                 <span className="text-xs font-medium w-6 text-center">{card.quantity}</span>
@@ -284,10 +316,10 @@ export default function GenesisDeckBuilder() {
         <div className="mb-6">
           <h1 className="text-2xl sm:text-3xl font-bold text-gradient-mystic mb-1 flex items-center gap-2">
             <Sparkles className="w-7 h-7" />
-            Genesis Deck Builder
+            Genesys Deck Builder
           </h1>
           <p className="text-sm text-muted-foreground">
-            {currentDeckName ? `Deck: ${currentDeckName}` : 'Deck vazio'} • Formato Genesis (orçamento de {GENESIS_BUDGET} pontos)
+            {currentDeckName ? `Deck: ${currentDeckName}` : 'Deck vazio'} • Formato Genesys ({GENESIS_BUDGET} pontos • {GENESYS_POINTS_COUNT} cartas pontuadas)
           </p>
         </div>
 
@@ -342,7 +374,7 @@ export default function GenesisDeckBuilder() {
                     loading="lazy"
                   />
                   <Badge className="absolute top-1 right-1 text-[10px]">
-                    {getCost(card.id)} pt
+                    {getCost(card)} pt
                   </Badge>
                   <CardContent className="p-2">
                     <p className="text-xs font-medium truncate">{card.name}</p>
@@ -354,7 +386,7 @@ export default function GenesisDeckBuilder() {
             {results.length === 0 && !searching && (
               <div className="text-center py-12 text-muted-foreground">
                 <Sparkles className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                <p>Busque cartas para começar a montar seu deck Genesis</p>
+                <p>Busque cartas para começar a montar seu deck Genesys</p>
               </div>
             )}
           </div>
@@ -439,7 +471,7 @@ export default function GenesisDeckBuilder() {
                 {previewCard.level && <Badge variant="secondary">★{previewCard.level}</Badge>}
                 {previewCard.atk !== undefined && <Badge>ATK {previewCard.atk}</Badge>}
                 {previewCard.def !== undefined && <Badge>DEF {previewCard.def}</Badge>}
-                <Badge className="ml-auto">{getCost(previewCard.id)} pt</Badge>
+                <Badge className="ml-auto">{getCost(previewCard)} pt</Badge>
               </div>
               <p className="text-xs text-muted-foreground max-h-32 overflow-y-auto">{previewCard.desc}</p>
               <div className="flex gap-2">

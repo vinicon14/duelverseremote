@@ -29,7 +29,8 @@ import { useRealtimeNotifications } from "@/hooks/useRealtimeNotifications";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useSubscriptionExpirationCheck } from "@/hooks/useSubscriptionExpirationCheck";
 import { useDiscordPresence } from "@/hooks/useDiscordPresence";
-import { TcgProvider, useTcg } from "./contexts/TcgContext";
+import { isRunningInsideDiscord } from "@/hooks/useDiscordActivity";
+import { TcgProvider, normalizeTcgType, useTcg } from "./contexts/TcgContext";
 const Home = lazy(() => import("./pages/Home"));
 const Landing = lazy(() => import("./pages/Landing"));
 const Admin = lazy(() => import("./pages/Admin"));
@@ -83,7 +84,7 @@ const HomePage = ({ user }: { user: User | null }) => {
 
 // Componente que resolve automaticamente o deck builder com base no TCG ativo
 const ActiveDeckBuilderRoute = () => {
-  const activeTcg = localStorage.getItem('activeTcg') || 'yugioh';
+  const { activeTcg } = useTcg();
   if (activeTcg === "genesis") return <GenesisDeckBuilder />;
   if (activeTcg === "rush_duel") return <RushDuelDeckBuilder />;
   return <DeckBuilder />;
@@ -158,7 +159,7 @@ const RouterContent = ({ user }: { user: User | null }) => {
   );
 };
 
-const AppContent = () => {
+const MainAppContent = () => {
   const [user, setUser] = useState<User | null>(null);
 
   useSubscriptionExpirationCheck();
@@ -190,6 +191,9 @@ const AppContent = () => {
   };
 
   useEffect(() => {
+    const normalizedTcg = normalizeTcgType(localStorage.getItem('activeTcg'));
+    localStorage.setItem('activeTcg', normalizedTcg);
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         setUser(session?.user ?? null);
@@ -237,6 +241,21 @@ const AppContent = () => {
       </div>
     </BrowserRouter>
   );
+};
+
+const DiscordActivityShell = () => (
+  <Suspense fallback={
+    <div className="flex min-h-screen w-full items-center justify-center bg-background">
+      <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+    </div>
+  }>
+    <DiscordActivity />
+  </Suspense>
+);
+
+const AppContent = () => {
+  if (isRunningInsideDiscord()) return <DiscordActivityShell />;
+  return <MainAppContent />;
 };
 
 const App = () => (

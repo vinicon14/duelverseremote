@@ -3,16 +3,11 @@
  * Desenvolvido por Vinícius
  * 
  * Dashboard principal do aplicativo.
- * Exibe Quick Play, torneios, saldo de DuelCoins e anúncios.
+ * Exibe Quick Play, torneios e saldo de DuelCoins.
  */
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Navbar } from "@/components/Navbar";
-import { AdBanner } from "@/components/AdBanner";
-import { GoogleAdBanner } from "@/components/GoogleAdBanner";
-import { useAccountType } from "@/hooks/useAccountType";
 import { Zap, Swords, Trophy } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -22,33 +17,6 @@ import { useTranslation } from "react-i18next";
 export default function Home() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [ads, setAds] = useState<any[]>([]);
-  const { isPro } = useAccountType();
-
-  useEffect(() => {
-    fetchAds();
-  }, []);
-
-  useEffect(() => {
-    if (isPro) {
-      setAds([]);
-    } else {
-      fetchAds();
-    }
-  }, [isPro]);
-
-  const fetchAds = async () => {
-    const { data, error } = await supabase
-      .from('advertisements')
-      .select('*')
-      .eq('is_active', true)
-      .or('expires_at.is.null,expires_at.gt.' + new Date().toISOString())
-      .limit(3);
-
-    if (!error && data) {
-      setAds(data);
-    }
-  };
 
   return (
     <SidebarProvider defaultOpen>
@@ -56,11 +24,6 @@ export default function Home() {
         <Navbar />
         
         <main className="flex-1 container max-w-5xl mx-auto px-4 pt-24 pb-12">
-        {/* Google Ad Banner Topo */}
-        {!isPro && (
-          <GoogleAdBanner slot="1234567890" className="mb-8" />
-        )}
-
         <div className="flex flex-col md:flex-row gap-6 mb-10">
           {/* Quick Match - HERO SECTION */}
           <Card className="card-mystic hover:border-primary/40 transition-all cursor-pointer animate-fade-in-up delay-100 flex-1 group" onClick={() => navigate('/matchmaking')}>
@@ -108,24 +71,8 @@ export default function Home() {
           </div>
         </div>
 
-        {!isPro && ads.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-xl font-semibold mb-4">{t('home.adsTitle')}</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {ads.map((ad) => (
-                <AdBanner key={ad.id} ad={ad} />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Google Ad Banner Meio */}
-        {!isPro && (
-          <GoogleAdBanner slot="1234567891" className="my-6" />
-        )}
       </main>
       </div>
     </SidebarProvider>
   );
 }
-

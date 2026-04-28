@@ -291,7 +291,7 @@ export const AdminSettings = () => {
         <CardContent className="space-y-6">
           {([
             { key: 'ygo' as const, label: '🃏 YGO Advanced', url: ringtoneYgo, file: ringtoneFileYgo, setFile: setRingtoneFileYgo },
-            { key: 'mtg' as const, label: '⚛️ Genesis', url: ringtoneMtg, file: ringtoneFileMtg, setFile: setRingtoneFileMtg },
+            { key: 'mtg' as const, label: '⚛️ Genesys', url: ringtoneMtg, file: ringtoneFileMtg, setFile: setRingtoneFileMtg },
             { key: 'pkm' as const, label: '⚡ Rush Duel', url: ringtonePkm, file: ringtoneFilePkm, setFile: setRingtoneFilePkm },
           ]).map((tcg) => (
             <div key={tcg.key} className="rounded-lg border border-border p-4 space-y-3">

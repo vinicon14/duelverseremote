@@ -10,18 +10,20 @@ export function UnifiedPageLoader() {
   useEffect(() => {
     // Evita loop no start
     if (location.pathname === '/') return;
+    if (location.pathname.startsWith('/profile')) return;
 
     // Dispara a animação de loader
     setIsLoading(true);
     setShowOverlay(true);
 
-    // Oculta a máscara após 900ms, tempo suficiente para a grande maioria
+    // Oculta a mascara apos 450ms; paginas com skeleton local seguem
+    // carregando seus dados sem bloquear a entrada visual.
     // dos useEffects paralelos (Supabase/Rest) buscarem seus dados nas views filhas
     // anulando o efeito de "waterfall" picotado que a plataforma vinha sofrendo
     const t = setTimeout(() => {
       setIsLoading(false);
       setTimeout(() => setShowOverlay(false), 300); // tempo do fade out
-    }, 900);
+    }, 450);
 
     return () => clearTimeout(t);
   }, [location.pathname]);
