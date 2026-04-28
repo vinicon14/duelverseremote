@@ -333,7 +333,7 @@ export const Navbar = () => {
         </div>
         
         <div className="hidden md:flex items-center space-x-2 shrink-0">
-          <TcgSwitcher />
+          {isAdmin && <TcgSwitcher />}
           <OnlineUsersCounter />
           
           {user && <NotificationBell userId={user.id} />}
@@ -384,7 +384,7 @@ export const Navbar = () => {
           <SheetContent side="right" className="w-72 h-screen overflow-y-auto p-4">
             <div className="flex flex-col space-y-1 pt-6 h-full pb-24">
               <div className="flex items-center gap-2 pb-3 mb-2 border-b border-border">
-                <TcgSwitcher />
+                {isAdmin && <TcgSwitcher />}
                 <OnlineUsersCounter />
                 {user && <NotificationBell userId={user.id} />}
               </div>

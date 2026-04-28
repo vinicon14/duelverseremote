@@ -13,25 +13,25 @@ import { toast } from 'sonner';
 
 const TCG_CONFIG: Record<TcgType, { name: string; icon: React.ReactNode; color: string; gradient: string; description: string }> = {
   yugioh: {
-    name: "YGO",
+    name: "YGO Advanced",
     icon: <Swords className="w-10 h-10" />,
     color: "text-purple-400",
     gradient: "from-purple-600 to-pink-600",
-    description: "Duele com monstros, magias e armadilhas no TCG clássico!"
+    description: "O formato competitivo principal do Yu-Gi-Oh! com lista de banidas oficial."
   },
   magic: {
-    name: "MTG",
+    name: "Genesis",
     icon: <Sparkles className="w-10 h-10" />,
     color: "text-amber-400",
     gradient: "from-amber-600 to-red-700",
-    description: "Explore os planos de MTG com criaturas, feitiços e planeswalkers!"
+    description: "Formato Yu-Gi-Oh! por orçamento — cada carta tem um custo em pontos."
   },
   pokemon: {
-    name: "PKM",
+    name: "Rush Duel",
     icon: <Zap className="w-10 h-10" />,
     color: "text-yellow-400",
     gradient: "from-yellow-500 to-blue-600",
-    description: "Capture, evolua e batalhe com Pokémon no TCG oficial!"
+    description: "Duelos rápidos no estilo SEVENS: compre até ter 5 cartas todo turno."
   }
 };
 
