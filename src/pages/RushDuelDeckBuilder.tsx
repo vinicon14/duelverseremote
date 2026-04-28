@@ -161,16 +161,16 @@ export default function RushDuelDeckBuilder() {
         return;
       }
 
-      const deckData = { 
+      const deckData: any = { 
         user_id: user.id, 
         name, 
         description, 
         is_public: isPublic, 
         tcg_type: 'rush_duel', 
-        main_deck: mainDeck, 
-        extra_deck: extraDeck, 
-        side_deck: [], 
-        tokens_deck: [] 
+        main_deck: mainDeck as any, 
+        extra_deck: extraDeck as any, 
+        side_deck: [] as any, 
+        tokens_deck: [] as any 
       };
       
       if (currentDeckId) {
@@ -424,8 +424,9 @@ export default function RushDuelDeckBuilder() {
         onClose={() => setShowLoadModal(false)} 
         decks={savedDecks} 
         onLoad={loadDeck} 
-        onDelete={deleteDeck} 
+        onDelete={async (_id: string) => deleteDeck()} 
         isLoading={loadingDecks} 
+        isLoggedIn={isLoggedIn} 
       />
     </div>
   );

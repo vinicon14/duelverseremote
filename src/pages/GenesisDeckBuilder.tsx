@@ -1,21 +1,35 @@
 /**
  * DuelVerse - Genesis Deck Builder
- * 
- * Interface para criar decks de Genesis usando a API YGOPRODeck (formato Genesys).
+ *
+ * Formato Genesis (custom DuelVerse): usa o catálogo Yu-Gi-Oh! (ygoprodeck)
+ * mas valida um ORÇAMENTO TOTAL DE PONTOS por deck. O custo de cada carta
+ * vem da tabela `genesis_card_costs` (admin gerencia). Cartas sem custo
+ * cadastrado contam como 0 pontos.
+ *
+ * Regras:
+ *  - Main deck: 40-60 cartas
+ *  - Extra deck: até 15 cartas
+ *  - Side deck: até 15 cartas
+ *  - Máximo 3 cópias por carta (igual Advanced)
+ *  - Soma de pontos do deck inteiro <= GENESIS_BUDGET
  */
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { Search, Plus, Minus, Save, Trash2, Loader2, Download, Upload, FolderOpen } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Search, Plus, Minus, Save, Trash2, Loader2, FolderOpen, Sparkles, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
+import { SaveDeckModal } from '@/components/deckbuilder/SaveDeckModal';
+import { LoadDeckModal } from '@/components/deckbuilder/LoadDeckModal';
 import { useTranslation } from 'react-i18next';
+
+const GENESIS_BUDGET = 100; // total de pontos permitidos por deck
 
 interface YugiohCard {
   id: number;
@@ -28,40 +42,15 @@ interface YugiohCard {
   race: string;
   attribute?: string;
   archetype?: string;
-  scale?: number;
-  linkval?: number;
-  card_images: {
-    id: number;
-    image_url: string;
-    image_url_small: string;
-    image_url_cropped: string;
-  }[];
+  card_images: { id: number; image_url: string; image_url_small: string; image_url_cropped?: string }[];
 }
 
-interface DeckCard {
-  card: YugiohCard;
+interface DeckCard extends YugiohCard {
   quantity: number;
 }
 
-// Color map adapted for YGO attributes for visual compatibility
-const COLOR_MAP: Record<string, string> = {
-  LIGHT: 'bg-yellow-100 text-yellow-800',
-  DARK: 'bg-purple-800 text-white',
-  FIRE: 'bg-red-500 text-white',
-  WATER: 'bg-blue-500 text-white',
-  EARTH: 'bg-amber-700 text-white',
-  WIND: 'bg-green-500 text-white',
-};
-
-const getCardImage = (card: YugiohCard): string => {
-  if (card.card_images?.[0]?.image_url_small) return card.card_images[0].image_url_small;
-  return '';
-};
-
-const getCardImageLarge = (card: YugiohCard): string => {
-  if (card.card_images?.[0]?.image_url) return card.card_images[0].image_url;
-  return '';
-};
+const isExtraCard = (type: string) =>
+  type.includes('Fusion') || type.includes('Synchro') || type.includes('XYZ') || type.includes('Link');
 
 export default function GenesisDeckBuilder() {
   const { t } = useTranslation();
@@ -69,32 +58,64 @@ export default function GenesisDeckBuilder() {
   const [results, setResults] = useState<YugiohCard[]>([]);
   const [searching, setSearching] = useState(false);
   const [mainDeck, setMainDeck] = useState<DeckCard[]>([]);
-  const [sideboard, setSideboard] = useState<DeckCard[]>([]);
   const [extraDeck, setExtraDeck] = useState<DeckCard[]>([]);
-  const [selectedCard, setSelectedCard] = useState<YugiohCard | null>(null);
-  const [saveOpen, setSaveOpen] = useState(false);
-  const [loadOpen, setLoadOpen] = useState(false);
-  const [importOpen, setImportOpen] = useState(false);
-  const [importText, setImportText] = useState('');
-  const [importing, setImporting] = useState(false);
-  const [importProgress, setImportProgress] = useState('');
-  const [deckName, setDeckName] = useState('');
-  const [saving, setSaving] = useState(false);
+  const [sideDeck, setSideDeck] = useState<DeckCard[]>([]);
+  const [previewCard, setPreviewCard] = useState<YugiohCard | null>(null);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [showLoadModal, setShowLoadModal] = useState(false);
   const [savedDecks, setSavedDecks] = useState<any[]>([]);
   const [loadingDecks, setLoadingDecks] = useState(false);
-  const GENESIS_FORMAT = 'genesys';
+  const [savingDeck, setSavingDeck] = useState(false);
+  const [currentDeckId, setCurrentDeckId] = useState<string | null>(null);
+  const [currentDeckName, setCurrentDeckName] = useState('');
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [costMap, setCostMap] = useState<Record<string, number>>({});
+  const [target, setTarget] = useState<'main' | 'extra' | 'side'>('main');
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => setIsLoggedIn(!!session));
+  }, []);
+
+  // Carrega o mapa de custos uma vez (admin pode atualizar a qualquer momento)
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from('genesis_card_costs').select('card_id, points');
+      if (data) {
+        const map: Record<string, number> = {};
+        data.forEach((r: any) => { map[String(r.card_id)] = r.points || 0; });
+        setCostMap(map);
+      }
+    })();
+  }, []);
+
+  const getCost = useCallback((cardId: number) => costMap[String(cardId)] ?? 0, [costMap]);
+
+  const totalMain = useMemo(() => mainDeck.reduce((s, c) => s + c.quantity, 0), [mainDeck]);
+  const totalExtra = useMemo(() => extraDeck.reduce((s, c) => s + c.quantity, 0), [extraDeck]);
+  const totalSide = useMemo(() => sideDeck.reduce((s, c) => s + c.quantity, 0), [sideDeck]);
+
+  const totalPoints = useMemo(() => {
+    const sumDeck = (deck: DeckCard[]) =>
+      deck.reduce((s, c) => s + getCost(c.id) * c.quantity, 0);
+    return sumDeck(mainDeck) + sumDeck(extraDeck) + sumDeck(sideDeck);
+  }, [mainDeck, extraDeck, sideDeck, getCost]);
+
+  const overBudget = totalPoints > GENESIS_BUDGET;
+  const deckValid = totalMain >= 40 && totalMain <= 60 && totalExtra <= 15 && totalSide <= 15 && !overBudget;
 
   const searchCards = useCallback(async () => {
     if (!query.trim()) return;
     setSearching(true);
     try {
-      const res = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?format=${GENESIS_FORMAT}&fname=${encodeURIComponent(query)}&num=30`);
+      const res = await fetch(
+        `https://db.ygoprodeck.com/api/v7/cardinfo.php?fname=${encodeURIComponent(query)}&num=40&offset=0`
+      );
       if (!res.ok) {
         setResults([]);
         return;
       }
       const data = await res.json();
-      setResults(data.data?.slice(0, 30) || []);
+      setResults((data.data || []).slice(0, 40));
     } catch (err) {
       console.error(err);
       toast.error('Erro ao buscar cartas');
@@ -103,562 +124,359 @@ export default function GenesisDeckBuilder() {
     }
   }, [query]);
 
-  const isExtraCard = (type: string) => type.includes('Fusion') || type.includes('Synchro') || type.includes('XYZ') || type.includes('Link');
+  const addToDeck = (card: YugiohCard, dest?: 'main' | 'extra' | 'side') => {
+    const where = dest ?? (isExtraCard(card.type) ? 'extra' : target);
+    const setter =
+      where === 'main' ? setMainDeck : where === 'extra' ? setExtraDeck : setSideDeck;
+    const total = where === 'main' ? totalMain : where === 'extra' ? totalExtra : totalSide;
+    const limit = where === 'main' ? 60 : 15;
 
-  const addToDeck = (card: YugiohCard, target: 'main' | 'side' | 'extra') => {
-    let setter;
-    if (target === 'main') setter = setMainDeck;
-    else if (target === 'side') setter = setSideboard;
-    else setter = setExtraDeck;
-    
+    if (total >= limit) {
+      toast.error(`${where === 'main' ? 'Main' : where === 'extra' ? 'Extra' : 'Side'} deck cheio (max ${limit})`);
+      return;
+    }
     setter(prev => {
-      const existing = prev.find(c => c.card.id === card.id);
+      const existing = prev.find(c => c.id === card.id);
+      if (existing && existing.quantity >= 3) {
+        toast.error('Máximo 3 cópias por carta');
+        return prev;
+      }
       if (existing) {
-        if (existing.quantity >= 3) {
-          toast.error('Máximo de 3 cópias por carta');
-          return prev;
-        }
-        return prev.map(c => c.card.id === card.id ? { ...c, quantity: c.quantity + 1 } : c);
+        return prev.map(c => (c.id === card.id ? { ...c, quantity: c.quantity + 1 } : c));
       }
-      return [...prev, { card, quantity: 1 }];
+      return [...prev, { ...card, quantity: 1 }];
     });
   };
 
-  const removeFromDeck = (cardId: number, target: 'main' | 'side' | 'extra') => {
-    let setter;
-    if (target === 'main') setter = setMainDeck;
-    else if (target === 'side') setter = setSideboard;
-    else setter = setExtraDeck;
-    
-    setter(prev => {
-      const existing = prev.find(c => c.card.id === cardId);
-      if (existing && existing.quantity > 1) {
-        return prev.map(c => c.card.id === cardId ? { ...c, quantity: c.quantity - 1 } : c);
-      }
-      return prev.filter(c => c.card.id !== cardId);
-    });
+  const removeFromDeck = (cardId: number, from: 'main' | 'extra' | 'side') => {
+    const setter = from === 'main' ? setMainDeck : from === 'extra' ? setExtraDeck : setSideDeck;
+    setter(prev =>
+      prev
+        .map(c => (c.id === cardId ? { ...c, quantity: c.quantity - 1 } : c))
+        .filter(c => c.quantity > 0)
+    );
   };
 
-  const totalMain = mainDeck.reduce((s, c) => s + c.quantity, 0);
-  const totalSide = sideboard.reduce((s, c) => s + c.quantity, 0);
+  const clearDeck = () => {
+    setMainDeck([]);
+    setExtraDeck([]);
+    setSideDeck([]);
+    setCurrentDeckId(null);
+    setCurrentDeckName('');
+  };
 
-  const handleSave = async () => {
-    if (!deckName.trim()) {
-      toast.error('Digite um nome para o deck');
-      return;
-    }
-    setSaving(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      toast.error('Faça login para salvar');
-      setSaving(false);
-      return;
-    }
+  const saveDeck = async (name: string, description: string, isPublic: boolean) => {
+    setSavingDeck(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Faça login');
+      if (totalMain < 40) throw new Error(`Main Deck precisa de no mínimo 40 cartas (atual: ${totalMain})`);
+      if (totalMain > 60) throw new Error(`Main Deck máximo de 60 cartas (atual: ${totalMain})`);
+      if (overBudget) throw new Error(`Orçamento estourado: ${totalPoints}/${GENESIS_BUDGET} pontos`);
 
-    if (totalMain < 40) {
-      toast.error(`Main Deck precisa de no mínimo 40 cartas (atual: ${totalMain})`);
-      setSaving(false);
-      return;
-    }
-    if (totalMain > 60) {
-      toast.error(`Main Deck máximo de 60 cartas (atual: ${totalMain})`);
-      setSaving(false);
-      return;
-    }
-    if (totalSide < 0 || totalSide > 15) {
-      toast.error(`Side Deck deve ter entre 0 e 15 cartas (atual: ${totalSide})`);
-      setSaving(false);
-      return;
-    }
-    if (totalExtra > 15) {
-      toast.error(`Extra Deck máximo de 15 cartas (atual: ${totalExtra})`);
-      setSaving(false);
-      return;
-    }
+      const deckData: any = {
+        user_id: user.id,
+        name,
+        description,
+        is_public: isPublic,
+        tcg_type: 'genesis',
+        main_deck: mainDeck as any,
+        extra_deck: extraDeck as any,
+        side_deck: sideDeck as any,
+        tokens_deck: [] as any,
+      };
 
-    const deckData = {
-      user_id: user.id,
-      name: deckName,
-      main_deck: mainDeck.map(c => ({
-        id: c.card.id,
-        name: c.card.name,
-        quantity: c.quantity,
-        image: getCardImage(c.card),
-        image_uris: c.card.image_uris || null,
-        card_faces: c.card.card_faces || null,
-        type_line: c.card.type_line || '',
-        mana_cost: c.card.mana_cost || '',
-        oracle_text: c.card.oracle_text || '',
-      })),
-      side_deck: sideboard.map(c => ({
-        id: c.card.id,
-        name: c.card.name,
-        quantity: c.quantity,
-        image: getCardImage(c.card),
-        image_uris: c.card.image_uris || null,
-        card_faces: c.card.card_faces || null,
-        type_line: c.card.type_line || '',
-        mana_cost: c.card.mana_cost || '',
-      })),
-      extra_deck: extraDeck.map(c => ({
-        id: c.card.id,
-        name: c.card.name,
-        quantity: c.quantity,
-        image: getCardImage(c.card),
-        image_uris: c.card.image_uris || null,
-        type_line: c.card.type_line || '',
-      })),
-      tokens_deck: [],
-      tcg_type: 'genesis'
-    };
-
-    const { error } = await supabase.from('saved_decks').insert(deckData);
-    setSaving(false);
-    if (error) {
-      toast.error('Erro ao salvar deck');
-    } else {
-      toast.success('Deck salvo!');
-      setSaveOpen(false);
+      if (currentDeckId) {
+        const { error } = await supabase.from('saved_decks').update(deckData).eq('id', currentDeckId);
+        if (error) throw error;
+        toast.success('Deck atualizado!');
+      } else {
+        const { data, error } = await supabase.from('saved_decks').insert(deckData).select().single();
+        if (error) throw error;
+        setCurrentDeckId(data.id);
+        toast.success('Deck salvo!');
+      }
+      setCurrentDeckName(name);
+      setShowSaveModal(false);
+    } catch (e: any) {
+      toast.error(e.message || 'Erro ao salvar deck');
+    } finally {
+      setSavingDeck(false);
     }
   };
 
   const loadSavedDecks = async () => {
     setLoadingDecks(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { toast.error('Faça login'); setLoadingDecks(false); return; }
-    const { data, error } = await supabase
-      .from('saved_decks')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('tcg_type', 'genesis')
-      .order('created_at', { ascending: false });
-    setLoadingDecks(false);
-    if (error) { toast.error('Erro ao carregar decks'); return; }
-    setSavedDecks(data || []);
-    setLoadOpen(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from('saved_decks')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('tcg_type', 'genesis')
+        .order('updated_at', { ascending: false });
+      setSavedDecks(data || []);
+    } finally {
+      setLoadingDecks(false);
+    }
   };
 
-  const loadDeck = (deck: any) => {
-    const mainCards: DeckCard[] = (deck.main_deck as any[] || []).map((c: any) => ({
-      card: {
-        id: c.id,
-        name: c.name,
-        card_images: c.image ? [{ id: c.id, image_url: c.image, image_url_small: c.image, image_url_cropped: c.image }] : [],
-        type: c.type_line || '',
-      } as YugiohCard,
-      quantity: c.quantity || 1,
-    }));
-    const sideCards: DeckCard[] = (deck.side_deck as any[] || []).map((c: any) => ({
-      card: {
-        id: c.id,
-        name: c.name,
-        card_images: c.image ? [{ id: c.id, image_url: c.image, image_url_small: c.image, image_url_cropped: c.image }] : [],
-        type: c.type_line || '',
-      } as YugiohCard,
-      quantity: c.quantity || 1,
-    }));
-    const extraCards: DeckCard[] = (deck.extra_deck as any[] || []).map((c: any) => ({
-      card: {
-        id: c.id,
-        name: c.name,
-        card_images: c.image ? [{ id: c.id, image_url: c.image, image_url_small: c.image, image_url_cropped: c.image }] : [],
-        type: c.type_line || '',
-      } as YugiohCard,
-      quantity: c.quantity || 1,
-    }));
-    setMainDeck(mainCards);
-    setSideboard(sideCards);
-    setExtraDeck(extraCards);
-    setDeckName(deck.name);
-    setLoadOpen(false);
-    toast.success(`Deck "${deck.name}" carregado!`);
+  const loadDeck = (saved: any) => {
+    setCurrentDeckId(saved.id);
+    setCurrentDeckName(saved.name);
+    setMainDeck((saved.main_deck as any) || []);
+    setExtraDeck((saved.extra_deck as any) || []);
+    setSideDeck((saved.side_deck as any) || []);
+    setShowLoadModal(false);
   };
 
-  const deleteSavedDeck = async (deckId: string) => {
+  const deleteDeckById = async (deckId: string) => {
     const { error } = await supabase.from('saved_decks').delete().eq('id', deckId);
-    if (error) { toast.error('Erro ao deletar'); return; }
+    if (error) {
+      toast.error('Erro ao deletar');
+      return false;
+    }
     setSavedDecks(prev => prev.filter(d => d.id !== deckId));
+    if (deckId === currentDeckId) clearDeck();
     toast.success('Deck deletado');
+    return true;
   };
 
-  const exportDeck = () => {
-    if (mainDeck.length === 0 && sideboard.length === 0) {
-      toast.error('Deck vazio');
-      return;
-    }
-    let text = '// Main Deck\n';
-    mainDeck.forEach(c => { text += `${c.quantity} ${c.card.name}\n`; });
-    if (sideboard.length > 0) {
-      text += '\n// Sideboard\n';
-      sideboard.forEach(c => { text += `${c.quantity} ${c.card.name}\n`; });
-    }
-    const blob = new Blob([text], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${deckName || 'mtg-deck'}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success('Deck exportado!');
-  };
-
-  const parseDeckList = (text: string): { main: { qty: number; name: string }[]; side: { qty: number; name: string }[] } => {
-    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-    const main: { qty: number; name: string }[] = [];
-    const side: { qty: number; name: string }[] = [];
-    let target: 'main' | 'side' = 'main';
-
-    for (const line of lines) {
-      const lower = line.toLowerCase();
-      if (lower.startsWith('//') || lower.startsWith('#')) continue;
-      if (lower === 'sideboard' || lower === 'sideboard:' || lower.includes('sideboard')) {
-        target = 'side';
-        continue;
-      }
-      if (lower === 'deck' || lower === 'deck:' || lower === 'main deck' || lower === 'main deck:' || lower === 'companion' || lower === 'commander') continue;
-      // Formats: "4 Lightning Bolt", "4x Lightning Bolt", "Lightning Bolt x4"
-      let match = line.match(/^(\d+)x?\s+(.+)$/);
-      if (!match) match = line.match(/^(.+?)\s+x(\d+)$/);
-      if (match) {
-        const idx = line.match(/^(\d+)/) ? 1 : 2;
-        const nameIdx = idx === 1 ? 2 : 1;
-        const qty = parseInt(match[idx]);
-        // Strip set/collector info like "(RNA)" or "[RNA:123]"
-        const name = match[nameIdx].replace(/\s*[\(\[][A-Z0-9]+[\)\]]\s*/g, '').replace(/\s*\/\/.*$/, '').trim();
-        if (name && qty > 0) (target === 'main' ? main : side).push({ qty, name });
-      }
-    }
-    return { main, side };
-  };
-
-  const importFromText = async (text: string) => {
-    const { main, side } = parseDeckList(text);
-    const total = main.length + side.length;
-    if (total === 0) {
-      toast.error('Nenhuma carta encontrada na lista. Use o formato: "4 Lightning Bolt"');
-      return;
-    }
-    setImporting(true);
-    const newMain: DeckCard[] = [];
-    const newSide: DeckCard[] = [];
-    let loaded = 0;
-    let failed = 0;
-
-    const fetchCard = async (name: string): Promise<ScryfallCard | null> => {
-      try {
-        const res = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(name)}`);
-        if (!res.ok) return null;
-        return await res.json();
-      } catch { return null; }
-    };
-
-    for (const entry of main) {
-      setImportProgress(`Importando ${++loaded}/${total}: ${entry.name}`);
-      const card = await fetchCard(entry.name);
-      if (card) newMain.push({ card, quantity: entry.qty });
-      else failed++;
-      await new Promise(r => setTimeout(r, 80)); // Scryfall rate limit
-    }
-    for (const entry of side) {
-      setImportProgress(`Importando ${++loaded}/${total}: ${entry.name}`);
-      const card = await fetchCard(entry.name);
-      if (card) newSide.push({ card, quantity: entry.qty });
-      else failed++;
-      await new Promise(r => setTimeout(r, 80));
-    }
-
-    setMainDeck(newMain);
-    setSideboard(newSide);
-    setImporting(false);
-    setImportOpen(false);
-    setImportText('');
-    setImportProgress('');
-    toast.success(`Deck importado! ${loaded - failed} cartas carregadas${failed ? `, ${failed} não encontradas` : ''}`);
-  };
-
-  const importDeckFromFile = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.txt,.dec,.dek,.mwDeck';
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-      const text = await file.text();
-      await importFromText(text);
-    };
-    input.click();
-  };
+  const renderDeck = (deck: DeckCard[], from: 'main' | 'extra' | 'side') => (
+    <ScrollArea className="h-[260px]">
+      <div className="space-y-1 pr-2">
+        {deck.length === 0 ? (
+          <p className="text-center text-muted-foreground py-8 text-sm">Vazio</p>
+        ) : (
+          deck.map(card => (
+            <div key={card.id} className="flex items-center gap-2 p-1.5 rounded hover:bg-muted/50">
+              <img
+                src={card.card_images?.[0]?.image_url_small}
+                alt={card.name}
+                className="w-8 h-11 rounded object-cover cursor-pointer"
+                onClick={() => setPreviewCard(card)}
+              />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium truncate">{card.name}</p>
+                <span className="text-[9px] text-muted-foreground">{card.type}</span>
+              </div>
+              <Badge variant="outline" className="text-[9px] px-1 py-0">
+                {getCost(card.id)} pt
+              </Badge>
+              <div className="flex items-center gap-1">
+                <span className="text-xs font-medium w-6 text-center">{card.quantity}</span>
+                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => removeFromDeck(card.id, from)}>
+                  <Minus className="w-3 h-3" />
+                </Button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </ScrollArea>
+  );
 
   return (
     <div className="min-h-screen bg-transparent">
       <Navbar />
-      <main className="container mx-auto px-4 pt-20 pb-8">
-        <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
-          <h1 className="text-2xl font-bold text-gradient-gold flex items-center gap-2">
-            ✨ Genesis Deck Builder
+      <main className="container mx-auto px-4 pt-20 sm:pt-24 pb-12">
+        <div className="mb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gradient-mystic mb-1 flex items-center gap-2">
+            <Sparkles className="w-7 h-7" />
+            Genesis Deck Builder
           </h1>
-          <div className="flex gap-2 flex-wrap">
-            <Button variant="outline" size="sm" onClick={exportDeck} className="gap-1">
-              <Download className="w-4 h-4" /> {t('common.save', 'Export')}
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => setImportOpen(true)} className="gap-1">
-              <Upload className="w-4 h-4" /> {t('deckBuilder.recognize', 'Import')}
-            </Button>
-            <Button variant="outline" size="sm" onClick={loadSavedDecks} className="gap-1">
-              <FolderOpen className="w-4 h-4" /> {t('deckBuilder.loadDeck')}
-            </Button>
-            <Button size="sm" onClick={() => setSaveOpen(true)} className="gap-1">
-              <Save className="w-4 h-4" /> {t('deckBuilder.saveDeck')}
-            </Button>
-          </div>
+          <p className="text-sm text-muted-foreground">
+            {currentDeckName ? `Deck: ${currentDeckName}` : 'Deck vazio'} • Formato Genesis (orçamento de {GENESIS_BUDGET} pontos)
+          </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Search Panel */}
-          <Card className="card-mystic lg:col-span-1">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg">{t('deckBuilder.searchCards')}</CardTitle>
-              <form onSubmit={e => { e.preventDefault(); searchCards(); }} className="flex gap-2">
+          <div className="lg:col-span-2 space-y-4">
+            <form
+              onSubmit={e => { e.preventDefault(); searchCards(); }}
+              className="flex gap-2"
+            >
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
+                  placeholder="Buscar cartas Yu-Gi-Oh!..."
                   value={query}
                   onChange={e => setQuery(e.target.value)}
-                  placeholder={t('deckBuilder.searchCards')}
-                  className="flex-1"
+                  className="pl-9"
                 />
-                <Button type="submit" size="icon" disabled={searching}>
-                  {searching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+              </div>
+              <Button type="submit" disabled={searching}>
+                {searching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+              </Button>
+            </form>
+
+            <div className="flex items-center gap-2 p-2 bg-muted/30 rounded-lg flex-wrap">
+              <span className="text-sm">Adicionar ao:</span>
+              {(['main', 'extra', 'side'] as const).map(d => (
+                <Button
+                  key={d}
+                  size="sm"
+                  variant={target === d ? 'default' : 'outline'}
+                  onClick={() => setTarget(d)}
+                >
+                  {d === 'main' ? 'Main' : d === 'extra' ? 'Extra' : 'Side'}
                 </Button>
-              </form>
-            </CardHeader>
-            <CardContent>
-              <ScrollArea className="h-[60vh]">
-                <div className="space-y-2">
-                  {results.map(card => (
-                    <div
-                      key={card.id}
-                      className="flex items-center gap-2 p-2 rounded hover:bg-muted/50 cursor-pointer group"
-                      onClick={() => setSelectedCard(card)}
-                    >
-                      {getCardImage(card) && (
-                        <img src={getCardImage(card)} alt={card.name} className="w-10 h-14 rounded object-cover" />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{card.name}</p>
-                        <p className="text-xs text-muted-foreground truncate">{card.type_line}</p>
-                        <div className="flex gap-1 mt-1">
-                          {card.colors?.map(c => (
-                            <span key={c} className={`w-4 h-4 rounded-full text-[10px] flex items-center justify-center ${COLOR_MAP[c] || 'bg-muted'}`}>
-                              {c}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="opacity-0 group-hover:opacity-100"
-                        onClick={e => { e.stopPropagation(); addToDeck(card, 'main'); }}
-                      >
-                        <Plus className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            </CardContent>
-          </Card>
+              ))}
+              <span className="ml-auto text-xs text-muted-foreground">
+                Cartas Extra (Fusion/Synchro/XYZ/Link) vão sempre para Extra Deck
+              </span>
+            </div>
 
-          {/* Deck Panel */}
-          <Card className="card-mystic lg:col-span-2">
-            <CardHeader className="pb-3">
-              <div className="flex justify-between items-center">
-                <CardTitle className="text-lg">
-                  {t('deckBuilder.mainDeck')} ({totalMain}/100)
-                </CardTitle>
-                <Badge variant={totalMain >= 100 ? "default" : "secondary"}>
-                  {totalMain >= 100 ? '✓' : `-${100 - totalMain}`}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <ScrollArea className="h-[40vh] mb-4">
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                  {mainDeck.map(({ card, quantity }) => (
-                    <div key={card.id} className="relative group">
-                      {getCardImage(card) && (
-                        <img
-                          src={getCardImage(card)}
-                          alt={card.name}
-                          className="w-full rounded cursor-pointer hover:scale-105 transition-transform"
-                          onClick={() => setSelectedCard(card)}
-                        />
-                      )}
-                      <Badge className="absolute top-1 right-1 text-xs">{quantity}x</Badge>
-                      <div className="absolute bottom-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button size="icon" variant="secondary" className="h-6 w-6" onClick={() => addToDeck(card, 'main')}>
-                          <Plus className="w-3 h-3" />
-                        </Button>
-                        <Button size="icon" variant="destructive" className="h-6 w-6" onClick={() => removeFromDeck(card.id, 'main')}>
-                          <Minus className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-
-              <div className="border-t border-border pt-4">
-                <h3 className="font-medium mb-2">Sideboard ({totalSide}/15)</h3>
-                <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-                  {sideboard.map(({ card, quantity }) => (
-                    <div key={card.id} className="relative group">
-                      {getCardImage(card) && (
-                        <img
-                          src={getCardImage(card)}
-                          alt={card.name}
-                          className="w-full rounded cursor-pointer"
-                          onClick={() => setSelectedCard(card)}
-                        />
-                      )}
-                      <Badge className="absolute top-1 right-1 text-xs">{quantity}x</Badge>
-                      <div className="absolute bottom-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100">
-                        <Button size="icon" variant="destructive" className="h-5 w-5" onClick={() => removeFromDeck(card.id, 'side')}>
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Card Detail Modal */}
-        {selectedCard && (
-          <Dialog open={!!selectedCard} onOpenChange={() => setSelectedCard(null)}>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>{selectedCard.name}</DialogTitle>
-              </DialogHeader>
-              <div className="flex flex-col items-center gap-4">
-                {getCardImageLarge(selectedCard) && (
-                  <img src={getCardImageLarge(selectedCard)} alt={selectedCard.name} className="w-64 rounded-lg" />
-                )}
-                <div className="w-full space-y-2 text-sm">
-                  <p><strong>Tipo:</strong> {selectedCard.type_line}</p>
-                  <p><strong>Mana:</strong> {selectedCard.mana_cost}</p>
-                  <p><strong>Raridade:</strong> {selectedCard.rarity}</p>
-                  <p><strong>Set:</strong> {selectedCard.set_name}</p>
-                  {selectedCard.oracle_text && <p className="text-muted-foreground">{selectedCard.oracle_text}</p>}
-                </div>
-                <div className="flex gap-2 w-full">
-                  <Button className="flex-1" onClick={() => { addToDeck(selectedCard, 'main'); setSelectedCard(null); }}>
-                    <Plus className="w-4 h-4 mr-1" /> Main Deck
-                  </Button>
-                  <Button variant="outline" className="flex-1" onClick={() => { addToDeck(selectedCard, 'side'); setSelectedCard(null); }}>
-                    <Plus className="w-4 h-4 mr-1" /> Sideboard
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-        )}
-
-        {/* Save Dialog */}
-        <Dialog open={saveOpen} onOpenChange={setSaveOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{t('deckBuilder.saveDeck')}</DialogTitle>
-            </DialogHeader>
-            <Input value={deckName} onChange={e => setDeckName(e.target.value)} placeholder={t('deckBuilder.deckName')} />
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setSaveOpen(false)}>Cancelar</Button>
-              <Button onClick={handleSave} disabled={saving}>{saving ? 'Salvando...' : 'Salvar'}</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Load Dialog */}
-        <Dialog open={loadOpen} onOpenChange={setLoadOpen}>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>{t('deckBuilder.loadDeck')}</DialogTitle>
-            </DialogHeader>
-            <ScrollArea className="max-h-[60vh]">
-              {loadingDecks ? (
-                <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin" /></div>
-              ) : savedDecks.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">Nenhum deck Genesis salvo</p>
-              ) : (
-                <div className="space-y-2">
-                  {savedDecks.map(deck => {
-                    const mainCount = (deck.main_deck as any[] || []).reduce((s: number, c: any) => s + (c.quantity || 1), 0);
-                    const sideCount = (deck.side_deck as any[] || []).reduce((s: number, c: any) => s + (c.quantity || 1), 0);
-                    return (
-                      <div key={deck.id} className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted/50">
-                        <div>
-                          <p className="font-medium text-sm">{deck.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            Main: {mainCount} | Side: {sideCount} • {new Date(deck.created_at).toLocaleDateString('pt-BR')}
-                          </p>
-                        </div>
-                        <div className="flex gap-1">
-                          <Button size="sm" onClick={() => loadDeck(deck)}>{t('deckBuilder.loadDeck')}</Button>
-                          <Button size="sm" variant="destructive" onClick={() => deleteSavedDeck(deck.id)}>
-                            <Trash2 className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </ScrollArea>
-          </DialogContent>
-        </Dialog>
-
-        {/* Import Dialog */}
-        <Dialog open={importOpen} onOpenChange={v => { if (!importing) setImportOpen(v); }}>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Importar Lista de Deck</DialogTitle>
-            </DialogHeader>
-            <p className="text-sm text-muted-foreground">
-              Cole sua lista no formato: <code className="bg-muted px-1 rounded">4 Lightning Bolt</code>. 
-              Suporta formatos MTGA, MTGO e listas comuns. Separe o sideboard com uma linha "Sideboard".
-            </p>
-            <Textarea
-              value={importText}
-              onChange={e => setImportText(e.target.value)}
-              placeholder={`4 Lightning Bolt\n4 Counterspell\n2 Island\n\nSideboard\n2 Negate`}
-              rows={12}
-              disabled={importing}
-              className="font-mono text-sm"
-            />
-            {importing && importProgress && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                {importProgress}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              {results.map(card => (
+                <Card
+                  key={card.id}
+                  className="card-mystic cursor-pointer hover:border-primary/40 relative"
+                  onClick={() => addToDeck(card)}
+                >
+                  <img
+                    src={card.card_images?.[0]?.image_url_small}
+                    alt={card.name}
+                    className="w-full h-auto rounded-t-lg"
+                    loading="lazy"
+                  />
+                  <Badge className="absolute top-1 right-1 text-[10px]">
+                    {getCost(card.id)} pt
+                  </Badge>
+                  <CardContent className="p-2">
+                    <p className="text-xs font-medium truncate">{card.name}</p>
+                    <Badge variant="outline" className="text-[10px]">{card.type}</Badge>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+            {results.length === 0 && !searching && (
+              <div className="text-center py-12 text-muted-foreground">
+                <Sparkles className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                <p>Busque cartas para começar a montar seu deck Genesis</p>
               </div>
             )}
-            <DialogFooter className="flex-col sm:flex-row gap-2">
-              <Button variant="outline" onClick={importDeckFromFile} disabled={importing} className="gap-1">
-                <Upload className="w-4 h-4" /> Importar Arquivo .txt
-              </Button>
+          </div>
+
+          <div className="space-y-4">
+            <Card className="card-mystic">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="font-bold text-lg">Deck</h2>
+                  <div className="flex gap-1">
+                    <Button size="icon" variant="ghost" onClick={() => { loadSavedDecks(); setShowLoadModal(true); }}>
+                      <FolderOpen className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => setShowSaveModal(true)}
+                      disabled={mainDeck.length === 0}
+                    >
+                      <Save className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={clearDeck}
+                      disabled={mainDeck.length === 0 && extraDeck.length === 0 && sideDeck.length === 0}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div
+                  className={`flex items-center justify-between text-[11px] mb-2 p-2 rounded ${
+                    overBudget ? 'bg-red-500/20 text-red-400' : 'bg-primary/10 text-primary'
+                  }`}
+                >
+                  <span className="flex items-center gap-1">
+                    {overBudget ? <AlertTriangle className="w-3 h-3" /> : <CheckCircle2 className="w-3 h-3" />}
+                    Orçamento
+                  </span>
+                  <span className="font-mono">{totalPoints} / {GENESIS_BUDGET} pt</span>
+                </div>
+
+                <div
+                  className={`flex items-center justify-between text-[11px] mb-3 p-2 rounded ${
+                    deckValid ? 'bg-green-500/20 text-green-500' : 'bg-yellow-500/20 text-yellow-500'
+                  }`}
+                >
+                  {deckValid ? (
+                    <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Deck válido</span>
+                  ) : (
+                    <span className="flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Main 40-60</span>
+                  )}
+                  <span>{totalMain} main • {totalExtra} extra • {totalSide} side</span>
+                </div>
+
+                <Tabs defaultValue="main">
+                  <TabsList className="w-full">
+                    <TabsTrigger value="main" className="flex-1">Main ({totalMain})</TabsTrigger>
+                    <TabsTrigger value="extra" className="flex-1">Extra ({totalExtra})</TabsTrigger>
+                    <TabsTrigger value="side" className="flex-1">Side ({totalSide})</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="main" className="mt-2">{renderDeck(mainDeck, 'main')}</TabsContent>
+                  <TabsContent value="extra" className="mt-2">{renderDeck(extraDeck, 'extra')}</TabsContent>
+                  <TabsContent value="side" className="mt-2">{renderDeck(sideDeck, 'side')}</TabsContent>
+                </Tabs>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </main>
+
+      <Dialog open={!!previewCard} onOpenChange={() => setPreviewCard(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>{previewCard?.name}</DialogTitle></DialogHeader>
+          {previewCard && (
+            <div className="space-y-3">
+              <img src={previewCard.card_images?.[0]?.image_url} alt={previewCard.name} className="w-full rounded-lg" />
+              <div className="flex flex-wrap gap-1">
+                <Badge variant="outline">{previewCard.type}</Badge>
+                {previewCard.level && <Badge variant="secondary">★{previewCard.level}</Badge>}
+                {previewCard.atk !== undefined && <Badge>ATK {previewCard.atk}</Badge>}
+                {previewCard.def !== undefined && <Badge>DEF {previewCard.def}</Badge>}
+                <Badge className="ml-auto">{getCost(previewCard.id)} pt</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground max-h-32 overflow-y-auto">{previewCard.desc}</p>
               <div className="flex gap-2">
-                <Button variant="ghost" onClick={() => { setImportOpen(false); setImportText(''); }} disabled={importing}>
-                  Cancelar
+                <Button className="flex-1" onClick={() => { addToDeck(previewCard, 'main'); setPreviewCard(null); }}>
+                  <Plus className="w-4 h-4 mr-1" /> Main
                 </Button>
-                <Button onClick={() => importFromText(importText)} disabled={importing || !importText.trim()}>
-                  {importing ? <><Loader2 className="w-4 h-4 animate-spin mr-1" /> Importando...</> : 'Importar Lista'}
+                {isExtraCard(previewCard.type) && (
+                  <Button variant="outline" className="flex-1" onClick={() => { addToDeck(previewCard, 'extra'); setPreviewCard(null); }}>
+                    Extra
+                  </Button>
+                )}
+                <Button variant="outline" className="flex-1" onClick={() => { addToDeck(previewCard, 'side'); setPreviewCard(null); }}>
+                  Side
                 </Button>
               </div>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </main>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <SaveDeckModal
+        open={showSaveModal}
+        onClose={() => setShowSaveModal(false)}
+        onSave={saveDeck}
+        isLoading={savingDeck}
+        existingName={currentDeckName}
+        isUpdate={!!currentDeckId}
+      />
+      <LoadDeckModal
+        open={showLoadModal}
+        onClose={() => setShowLoadModal(false)}
+        decks={savedDecks}
+        onLoad={loadDeck}
+        onDelete={deleteDeckById}
+        isLoading={loadingDecks}
+        isLoggedIn={isLoggedIn}
+      />
     </div>
   );
 }
-
