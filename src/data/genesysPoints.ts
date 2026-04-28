@@ -1,6 +1,6 @@
 // Generated from the official Konami GENESYS point list.
 // Source: https://www.yugioh-card.com/en/genesys/
-// Generated at: 2026-04-28T13:12:19.310Z
+// Generated at: 2026-04-28T22:57:16.450Z
 
 export interface GenesysPointEntry {
   name: string;
@@ -8,7 +8,7 @@ export interface GenesysPointEntry {
 }
 
 export const GENESYS_POINTS_SOURCE = 'https://www.yugioh-card.com/en/genesys/';
-export const GENESYS_POINTS_GENERATED_AT = '2026-04-28T13:12:19.310Z';
+export const GENESYS_POINTS_GENERATED_AT = '2026-04-28T22:57:16.450Z';
 
 export const GENESYS_POINT_ENTRIES: GenesysPointEntry[] = [
   {

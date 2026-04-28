@@ -28,7 +28,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { SaveDeckModal } from '@/components/deckbuilder/SaveDeckModal';
 import { LoadDeckModal } from '@/components/deckbuilder/LoadDeckModal';
 import { useTranslation } from 'react-i18next';
-import { GENESYS_POINT_ENTRIES } from '@/data/genesysPoints';
+import { GENESYS_POINT_ENTRIES, GENESYS_POINTS_GENERATED_AT, GENESYS_POINTS_SOURCE } from '@/data/genesysPoints';
 
 const GENESIS_BUDGET = 100; // total de pontos permitidos por deck
 const GENESYS_POINTS_COUNT = GENESYS_POINT_ENTRIES.length;
@@ -52,7 +52,10 @@ interface DeckCard extends YugiohCard {
 }
 
 const isExtraCard = (type: string) =>
-  type.includes('Fusion') || type.includes('Synchro') || type.includes('XYZ') || type.includes('Link');
+  type.includes('Fusion') || type.includes('Synchro') || type.includes('XYZ');
+
+const isForbiddenGenesysCard = (type: string) =>
+  type.includes('Link') || type.includes('Pendulum');
 
 const normalizeCardName = (name: string) =>
   name
@@ -94,10 +97,13 @@ export default function GenesisDeckBuilder() {
   // Fallback por ID para cartas que não casarem com o nome oficial da Konami.
   useEffect(() => {
     (async () => {
-      const { data } = await supabase.from('genesis_card_costs').select('card_id, points');
+      const { data } = await supabase.from('genesis_card_costs').select('card_id, card_name, points');
       if (data) {
         const map: Record<string, number> = {};
-        data.forEach((r: any) => { map[String(r.card_id)] = r.points || 0; });
+        data.forEach((r: any) => {
+          map[String(r.card_id)] = r.points || 0;
+          if (r.card_name) map[normalizeCardName(r.card_name)] = r.points || 0;
+        });
         setCostMap(map);
       }
     })();
@@ -106,6 +112,8 @@ export default function GenesisDeckBuilder() {
   const getCost = useCallback((card: Pick<YugiohCard, 'id' | 'name'>) => {
     const officialCost = OFFICIAL_GENESYS_POINT_MAP[normalizeCardName(card.name)];
     if (officialCost !== undefined) return officialCost;
+    const databaseNameCost = costMap[normalizeCardName(card.name)];
+    if (databaseNameCost !== undefined) return databaseNameCost;
     return costMap[String(card.id)] ?? 0;
   }, [costMap]);
 
@@ -151,6 +159,11 @@ export default function GenesisDeckBuilder() {
   }, [query]);
 
   const addToDeck = (card: YugiohCard, dest?: 'main' | 'extra' | 'side') => {
+    if (isForbiddenGenesysCard(card.type)) {
+      toast.error('Genesys não permite Monstros Link ou Pêndulo');
+      return;
+    }
+
     const requested = dest ?? target;
     if (requested === 'extra' && !isExtraCard(card.type)) {
       toast.error('Apenas cartas de Extra Deck podem ir para o Extra Deck');
@@ -321,6 +334,9 @@ export default function GenesisDeckBuilder() {
           <p className="text-sm text-muted-foreground">
             {currentDeckName ? `Deck: ${currentDeckName}` : 'Deck vazio'} • Formato Genesys ({GENESIS_BUDGET} pontos • {GENESYS_POINTS_COUNT} cartas pontuadas)
           </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Pontos oficiais Konami atualizados em {new Date(GENESYS_POINTS_GENERATED_AT).toLocaleString('pt-BR')} · <a href={GENESYS_POINTS_SOURCE} target="_blank" rel="noreferrer" className="text-primary hover:underline">ver fonte</a>
+          </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -356,7 +372,7 @@ export default function GenesisDeckBuilder() {
                 </Button>
               ))}
               <span className="ml-auto text-xs text-muted-foreground">
-                Cartas Extra (Fusion/Synchro/XYZ/Link) vão sempre para Extra Deck
+                Cartas Extra (Fusion/Synchro/XYZ) vão para Extra Deck. Link/Pêndulo ficam bloqueadas no Genesys.
               </span>
             </div>
 
@@ -376,6 +392,11 @@ export default function GenesisDeckBuilder() {
                   <Badge className="absolute top-1 right-1 text-[10px]">
                     {getCost(card)} pt
                   </Badge>
+                  {isForbiddenGenesysCard(card.type) && (
+                    <Badge variant="destructive" className="absolute left-1 top-1 text-[10px]">
+                      Bloqueada
+                    </Badge>
+                  )}
                   <CardContent className="p-2">
                     <p className="text-xs font-medium truncate">{card.name}</p>
                     <Badge variant="outline" className="text-[10px]">{card.type}</Badge>

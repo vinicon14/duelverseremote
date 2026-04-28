@@ -2,7 +2,7 @@
  * DuelVerse - Rush Duel Deck Builder
  * 
  * Deck builder usando YAML Yugi, que publica um JSON especifico de Rush Duel.
- * Regras DuelVerse: exatamente 40 cartas main, até 15 extra, até 15 side, máx 3 cópias por nome.
+ * Regras DuelVerse: 40 cartas main, até 15 extra, até 15 side, máx 3 cópias por nome.
  */
 import { useState, useEffect, useCallback } from 'react';
 import { Navbar } from '@/components/Navbar';
@@ -49,7 +49,9 @@ interface DeckCard extends YugiohCard {
 const RUSH_DUEL_TYPES = ['All', 'Normal Monster', 'Effect Monster', 'Maximum Monster', 'Fusion Monster', 'Ritual Monster', 'Spell', 'Trap'];
 const RUSH_ATTRIBUTES = ['All', 'DARK', 'DIVINE', 'EARTH', 'FIRE', 'LIGHT', 'WATER', 'WIND'];
 const RUSH_MAIN_DECK_SIZE = 40;
+const RUSH_SEARCH_LIMIT = 96;
 const RUSH_CARDS_URL = 'https://dawnbrandbots.github.io/yaml-yugi/rush.json';
+const RUSH_CARDS_SOURCE_LABEL = 'YAML Yugi Rush Duel';
 
 interface RushYamlCard {
   konami_id?: number;
@@ -139,6 +141,46 @@ const loadRushCards = async () => {
   return rushCardCache;
 };
 
+const RushCardArt = ({ card, className = '' }: { card: YugiohCard; className?: string }) => {
+  const imageUrl = card.card_images?.[0]?.image_url_small || card.card_images?.[0]?.image_url;
+  const [imageFailed, setImageFailed] = useState(!imageUrl || imageUrl === '/placeholder.svg');
+
+  if (!imageFailed && imageUrl) {
+    return (
+      <img
+        src={imageUrl}
+        alt={card.name}
+        className={className}
+        loading="lazy"
+        onError={() => setImageFailed(true)}
+      />
+    );
+  }
+
+  return (
+    <div
+      className={`flex aspect-[5/7] flex-col justify-between overflow-hidden rounded border border-amber-300/40 bg-gradient-to-br from-amber-200 via-orange-300 to-red-500 p-2 text-slate-950 shadow-inner ${className}`}
+      aria-label={card.name}
+    >
+      <div>
+        <p className="line-clamp-2 text-[10px] font-black uppercase leading-tight">
+          {card.name}
+        </p>
+        <p className="mt-1 text-[8px] font-semibold uppercase opacity-75">
+          {card.type}
+        </p>
+      </div>
+      <div className="rounded bg-white/45 p-1 text-[8px] leading-tight">
+        <p className="line-clamp-4">{card.desc || card.race}</p>
+      </div>
+      <div className="flex items-center justify-between text-[8px] font-black">
+        <span>{card.attribute || card.race}</span>
+        {card.atk !== undefined && <span>ATK {card.atk}</span>}
+      </div>
+    </div>
+  );
+};
+
 export default function RushDuelDeckBuilder() {
   const { toast } = useToast();
   const { t } = useTranslation();
@@ -155,6 +197,8 @@ export default function RushDuelDeckBuilder() {
   const [savedDecks, setSavedDecks] = useState<any[]>([]);
   const [savingDeck, setSavingDeck] = useState(false);
   const [loadingDecks, setLoadingDecks] = useState(false);
+  const [cardsLoaded, setCardsLoaded] = useState(0);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [currentDeckId, setCurrentDeckId] = useState<string | null>(null);
   const [currentDeckName, setCurrentDeckName] = useState('');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -169,11 +213,41 @@ export default function RushDuelDeckBuilder() {
     checkAuth();
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadInitialCards = async () => {
+      setInitialLoading(true);
+      try {
+        const cards = await loadRushCards();
+        if (cancelled) return;
+        setCardsLoaded(cards.length);
+        setSearchResults(cards.slice(0, RUSH_SEARCH_LIMIT));
+      } catch (error) {
+        if (cancelled) return;
+        console.error('Rush Duel initial load error:', error);
+        toast({
+          title: 'Cartas Rush Duel indisponíveis',
+          description: error instanceof Error ? error.message : 'Não foi possível carregar a base Rush Duel',
+          variant: 'destructive',
+        });
+      } finally {
+        if (!cancelled) setInitialLoading(false);
+      }
+    };
+
+    loadInitialCards();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [toast]);
+
   const searchCards = useCallback(async () => {
-    if (!searchQuery.trim() && typeFilter === 'All' && attributeFilter === 'All') return;
     setLoading(true);
     try {
       const cards = await loadRushCards();
+      setCardsLoaded(cards.length);
       const query = searchQuery.trim().toLowerCase();
 
       let filtered = query
@@ -191,7 +265,7 @@ export default function RushDuelDeckBuilder() {
         filtered = filtered.filter(c => c.attribute === attributeFilter);
       }
       
-      setSearchResults(filtered.slice(0, 40));
+      setSearchResults(filtered.slice(0, RUSH_SEARCH_LIMIT));
     } catch (error) {
       console.error('Rush Duel search error:', error);
       toast({
@@ -206,7 +280,7 @@ export default function RushDuelDeckBuilder() {
 
   const getTotal = (deck: DeckCard[]) => deck.reduce((sum, c) => sum + c.quantity, 0);
 
-  const isExtraCard = (type: string) => type.includes('Fusion') || type.includes('Ritual');
+  const isExtraCard = (type: string) => type.includes('Fusion');
 
   const getTotalCopies = (cardName: string) => {
     const normalizedName = cardName.trim().toLowerCase();
@@ -217,7 +291,7 @@ export default function RushDuelDeckBuilder() {
 
   const addToDeck = (card: YugiohCard) => {
     if (addTo === 'extra' && !isExtraCard(card.type)) {
-      toast({ title: 'Carta inválida', description: 'Apenas Fusion e Ritual podem ir para o Extra Deck', variant: 'destructive' });
+      toast({ title: 'Carta inválida', description: 'Apenas Fusion Monsters podem ir para o Extra Deck Rush Duel', variant: 'destructive' });
       return;
     }
 
@@ -349,12 +423,9 @@ export default function RushDuelDeckBuilder() {
         ) : (
           deck.map(card => (
             <div key={card.id} className="flex items-center gap-2 p-1.5 rounded hover:bg-muted/50">
-              <img 
-                src={card.card_images?.[0]?.image_url_small} 
-                alt={card.name} 
-                className="w-8 h-11 rounded object-cover cursor-pointer" 
-                onClick={() => setPreviewCard(card)} 
-              />
+              <button type="button" className="w-8 shrink-0" onClick={() => setPreviewCard(card)}>
+                <RushCardArt card={card} className="h-11 w-8 rounded object-cover" />
+              </button>
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium truncate">{card.name}</p>
                 <span className="text-[9px] text-muted-foreground">{card.type}</span>
@@ -382,7 +453,7 @@ export default function RushDuelDeckBuilder() {
             Rush Duel Deck Builder
           </h1>
           <p className="text-sm text-muted-foreground">
-            {currentDeckName ? `Deck: ${currentDeckName}` : 'Deck vazio'} • Formato Rush Duel (SEVENS ROAD)
+            {currentDeckName ? `Deck: ${currentDeckName}` : 'Deck vazio'} • {cardsLoaded.toLocaleString('pt-BR')} cartas Rush Duel carregadas via {RUSH_CARDS_SOURCE_LABEL}
           </p>
         </div>
 
@@ -413,9 +484,25 @@ export default function RushDuelDeckBuilder() {
                   {RUSH_ATTRIBUTES.map(t => <SelectItem key={t} value={t}>{t === 'All' ? 'Atributo' : t}</SelectItem>)}
                 </SelectContent>
               </Select>
-              <Button onClick={searchCards} disabled={loading}>
+              <Button onClick={searchCards} disabled={loading || initialLoading}>
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
               </Button>
+            </div>
+
+            <div className="flex flex-col gap-2 rounded-lg border border-border/60 bg-background/40 p-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+              <span>
+                {initialLoading
+                  ? 'Carregando cartas Rush Duel...'
+                  : `${cardsLoaded.toLocaleString('pt-BR')} cartas disponíveis. Mostrando até ${RUSH_SEARCH_LIMIT} por busca.`}
+              </span>
+              <a
+                href={RUSH_CARDS_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="text-primary hover:underline"
+              >
+                Fonte JSON
+              </a>
             </div>
 
             <div className="flex items-center gap-2 p-2 bg-muted/30 rounded-lg">
@@ -450,12 +537,7 @@ export default function RushDuelDeckBuilder() {
                   className="card-mystic cursor-pointer hover:border-primary/40" 
                   onClick={() => { addToDeck(card); }}
                 >
-                  <img 
-                    src={card.card_images?.[0]?.image_url_small} 
-                    alt={card.name} 
-                    className="w-full h-auto rounded-t-lg" 
-                    loading="lazy" 
-                  />
+                  <RushCardArt card={card} className="w-full rounded-t-lg" />
                   <CardContent className="p-2">
                     <p className="text-xs font-medium truncate">{card.name}</p>
                     <Badge variant="outline" className="text-[10px]">{card.type}</Badge>
@@ -463,10 +545,16 @@ export default function RushDuelDeckBuilder() {
                 </Card>
               ))}
             </div>
-            {searchResults.length === 0 && !loading && (
+            {searchResults.length === 0 && !loading && !initialLoading && (
               <div className="text-center py-12 text-muted-foreground">
                 <Zap className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                <p>Busque cartas Rush Duel</p>
+                <p>Nenhuma carta Rush Duel encontrada com os filtros atuais</p>
+              </div>
+            )}
+            {initialLoading && (
+              <div className="text-center py-12 text-muted-foreground">
+                <Loader2 className="w-12 h-12 mx-auto mb-3 animate-spin opacity-60" />
+                <p>Carregando base Rush Duel...</p>
               </div>
             )}
           </div>
@@ -525,7 +613,7 @@ export default function RushDuelDeckBuilder() {
           <DialogHeader><DialogTitle>{previewCard?.name}</DialogTitle></DialogHeader>
           {previewCard && (
             <div className="space-y-3">
-              <img src={previewCard.card_images?.[0]?.image_url} alt={previewCard.name} className="w-full rounded-lg" />
+              <RushCardArt card={previewCard} className="mx-auto max-h-[520px] w-full max-w-[320px] rounded-lg object-contain" />
               <div className="flex flex-wrap gap-1">
                 <Badge variant="outline">{previewCard.type}</Badge>
                 {previewCard.level && <Badge variant="secondary">★{previewCard.level}</Badge>}

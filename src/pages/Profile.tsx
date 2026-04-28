@@ -410,6 +410,10 @@ const Profile = () => {
 
   const adQuest = dailyQuests.find(q => q.quest_type === 'watch_ad');
   const dailyLoginQuest = dailyQuests.find(q => q.quest_type === 'daily_login');
+  const completedDailyQuests = dailyQuests.filter(q => q.claimed).length;
+  const totalDailyQuests = dailyQuests.length || 4;
+  const adProgress = `${adQuest?.progress || 0}/${adQuest?.target || 5}`;
+  const selectedRankedDifficulty = RANKED_XP_DIFFICULTIES.find(difficulty => difficulty.key === rankedDifficulty) || RANKED_XP_DIFFICULTIES[0];
 
   const handleSelectRankedDifficulty = (difficulty: RankedXpDifficultyKey) => {
     setRankedDifficulty(difficulty);
@@ -437,7 +441,8 @@ const Profile = () => {
           renderProfileSkeleton()
         ) : (
           <>
-            <Card className="card-mystic mb-6 sm:mb-8 animate-fade-in-up">
+            <div className="mb-6 grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(340px,0.9fr)]">
+            <Card className="card-mystic h-full animate-fade-in-up">
               <CardContent className="pt-4 sm:pt-6">
                 <div className="flex flex-col md:flex-row items-center md:items-start gap-4 sm:gap-6">
                   {isOwnProfile ? (
@@ -470,7 +475,7 @@ const Profile = () => {
                       {profile?.bio || t('profile.duelist')}
                     </p>
 
-                    <div className="flex flex-wrap gap-2 sm:gap-4 justify-center md:justify-start">
+                    <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:gap-3 sm:justify-center md:justify-start">
                       <div className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg bg-primary/10">
                         <Trophy className="w-4 h-4 sm:w-5 sm:h-5 text-secondary" />
                         <span className="text-sm sm:text-base font-semibold">{t('profile.level', { level: stats.level })}</span>
@@ -495,7 +500,7 @@ const Profile = () => {
               </CardContent>
             </Card>
 
-            <Card className="card-mystic mb-6 animate-fade-in-up">
+            <Card className="card-mystic h-full animate-fade-in-up">
               <CardContent className="pt-5">
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                   <div className="space-y-1">
@@ -531,11 +536,26 @@ const Profile = () => {
                     <span>{xp.nextLevelAt} XP</span>
                   </div>
                 </div>
+                <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                  <div className="rounded-lg border border-border/60 bg-background/40 p-3">
+                    <p className="text-xs uppercase text-muted-foreground">Missões hoje</p>
+                    <p className="text-lg font-bold text-primary">{completedDailyQuests}/{totalDailyQuests}</p>
+                  </div>
+                  <div className="rounded-lg border border-border/60 bg-background/40 p-3">
+                    <p className="text-xs uppercase text-muted-foreground">Anúncios</p>
+                    <p className="text-lg font-bold text-primary">{adProgress}</p>
+                  </div>
+                  <div className="rounded-lg border border-border/60 bg-background/40 p-3">
+                    <p className="text-xs uppercase text-muted-foreground">Ranqueada</p>
+                    <p className="text-lg font-bold text-primary">{selectedRankedDifficulty.xp.toLocaleString('pt-BR')} XP</p>
+                  </div>
+                </div>
               </CardContent>
             </Card>
+            </div>
 
             <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-              <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
+              <TabsList className="grid h-auto w-full grid-cols-2 rounded-xl bg-card/80 p-1 md:grid-cols-4">
                 <TabsTrigger value="stats" className="gap-2">
                   <Trophy className="h-4 w-4" />
                   {t('profile.tabStats')}
