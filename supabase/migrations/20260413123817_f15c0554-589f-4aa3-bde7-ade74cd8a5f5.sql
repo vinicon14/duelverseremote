@@ -1,0 +1,1 @@
+ALTER TABLE public.lives DROP COLUMN IF EXISTS daily_room_url;

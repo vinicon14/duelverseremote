@@ -1,0 +1,494 @@
+const { app, BrowserWindow, Tray, Menu, Notification, ipcMain, shell, nativeImage, desktopCapturer, session, dialog } = require('electron');
+const fs = require('fs');
+const path = require('path');
+
+const APP_USER_MODEL_ID = 'com.duelverse.desktop';
+
+app.setAppUserModelId(APP_USER_MODEL_ID);
+
+const REMOTE_URL = 'https://duelverse.site';
+const BACKEND_URL = 'https://xxttwzewtqxvpgefggah.supabase.co';
+const BACKEND_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4dHR3emV3dHF4dnBnZWZnZ2FoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk4NjY5NzQsImV4cCI6MjA3NTQ0Mjk3NH0.jhVKEu8tyid1gMnAxXZJdfrYt0a55eNpJT17hSdqtPQ';
+const NOTIFICATION_POLL_INTERVAL_MS = 15000;
+const MAX_TRACKED_NOTIFICATIONS = 200;
+let mainWindow;
+let tray;
+let authToken = null;
+let authUserId = null;
+let notificationPollInterval = null;
+let knownNotificationIds = new Set();
+let selectedSourceId = null;
+
+function getAppIconPath() {
+  const iconFileName = process.platform === 'win32' ? 'icon.ico' : 'icon.png';
+
+  if (app.isPackaged) {
+    const packagedIconPath = path.join(process.resourcesPath, iconFileName);
+    if (fs.existsSync(packagedIconPath)) {
+      return packagedIconPath;
+    }
+  }
+
+  return path.join(__dirname, iconFileName);
+}
+
+function getAppIcon() {
+  const iconPath = getAppIconPath();
+  try {
+    if (process.platform === 'win32') {
+      return iconPath;
+    }
+
+    const icon = nativeImage.createFromPath(iconPath);
+    if (!icon.isEmpty()) return icon;
+  } catch (e) {
+    console.warn('[Electron] Failed to load icon from', iconPath, e);
+  }
+  return undefined;
+}
+
+function recreateShortcut(shortcutPath, shortcutOptions) {
+  try {
+    if (fs.existsSync(shortcutPath)) {
+      fs.unlinkSync(shortcutPath);
+    }
+  } catch (error) {
+    console.warn('[Electron] Failed to remove existing shortcut:', shortcutPath, error);
+  }
+
+  shell.writeShortcutLink(shortcutPath, 'create', shortcutOptions);
+}
+
+function showMainWindow() {
+  if (!mainWindow) return;
+  if (mainWindow.isMinimized()) {
+    mainWindow.restore();
+  }
+  mainWindow.show();
+  mainWindow.focus();
+}
+
+function trimKnownNotificationIds() {
+  if (knownNotificationIds.size <= MAX_TRACKED_NOTIFICATIONS) return;
+  const ids = Array.from(knownNotificationIds);
+  knownNotificationIds = new Set(ids.slice(ids.length - MAX_TRACKED_NOTIFICATIONS));
+}
+
+function stopNotificationPolling() {
+  if (notificationPollInterval) {
+    clearInterval(notificationPollInterval);
+    notificationPollInterval = null;
+  }
+}
+
+async function fetchUnreadNotifications({ primeOnly = false } = {}) {
+  if (!authToken || !authUserId) return;
+
+  try {
+    const url = new URL(`${BACKEND_URL}/rest/v1/notifications`);
+    url.searchParams.set('select', 'id,title,message,created_at,read,type,data');
+    url.searchParams.set('user_id', `eq.${authUserId}`);
+    url.searchParams.set('read', 'eq.false');
+    url.searchParams.set('order', 'created_at.desc');
+    url.searchParams.set('limit', '20');
+
+    const response = await fetch(url, {
+      headers: {
+        apikey: BACKEND_ANON_KEY,
+        Authorization: `Bearer ${authToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Notification polling failed with status ${response.status}`);
+    }
+
+    const notifications = await response.json();
+    if (!Array.isArray(notifications)) return;
+
+    if (primeOnly) {
+      for (const notification of notifications) {
+        if (notification?.id) {
+          knownNotificationIds.add(notification.id);
+        }
+      }
+      trimKnownNotificationIds();
+      return;
+    }
+
+    const freshNotifications = notifications
+      .filter((notification) => notification?.id && !knownNotificationIds.has(notification.id))
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+    for (const notification of freshNotifications) {
+      knownNotificationIds.add(notification.id);
+      
+      const isDuelInvite = notification.type === 'duel_invite';
+      
+      if (Notification.isSupported()) {
+        const notif = new Notification({
+          title: notification.title || 'Duelverse',
+          body: notification.message || 'Você recebeu uma nova notificação.',
+          icon: path.join(__dirname, 'icon.png'),
+          urgency: isDuelInvite ? 'critical' : 'normal',
+        });
+        notif.on('click', () => {
+          showMainWindow();
+          if (isDuelInvite && notification.data?.duel_id) {
+            mainWindow.webContents.executeJavaScript(
+              `window.location.hash = ''; window.location.href = '/duel/${notification.data.duel_id}';`
+            );
+          }
+        });
+        notif.show();
+      }
+
+      // For duel invites, force-show the window so the in-app overlay with audio triggers
+      if (isDuelInvite) {
+        showMainWindow();
+      }
+    }
+
+    trimKnownNotificationIds();
+  } catch (error) {
+    console.error('[Electron] Failed to poll notifications:', error);
+  }
+}
+
+// Also poll duel_invites directly for faster response
+async function pollDuelInvites() {
+  if (!authToken || !authUserId) return;
+
+  try {
+    const url = new URL(`${BACKEND_URL}/rest/v1/duel_invites`);
+    url.searchParams.set('select', 'id,sender_id,duel_id,created_at');
+    url.searchParams.set('receiver_id', `eq.${authUserId}`);
+    url.searchParams.set('status', 'eq.pending');
+    url.searchParams.set('order', 'created_at.desc');
+    url.searchParams.set('limit', '1');
+
+    const response = await fetch(url, {
+      headers: {
+        apikey: BACKEND_ANON_KEY,
+        Authorization: `Bearer ${authToken}`,
+      },
+    });
+
+    if (!response.ok) return;
+    const invites = await response.json();
+    if (!Array.isArray(invites) || invites.length === 0) return;
+
+    const invite = invites[0];
+    const inviteKey = `invite_${invite.id}`;
+    if (knownNotificationIds.has(inviteKey)) return;
+    knownNotificationIds.add(inviteKey);
+
+    // Force show window so the web DuelCallNotification overlay activates with audio
+    showMainWindow();
+    
+    if (Notification.isSupported()) {
+      const notif = new Notification({
+        title: '⚔️ Desafio de Duelo!',
+        body: 'Você recebeu um convite para duelar!',
+        icon: path.join(__dirname, 'icon.png'),
+        urgency: 'critical',
+      });
+      notif.on('click', () => showMainWindow());
+      notif.show();
+    }
+  } catch (error) {
+    // Silent fail for invite polling
+  }
+}
+
+async function startNotificationPolling({ resetKnown = false } = {}) {
+  if (!authToken || !authUserId) {
+    stopNotificationPolling();
+    knownNotificationIds = new Set();
+    return;
+  }
+
+  if (resetKnown) {
+    knownNotificationIds = new Set();
+  }
+
+  await fetchUnreadNotifications({ primeOnly: true });
+  stopNotificationPolling();
+  notificationPollInterval = setInterval(() => {
+    void fetchUnreadNotifications();
+    void pollDuelInvites();
+  }, NOTIFICATION_POLL_INTERVAL_MS);
+}
+
+function setupZoomShortcuts() {
+  if (!mainWindow) return;
+
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    const isAccelerator = input.control || input.meta;
+    if (!isAccelerator || input.type !== 'keyDown') return;
+
+    const currentZoom = mainWindow.webContents.getZoomFactor();
+
+    if (['+', '=', 'Add'].includes(input.key)) {
+      event.preventDefault();
+      mainWindow.webContents.setZoomFactor(Math.min(currentZoom + 0.1, 3));
+      return;
+    }
+
+    if (['-', '_', 'Subtract'].includes(input.key)) {
+      event.preventDefault();
+      mainWindow.webContents.setZoomFactor(Math.max(currentZoom - 0.1, 0.5));
+      return;
+    }
+
+    if (['0', 'Numpad0'].includes(input.key)) {
+      event.preventDefault();
+      mainWindow.webContents.setZoomFactor(1);
+    }
+  });
+}
+
+function createWindow() {
+  mainWindow = new BrowserWindow({
+    width: 1280,
+    height: 800,
+    minWidth: 800,
+    minHeight: 600,
+    icon: getAppIcon(),
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.cjs'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      nativeWindowOpen: true,
+    },
+    autoHideMenuBar: true,
+    title: 'Duelverse',
+  });
+
+  mainWindow.loadURL(REMOTE_URL);
+  setupZoomShortcuts();
+
+  // Auto-grant camera/microphone/display-capture permissions for WebRTC & recording
+  mainWindow.webContents.session.setPermissionRequestHandler((webContents, permission, callback) => {
+    const allowedPermissions = ['media', 'mediaKeySystem', 'notifications', 'fullscreen', 'display-capture'];
+    callback(allowedPermissions.includes(permission));
+  });
+
+  mainWindow.webContents.session.setPermissionCheckHandler((webContents, permission) => {
+    const allowedPermissions = ['media', 'mediaKeySystem', 'notifications', 'fullscreen', 'display-capture'];
+    return allowedPermissions.includes(permission);
+  });
+
+  // Allow getDisplayMedia to work with remote content by providing desktop sources
+  mainWindow.webContents.session.setDisplayMediaRequestHandler((request, callback) => {
+    desktopCapturer.getSources({ types: ['screen', 'window'] }).then((sources) => {
+      // Use user-selected source if available, otherwise fall back to first screen
+      let preferredSource = null;
+      if (selectedSourceId) {
+        preferredSource = sources.find((source) => source.id === selectedSourceId);
+        // Clear selection after use
+        selectedSourceId = null;
+      }
+      if (!preferredSource) {
+        preferredSource = sources.find((source) => source.id.startsWith('screen:')) || sources[0];
+      }
+
+      if (!preferredSource) {
+        callback({});
+        return;
+      }
+
+      const result = { video: preferredSource };
+
+      if (request.audioRequested) {
+        result.audio = 'loopback';
+      }
+
+      callback(result);
+    }).catch((error) => {
+      console.error('[Electron] Failed to resolve display media request:', error);
+      callback({});
+    });
+  }, { useSystemPicker: false });
+
+  // Force taskbar icon on Windows
+  const appIcon = getAppIcon();
+  if (appIcon && process.platform === 'win32') {
+    mainWindow.setIcon(appIcon);
+    mainWindow.setOverlayIcon(null, '');
+  }
+
+  // Open external links in the default browser, but allow OAuth popups and in-app remote pages
+  mainWindow.webContents.setWindowOpenHandler(({ url, disposition }) => {
+    if (url.startsWith(REMOTE_URL)) {
+      return { action: 'allow' };
+    }
+
+    if (disposition === 'new-window') {
+      return { action: 'allow' };
+    }
+
+      shell.openExternal(url);
+    return { action: 'deny' };
+  });
+
+  mainWindow.on('close', (e) => {
+    if (!app.isQuitting) {
+      e.preventDefault();
+      mainWindow.hide();
+      if (tray) {
+        tray.displayBalloon({
+          title: 'Duelverse',
+          content: 'O app continua rodando em segundo plano. Você receberá notificações!',
+        });
+      }
+    }
+  });
+}
+
+function createTray() {
+  try {
+    tray = new Tray(getAppIcon() || getAppIconPath());
+  } catch {
+    tray = null;
+    return;
+  }
+
+  const contextMenu = Menu.buildFromTemplate([
+    { label: 'Abrir Duelverse', click: () => { showMainWindow(); } },
+    { type: 'separator' },
+    { label: 'Sair', click: () => { app.isQuitting = true; app.quit(); } },
+  ]);
+
+  tray.setToolTip('Duelverse');
+  tray.setContextMenu(contextMenu);
+  tray.on('click', () => { showMainWindow(); });
+}
+
+function setAutoLaunch() {
+  if (process.platform !== 'win32' || !app.isPackaged) return;
+  app.setLoginItemSettings({
+    openAtLogin: true,
+    path: process.execPath,
+    args: [],
+  });
+}
+
+function createShortcuts() {
+  if (process.platform !== 'win32' || !app.isPackaged) return;
+
+  const shortcutOptions = {
+    target: process.execPath,
+    args: '',
+    description: 'Duelverse',
+    icon: getAppIconPath(),
+    iconIndex: 0,
+    appUserModelId: APP_USER_MODEL_ID,
+  };
+
+  const desktopShortcut = path.join(app.getPath('desktop'), 'Duelverse.lnk');
+  recreateShortcut(desktopShortcut, shortcutOptions);
+
+  const startMenuShortcut = path.join(app.getPath('startMenu'), 'Programs', 'Duelverse.lnk');
+  fs.mkdirSync(path.dirname(startMenuShortcut), { recursive: true });
+  recreateShortcut(startMenuShortcut, shortcutOptions);
+}
+
+ipcMain.handle('get-desktop-sources', async () => {
+  try {
+    const sources = await desktopCapturer.getSources({
+      types: ['screen', 'window'],
+      thumbnailSize: { width: 320, height: 180 },
+    });
+    return sources.map(source => ({
+      id: source.id,
+      name: source.name,
+      thumbnail: source.thumbnail.toDataURL(),
+    }));
+  } catch (e) {
+    console.error('[Electron] Failed to get desktop sources:', e);
+    return [];
+  }
+});
+
+ipcMain.on('show-notification', (_, { title, body }) => {
+  if (Notification.isSupported()) {
+    const notif = new Notification({ title, body, icon: path.join(__dirname, 'icon.png') });
+    notif.on('click', () => { showMainWindow(); });
+    notif.show();
+  }
+});
+
+ipcMain.on('set-selected-source', (_, sourceId) => {
+  selectedSourceId = sourceId || null;
+  console.log('[Electron] Selected capture source:', selectedSourceId);
+});
+
+ipcMain.handle('save-file-locally', async (_, arrayBuffer, defaultName) => {
+  try {
+    const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+      title: 'Salvar gravação',
+      defaultPath: defaultName || 'gravacao.webm',
+      filters: [
+        { name: 'Vídeo WebM', extensions: ['webm'] },
+        { name: 'Todos os arquivos', extensions: ['*'] },
+      ],
+    });
+
+    if (canceled || !filePath) return { success: false, reason: 'canceled' };
+
+    const buffer = Buffer.from(arrayBuffer);
+    fs.writeFileSync(filePath, buffer);
+    return { success: true, filePath };
+  } catch (error) {
+    console.error('[Electron] Failed to save file:', error);
+    return { success: false, reason: error.message };
+  }
+});
+
+ipcMain.handle('sync-auth', async (_, { token, userId }) => {
+  const normalizedToken = token || null;
+  const normalizedUserId = userId || null;
+  const userChanged = authUserId !== normalizedUserId;
+
+  authToken = normalizedToken;
+  authUserId = normalizedUserId;
+
+  if (!authToken || !authUserId) {
+    console.log('[Electron] Auth cleared');
+    stopNotificationPolling();
+    knownNotificationIds = new Set();
+    return;
+  }
+
+  console.log('[Electron] Auth synced for user:', authUserId);
+  await startNotificationPolling({ resetKnown: userChanged || !notificationPollInterval });
+});
+
+app.whenReady().then(async () => {
+  // Clear cache to always load latest version
+  try {
+    await session.defaultSession.clearCache();
+    console.log('[Electron] Cache cleared successfully');
+  } catch (e) {
+    console.warn('[Electron] Failed to clear cache:', e);
+  }
+
+  setAutoLaunch();
+  createWindow();
+  createTray();
+  createShortcuts();
+});
+
+app.on('before-quit', () => {
+  app.isQuitting = true;
+  stopNotificationPolling();
+});
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') app.quit();
+});
+
+app.on('activate', () => {
+  if (BrowserWindow.getAllWindows().length === 0) createWindow();
+});

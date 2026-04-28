@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Duelverse</string>
+    <string name="title_activity_main">Duelverse</string>
+    <string name="package_name">com.duelverse.app</string>
+    <string name="custom_url_scheme">com.duelverse.app</string>
+</resources>

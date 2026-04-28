@@ -1,0 +1,33 @@
+/* Animações nativas para emular virada de página de TCG */
+
+#root.page-turn-left .router-view-animate {
+  transform-style: preserve-3d;
+  animation: page-flip-left 0.4s forwards;
+  perspective: 1200px;
+}
+
+#root.page-turn-right .router-view-animate {
+  transform-style: preserve-3d;
+  animation: page-flip-right 0.4s forwards;
+  perspective: 1200px;
+}
+
+@keyframes page-flip-left {
+  0% { transform: rotateY(0deg) scale(1); opacity: 1; }
+  100% { transform: rotateY(-30deg) scale(0.9) translateX(-100px); opacity: 0; }
+}
+
+@keyframes page-flip-right {
+  0% { transform: rotateY(0deg) scale(1); opacity: 1; }
+  100% { transform: rotateY(30deg) scale(0.9) translateX(100px); opacity: 0; }
+}
+
+/* Aplicando animação nas views novas montadas */
+.router-view-animate {
+  animation: root-enter 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+@keyframes root-enter {
+  0% { transform: scale(0.95); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}

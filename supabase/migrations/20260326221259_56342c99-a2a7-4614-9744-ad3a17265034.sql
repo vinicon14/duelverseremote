@@ -1,0 +1,1 @@
+ALTER TABLE public.marketplace_products ADD COLUMN IF NOT EXISTS is_approved boolean NOT NULL DEFAULT false;
