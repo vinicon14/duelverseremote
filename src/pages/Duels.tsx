@@ -6,7 +6,7 @@
  * Inclui chat global e criação/entrada de salas.
  */
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -24,6 +24,7 @@ import { useTcg } from "@/contexts/TcgContext";
 import { detectPlatform } from "@/utils/platformDetection";
 import { announceDuelRoom } from "@/utils/announceDuelRoom";
 import { getDefaultLifePoints, isLegacyMagicTcg } from "@/utils/tcgRules";
+import { RANKED_XP_DIFFICULTIES, getRankedDifficulty, getRankedDifficultyStorageKey, type RankedXpDifficultyKey } from "@/utils/xpRewards";
 import { useTranslation } from "react-i18next";
 
 const Duels = () => {
@@ -31,6 +32,7 @@ const Duels = () => {
   const { t } = useTranslation();
   const { activeTcg } = useTcg();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const [duels, setDuels] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,6 +43,7 @@ const Duels = () => {
   const [isPrivate, setIsPrivate] = useState(false);
   const [roomPassword, setRoomPassword] = useState("");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [rankedDifficulty, setRankedDifficulty] = useState<RankedXpDifficultyKey>(RANKED_XP_DIFFICULTIES[0].key);
   const [searchQuery, setSearchQuery] = useState("");
   // Password prompt for joining private rooms
   const [passwordPrompt, setPasswordPrompt] = useState<{ duelId: string; expected: string } | null>(null);
@@ -48,6 +51,19 @@ const Duels = () => {
 
   const platform = detectPlatform();
   const isWebBrowser = !platform.isStandalone && !(window as any).electronAPI?.isElectron && !platform.isNativeApp;
+  const selectedRankedDifficulty = getRankedDifficulty(rankedDifficulty);
+
+  useEffect(() => {
+    const stored = localStorage.getItem(getRankedDifficultyStorageKey(activeTcg));
+    if (stored && RANKED_XP_DIFFICULTIES.some(difficulty => difficulty.key === stored)) {
+      setRankedDifficulty(stored as RankedXpDifficultyKey);
+    }
+
+    if (searchParams.get('ranked') === '1') {
+      setIsRanked(true);
+      setShowCreateDialog(true);
+    }
+  }, [activeTcg, searchParams]);
 
   useEffect(() => {
     checkAuth();
@@ -184,6 +200,21 @@ const Duels = () => {
         .single();
 
       if (error) throw error;
+
+      if (isRanked) {
+        const difficulty = getRankedDifficulty(rankedDifficulty);
+        const { data: betResult, error: betError } = await supabase.rpc('place_ranked_bet', {
+          p_tcg_type: activeTcg,
+          p_difficulty: difficulty.key,
+          p_xp_bet: difficulty.xp,
+          p_duel_id: data.id,
+        });
+
+        if (betError || (betResult as any)?.success === false) {
+          await supabase.from('live_duels').delete().eq('id', data.id);
+          throw new Error(betError?.message || (betResult as any)?.message || 'Não foi possível descontar o XP ranqueado.');
+        }
+      }
 
       toast({
         title: t('duels.roomCreated'),
@@ -453,6 +484,34 @@ const Duels = () => {
                           : t('duels.casualHint')}
                       </p>
                     </div>
+
+                    {isRanked && (
+                      <div className="space-y-2">
+                        <Label>Dificuldade ranqueada</Label>
+                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                          {RANKED_XP_DIFFICULTIES.map((difficulty) => (
+                            <Button
+                              key={difficulty.key}
+                              type="button"
+                              variant={rankedDifficulty === difficulty.key ? "default" : "outline"}
+                              onClick={() => {
+                                setRankedDifficulty(difficulty.key);
+                                localStorage.setItem(getRankedDifficultyStorageKey(activeTcg), difficulty.key);
+                              }}
+                              className={rankedDifficulty === difficulty.key ? "btn-mystic text-white" : ""}
+                            >
+                              <span className="flex flex-col text-xs leading-tight">
+                                <span>{difficulty.label}</span>
+                                <span>{difficulty.xp} XP</span>
+                              </span>
+                            </Button>
+                          ))}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {selectedRankedDifficulty.xp.toLocaleString('pt-BR')} XP será descontado ao entrar na Duel Room.
+                        </p>
+                      </div>
+                    )}
 
                     <div className="space-y-2">
                       <Label htmlFor="duration">{t('duels.duration')}</Label>
