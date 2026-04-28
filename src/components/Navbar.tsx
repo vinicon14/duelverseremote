@@ -147,7 +147,7 @@ export const Navbar = () => {
             {t('nav.gallery')}
           </Button>
         </Link>
-        <Link to={activeTcg === 'magic' ? '/magic-deck-builder' : '/deck-builder'}>
+        <Link to="/deck-builder">
           <Button variant="ghost" className={btnClass}>
             <Layers className="mr-2 h-4 w-4" />
             {t('nav.deckBuilder')}
