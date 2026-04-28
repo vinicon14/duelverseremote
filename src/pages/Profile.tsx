@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/Navbar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { Trophy, Swords, Star, Calendar, Video, Eye, Play, Sparkles, Loader2, Gift, CheckCircle2, Clapperboard } from "lucide-react";
+import { Trophy, Swords, Star, Calendar, Video, Eye, Play, Sparkles, Loader2, Gift, CheckCircle2, Clapperboard, Target } from "lucide-react";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { ChangePasswordForm } from "@/components/ChangePasswordForm";
 import { LanguageSelector } from "@/components/LanguageSelector";
@@ -23,7 +23,8 @@ import { ptBR, enUS, es, fr, de, it, ja, ko, zhCN, ru, nl, pl, tr, ar, id as idL
 import { useTranslation } from "react-i18next";
 import { useTcg } from "@/contexts/TcgContext";
 import { getTcgDisplayName } from "@/utils/tcgDisplay";
-import { hasRewardedAdUnit, showGoogleRewardedVideoAd } from "@/utils/rewardedAds";
+import { hasRewardedAdUnit, showRewardedVideoAd } from "@/utils/rewardedAds";
+import { DAILY_XP_REWARDS, RANKED_XP_DIFFICULTIES, WELCOME_XP_REWARDS, getRankedDifficultyStorageKey, type RankedXpDifficultyKey } from "@/utils/xpRewards";
 
 const dateLocaleMap: Record<string, any> = {
   "pt-BR": ptBR, "pt-PT": ptBR, en: enUS, es, fr, de, it, ja, ko, zh: zhCN, ru, nl, pl, tr, ar, id: idLocale,
@@ -72,6 +73,7 @@ const Profile = () => {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isOwnProfile, setIsOwnProfile] = useState(true);
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'stats');
+  const [rankedDifficulty, setRankedDifficulty] = useState<RankedXpDifficultyKey>(RANKED_XP_DIFFICULTIES[0].key);
 
   const loadTcgProfile = async (userId: string) => {
     const { data, error } = await supabase
@@ -144,6 +146,13 @@ const Profile = () => {
     const tab = searchParams.get('tab') || 'stats';
     if (tab !== activeTab) setActiveTab(tab);
   }, [activeTab, searchParams]);
+
+  useEffect(() => {
+    const stored = localStorage.getItem(getRankedDifficultyStorageKey(activeTcg));
+    if (stored && RANKED_XP_DIFFICULTIES.some(difficulty => difficulty.key === stored)) {
+      setRankedDifficulty(stored as RankedXpDifficultyKey);
+    }
+  }, [activeTcg]);
 
   useEffect(() => {
     let cancelled = false;
@@ -251,6 +260,7 @@ const Profile = () => {
     return {
       total,
       level,
+      currentProgress,
       nextLevelAt,
       needed,
       percent,
@@ -306,10 +316,10 @@ const Profile = () => {
     setWatchingAd(true);
     try {
       if (!hasRewardedAdUnit()) {
-        throw new Error('Configure VITE_GAM_REWARDED_AD_UNIT_PATH para ativar videos recompensados.');
+        throw new Error('Configure VITE_EASYPLATFORM_REWARDED_SCRIPT_URL ou VITE_EASYPLATFORM_REWARDED_EMBED_URL para ativar videos recompensados.');
       }
 
-      const adResult = await showGoogleRewardedVideoAd();
+      const adResult = await showRewardedVideoAd();
       if (!adResult.rewarded) {
         throw new Error('O anuncio nao liberou recompensa.');
       }
@@ -327,10 +337,15 @@ const Profile = () => {
           title: 'Anuncios recompensados',
           description: result.message || 'Limite diario atingido',
         });
+      } else if ((result?.xp_earned || 0) > 0) {
+        toast({
+          title: 'Bonus de anuncios liberado',
+          description: `+${result.xp_earned} XP por completar ${result.daily_count}/${result.daily_limit} anuncios`,
+        });
       } else {
         toast({
-          title: 'Recompensa recebida',
-          description: `+${result?.xp_earned || 100} XP por assistir ao anuncio`,
+          title: 'Anuncio contabilizado',
+          description: `${result?.daily_count || 0}/${result?.daily_limit || 5} anuncios assistidos hoje`,
         });
       }
 
@@ -353,23 +368,54 @@ const Profile = () => {
   const questLabels: Record<string, { title: string; description: string }> = {
     daily_login: {
       title: 'Login diario',
-      description: '+5 XP uma vez por dia',
+      description: `+${DAILY_XP_REWARDS.login} XP uma vez por dia`,
     },
     play_casual: {
       title: 'Duelo casual',
-      description: '+10 XP ao concluir um duelo casual',
-    },
-    play_ranked: {
-      title: 'Duelo ranqueado',
-      description: '+20 XP ao concluir um duelo ranqueado',
+      description: `+${DAILY_XP_REWARDS.casualDuel} XP ao concluir um duelo casual`,
     },
     watch_ad: {
       title: 'Assistir 5 anuncios',
-      description: '+100 XP por video concluido',
+      description: `+${DAILY_XP_REWARDS.adsBundle} XP ao concluir 5 videos`,
+    },
+    forum_interaction: {
+      title: 'Interagir no forum',
+      description: `+${DAILY_XP_REWARDS.forumInteraction} XP ao participar do chat/forum`,
     },
   };
 
+  const welcomeMissions = useMemo(() => [
+    {
+      title: 'Primeiro login',
+      description: `Conta criada com +${WELCOME_XP_REWARDS.initialAccount} XP iniciais`,
+      complete: true,
+      progress: 1,
+      target: 1,
+    },
+    {
+      title: 'Configurar perfil',
+      description: 'Adicione avatar ou bio para completar',
+      complete: Boolean(profile?.avatar_url || profile?.bio),
+      progress: profile?.avatar_url || profile?.bio ? 1 : 0,
+      target: 1,
+    },
+    {
+      title: 'Primeira partida',
+      description: 'Complete sua primeira partida registrada',
+      complete: stats.totalGames > 0,
+      progress: stats.totalGames > 0 ? 1 : 0,
+      target: 1,
+    },
+  ], [profile?.avatar_url, profile?.bio, stats.totalGames]);
+
   const adQuest = dailyQuests.find(q => q.quest_type === 'watch_ad');
+  const dailyLoginQuest = dailyQuests.find(q => q.quest_type === 'daily_login');
+
+  const handleSelectRankedDifficulty = (difficulty: RankedXpDifficultyKey) => {
+    setRankedDifficulty(difficulty);
+    localStorage.setItem(getRankedDifficultyStorageKey(activeTcg), difficulty);
+    navigate('/duels?ranked=1');
+  };
 
   const renderProfileSkeleton = () => (
     <div className="animate-pulse space-y-6">
@@ -458,18 +504,22 @@ const Profile = () => {
                       <h2 className="text-lg font-bold text-gradient-mystic">XP {getTcgDisplayName(activeTcg)}</h2>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      Nivel {xp.level} • {xp.total} XP total • {xp.needed} XP para o proximo nivel
+                      Nivel {xp.level} • {xp.total.toLocaleString('pt-BR')} XP exatos • {xp.needed.toLocaleString('pt-BR')} XP para o proximo nivel
                     </p>
+                  </div>
+                  <div className="rounded-lg border border-primary/20 bg-primary/10 px-4 py-3 text-center">
+                    <p className="text-xs uppercase text-muted-foreground">XP atual</p>
+                    <p className="text-2xl font-bold text-primary">{xp.total.toLocaleString('pt-BR')}</p>
                   </div>
                   {isOwnProfile && (
                     <Button
                       onClick={handleClaimDailyXp}
-                      disabled={claimingDailyXp || xp.claimedToday}
-                      variant={xp.claimedToday ? "outline" : "default"}
-                      className={xp.claimedToday ? "" : "btn-mystic text-white"}
+                      disabled={claimingDailyXp || Boolean(dailyLoginQuest?.claimed)}
+                      variant={dailyLoginQuest?.claimed ? "outline" : "default"}
+                      className={dailyLoginQuest?.claimed ? "" : "btn-mystic text-white"}
                     >
                       {claimingDailyXp ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                      {xp.claimedToday ? 'XP diário coletado' : 'Coletar XP diário'}
+                      {dailyLoginQuest?.claimed ? 'XP diário coletado' : 'Coletar XP diário'}
                     </Button>
                   )}
                 </div>
@@ -477,79 +527,26 @@ const Profile = () => {
                   <Progress value={xp.percent} className="h-3" />
                   <div className="flex justify-between text-xs text-muted-foreground">
                     <span>{(xp.level - 1) * 100} XP</span>
+                    <span>{xp.currentProgress}/100 XP no nivel</span>
                     <span>{xp.nextLevelAt} XP</span>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="card-mystic mb-6 animate-fade-in-up">
-              <CardContent className="pt-5">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <Gift className="h-5 w-5 text-secondary" />
-                      <h2 className="text-lg font-bold text-gradient-mystic">Tarefas diarias</h2>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      Missoes resetam diariamente para {getTcgDisplayName(activeTcg)}.
-                    </p>
-                  </div>
-
-                  {isOwnProfile && (
-                    <Button
-                      onClick={handleWatchRewardedAd}
-                      disabled={watchingAd || (adQuest?.progress || 0) >= (adQuest?.target || 5)}
-                      className="btn-mystic text-white"
-                    >
-                      {watchingAd ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <Clapperboard className="mr-2 h-4 w-4" />
-                      )}
-                      {(adQuest?.progress || 0) >= (adQuest?.target || 5)
-                        ? 'Limite diario de anuncios'
-                        : 'Assistir anuncio'}
-                    </Button>
-                  )}
-                </div>
-
-                <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {dailyQuests.map((quest) => {
-                    const label = questLabels[quest.quest_type] || {
-                      title: quest.quest_type,
-                      description: `${quest.reward_xp} XP`,
-                    };
-                    const percent = Math.min(100, (quest.progress / Math.max(quest.target, 1)) * 100);
-
-                    return (
-                      <div key={quest.id} className="rounded-lg border border-border/60 bg-background/40 p-3">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="text-sm font-semibold">{label.title}</p>
-                            <p className="text-xs text-muted-foreground">{label.description}</p>
-                          </div>
-                          {quest.claimed ? (
-                            <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
-                          ) : (
-                            <span className="text-xs font-semibold text-muted-foreground shrink-0">
-                              {quest.progress}/{quest.target}
-                            </span>
-                          )}
-                        </div>
-                        <Progress value={percent} className="mt-3 h-2" />
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-
             <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
                 <TabsTrigger value="stats" className="gap-2">
                   <Trophy className="h-4 w-4" />
                   {t('profile.tabStats')}
+                </TabsTrigger>
+                <TabsTrigger value="missions" className="gap-2">
+                  <Gift className="h-4 w-4" />
+                  Missões
+                </TabsTrigger>
+                <TabsTrigger value="ranked" className="gap-2">
+                  <Target className="h-4 w-4" />
+                  Ranqueada
                 </TabsTrigger>
                 <TabsTrigger value="gallery" className="gap-2">
                   <Video className="h-4 w-4" />
@@ -661,6 +658,141 @@ const Profile = () => {
                         })}
                       </div>
                     )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="missions" className="space-y-6">
+                <Card className="card-mystic">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Gift className="w-5 h-5 text-secondary" />
+                      <span className="text-gradient-mystic">Missões de boas-vindas</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {welcomeMissions.map((mission) => (
+                        <div key={mission.title} className="rounded-lg border border-border/60 bg-background/40 p-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-sm font-semibold">{mission.title}</p>
+                              <p className="text-xs text-muted-foreground">{mission.description}</p>
+                            </div>
+                            {mission.complete ? (
+                              <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
+                            ) : (
+                              <span className="text-xs font-semibold text-muted-foreground shrink-0">
+                                {mission.progress}/{mission.target}
+                              </span>
+                            )}
+                          </div>
+                          <Progress value={(mission.progress / mission.target) * 100} className="mt-3 h-2" />
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="card-mystic">
+                  <CardHeader>
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                      <div>
+                        <CardTitle className="flex items-center gap-2">
+                          <Calendar className="w-5 h-5 text-primary" />
+                          <span className="text-gradient-mystic">Missões diárias</span>
+                        </CardTitle>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Reset diário para {getTcgDisplayName(activeTcg)}.
+                        </p>
+                      </div>
+
+                      {isOwnProfile && (
+                        <Button
+                          onClick={handleWatchRewardedAd}
+                          disabled={watchingAd || Boolean(adQuest?.claimed)}
+                          className="btn-mystic text-white"
+                        >
+                          {watchingAd ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <Clapperboard className="mr-2 h-4 w-4" />
+                          )}
+                          {adQuest?.claimed
+                            ? 'Bônus de anúncios coletado'
+                            : `Assistir anúncio (${adQuest?.progress || 0}/${adQuest?.target || 5})`}
+                        </Button>
+                      )}
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {dailyQuests.map((quest) => {
+                        const label = questLabels[quest.quest_type] || {
+                          title: quest.quest_type,
+                          description: `${quest.reward_xp} XP`,
+                        };
+                        const percent = Math.min(100, (quest.progress / Math.max(quest.target, 1)) * 100);
+
+                        return (
+                          <div key={quest.id} className="rounded-lg border border-border/60 bg-background/40 p-3">
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <p className="text-sm font-semibold">{label.title}</p>
+                                <p className="text-xs text-muted-foreground">{label.description}</p>
+                              </div>
+                              {quest.claimed ? (
+                                <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
+                              ) : (
+                                <span className="text-xs font-semibold text-muted-foreground shrink-0">
+                                  {quest.progress}/{quest.target}
+                                </span>
+                              )}
+                            </div>
+                            <Progress value={percent} className="mt-3 h-2" />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="ranked" className="space-y-6">
+                <Card className="card-mystic">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Target className="w-5 h-5 text-primary" />
+                      <span className="text-gradient-mystic">Partida ranqueada por XP</span>
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      Seu saldo atual é {xp.total.toLocaleString('pt-BR')} XP. O valor escolhido é descontado ao criar a sala ranqueada.
+                    </p>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                      {RANKED_XP_DIFFICULTIES.map((difficulty) => {
+                        const selected = rankedDifficulty === difficulty.key;
+                        const disabled = xp.total < difficulty.xp;
+
+                        return (
+                          <Button
+                            key={difficulty.key}
+                            type="button"
+                            variant={selected ? "default" : "outline"}
+                            disabled={disabled}
+                            onClick={() => handleSelectRankedDifficulty(difficulty.key)}
+                            className={`h-auto flex-col gap-1 py-4 ${selected ? "btn-mystic text-white" : ""}`}
+                          >
+                            <span className="font-bold">{difficulty.label}</span>
+                            <span className="text-xs opacity-80">{difficulty.xp.toLocaleString('pt-BR')} XP</span>
+                          </Button>
+                        );
+                      })}
+                    </div>
+                    <div className="mt-4 rounded-lg border border-border/60 bg-background/40 p-3 text-sm text-muted-foreground">
+                      Se vencer, você recebe de volta o XP apostado e o resultado ranqueado continua contando para o ranking competitivo.
+                    </div>
                   </CardContent>
                 </Card>
               </TabsContent>

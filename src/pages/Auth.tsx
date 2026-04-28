@@ -191,6 +191,8 @@ const Auth = () => {
                 user_id: session.user.id,
                 tcg_type: tcgToCreate,
                 username,
+                xp_total: 50,
+                xp_level: 1,
               });
 
               // Set active TCG in localStorage

@@ -16,6 +16,8 @@ export const AdminSettings = () => {
   const [ringtonePkm, setRingtonePkm] = useState("");
   const [windowsDownloadUrl, setWindowsDownloadUrl] = useState("");
   const [androidDownloadUrl, setAndroidDownloadUrl] = useState("");
+  const [adRevenueDashboardUrl, setAdRevenueDashboardUrl] = useState("https://easyplatform.com/login.php");
+  const [adPublisherSignupUrl, setAdPublisherSignupUrl] = useState("https://easyplatform.com/publisher_registration.php");
   const [windowsFile, setWindowsFile] = useState<File | null>(null);
   const [androidFile, setAndroidFile] = useState<File | null>(null);
   const [ringtoneFileYgo, setRingtoneFileYgo] = useState<File | null>(null);
@@ -59,6 +61,8 @@ export const AdminSettings = () => {
         const ringPkm = data.find((s) => s.key === 'ringtone_pkm');
         const windowsSetting = data.find((s) => s.key === 'windows_download_url');
         const androidSetting = data.find((s) => s.key === 'android_download_url');
+        const adDashboardSetting = data.find((s) => s.key === 'ad_revenue_dashboard_url');
+        const adSignupSetting = data.find((s) => s.key === 'ad_publisher_signup_url');
 
         if (emailSetting) setSupportEmail(emailSetting.value || '');
         
@@ -68,6 +72,8 @@ export const AdminSettings = () => {
         if (ringPkm) setRingtonePkm(ringPkm.value || '');
         if (windowsSetting) setWindowsDownloadUrl(windowsSetting.value || '');
         if (androidSetting) setAndroidDownloadUrl(androidSetting.value || '');
+        if (adDashboardSetting) setAdRevenueDashboardUrl(adDashboardSetting.value || 'https://easyplatform.com/login.php');
+        if (adSignupSetting) setAdPublisherSignupUrl(adSignupSetting.value || 'https://easyplatform.com/publisher_registration.php');
       }
     } catch (error) {
       console.error('Error fetching settings:', error);
@@ -206,6 +212,8 @@ export const AdminSettings = () => {
         { key: 'support_email', value: supportEmail },
         
         { key: 'landing_video_url', value: landingVideoUrl },
+        { key: 'ad_revenue_dashboard_url', value: adRevenueDashboardUrl },
+        { key: 'ad_publisher_signup_url', value: adPublisherSignupUrl },
       ];
 
       for (const setting of settings) {
@@ -278,6 +286,60 @@ export const AdminSettings = () => {
               Cole a URL de um vídeo do YouTube ou link direto de vídeo (.mp4). Será exibido na página inicial para visitantes.
             </p>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Monetização de anúncios</CardTitle>
+          <CardDescription>
+            Links da EasyPlatform para acompanhar receita, relatórios e cadastro Publisher.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="ad-dashboard-url">Link para receber/acompanhar dinheiro</Label>
+              <Input
+                id="ad-dashboard-url"
+                type="url"
+                value={adRevenueDashboardUrl}
+                onChange={(e) => setAdRevenueDashboardUrl(e.target.value)}
+              />
+              <a
+                href={adRevenueDashboardUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
+              >
+                <ExternalLink className="w-4 h-4" />
+                Abrir painel EasyPlatform
+              </a>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="ad-signup-url">Cadastro Publisher</Label>
+              <Input
+                id="ad-signup-url"
+                type="url"
+                value={adPublisherSignupUrl}
+                onChange={(e) => setAdPublisherSignupUrl(e.target.value)}
+              />
+              <a
+                href={adPublisherSignupUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
+              >
+                <ExternalLink className="w-4 h-4" />
+                Cadastrar site Publisher
+              </a>
+            </div>
+          </div>
+
+          <p className="text-sm text-muted-foreground">
+            A EasyPlatform informa que publishers veem estatísticas em Reports e gerenciam sites/ad units dentro da plataforma após aprovação.
+          </p>
         </CardContent>
       </Card>
 

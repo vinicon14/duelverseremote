@@ -292,6 +292,13 @@ export const GlobalChat = () => {
 
       if (error) throw error;
 
+      supabase.rpc("complete_quest", {
+        p_tcg_type: activeTcg,
+        p_quest_type: "forum_interaction",
+      }).then(({ error: questError }) => {
+        if (questError) console.warn("Forum interaction quest skipped:", questError);
+      });
+
       if (bridgeEnabled) {
         try {
           const bridgeResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/discord-bridge`, {

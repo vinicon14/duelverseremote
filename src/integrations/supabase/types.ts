@@ -1783,6 +1783,42 @@ export type Database = {
         }
         Relationships: []
       }
+      rewarded_ad_views: {
+        Row: {
+          ad_session_id: string
+          created_at: string
+          id: string
+          metadata: Json
+          provider: string
+          quest_date: string
+          tcg_type: string
+          user_id: string
+          xp_awarded: boolean
+        }
+        Insert: {
+          ad_session_id: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          provider?: string
+          quest_date?: string
+          tcg_type?: string
+          user_id: string
+          xp_awarded?: boolean
+        }
+        Update: {
+          ad_session_id?: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          provider?: string
+          quest_date?: string
+          tcg_type?: string
+          user_id?: string
+          xp_awarded?: boolean
+        }
+        Relationships: []
+      }
       ranked_xp_bets: {
         Row: {
           created_at: string
