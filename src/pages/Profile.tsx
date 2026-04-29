@@ -268,7 +268,7 @@ const Profile = () => {
 
     setClaimingDailyXp(true);
     try {
-      const { data, error } = await supabase.rpc('claim_daily_xp', { p_tcg_type: activeTcg });
+      const { data, error } = await supabase.rpc('claim_daily_xp', { _tcg_type: activeTcg });
       if (error) throw error;
 
       const result = data as any;
