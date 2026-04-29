@@ -292,11 +292,12 @@ export const GlobalChat = () => {
 
       if (error) throw error;
 
-      supabase.rpc("complete_quest", {
-        p_tcg_type: activeTcg,
-        p_quest_type: "forum_interaction",
-      }).then(({ error: questError }) => {
-        if (questError) console.warn("Forum interaction quest skipped:", questError);
+      (supabase.rpc as any)("award_xp", {
+        _tcg_type: activeTcg,
+        _amount: 10,
+        _reason: "forum_interaction",
+      }).then(({ error: questError }: any) => {
+        if (questError) console.warn("Forum interaction XP skipped:", questError);
       });
 
       if (bridgeEnabled) {

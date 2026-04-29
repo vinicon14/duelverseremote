@@ -1702,170 +1702,6 @@ export type Database = {
         }
         Relationships: []
       }
-      xp_events: {
-        Row: {
-          amount: number
-          created_at: string
-          id: string
-          idempotency_key: string
-          metadata: Json
-          reason: string
-          source_id: string | null
-          tcg_type: string
-          user_id: string
-        }
-        Insert: {
-          amount: number
-          created_at?: string
-          id?: string
-          idempotency_key: string
-          metadata?: Json
-          reason: string
-          source_id?: string | null
-          tcg_type?: string
-          user_id: string
-        }
-        Update: {
-          amount?: number
-          created_at?: string
-          id?: string
-          idempotency_key?: string
-          metadata?: Json
-          reason?: string
-          source_id?: string | null
-          tcg_type?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      xp_quests: {
-        Row: {
-          claimed: boolean
-          created_at: string
-          expires_at: string
-          id: string
-          progress: number
-          quest_date: string
-          quest_type: string
-          reward_xp: number
-          target: number
-          tcg_type: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          claimed?: boolean
-          created_at?: string
-          expires_at?: string
-          id?: string
-          progress?: number
-          quest_date?: string
-          quest_type: string
-          reward_xp: number
-          target: number
-          tcg_type?: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          claimed?: boolean
-          created_at?: string
-          expires_at?: string
-          id?: string
-          progress?: number
-          quest_date?: string
-          quest_type?: string
-          reward_xp?: number
-          target?: number
-          tcg_type?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      rewarded_ad_views: {
-        Row: {
-          ad_session_id: string
-          created_at: string
-          id: string
-          metadata: Json
-          provider: string
-          quest_date: string
-          tcg_type: string
-          user_id: string
-          xp_awarded: boolean
-        }
-        Insert: {
-          ad_session_id: string
-          created_at?: string
-          id?: string
-          metadata?: Json
-          provider?: string
-          quest_date?: string
-          tcg_type?: string
-          user_id: string
-          xp_awarded?: boolean
-        }
-        Update: {
-          ad_session_id?: string
-          created_at?: string
-          id?: string
-          metadata?: Json
-          provider?: string
-          quest_date?: string
-          tcg_type?: string
-          user_id?: string
-          xp_awarded?: boolean
-        }
-        Relationships: []
-      }
-      ranked_xp_bets: {
-        Row: {
-          created_at: string
-          difficulty: string
-          duel_id: string | null
-          id: string
-          resolved_at: string | null
-          result: string
-          tcg_type: string
-          user_id: string
-          xp_bet: number
-          xp_won: number
-        }
-        Insert: {
-          created_at?: string
-          difficulty: string
-          duel_id?: string | null
-          id?: string
-          resolved_at?: string | null
-          result?: string
-          tcg_type?: string
-          user_id: string
-          xp_bet: number
-          xp_won?: number
-        }
-        Update: {
-          created_at?: string
-          difficulty?: string
-          duel_id?: string | null
-          id?: string
-          resolved_at?: string | null
-          result?: string
-          tcg_type?: string
-          user_id?: string
-          xp_bet?: number
-          xp_won?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "ranked_xp_bets_duel_id_fkey"
-            columns: ["duel_id"]
-            isOneToOne: false
-            referencedRelation: "live_duels"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       tournament_chat_messages: {
         Row: {
           created_at: string
@@ -2345,26 +2181,37 @@ export type Database = {
         }
         Returns: Json
       }
+      award_xp: {
+        Args: { _amount: number; _reason?: string; _tcg_type: string }
+        Returns: {
+          leveled_up: boolean
+          new_level: number
+          new_total: number
+        }[]
+      }
       calculate_level_from_points: {
         Args: { p_points: number }
         Returns: number
       }
-      calculate_xp_level: {
-        Args: { p_xp_total: number }
-        Returns: number
-      }
       check_expired_subscriptions: { Args: never; Returns: undefined }
-      claim_daily_xp: {
-        Args: { p_tcg_type: string }
-        Returns: Json
+      claim_ads_xp_bundle: {
+        Args: { _tcg_type: string }
+        Returns: {
+          ads_watched: number
+          bundle_awarded: boolean
+          leveled_up: boolean
+          new_level: number
+          new_total: number
+        }[]
       }
-      claim_rewarded_ad_xp: {
-        Args: {
-          p_ad_session_id?: string | null
-          p_provider?: string
-          p_tcg_type: string
-        }
-        Returns: Json
+      claim_daily_xp: {
+        Args: { _amount?: number; _tcg_type: string }
+        Returns: {
+          claimed: boolean
+          leveled_up: boolean
+          new_level: number
+          new_total: number
+        }[]
       }
       cleanup_empty_duels: { Args: never; Returns: undefined }
       cleanup_expired_matchmaking_queue: { Args: never; Returns: number }
@@ -2377,10 +2224,7 @@ export type Database = {
           deleted_emails: string[]
         }[]
       }
-      complete_quest: {
-        Args: { p_quest_type: string; p_tcg_type: string }
-        Returns: Json
-      }
+      compute_xp_level: { Args: { _total: number }; Returns: number }
       create_normal_tournament:
         | {
             Args: {
@@ -2572,23 +2416,6 @@ export type Database = {
         }
         Returns: number
       }
-      generate_daily_quests: {
-        Args: { p_tcg_type?: string }
-        Returns: number
-      }
-      normalize_tcg_type: {
-        Args: { p_tcg_type: string }
-        Returns: string
-      }
-      place_ranked_bet: {
-        Args: {
-          p_difficulty: string
-          p_duel_id?: string | null
-          p_tcg_type: string
-          p_xp_bet: number
-        }
-        Returns: Json
-      }
       purchase_marketplace_items: { Args: { p_items: Json }; Returns: Json }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
@@ -2610,13 +2437,9 @@ export type Database = {
           p_player1_score: number
           p_player2_id: string
           p_player2_score: number
-          p_winner_id: string | null
+          p_winner_id: string
         }
         Returns: string
-      }
-      resolve_ranked_bet: {
-        Args: { p_bet_id: string; p_won: boolean }
-        Returns: number
       }
       reward_judge_resolution: {
         Args: { p_judge_id: string; p_log_id: string }

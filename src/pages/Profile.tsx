@@ -127,19 +127,9 @@ const Profile = () => {
     return data || [];
   };
 
-  const loadDailyQuests = async (userId: string) => {
-    await supabase.rpc('generate_daily_quests', { p_tcg_type: activeTcg });
-
-    const { data, error } = await supabase
-      .from('xp_quests')
-      .select('id, quest_type, progress, target, reward_xp, claimed')
-      .eq('user_id', userId)
-      .eq('tcg_type', activeTcg)
-      .eq('quest_date', getTodayKey())
-      .order('created_at', { ascending: true });
-
-    if (error) throw error;
-    return data || [];
+  const loadDailyQuests = async (_userId: string): Promise<DailyQuest[]> => {
+    // Daily quests table not implemented yet; return empty list.
+    return [];
   };
 
   useEffect(() => {
@@ -278,7 +268,7 @@ const Profile = () => {
 
     setClaimingDailyXp(true);
     try {
-      const { data, error } = await supabase.rpc('claim_daily_xp', { p_tcg_type: activeTcg });
+      const { data, error } = await supabase.rpc('claim_daily_xp', { _tcg_type: activeTcg });
       if (error) throw error;
 
       const result = data as any;
@@ -324,11 +314,9 @@ const Profile = () => {
         throw new Error('O anuncio nao liberou recompensa.');
       }
 
-      const { data, error } = await supabase.rpc('claim_rewarded_ad_xp', {
-        p_tcg_type: activeTcg,
-        p_ad_session_id: adResult.sessionId,
-        p_provider: adResult.provider,
-      });
+      const { data, error } = await supabase.rpc('claim_ads_xp_bundle', {
+        _tcg_type: activeTcg,
+      } as any);
       if (error) throw error;
 
       const result = data as any;
