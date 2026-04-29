@@ -203,7 +203,7 @@ const Duels = () => {
 
       if (isRanked) {
         const difficulty = getRankedDifficulty(rankedDifficulty);
-        const { data: betResult, error: betError } = await supabase.rpc('place_ranked_bet', {
+        const { data: betResult, error: betError } = await (supabase.rpc as any)('place_ranked_bet', {
           p_tcg_type: activeTcg,
           p_difficulty: difficulty.key,
           p_xp_bet: difficulty.xp,
