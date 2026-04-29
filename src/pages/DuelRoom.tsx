@@ -749,6 +749,37 @@ const DuelRoom = () => {
         });
       }
 
+      // Conceder XP ao usuário atual baseado no resultado
+      try {
+        if (currentUser && duel?.opponent_id) {
+          const tcg = (duel as any)?.tcg_type || 'yugioh';
+          const isRanked = (duel as any)?.is_ranked;
+          const isWinner = finalWinnerId && finalWinnerId === currentUser.id;
+          // Casual: 10 XP por participar; Ranked: vencedor +30, perdedor +5
+          const amount = isRanked ? (isWinner ? 30 : 5) : 10;
+          const reason = isRanked ? (isWinner ? 'ranked_win' : 'ranked_loss') : 'casual_duel';
+          const { data: xpData } = await (supabase.rpc as any)('award_xp', {
+            _tcg_type: tcg,
+            _amount: amount,
+            _reason: reason,
+          });
+          const result = Array.isArray(xpData) ? xpData[0] : xpData;
+          if (result?.leveled_up) {
+            toast({
+              title: '🎉 Subiu de nível!',
+              description: `Você alcançou o nível ${result.new_level}`,
+            });
+          } else if (amount > 0) {
+            toast({
+              title: `+${amount} XP`,
+              description: `Total: ${result?.new_total ?? '...'} XP`,
+            });
+          }
+        }
+      } catch (xpError) {
+        console.error('Erro ao conceder XP:', xpError);
+      }
+
       // Deletar o duelo após 1 minuto
       setTimeout(async () => {
         await supabase
