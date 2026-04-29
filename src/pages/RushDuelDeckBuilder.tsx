@@ -152,6 +152,8 @@ const RushCardArt = ({ card, className = '' }: { card: YugiohCard; className?: s
         alt={card.name}
         className={className}
         loading="lazy"
+        crossOrigin="anonymous"
+        referrerPolicy="no-referrer"
         onError={() => setImageFailed(true)}
       />
     );
