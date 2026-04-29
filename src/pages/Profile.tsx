@@ -127,19 +127,9 @@ const Profile = () => {
     return data || [];
   };
 
-  const loadDailyQuests = async (userId: string) => {
-    await supabase.rpc('generate_daily_quests', { p_tcg_type: activeTcg });
-
-    const { data, error } = await supabase
-      .from('xp_quests')
-      .select('id, quest_type, progress, target, reward_xp, claimed')
-      .eq('user_id', userId)
-      .eq('tcg_type', activeTcg)
-      .eq('quest_date', getTodayKey())
-      .order('created_at', { ascending: true });
-
-    if (error) throw error;
-    return data || [];
+  const loadDailyQuests = async (_userId: string): Promise<DailyQuest[]> => {
+    // Daily quests table not implemented yet; return empty list.
+    return [];
   };
 
   useEffect(() => {
