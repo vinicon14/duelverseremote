@@ -314,11 +314,9 @@ const Profile = () => {
         throw new Error('O anuncio nao liberou recompensa.');
       }
 
-      const { data, error } = await supabase.rpc('claim_rewarded_ad_xp', {
-        p_tcg_type: activeTcg,
-        p_ad_session_id: adResult.sessionId,
-        p_provider: adResult.provider,
-      });
+      const { data, error } = await supabase.rpc('claim_ads_xp_bundle', {
+        _tcg_type: activeTcg,
+      } as any);
       if (error) throw error;
 
       const result = data as any;
