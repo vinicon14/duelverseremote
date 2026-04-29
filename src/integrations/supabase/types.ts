@@ -1661,6 +1661,10 @@ export type Database = {
           user_id: string
           username: string
           wins: number
+          xp_ads_watched: number
+          xp_last_daily_claim: string | null
+          xp_level: number
+          xp_total: number
         }
         Insert: {
           avatar_url?: string | null
@@ -1674,6 +1678,10 @@ export type Database = {
           user_id: string
           username: string
           wins?: number
+          xp_ads_watched?: number
+          xp_last_daily_claim?: string | null
+          xp_level?: number
+          xp_total?: number
         }
         Update: {
           avatar_url?: string | null
@@ -1687,6 +1695,10 @@ export type Database = {
           user_id?: string
           username?: string
           wins?: number
+          xp_ads_watched?: number
+          xp_last_daily_claim?: string | null
+          xp_level?: number
+          xp_total?: number
         }
         Relationships: []
       }
@@ -2169,11 +2181,38 @@ export type Database = {
         }
         Returns: Json
       }
+      award_xp: {
+        Args: { _amount: number; _reason?: string; _tcg_type: string }
+        Returns: {
+          leveled_up: boolean
+          new_level: number
+          new_total: number
+        }[]
+      }
       calculate_level_from_points: {
         Args: { p_points: number }
         Returns: number
       }
       check_expired_subscriptions: { Args: never; Returns: undefined }
+      claim_ads_xp_bundle: {
+        Args: { _tcg_type: string }
+        Returns: {
+          ads_watched: number
+          bundle_awarded: boolean
+          leveled_up: boolean
+          new_level: number
+          new_total: number
+        }[]
+      }
+      claim_daily_xp: {
+        Args: { _amount?: number; _tcg_type: string }
+        Returns: {
+          claimed: boolean
+          leveled_up: boolean
+          new_level: number
+          new_total: number
+        }[]
+      }
       cleanup_empty_duels: { Args: never; Returns: undefined }
       cleanup_expired_matchmaking_queue: { Args: never; Returns: number }
       cleanup_expired_queue_entries: { Args: never; Returns: undefined }
@@ -2185,6 +2224,7 @@ export type Database = {
           deleted_emails: string[]
         }[]
       }
+      compute_xp_level: { Args: { _total: number }; Returns: number }
       create_normal_tournament:
         | {
             Args: {
