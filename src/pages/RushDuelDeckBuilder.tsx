@@ -99,7 +99,10 @@ const getRushRace = (card: RushYamlCard) => {
 const getRushImageUrl = (card: RushYamlCard) => {
   const image = card.images?.[0]?.image;
   if (!image) return '/placeholder.svg';
-  return `https://yugipedia.com/wiki/Special:Redirect/file/${encodeURIComponent(image)}`;
+  // Use images.weserv.nl as a CDN proxy to bypass yugipedia hotlink protection and add caching.
+  // It follows the 302 from Special:Redirect and serves a fast cached PNG.
+  const target = `yugipedia.com/wiki/Special:Redirect/file/${encodeURIComponent(image)}`;
+  return `https://images.weserv.nl/?url=${encodeURIComponent(target)}&w=300&output=webp`;
 };
 
 const normalizeRushCard = (card: RushYamlCard, index: number): YugiohCard => {
@@ -152,6 +155,7 @@ const RushCardArt = ({ card, className = '' }: { card: YugiohCard; className?: s
         alt={card.name}
         className={className}
         loading="lazy"
+        referrerPolicy="no-referrer"
         onError={() => setImageFailed(true)}
       />
     );
