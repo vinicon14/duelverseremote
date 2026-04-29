@@ -174,6 +174,18 @@ export const TcgProvider = ({ children }: { children: ReactNode }) => {
     const normalized = normalizeTcgType(tcg);
     localStorage.setItem('activeTcg', normalized);
     setActiveTcgState(normalized);
+
+    // XP de boas-vindas para o novo perfil TCG
+    try {
+      await (supabase.rpc as any)('award_xp', {
+        _tcg_type: normalized,
+        _amount: 50,
+        _reason: 'welcome_bonus',
+      });
+    } catch (xpError) {
+      console.warn('Welcome XP skipped:', xpError);
+    }
+
     await fetchProfiles();
     return true;
   };
