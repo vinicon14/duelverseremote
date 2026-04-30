@@ -268,19 +268,25 @@ const Profile = () => {
 
     setClaimingDailyXp(true);
     try {
-      const { data, error } = await supabase.rpc('claim_daily_xp', { _tcg_type: activeTcg });
+      const { data, error } = await supabase.rpc('claim_daily_xp', { _tcg_type: activeTcg } as any);
       if (error) throw error;
 
-      const result = data as any;
-      if (result?.success === false) {
+      // Função retorna TABLE → PostgREST devolve array de linhas
+      const row: any = Array.isArray(data) ? data[0] : data;
+      const claimed = row?.claimed === true;
+      const leveledUp = row?.leveled_up === true;
+
+      if (!claimed) {
         toast({
           title: 'XP diário',
-          description: result.message || 'Recompensa diária já coletada',
+          description: 'Você já coletou hoje. Volte em 24h!',
         });
       } else {
         toast({
-          title: 'XP diário coletado',
-          description: `+${result?.xp_earned || 5} XP em ${getTcgDisplayName(activeTcg)}`,
+          title: '✨ +5 XP coletados!',
+          description: leveledUp
+            ? `Subiu para o nível ${row?.new_level} em ${getTcgDisplayName(activeTcg)}!`
+            : `Total: ${row?.new_total} XP em ${getTcgDisplayName(activeTcg)}`,
         });
       }
 
