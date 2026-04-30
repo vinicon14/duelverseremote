@@ -268,19 +268,25 @@ const Profile = () => {
 
     setClaimingDailyXp(true);
     try {
-      const { data, error } = await supabase.rpc('claim_daily_xp', { _tcg_type: activeTcg });
+      const { data, error } = await supabase.rpc('claim_daily_xp', { _tcg_type: activeTcg } as any);
       if (error) throw error;
 
-      const result = data as any;
-      if (result?.success === false) {
+      // Função retorna TABLE → PostgREST devolve array de linhas
+      const row: any = Array.isArray(data) ? data[0] : data;
+      const claimed = row?.claimed === true;
+      const leveledUp = row?.leveled_up === true;
+
+      if (!claimed) {
         toast({
           title: 'XP diário',
-          description: result.message || 'Recompensa diária já coletada',
+          description: 'Você já coletou hoje. Volte em 24h!',
         });
       } else {
         toast({
-          title: 'XP diário coletado',
-          description: `+${result?.xp_earned || 5} XP em ${getTcgDisplayName(activeTcg)}`,
+          title: '✨ +5 XP coletados!',
+          description: leveledUp
+            ? `Subiu para o nível ${row?.new_level} em ${getTcgDisplayName(activeTcg)}!`
+            : `Total: ${row?.new_total} XP em ${getTcgDisplayName(activeTcg)}`,
         });
       }
 
@@ -319,21 +325,20 @@ const Profile = () => {
       } as any);
       if (error) throw error;
 
-      const result = data as any;
-      if (result?.success === false) {
+      // Função retorna TABLE → array
+      const row: any = Array.isArray(data) ? data[0] : data;
+      const bundleAwarded = row?.bundle_awarded === true;
+      const adsWatched = row?.ads_watched || 0;
+
+      if (bundleAwarded) {
         toast({
-          title: 'Anuncios recompensados',
-          description: result.message || 'Limite diario atingido',
-        });
-      } else if ((result?.xp_earned || 0) > 0) {
-        toast({
-          title: 'Bonus de anuncios liberado',
-          description: `+${result.xp_earned} XP por completar ${result.daily_count}/${result.daily_limit} anuncios`,
+          title: '🎁 +100 XP liberados!',
+          description: `Você completou ${adsWatched} anúncios e ganhou o bônus!`,
         });
       } else {
         toast({
-          title: 'Anuncio contabilizado',
-          description: `${result?.daily_count || 0}/${result?.daily_limit || 5} anuncios assistidos hoje`,
+          title: 'Anúncio contabilizado',
+          description: `${adsWatched % 10}/10 anúncios para o próximo bônus de 100 XP`,
         });
       }
 
