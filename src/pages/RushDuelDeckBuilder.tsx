@@ -324,8 +324,13 @@ export default function RushDuelDeckBuilder() {
       return;
     }
 
-    const existing = target.find(c => c.id === card.id);
-    setTarget(prev => prev.map(c => c.id === card.id ? { ...c, quantity: c.quantity + 1 } : c).concat(!existing ? { ...card, quantity: 1 } : []));
+    setTarget(prev => {
+      const existing = prev.find(c => c.id === card.id);
+      if (existing) {
+        return prev.map(c => c.id === card.id ? { ...c, quantity: c.quantity + 1 } : c);
+      }
+      return [...prev, { ...card, quantity: 1 }];
+    });
   };
 
   const removeFromDeck = (cardId: number, from: 'main' | 'extra' | 'side') => {
