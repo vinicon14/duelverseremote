@@ -45,6 +45,8 @@ interface DuelDeckViewerProps {
   currentUserId?: string;
   opponentUsername?: string;
   embedded?: boolean;
+  /** TCG type of the duel — when 'rush_duel', applies Rush Duel rules (3x3 board, draw-up-to-5). */
+  tcgType?: string | null;
 }
 
 const EXTRA_DECK_TYPES = ['Fusion', 'Synchro', 'XYZ', 'Link'];
@@ -172,7 +174,9 @@ export const DuelDeckViewer = ({
   currentUserId,
   opponentUsername,
   embedded = false,
+  tcgType,
 }: DuelDeckViewerProps) => {
+  const isRushDuel = tcgType === 'rush_duel';
   const [selectedEffectCard, setSelectedEffectCard] = useState<GameCard | null>(null);
   const [effectModalOpen, setEffectModalOpen] = useState(false);
   const [fieldState, setFieldState] = useState<FieldState>(INITIAL_FIELD_STATE);
@@ -359,11 +363,23 @@ export const DuelDeckViewer = ({
         }
       });
 
+      const shuffledDeck = shuffleArray(expandedDeck);
+
+      // Rush Duel: opening hand of 5 cards drawn automatically.
+      let openingHand: GameCard[] = [];
+      let remainingDeck = shuffledDeck;
+      if (isRushDuel) {
+        const drawCount = Math.min(5, shuffledDeck.length);
+        openingHand = shuffledDeck.slice(0, drawCount).map(c => ({ ...c, isFaceDown: false }));
+        remainingDeck = shuffledDeck.slice(drawCount);
+      }
+
       setFieldState({
         ...INITIAL_FIELD_STATE,
-        deck: shuffleArray(expandedDeck),
+        deck: remainingDeck,
         extraDeck: expandedExtra,
         sideDeck: expandedSide,
+        hand: openingHand,
       });
     }
   }, [deck, extraDeck, sideDeck]);
@@ -407,6 +423,27 @@ export const DuelDeckViewer = ({
         deckCopy.splice(randomIndex, 1);
       }
       
+      return {
+        ...prev,
+        deck: deckCopy,
+        hand: [...prev.hand, ...drawnCards],
+      };
+    });
+  }, []);
+
+  // Rush Duel: at the start of each turn, draw until you have 5 cards in hand.
+  const drawUpToFive = useCallback(() => {
+    setFieldState(prev => {
+      const need = 5 - prev.hand.length;
+      if (need <= 0 || prev.deck.length === 0) return prev;
+      const toDraw = Math.min(need, prev.deck.length);
+      const deckCopy = [...prev.deck];
+      const drawnCards: GameCard[] = [];
+      for (let i = 0; i < toDraw; i++) {
+        const randomIndex = Math.floor(Math.random() * deckCopy.length);
+        drawnCards.push({ ...deckCopy[randomIndex], isFaceDown: false });
+        deckCopy.splice(randomIndex, 1);
+      }
       return {
         ...prev,
         deck: deckCopy,
@@ -1128,10 +1165,11 @@ export const DuelDeckViewer = ({
                       size="sm"
                       variant="outline"
                       className="flex-1 h-7 text-xs"
-                      onClick={() => drawMultiple(5)}
-                      disabled={fieldState.deck.length === 0}
+                      onClick={isRushDuel ? drawUpToFive : () => drawMultiple(5)}
+                      disabled={fieldState.deck.length === 0 || (isRushDuel && fieldState.hand.length >= 5)}
+                      title={isRushDuel ? 'Comprar até ter 5 cartas na mão (regra Rush Duel)' : 'Comprar 5 cartas'}
                     >
-                      Comprar 5
+                      {isRushDuel ? 'Comprar até 5' : 'Comprar 5'}
                     </Button>
                   </div>
 
@@ -1198,6 +1236,7 @@ export const DuelDeckViewer = ({
                     isFullscreen={isFullscreen}
                     playmatUrl={localStorage.getItem('activePlaymatUrl')}
                     sleeveUrl={localStorage.getItem('activeSleeveUrl')}
+                    tcgType={tcgType}
                   />
                 </div>
               </ScrollArea>

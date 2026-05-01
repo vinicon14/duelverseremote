@@ -79,6 +79,8 @@ interface DuelFieldBoardProps {
   isFullscreen?: boolean;
   playmatUrl?: string | null;
   sleeveUrl?: string | null;
+  /** When 'rush_duel', renders a 3x3 board (3 monster + 3 spell zones) and hides the Extra Monster Zones (Rush Duel has no Extra Deck / EMZ). */
+  tcgType?: string | null;
 }
 
 // Local state for effect modal will be managed inside component
@@ -273,7 +275,17 @@ export const DuelFieldBoard = ({
   isFullscreen = false,
   playmatUrl,
   sleeveUrl,
+  tcgType,
 }: DuelFieldBoardProps) => {
+  const isRushDuel = tcgType === 'rush_duel';
+  // Rush Duel uses a 3x3 board: 3 monster zones + 3 spell/trap zones, no Extra Monster Zones, no Extra Deck.
+  const monsterZones = (isRushDuel
+    ? (['monster1', 'monster2', 'monster3'] as const)
+    : (['monster1', 'monster2', 'monster3', 'monster4', 'monster5'] as const));
+  const spellZones = (isRushDuel
+    ? (['spell1', 'spell2', 'spell3'] as const)
+    : (['spell1', 'spell2', 'spell3', 'spell4', 'spell5'] as const));
+
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
@@ -324,35 +336,37 @@ export const DuelFieldBoard = ({
       {/* Field Layout */}
       <div className="relative z-10 flex flex-col gap-2 sm:gap-3">
         
-        {/* Extra Monster Zones Row */}
-        <div className="flex justify-center gap-1 sm:gap-2">
-          <div className="flex items-center gap-8 sm:gap-16">
-            <ZoneSlot
-              zone="extraMonster1"
-              card={fieldState.extraMonster1}
-              label="Extra Monster"
-              onClick={() => onZoneClick('extraMonster1')}
-              onCardClick={(card) => handleCardClickLocal(card, 'extraMonster1')}
-              onDragOver={handleDragOver}
-              onDrop={handleDrop('extraMonster1')}
-              className="border-purple-500/30"
-              isHorizontal
-              sleeveUrl={sleeveUrl}
-            />
-            <ZoneSlot
-              zone="extraMonster2"
-              card={fieldState.extraMonster2}
-              label="Extra Monster"
-              onClick={() => onZoneClick('extraMonster2')}
-              onCardClick={(card) => handleCardClickLocal(card, 'extraMonster2')}
-              onDragOver={handleDragOver}
-              onDrop={handleDrop('extraMonster2')}
-              className="border-purple-500/30"
-              isHorizontal
-              sleeveUrl={sleeveUrl}
-            />
+        {/* Extra Monster Zones Row (hidden in Rush Duel — no Extra Deck / EMZ) */}
+        {!isRushDuel && (
+          <div className="flex justify-center gap-1 sm:gap-2">
+            <div className="flex items-center gap-8 sm:gap-16">
+              <ZoneSlot
+                zone="extraMonster1"
+                card={fieldState.extraMonster1}
+                label="Extra Monster"
+                onClick={() => onZoneClick('extraMonster1')}
+                onCardClick={(card) => handleCardClickLocal(card, 'extraMonster1')}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop('extraMonster1')}
+                className="border-purple-500/30"
+                isHorizontal
+                sleeveUrl={sleeveUrl}
+              />
+              <ZoneSlot
+                zone="extraMonster2"
+                card={fieldState.extraMonster2}
+                label="Extra Monster"
+                onClick={() => onZoneClick('extraMonster2')}
+                onCardClick={(card) => handleCardClickLocal(card, 'extraMonster2')}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop('extraMonster2')}
+                className="border-purple-500/30"
+                isHorizontal
+                sleeveUrl={sleeveUrl}
+              />
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Main Field Row */}
         <div className="flex justify-center items-center gap-1 sm:gap-2">
@@ -371,7 +385,7 @@ export const DuelFieldBoard = ({
 
           {/* Monster Zones */}
           <div className="flex gap-1 sm:gap-1.5">
-            {(['monster1', 'monster2', 'monster3', 'monster4', 'monster5'] as const).map((zone, idx) => (
+            {monsterZones.map((zone, idx) => (
               <ZoneSlot
                 key={zone}
                 zone={zone}
@@ -403,21 +417,25 @@ export const DuelFieldBoard = ({
 
         {/* Spell/Trap Row */}
         <div className="flex justify-center items-center gap-1 sm:gap-2">
-          {/* Extra Deck (Left) */}
-          <PileZone
-            zone="extraDeck"
-            cards={fieldState.extraDeck}
-            icon={Sparkles}
-            label="Extra"
-            onClick={() => onZoneClick('extraDeck')}
-            onDragOver={handleDragOver}
-            onDrop={handleDrop('extraDeck')}
-            iconColor="text-yellow-500"
-          />
-
+          {/* Extra Deck (Left) — hidden in Rush Duel */}
+          {!isRushDuel ? (
+            <PileZone
+              zone="extraDeck"
+              cards={fieldState.extraDeck}
+              icon={Sparkles}
+              label="Extra"
+              onClick={() => onZoneClick('extraDeck')}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop('extraDeck')}
+              iconColor="text-yellow-500"
+            />
+          ) : (
+            // Spacer to keep the row centered when extra deck is hidden
+            <div className="w-[44px] sm:w-[52px] md:w-[60px] shrink-0" aria-hidden />
+          )}
           {/* Spell/Trap Zones */}
           <div className="flex gap-1 sm:gap-1.5">
-            {(['spell1', 'spell2', 'spell3', 'spell4', 'spell5'] as const).map((zone, idx) => (
+            {spellZones.map((zone, idx) => (
               <ZoneSlot
                 key={zone}
                 zone={zone}
