@@ -438,7 +438,7 @@ export default function RushDuelDeckBuilder() {
   };
 
   const renderDeck = (deck: DeckCard[], from: 'main' | 'extra' | 'side') => (
-    <ScrollArea className="h-[250px]">
+    <ScrollArea className="h-[calc(100vh-380px)] min-h-[300px]">
       <div className="space-y-1 pr-2">
         {deck.length === 0 ? (
           <p className="text-center text-muted-foreground py-8 text-sm">
