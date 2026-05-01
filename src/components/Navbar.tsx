@@ -37,6 +37,13 @@ export const Navbar = () => {
   const { isJudge } = useJudge();
   const { isPro } = useAccountType();
   const { activeTcg } = useTcg();
+  const [bgmMuted, setBgmMuted] = useState<boolean>(() => getBgmMuted());
+
+  useEffect(() => {
+    const handler = (e: any) => setBgmMuted(!!e?.detail?.muted);
+    window.addEventListener('duelverse:bgm-state', handler as any);
+    return () => window.removeEventListener('duelverse:bgm-state', handler as any);
+  }, []);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
