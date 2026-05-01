@@ -1,26 +1,25 @@
 /**
  * DuelVerse - Background Music Player
  *
- * Toca o ringtone do YGO Advanced em loop como trilha de fundo da plataforma.
- * - Sem botão flutuante. O toggle agora vive no menu do avatar (Navbar),
- *   entre o item "Perfil" e "Sair".
- * - Volume baixo por padrão (0.18).
+ * Trilha sonora ambiente inspirada em Yu-Gi-Oh!.
+ * - Silenciada por padrão (usuário ativa pelo menu do avatar).
  * - Não toca em /duel/:id, /pro/*, /discord-activity, /share/*.
  * - Persiste preferência em localStorage.
  *
  * API global:
  *   - window.dispatchEvent(new CustomEvent('duelverse:bgm-toggle'))
- *   - getBgmMuted() / subscribeBgm(cb)
+ *   - getBgmMuted()
  */
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 
 const STORAGE_KEY = "duelverse_bgm_muted";
-const VOLUME = 0.18;
-// Fallback caso o ringtone não esteja configurado
-const FALLBACK_TRACK =
-  "https://xxttwzewtqxvpgefggah.supabase.co/storage/v1/object/public/ringtones/ygo/ringtone.mp3";
+const VOLUME = 0.22;
+
+// Trilha inspirada em Yu-Gi-Oh! (tema épico/dramático estilo duelo).
+// Hospedada no Internet Archive (domínio público / fan upload).
+const YGO_THEME_TRACK =
+  "https://archive.org/download/yu-gi-oh-duel-monsters-ost/01%20-%20Yu-Gi-Oh%21%20Duel%20Monsters%20Theme.mp3";
 
 const isBlockedRoute = (pathname: string) => {
   if (pathname.startsWith("/duel/")) return true;
@@ -30,12 +29,14 @@ const isBlockedRoute = (pathname: string) => {
   return false;
 };
 
-// Helpers para o resto do app
 export const getBgmMuted = (): boolean => {
   try {
-    return localStorage.getItem(STORAGE_KEY) === "1";
+    const v = localStorage.getItem(STORAGE_KEY);
+    // Default: mutado (true) se nunca configurado
+    if (v === null) return true;
+    return v === "1";
   } catch {
-    return false;
+    return true;
   }
 };
 
@@ -46,37 +47,12 @@ export const toggleBgm = () => {
 export const BackgroundMusic = () => {
   const location = useLocation();
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [trackUrl, setTrackUrl] = useState<string>(FALLBACK_TRACK);
   const [muted, setMuted] = useState<boolean>(() => getBgmMuted());
   const [ready, setReady] = useState(false);
 
-  // Busca a URL do ringtone YGO configurado pelo admin
+  // Cria o elemento audio uma vez
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const { data } = await supabase
-          .from("system_settings")
-          .select("value")
-          .eq("key", "ringtone_ygo")
-          .maybeSingle();
-        if (!cancelled && data?.value) {
-          // Remove cache-buster ?t=... para reutilização do cache do navegador
-          const clean = String(data.value).split("?t=")[0];
-          setTrackUrl(clean);
-        }
-      } catch {
-        // mantém fallback
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  // Recria o elemento audio quando a URL muda
-  useEffect(() => {
-    const audio = new Audio(trackUrl);
+    const audio = new Audio(YGO_THEME_TRACK);
     audio.loop = true;
     audio.volume = VOLUME;
     audio.preload = "auto";
@@ -86,7 +62,7 @@ export const BackgroundMusic = () => {
       audio.pause();
       audioRef.current = null;
     };
-  }, [trackUrl]);
+  }, []);
 
   // Aguarda primeira interação para destravar autoplay
   useEffect(() => {
@@ -140,10 +116,10 @@ export const BackgroundMusic = () => {
     const playPromise = audio.play();
     if (playPromise && typeof playPromise.catch === "function") {
       playPromise.catch(() => {
-        // autoplay bloqueado — usuário precisa interagir mais uma vez
+        // autoplay bloqueado
       });
     }
-  }, [location.pathname, muted, ready, trackUrl]);
+  }, [location.pathname, muted, ready]);
 
   return null;
 };

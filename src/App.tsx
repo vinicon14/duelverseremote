@@ -25,6 +25,7 @@ import { AnimatedBackground } from "@/components/AnimatedBackground";
 import { PageNavigationArrows } from "@/components/PageNavigationArrows";
 import { UnifiedPageLoader } from "@/components/UnifiedPageLoader";
 import { BackgroundMusic } from "@/components/BackgroundMusic";
+import { SoundEffectsProvider } from "@/components/SoundEffectsProvider";
 
 import { useRealtimeNotifications } from "@/hooks/useRealtimeNotifications";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
@@ -238,6 +239,7 @@ const MainAppContent = () => {
       <PageNavigationArrows />
       <UnifiedPageLoader />
       <BackgroundMusic />
+      <SoundEffectsProvider />
       <div className="router-view-animate">
         <RouterContent user={user} />
       </div>
