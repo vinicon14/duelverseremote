@@ -301,7 +301,7 @@ const Profile = () => {
         });
       }
 
-      const freshTcgProfile = await loadTcgProfile(profile.user_id);
+      const freshTcgProfile = await loadTcgProfile(profile.user_id, true);
       const freshQuests = await loadDailyQuests(profile.user_id);
       setTcgProfile(freshTcgProfile);
       setDailyQuests(freshQuests);
@@ -353,7 +353,7 @@ const Profile = () => {
         });
       }
 
-      const freshTcgProfile = await loadTcgProfile(profile.user_id);
+      const freshTcgProfile = await loadTcgProfile(profile.user_id, true);
       const freshQuests = await loadDailyQuests(profile.user_id);
       setTcgProfile(freshTcgProfile);
       setDailyQuests(freshQuests);
