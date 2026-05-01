@@ -11,6 +11,9 @@ export const AdminSettings = () => {
   const [supportEmail, setSupportEmail] = useState("");
   
   const [landingVideoUrl, setLandingVideoUrl] = useState("");
+  const [bgmVideoUrl, setBgmVideoUrl] = useState("");
+  const [bgmFile, setBgmFile] = useState<File | null>(null);
+  const [uploadingBgm, setUploadingBgm] = useState(false);
   const [ringtoneYgo, setRingtoneYgo] = useState("");
   const [ringtoneMtg, setRingtoneMtg] = useState("");
   const [ringtonePkm, setRingtonePkm] = useState("");
@@ -56,6 +59,7 @@ export const AdminSettings = () => {
         const emailSetting = data.find((s) => s.key === 'support_email');
         
         const videoSetting = data.find((s) => s.key === 'landing_video_url');
+        const bgmSetting = data.find((s) => s.key === 'bgm_video_url');
         const ringYgo = data.find((s) => s.key === 'ringtone_ygo');
         const ringMtg = data.find((s) => s.key === 'ringtone_mtg');
         const ringPkm = data.find((s) => s.key === 'ringtone_pkm');
@@ -67,6 +71,7 @@ export const AdminSettings = () => {
         if (emailSetting) setSupportEmail(emailSetting.value || '');
         
         if (videoSetting) setLandingVideoUrl(videoSetting.value || '');
+        if (bgmSetting) setBgmVideoUrl(bgmSetting.value || '');
         if (ringYgo) setRingtoneYgo(ringYgo.value || '');
         if (ringMtg) setRingtoneMtg(ringMtg.value || '');
         if (ringPkm) setRingtonePkm(ringPkm.value || '');
