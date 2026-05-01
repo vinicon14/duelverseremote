@@ -431,6 +431,27 @@ export const DuelDeckViewer = ({
     });
   }, []);
 
+  // Rush Duel: at the start of each turn, draw until you have 5 cards in hand.
+  const drawUpToFive = useCallback(() => {
+    setFieldState(prev => {
+      const need = 5 - prev.hand.length;
+      if (need <= 0 || prev.deck.length === 0) return prev;
+      const toDraw = Math.min(need, prev.deck.length);
+      const deckCopy = [...prev.deck];
+      const drawnCards: GameCard[] = [];
+      for (let i = 0; i < toDraw; i++) {
+        const randomIndex = Math.floor(Math.random() * deckCopy.length);
+        drawnCards.push({ ...deckCopy[randomIndex], isFaceDown: false });
+        deckCopy.splice(randomIndex, 1);
+      }
+      return {
+        ...prev,
+        deck: deckCopy,
+        hand: [...prev.hand, ...drawnCards],
+      };
+    });
+  }, []);
+
   const shuffleDeck = useCallback(() => {
     setFieldState(prev => ({
       ...prev,
