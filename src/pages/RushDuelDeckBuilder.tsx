@@ -344,7 +344,18 @@ export default function RushDuelDeckBuilder() {
   };
 
   const incrementCardInDeck = (card: DeckCard, from: 'main' | 'extra' | 'side') => {
-    addToDeck(card);
+    if (getTotalCopies(card.name) >= 3) {
+      toast({ title: 'Limite atingido', description: 'Máximo 3 cópias por nome no deck inteiro', variant: 'destructive' });
+      return;
+    }
+    const total = from === 'main' ? getTotal(mainDeck) : from === 'extra' ? getTotal(extraDeck) : getTotal(sideDeck);
+    const limit = from === 'main' ? RUSH_MAIN_DECK_SIZE : 15;
+    if (total >= limit) {
+      toast({ title: `${from === 'main' ? 'Main' : from === 'extra' ? 'Extra' : 'Side'} cheio`, description: `Máximo ${limit} cartas`, variant: 'destructive' });
+      return;
+    }
+    const setter = from === 'main' ? setMainDeck : from === 'extra' ? setExtraDeck : setSideDeck;
+    setter(prev => prev.map(c => c.id === card.id ? { ...c, quantity: c.quantity + 1 } : c));
   };
 
   const clearDeck = () => { setMainDeck([]); setExtraDeck([]); setSideDeck([]); setCurrentDeckId(null); setCurrentDeckName(''); };
