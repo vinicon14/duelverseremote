@@ -1165,10 +1165,11 @@ export const DuelDeckViewer = ({
                       size="sm"
                       variant="outline"
                       className="flex-1 h-7 text-xs"
-                      onClick={() => drawMultiple(5)}
-                      disabled={fieldState.deck.length === 0}
+                      onClick={isRushDuel ? drawUpToFive : () => drawMultiple(5)}
+                      disabled={fieldState.deck.length === 0 || (isRushDuel && fieldState.hand.length >= 5)}
+                      title={isRushDuel ? 'Comprar até ter 5 cartas na mão (regra Rush Duel)' : 'Comprar 5 cartas'}
                     >
-                      Comprar 5
+                      {isRushDuel ? 'Comprar até 5' : 'Comprar 5'}
                     </Button>
                   </div>
 
