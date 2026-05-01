@@ -22,6 +22,17 @@ const Landing = () => {
   const { t } = useTranslation();
   const [videoUrl, setVideoUrl] = useState("");
 
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from('system_settings')
+        .select('value')
+        .eq('key', 'landing_video_url')
+        .maybeSingle();
+      if (data?.value) setVideoUrl(String(data.value));
+    })();
+  }, []);
+
   return (
     <div className="min-h-screen text-foreground">
       <SEOHead tKey="home" path="/" />
