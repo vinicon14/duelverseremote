@@ -455,9 +455,15 @@ export default function RushDuelDeckBuilder() {
                 <span className="text-[9px] text-muted-foreground">{card.type}</span>
               </div>
               <div className="flex items-center gap-1">
-                <span className="text-xs font-medium w-6 text-center">{card.quantity}</span>
-                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => removeFromDeck(card.id, from)}>
+                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => removeFromDeck(card.id, from)} title="Remover 1">
                   <Minus className="w-3 h-3" />
+                </Button>
+                <span className="text-xs font-medium w-6 text-center">{card.quantity}</span>
+                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => incrementCardInDeck(card, from)} title="Adicionar 1">
+                  <Plus className="w-3 h-3" />
+                </Button>
+                <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive hover:text-destructive" onClick={() => removeAllOfCard(card.id, from)} title="Remover todas">
+                  <Trash2 className="w-3 h-3" />
                 </Button>
               </div>
             </div>
