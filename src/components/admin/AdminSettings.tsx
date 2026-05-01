@@ -210,6 +210,50 @@ export const AdminSettings = () => {
     }
   };
 
+  const uploadBgmTrack = async () => {
+    if (!bgmFile) {
+      toast({ title: 'Selecione um arquivo de vídeo ou áudio', variant: 'destructive' });
+      return;
+    }
+    setUploadingBgm(true);
+    try {
+      const ext = bgmFile.name.split('.').pop()?.toLowerCase() || 'mp4';
+      const targetPath = `bgm/platform-soundtrack.${ext}`;
+      const contentType =
+        bgmFile.type ||
+        (ext === 'mp4' ? 'video/mp4' :
+         ext === 'webm' ? 'video/webm' :
+         ext === 'mp3' ? 'audio/mpeg' :
+         ext === 'wav' ? 'audio/wav' :
+         ext === 'ogg' ? 'audio/ogg' :
+         ext === 'm4a' ? 'audio/mp4' : 'application/octet-stream');
+
+      const { error: uploadError } = await supabase.storage
+        .from('ringtones')
+        .upload(targetPath, bgmFile, { upsert: true, cacheControl: '3600', contentType });
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage.from('ringtones').getPublicUrl(targetPath);
+      const publicUrl = `${data.publicUrl}?t=${Date.now()}`;
+
+      await upsertSetting('bgm_video_url', publicUrl);
+      setBgmVideoUrl(publicUrl);
+      setBgmFile(null);
+      window.dispatchEvent(new CustomEvent('duelverse:bgm-url-updated'));
+
+      toast({
+        title: 'Trilha sonora atualizada!',
+        description: 'O áudio do vídeo será reproduzido como trilha de fundo da plataforma.',
+      });
+    } catch (error: any) {
+      console.error('Error uploading BGM:', error);
+      toast({ title: 'Erro no upload', description: error.message, variant: 'destructive' });
+    } finally {
+      setUploadingBgm(false);
+    }
+  };
+
   const saveSettings = async () => {
     setLoading(true);
     try {
@@ -217,6 +261,7 @@ export const AdminSettings = () => {
         { key: 'support_email', value: supportEmail },
         
         { key: 'landing_video_url', value: landingVideoUrl },
+        { key: 'bgm_video_url', value: bgmVideoUrl },
         { key: 'ad_revenue_dashboard_url', value: adRevenueDashboardUrl },
         { key: 'ad_publisher_signup_url', value: adPublisherSignupUrl },
       ];
