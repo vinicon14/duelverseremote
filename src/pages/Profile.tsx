@@ -472,7 +472,7 @@ const Profile = () => {
                         {profile?.username || t('profile.user')}
                       </h1>
                       <span className="mx-auto md:mx-0 w-fit rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                        {getTcgDisplayName(activeTcg)}
+                        {getTcgDisplayName(tcgProfile?.tcg_type || activeTcg)}
                       </span>
                     </div>
                     <p className="text-sm sm:text-base text-muted-foreground mb-4">
