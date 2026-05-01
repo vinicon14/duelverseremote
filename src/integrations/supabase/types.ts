@@ -2183,11 +2183,7 @@ export type Database = {
       }
       award_xp: {
         Args: { _amount: number; _reason?: string; _tcg_type: string }
-        Returns: {
-          leveled_up: boolean
-          new_level: number
-          new_total: number
-        }[]
+        Returns: Json
       }
       calculate_level_from_points: {
         Args: { p_points: number }

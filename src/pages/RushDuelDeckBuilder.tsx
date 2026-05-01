@@ -334,13 +334,28 @@ export default function RushDuelDeckBuilder() {
   };
 
   const removeFromDeck = (cardId: number, from: 'main' | 'extra' | 'side') => {
-    if (from === 'main') {
-      setMainDeck(prev => prev.map(c => c.id === cardId ? (c.quantity <= 1 ? null : { ...c, quantity: c.quantity - 1 }) : c).filter(Boolean) as DeckCard[]);
-    } else if (from === 'extra') {
-      setExtraDeck(prev => prev.map(c => c.id === cardId ? (c.quantity <= 1 ? null : { ...c, quantity: c.quantity - 1 }) : c).filter(Boolean) as DeckCard[]);
-    } else {
-      setSideDeck(prev => prev.map(c => c.id === cardId ? (c.quantity <= 1 ? null : { ...c, quantity: c.quantity - 1 }) : c).filter(Boolean) as DeckCard[]);
+    const setter = from === 'main' ? setMainDeck : from === 'extra' ? setExtraDeck : setSideDeck;
+    setter(prev => prev.map(c => c.id === cardId ? { ...c, quantity: c.quantity - 1 } : c).filter(c => c.quantity > 0));
+  };
+
+  const removeAllOfCard = (cardId: number, from: 'main' | 'extra' | 'side') => {
+    const setter = from === 'main' ? setMainDeck : from === 'extra' ? setExtraDeck : setSideDeck;
+    setter(prev => prev.filter(c => c.id !== cardId));
+  };
+
+  const incrementCardInDeck = (card: DeckCard, from: 'main' | 'extra' | 'side') => {
+    if (getTotalCopies(card.name) >= 3) {
+      toast({ title: 'Limite atingido', description: 'Máximo 3 cópias por nome no deck inteiro', variant: 'destructive' });
+      return;
     }
+    const total = from === 'main' ? getTotal(mainDeck) : from === 'extra' ? getTotal(extraDeck) : getTotal(sideDeck);
+    const limit = from === 'main' ? RUSH_MAIN_DECK_SIZE : 15;
+    if (total >= limit) {
+      toast({ title: `${from === 'main' ? 'Main' : from === 'extra' ? 'Extra' : 'Side'} cheio`, description: `Máximo ${limit} cartas`, variant: 'destructive' });
+      return;
+    }
+    const setter = from === 'main' ? setMainDeck : from === 'extra' ? setExtraDeck : setSideDeck;
+    setter(prev => prev.map(c => c.id === card.id ? { ...c, quantity: c.quantity + 1 } : c));
   };
 
   const clearDeck = () => { setMainDeck([]); setExtraDeck([]); setSideDeck([]); setCurrentDeckId(null); setCurrentDeckName(''); };
@@ -440,9 +455,15 @@ export default function RushDuelDeckBuilder() {
                 <span className="text-[9px] text-muted-foreground">{card.type}</span>
               </div>
               <div className="flex items-center gap-1">
-                <span className="text-xs font-medium w-6 text-center">{card.quantity}</span>
-                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => removeFromDeck(card.id, from)}>
+                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => removeFromDeck(card.id, from)} title="Remover 1">
                   <Minus className="w-3 h-3" />
+                </Button>
+                <span className="text-xs font-medium w-6 text-center">{card.quantity}</span>
+                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => incrementCardInDeck(card, from)} title="Adicionar 1">
+                  <Plus className="w-3 h-3" />
+                </Button>
+                <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive hover:text-destructive" onClick={() => removeAllOfCard(card.id, from)} title="Remover todas">
+                  <Trash2 className="w-3 h-3" />
                 </Button>
               </div>
             </div>
