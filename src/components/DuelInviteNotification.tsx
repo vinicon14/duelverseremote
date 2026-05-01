@@ -164,6 +164,17 @@ export const DuelInviteNotification = ({ currentUserId }: { currentUserId?: stri
         return;
       }
 
+      // Sincroniza o TCG ativo do receptor com o TCG do duelo
+      try {
+        const { data: duelData } = await supabase
+          .from('live_duels')
+          .select('tcg_type')
+          .eq('id', pendingInvite.duel_id)
+          .maybeSingle();
+        const duelTcg = (duelData as any)?.tcg_type || 'yugioh';
+        localStorage.setItem('activeTcg', duelTcg);
+      } catch {}
+
       // Atualizar status do convite para aceito
       const { error: updateError } = await supabase
         .from('duel_invites')
