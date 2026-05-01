@@ -336,35 +336,37 @@ export const DuelFieldBoard = ({
       {/* Field Layout */}
       <div className="relative z-10 flex flex-col gap-2 sm:gap-3">
         
-        {/* Extra Monster Zones Row */}
-        <div className="flex justify-center gap-1 sm:gap-2">
-          <div className="flex items-center gap-8 sm:gap-16">
-            <ZoneSlot
-              zone="extraMonster1"
-              card={fieldState.extraMonster1}
-              label="Extra Monster"
-              onClick={() => onZoneClick('extraMonster1')}
-              onCardClick={(card) => handleCardClickLocal(card, 'extraMonster1')}
-              onDragOver={handleDragOver}
-              onDrop={handleDrop('extraMonster1')}
-              className="border-purple-500/30"
-              isHorizontal
-              sleeveUrl={sleeveUrl}
-            />
-            <ZoneSlot
-              zone="extraMonster2"
-              card={fieldState.extraMonster2}
-              label="Extra Monster"
-              onClick={() => onZoneClick('extraMonster2')}
-              onCardClick={(card) => handleCardClickLocal(card, 'extraMonster2')}
-              onDragOver={handleDragOver}
-              onDrop={handleDrop('extraMonster2')}
-              className="border-purple-500/30"
-              isHorizontal
-              sleeveUrl={sleeveUrl}
-            />
+        {/* Extra Monster Zones Row (hidden in Rush Duel — no Extra Deck / EMZ) */}
+        {!isRushDuel && (
+          <div className="flex justify-center gap-1 sm:gap-2">
+            <div className="flex items-center gap-8 sm:gap-16">
+              <ZoneSlot
+                zone="extraMonster1"
+                card={fieldState.extraMonster1}
+                label="Extra Monster"
+                onClick={() => onZoneClick('extraMonster1')}
+                onCardClick={(card) => handleCardClickLocal(card, 'extraMonster1')}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop('extraMonster1')}
+                className="border-purple-500/30"
+                isHorizontal
+                sleeveUrl={sleeveUrl}
+              />
+              <ZoneSlot
+                zone="extraMonster2"
+                card={fieldState.extraMonster2}
+                label="Extra Monster"
+                onClick={() => onZoneClick('extraMonster2')}
+                onCardClick={(card) => handleCardClickLocal(card, 'extraMonster2')}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop('extraMonster2')}
+                className="border-purple-500/30"
+                isHorizontal
+                sleeveUrl={sleeveUrl}
+              />
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Main Field Row */}
         <div className="flex justify-center items-center gap-1 sm:gap-2">
