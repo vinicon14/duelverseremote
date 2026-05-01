@@ -13,9 +13,19 @@
  */
 
 const SFX_MUTED_KEY = "duelverse_sfx_muted";
+const BGM_MUTED_KEY = "duelverse_bgm_muted";
 
+/**
+ * SFX seguem o mute mestre da plataforma (BGM).
+ * Se o usuário silenciar o som da plataforma, sons de toque e troca de página
+ * também são silenciados. Mantém compat com chave própria de SFX.
+ */
 export const isSfxMuted = (): boolean => {
   try {
+    // Mestre: BGM mute (default = mutado)
+    const bgm = localStorage.getItem(BGM_MUTED_KEY);
+    const bgmMuted = bgm === null ? true : bgm === "1";
+    if (bgmMuted) return true;
     return localStorage.getItem(SFX_MUTED_KEY) === "1";
   } catch {
     return false;
