@@ -590,50 +590,6 @@ const Friends = () => {
           </TabsContent>
         </Tabs>
       </main>
-
-      {/* TCG Selector Dialog */}
-      <Dialog open={!!challengeTarget} onOpenChange={(open) => { if (!open) setChallengeTarget(null); }}>
-        <DialogContent className="card-mystic border-primary/30 max-w-sm w-[92vw] sm:w-full p-5 z-[100]">
-          <DialogHeader>
-            <DialogTitle className="text-center text-xl flex items-center justify-center gap-2">
-              <Swords className="w-6 h-6" />
-              {t('friends.chooseTcg', 'Escolha o modo de duelo')}
-            </DialogTitle>
-            <DialogDescription className="text-center">
-              {t('friends.chooseTcgDesc', 'Selecione qual versão de Yu-Gi-Oh! deseja jogar')}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col gap-3 mt-2">
-            <Button
-              type="button"
-              onClick={() => { const target = challengeTarget; if (target) challengeFriend(target, 'yugioh'); }}
-              className="w-full h-14 text-base sm:text-lg justify-start"
-              variant="outline"
-            >
-              🃏 YGO Advanced
-            </Button>
-            <Button
-              type="button"
-              onClick={() => { const target = challengeTarget; if (target) challengeFriend(target, 'genesis'); }}
-              className="w-full h-14 text-base sm:text-lg justify-start"
-              variant="outline"
-            >
-              ⚛️ Genesys
-            </Button>
-            <Button
-              type="button"
-              onClick={() => { const target = challengeTarget; if (target) challengeFriend(target, 'rush_duel'); }}
-              className="w-full h-14 text-base sm:text-lg justify-start"
-              variant="outline"
-            >
-              ⚡ Rush Duel
-            </Button>
-            <Button type="button" variant="ghost" className="mt-1" onClick={() => setChallengeTarget(null)}>
-              {t('common.cancel', 'Cancelar')}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
