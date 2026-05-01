@@ -438,7 +438,7 @@ export default function RushDuelDeckBuilder() {
   };
 
   const renderDeck = (deck: DeckCard[], from: 'main' | 'extra' | 'side') => (
-    <ScrollArea className="h-[250px]">
+    <ScrollArea className="h-[calc(100vh-380px)] min-h-[300px]">
       <div className="space-y-1 pr-2">
         {deck.length === 0 ? (
           <p className="text-center text-muted-foreground py-8 text-sm">
@@ -487,8 +487,8 @@ export default function RushDuelDeckBuilder() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="space-y-4 order-2 lg:order-1">
             <div className="flex flex-wrap gap-2">
               <div className="flex-1 min-w-[200px]">
                 <div className="relative">
@@ -589,7 +589,7 @@ export default function RushDuelDeckBuilder() {
             )}
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-4 order-1 lg:order-2">
             <Card className="card-mystic">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-3">

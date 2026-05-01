@@ -8,7 +8,8 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Swords, Trophy, User, LogOut, Menu, Users, Zap, Shield, Store, Newspaper, Coins, Scale, Video, Layers, BarChart3, Crown, Gift } from "lucide-react";
+import { Swords, Trophy, User, LogOut, Menu, Users, Zap, Shield, Store, Newspaper, Coins, Scale, Video, Layers, BarChart3, Crown, Gift, Music, VolumeX } from "lucide-react";
+import { toggleBgm, getBgmMuted } from "@/components/BackgroundMusic";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/hooks/useAdmin";
@@ -36,6 +37,13 @@ export const Navbar = () => {
   const { isJudge } = useJudge();
   const { isPro } = useAccountType();
   const { activeTcg } = useTcg();
+  const [bgmMuted, setBgmMuted] = useState<boolean>(() => getBgmMuted());
+
+  useEffect(() => {
+    const handler = (e: any) => setBgmMuted(!!e?.detail?.muted);
+    window.addEventListener('duelverse:bgm-state', handler as any);
+    return () => window.removeEventListener('duelverse:bgm-state', handler as any);
+  }, []);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -359,6 +367,10 @@ export const Navbar = () => {
                   {t('nav.profile')}
                   {isPro && <Crown className="ml-2 w-3 h-3 text-yellow-500" />}
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => { e.preventDefault(); toggleBgm(); }}>
+                  {bgmMuted ? <VolumeX className="mr-2 h-4 w-4" /> : <Music className="mr-2 h-4 w-4" />}
+                  {bgmMuted ? 'Ativar música' : 'Silenciar música'}
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleLogout}>
                   <LogOut className="mr-2 h-4 w-4" />
                   {t('nav.logout')}
@@ -395,6 +407,10 @@ export const Navbar = () => {
                     <Button variant="ghost" onClick={() => navigate('/profile')} className="w-full justify-start h-11 text-base">
                       <User className="mr-2 h-4 w-4" />
                       {t('nav.profile')}
+                    </Button>
+                    <Button variant="ghost" onClick={() => toggleBgm()} className="w-full justify-start h-11 text-base">
+                      {bgmMuted ? <VolumeX className="mr-2 h-4 w-4" /> : <Music className="mr-2 h-4 w-4" />}
+                      {bgmMuted ? 'Ativar música' : 'Silenciar música'}
                     </Button>
                     <Button variant="ghost" onClick={handleLogout} className="w-full justify-start h-11 text-base text-destructive">
                       <LogOut className="mr-2 h-4 w-4" />
