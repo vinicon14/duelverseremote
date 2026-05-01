@@ -363,11 +363,23 @@ export const DuelDeckViewer = ({
         }
       });
 
+      const shuffledDeck = shuffleArray(expandedDeck);
+
+      // Rush Duel: opening hand of 5 cards drawn automatically.
+      let openingHand: GameCard[] = [];
+      let remainingDeck = shuffledDeck;
+      if (isRushDuel) {
+        const drawCount = Math.min(5, shuffledDeck.length);
+        openingHand = shuffledDeck.slice(0, drawCount).map(c => ({ ...c, isFaceDown: false }));
+        remainingDeck = shuffledDeck.slice(drawCount);
+      }
+
       setFieldState({
         ...INITIAL_FIELD_STATE,
-        deck: shuffleArray(expandedDeck),
+        deck: remainingDeck,
         extraDeck: expandedExtra,
         sideDeck: expandedSide,
+        hand: openingHand,
       });
     }
   }, [deck, extraDeck, sideDeck]);
