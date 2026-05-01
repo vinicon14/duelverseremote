@@ -510,7 +510,7 @@ const Profile = () => {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <Sparkles className="h-5 w-5 text-primary" />
-                      <h2 className="text-lg font-bold text-gradient-mystic">XP {getTcgDisplayName(activeTcg)}</h2>
+                      <h2 className="text-lg font-bold text-gradient-mystic">XP {getTcgDisplayName(tcgProfile?.tcg_type || activeTcg)}</h2>
                     </div>
                     <p className="text-sm text-muted-foreground">
                       Nivel {xp.level} • {xp.total.toLocaleString('pt-BR')} XP exatos • {xp.needed.toLocaleString('pt-BR')} XP para o proximo nivel
