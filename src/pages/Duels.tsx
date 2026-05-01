@@ -442,11 +442,12 @@ const Duels = () => {
                     {t('duels.createDuel')}
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="card-mystic !fixed !left-[50%] !top-[50%] !translate-x-[-50%] !translate-y-[-50%] w-[calc(100vw-1rem)] max-w-lg max-h-[85dvh] sm:max-h-[85vh] overflow-y-auto overflow-x-hidden overscroll-contain p-4 sm:p-6 [-webkit-overflow-scrolling:touch]">
-                  <DialogHeader>
+                <DialogContent className="card-mystic !fixed !left-[50%] !top-[50%] !translate-x-[-50%] !translate-y-[-50%] w-[calc(100vw-1rem)] max-w-lg max-h-[90dvh] sm:max-h-[85vh] overflow-hidden p-0 flex flex-col [-webkit-overflow-scrolling:touch]">
+                  <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2 shrink-0 border-b border-border/40 bg-card/80 backdrop-blur-sm">
                     <DialogTitle className="text-gradient-mystic">{t('duels.createRoom')}</DialogTitle>
                   </DialogHeader>
-                  <div className="space-y-4">
+                  <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-4 sm:px-6 py-4 [-webkit-overflow-scrolling:touch]">
+                    <div className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="room-name">{t('duels.roomName')}</Label>
                       <Input
