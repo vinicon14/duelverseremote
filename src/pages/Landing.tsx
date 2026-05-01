@@ -22,6 +22,17 @@ const Landing = () => {
   const { t } = useTranslation();
   const [videoUrl, setVideoUrl] = useState("");
 
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from('system_settings')
+        .select('value')
+        .eq('key', 'landing_video_url')
+        .maybeSingle();
+      if (data?.value) setVideoUrl(String(data.value));
+    })();
+  }, []);
+
   return (
     <div className="min-h-screen text-foreground">
       <SEOHead tKey="home" path="/" />
@@ -126,7 +137,14 @@ const Landing = () => {
             <div className="relative rounded-2xl overflow-hidden border border-border shadow-2xl bg-card aspect-video">
               {videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be') ?
             <iframe
-              src={videoUrl.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')}
+              src={(() => {
+                let id = '';
+                const m1 = videoUrl.match(/[?&]v=([^&]+)/);
+                const m2 = videoUrl.match(/youtu\.be\/([^?&/]+)/);
+                const m3 = videoUrl.match(/youtube\.com\/embed\/([^?&/]+)/);
+                id = m1?.[1] || m2?.[1] || m3?.[1] || '';
+                return id ? `https://www.youtube.com/embed/${id}` : videoUrl;
+              })()}
               className="w-full h-full"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
