@@ -344,6 +344,87 @@ export const AdminSettings = () => {
 
       <Card>
         <CardHeader>
+          <CardTitle>🎵 Trilha sonora da plataforma</CardTitle>
+          <CardDescription>
+            Envie um vídeo (ou áudio) e a plataforma reproduzirá automaticamente apenas a faixa
+            de áudio em loop como trilha de fundo. Se nenhum arquivo for enviado, será usada a
+            trilha sintetizada padrão. Links do YouTube não são suportados — envie um arquivo
+            direto (.mp4, .webm, .mp3, .wav, .ogg, .m4a).
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="rounded-lg border border-border p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <Music className="w-4 h-4 text-primary" />
+              <Label className="font-semibold">Arquivo de vídeo/áudio</Label>
+            </div>
+
+            <Input
+              type="file"
+              accept="video/mp4,video/webm,audio/*,.mp4,.webm,.mp3,.wav,.ogg,.m4a"
+              onChange={(e) => setBgmFile(e.target.files?.[0] || null)}
+            />
+
+            {bgmFile && (
+              <p className="text-sm text-muted-foreground truncate">
+                Selecionado: {bgmFile.name}
+              </p>
+            )}
+
+            {bgmVideoUrl && (
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground break-all">{bgmVideoUrl}</p>
+                <audio controls src={bgmVideoUrl} className="h-8 w-full" preload="none" />
+              </div>
+            )}
+
+            <Button
+              type="button"
+              size="sm"
+              onClick={uploadBgmTrack}
+              disabled={uploadingBgm || !bgmFile}
+              className="w-full"
+            >
+              <Upload className={`w-4 h-4 mr-2 ${uploadingBgm ? 'animate-spin' : ''}`} />
+              {uploadingBgm ? 'Enviando...' : 'Enviar trilha sonora'}
+            </Button>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="bgm-url">Ou cole uma URL direta</Label>
+            <Input
+              id="bgm-url"
+              type="url"
+              placeholder="https://.../trilha.mp4"
+              value={bgmVideoUrl}
+              onChange={(e) => setBgmVideoUrl(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Use o botão "Salvar" no final da página após editar a URL.
+            </p>
+          </div>
+
+          {bgmVideoUrl && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                await upsertSetting('bgm_video_url', '');
+                setBgmVideoUrl('');
+                window.dispatchEvent(new CustomEvent('duelverse:bgm-url-updated'));
+                toast({ title: 'Trilha removida', description: 'A trilha sintetizada padrão será usada.' });
+              }}
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Remover trilha personalizada
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>Monetização de anúncios</CardTitle>
           <CardDescription>
             Links da EasyPlatform para acompanhar receita, relatórios e cadastro Publisher.
