@@ -1,7 +1,7 @@
 /**
  * DuelVerse - Background Music Player
  *
- * Trilha sonora ambiente inspirada em Yu-Gi-Oh!.
+ * Trilha sonora ambiente sintetizada (Web Audio API) inspirada em Yu-Gi-Oh!.
  * - Silenciada por padrão (usuário ativa pelo menu do avatar).
  * - Não toca em /duel/:id, /pro/*, /discord-activity, /share/*.
  * - Persiste preferência em localStorage.
@@ -10,16 +10,11 @@
  *   - window.dispatchEvent(new CustomEvent('duelverse:bgm-toggle'))
  *   - getBgmMuted()
  */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
+import { startBgm, stopBgm } from "@/utils/bgm";
 
 const STORAGE_KEY = "duelverse_bgm_muted";
-const VOLUME = 0.22;
-
-// Trilha inspirada em Yu-Gi-Oh! (tema épico/dramático estilo duelo).
-// Hospedada no Internet Archive (domínio público / fan upload).
-const YGO_THEME_TRACK =
-  "https://archive.org/download/yu-gi-oh-duel-monsters-ost/01%20-%20Yu-Gi-Oh%21%20Duel%20Monsters%20Theme.mp3";
 
 const isBlockedRoute = (pathname: string) => {
   if (pathname.startsWith("/duel/")) return true;
@@ -32,8 +27,7 @@ const isBlockedRoute = (pathname: string) => {
 export const getBgmMuted = (): boolean => {
   try {
     const v = localStorage.getItem(STORAGE_KEY);
-    // Default: mutado (true) se nunca configurado
-    if (v === null) return true;
+    if (v === null) return true; // mutado por padrão
     return v === "1";
   } catch {
     return true;
@@ -46,25 +40,10 @@ export const toggleBgm = () => {
 
 export const BackgroundMusic = () => {
   const location = useLocation();
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const [muted, setMuted] = useState<boolean>(() => getBgmMuted());
   const [ready, setReady] = useState(false);
 
-  // Cria o elemento audio uma vez
-  useEffect(() => {
-    const audio = new Audio(YGO_THEME_TRACK);
-    audio.loop = true;
-    audio.volume = VOLUME;
-    audio.preload = "auto";
-    audio.crossOrigin = "anonymous";
-    audioRef.current = audio;
-    return () => {
-      audio.pause();
-      audioRef.current = null;
-    };
-  }, []);
-
-  // Aguarda primeira interação para destravar autoplay
+  // Aguarda primeira interação para destravar AudioContext
   useEffect(() => {
     const unlock = () => {
       setReady(true);
@@ -100,26 +79,20 @@ export const BackgroundMusic = () => {
     return () => window.removeEventListener("duelverse:bgm-toggle", handler);
   }, []);
 
-  // Controla play/pause conforme rota, mute e ready
+  // Controla play/stop conforme rota, mute e ready
   useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
     const blocked = isBlockedRoute(location.pathname);
-
     if (muted || blocked || !ready) {
-      audio.pause();
+      stopBgm();
       return;
     }
-
-    audio.volume = VOLUME;
-    const playPromise = audio.play();
-    if (playPromise && typeof playPromise.catch === "function") {
-      playPromise.catch(() => {
-        // autoplay bloqueado
-      });
-    }
+    startBgm(0.32);
   }, [location.pathname, muted, ready]);
+
+  // Para tudo ao desmontar
+  useEffect(() => {
+    return () => stopBgm();
+  }, []);
 
   return null;
 };
