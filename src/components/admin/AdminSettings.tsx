@@ -270,6 +270,9 @@ export const AdminSettings = () => {
         await upsertSetting(setting.key, setting.value);
       }
 
+      // Notifica BGM player que a URL pode ter mudado
+      window.dispatchEvent(new CustomEvent('duelverse:bgm-url-updated'));
+
       toast({
         title: 'Configurações salvas',
         description: 'As configurações foram atualizadas com sucesso!'
