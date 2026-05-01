@@ -594,7 +594,9 @@ const Duels = () => {
                         />
                       )}
                     </div>
-
+                    </div>
+                  </div>
+                  <div className="shrink-0 border-t border-border/40 bg-card/80 backdrop-blur-sm px-4 sm:px-6 py-3">
                     <Button onClick={handleCreateDuel} className="w-full btn-mystic text-white">
                       {t('duels.createAndEnter')}
                     </Button>
