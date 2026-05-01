@@ -24,6 +24,7 @@ import { NativePermissionPrompt } from "@/components/NativePermissionPrompt";
 import { AnimatedBackground } from "@/components/AnimatedBackground";
 import { PageNavigationArrows } from "@/components/PageNavigationArrows";
 import { UnifiedPageLoader } from "@/components/UnifiedPageLoader";
+import { BackgroundMusic } from "@/components/BackgroundMusic";
 
 import { useRealtimeNotifications } from "@/hooks/useRealtimeNotifications";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
@@ -236,6 +237,7 @@ const MainAppContent = () => {
       <AnimatedBackground />
       <PageNavigationArrows />
       <UnifiedPageLoader />
+      <BackgroundMusic />
       <div className="router-view-animate">
         <RouterContent user={user} />
       </div>

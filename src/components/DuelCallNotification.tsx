@@ -320,6 +320,10 @@ export const DuelCallNotification = ({ currentUserId }: { currentUserId?: string
     if (!invite) return;
     stopAudio();
     try {
+      // Sync receiver's active TCG with the duel's TCG so deck loading works
+      const duelTcg = invite.duel?.tcg_type || 'yugioh';
+      try { localStorage.setItem('activeTcg', duelTcg); } catch {}
+
       await supabase.from('duel_invites').update({ status: 'accepted' }).eq('id', invite.id);
       setInvite(null);
       navigate(`/duel/${invite.duel_id}`);
