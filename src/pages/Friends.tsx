@@ -400,7 +400,8 @@ const Friends = () => {
                             </Button>
                             <Button
                               size="sm"
-                              onClick={() => setChallengeTarget(friend.user_id)}
+                              type="button"
+                              onClick={() => setChallengeTarget(prev => prev === friend.user_id ? null : friend.user_id)}
                               className="btn-mystic text-white"
                             >
                               <Swords className="w-4 h-4 mr-1" />
@@ -408,6 +409,28 @@ const Friends = () => {
                             </Button>
                           </div>
                         </div>
+
+                        {challengeTarget === friend.user_id && (
+                          <div className="mt-4 p-3 rounded-lg border border-primary/30 bg-background/70 space-y-2 animate-in fade-in slide-in-from-top-2">
+                            <p className="text-sm font-semibold text-center text-gradient-mystic">
+                              {t('friends.chooseTcg', 'Escolha o modo de duelo')}
+                            </p>
+                            <div className="grid grid-cols-1 gap-2">
+                              <Button type="button" variant="outline" className="justify-start h-12" onClick={() => challengeFriend(friend.user_id, 'yugioh')}>
+                                🃏 YGO Advanced
+                              </Button>
+                              <Button type="button" variant="outline" className="justify-start h-12" onClick={() => challengeFriend(friend.user_id, 'genesis')}>
+                                ⚛️ Genesys
+                              </Button>
+                              <Button type="button" variant="outline" className="justify-start h-12" onClick={() => challengeFriend(friend.user_id, 'rush_duel')}>
+                                ⚡ Rush Duel
+                              </Button>
+                              <Button type="button" variant="ghost" size="sm" onClick={() => setChallengeTarget(null)}>
+                                {t('common.cancel', 'Cancelar')}
+                              </Button>
+                            </div>
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
                   );
