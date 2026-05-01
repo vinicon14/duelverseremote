@@ -174,7 +174,7 @@ const Profile = () => {
 
       const [profileResult, tcgResult, questsResult] = await Promise.allSettled([
         loadProfile(targetUserId),
-        loadTcgProfile(targetUserId),
+        loadTcgProfile(targetUserId, targetUserId === session.user.id),
         loadDailyQuests(targetUserId),
       ]);
 
