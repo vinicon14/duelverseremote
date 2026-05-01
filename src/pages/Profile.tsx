@@ -323,7 +323,7 @@ const Profile = () => {
     setWatchingAd(true);
     try {
       if (!hasRewardedAdUnit()) {
-        throw new Error('Configure VITE_EASYPLATFORM_REWARDED_SCRIPT_URL ou VITE_EASYPLATFORM_REWARDED_EMBED_URL para ativar videos recompensados.');
+        throw new Error('Sistema de anúncios indisponível no momento.');
       }
 
       const adResult = await showRewardedVideoAd();

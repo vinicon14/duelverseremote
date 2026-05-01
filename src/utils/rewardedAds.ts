@@ -6,7 +6,7 @@ declare global {
   }
 }
 
-type RewardedAdProvider = "easyplatform" | "google_ad_manager" | "easyplatform_dev";
+type RewardedAdProvider = "easyplatform" | "google_ad_manager" | "easyplatform_dev" | "adsense_internal";
 
 type RewardedAdResult = {
   provider: RewardedAdProvider;
@@ -94,8 +94,10 @@ const DEV_REWARDED_AD_UNIT = "/22639388115/rewarded_web_example";
 const EASYPLATFORM_LOGIN_URL = "https://easyplatform.com/login.php";
 
 const getRewardedProvider = (): RewardedAdProvider => {
-  const provider = String(import.meta.env.VITE_REWARDED_AD_PROVIDER || "easyplatform").toLowerCase();
-  return provider === "google_ad_manager" ? "google_ad_manager" : "easyplatform";
+  const provider = String(import.meta.env.VITE_REWARDED_AD_PROVIDER || "adsense_internal").toLowerCase();
+  if (provider === "google_ad_manager") return "google_ad_manager";
+  if (provider === "easyplatform") return "easyplatform";
+  return "adsense_internal" as RewardedAdProvider;
 };
 
 const getConfiguredRewardedAdUnit = () => {
@@ -324,18 +326,97 @@ const showEasyPlatformRewardedVideoAd = (timeoutMs = 60000): Promise<RewardedAdR
   });
 };
 
+const ADSENSE_CLIENT = "ca-pub-5741796577623184";
+const ADSENSE_REWARDED_SLOT = import.meta.env.VITE_ADSENSE_REWARDED_SLOT || "1234567890";
+const ADSENSE_MIN_SECONDS = Number(import.meta.env.VITE_ADSENSE_REWARDED_MIN_SECONDS || 15);
+
+const ensureAdSenseScript = () => {
+  const w = window as any;
+  if (w._adsenseLoaded) return;
+  w._adsenseLoaded = true;
+  const script = document.createElement('script');
+  script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`;
+  script.async = true;
+  script.crossOrigin = 'anonymous';
+  document.head.appendChild(script);
+};
+
+const showAdSenseInternalRewardedAd = (): Promise<RewardedAdResult> => {
+  const sessionId = createAdSessionId();
+  return new Promise((resolve, reject) => {
+    const shell = createRewardedShell("Assista o anúncio para ganhar XP");
+    let resolved = false;
+    let secondsLeft = ADSENSE_MIN_SECONDS;
+
+    // Render AdSense ins inside the shell
+    shell.body.innerHTML = "";
+    shell.body.style.padding = "16px";
+    const adWrap = document.createElement('div');
+    adWrap.style.cssText = "width:100%;min-height:260px;display:flex;align-items:center;justify-content:center;background:#0b1220;border-radius:8px;overflow:hidden;";
+    const ins = document.createElement('ins');
+    ins.className = 'adsbygoogle';
+    ins.style.cssText = "display:block;width:100%;min-height:260px;";
+    ins.setAttribute('data-ad-client', ADSENSE_CLIENT);
+    ins.setAttribute('data-ad-slot', ADSENSE_REWARDED_SLOT);
+    ins.setAttribute('data-ad-format', 'auto');
+    ins.setAttribute('data-full-width-responsive', 'true');
+    adWrap.appendChild(ins);
+    shell.body.appendChild(adWrap);
+
+    ensureAdSenseScript();
+    setTimeout(() => {
+      try {
+        ((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({});
+      } catch { /* ignore */ }
+    }, 400);
+
+    const tick = window.setInterval(() => {
+      secondsLeft -= 1;
+      if (secondsLeft > 0) {
+        shell.status.textContent = `Aguarde ${secondsLeft}s para liberar a recompensa...`;
+      } else {
+        window.clearInterval(tick);
+        shell.complete.disabled = false;
+        shell.complete.style.opacity = "1";
+        shell.status.textContent = "Pronto! Confirme para receber XP.";
+      }
+    }, 1000);
+
+    const finish = (ok: boolean) => {
+      if (resolved) return;
+      resolved = true;
+      window.clearInterval(tick);
+      shell.overlay.remove();
+      clearRewardedHash();
+      if (ok) {
+        resolve({ provider: "adsense_internal", sessionId, rewarded: true, videoCompleted: true });
+      } else {
+        reject(new Error("Anúncio fechado antes da recompensa."));
+      }
+    };
+
+    shell.close.onclick = () => finish(false);
+    shell.complete.onclick = () => {
+      if (!shell.complete.disabled) finish(true);
+    };
+  });
+};
+
 export const hasRewardedAdUnit = () => {
-  if (getRewardedProvider() === "google_ad_manager") return Boolean(getConfiguredRewardedAdUnit());
-  const config = getEasyPlatformConfig();
-  return Boolean(config.scriptUrl || config.embedUrl || import.meta.env.DEV);
+  const provider = getRewardedProvider();
+  if (provider === "google_ad_manager") return Boolean(getConfiguredRewardedAdUnit());
+  if (provider === "easyplatform") {
+    const config = getEasyPlatformConfig();
+    return Boolean(config.scriptUrl || config.embedUrl || import.meta.env.DEV);
+  }
+  return true; // adsense_internal sempre disponível
 };
 
 export const showRewardedVideoAd = (timeoutMs = 60000): Promise<RewardedAdResult> => {
-  if (getRewardedProvider() === "google_ad_manager") {
-    return showGoogleRewardedVideoAd(timeoutMs);
-  }
-
-  return showEasyPlatformRewardedVideoAd(timeoutMs);
+  const provider = getRewardedProvider();
+  if (provider === "google_ad_manager") return showGoogleRewardedVideoAd(timeoutMs);
+  if (provider === "easyplatform") return showEasyPlatformRewardedVideoAd(timeoutMs);
+  return showAdSenseInternalRewardedAd();
 };
 
 export const showGoogleRewardedVideoAd = (timeoutMs = 30000): Promise<RewardedAdResult> => {
