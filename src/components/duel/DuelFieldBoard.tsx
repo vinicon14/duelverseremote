@@ -275,7 +275,17 @@ export const DuelFieldBoard = ({
   isFullscreen = false,
   playmatUrl,
   sleeveUrl,
+  tcgType,
 }: DuelFieldBoardProps) => {
+  const isRushDuel = tcgType === 'rush_duel';
+  // Rush Duel uses a 3x3 board: 3 monster zones + 3 spell/trap zones, no Extra Monster Zones, no Extra Deck.
+  const monsterZones = (isRushDuel
+    ? (['monster1', 'monster2', 'monster3'] as const)
+    : (['monster1', 'monster2', 'monster3', 'monster4', 'monster5'] as const));
+  const spellZones = (isRushDuel
+    ? (['spell1', 'spell2', 'spell3'] as const)
+    : (['spell1', 'spell2', 'spell3', 'spell4', 'spell5'] as const));
+
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
