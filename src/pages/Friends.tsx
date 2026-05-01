@@ -17,13 +17,6 @@ import { useToast } from "@/components/ui/use-toast";
 import { Users, UserPlus, Check, X, Search, Swords } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useFriendsOnlineStatus } from "@/hooks/useFriendsOnlineStatus";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
 import { useTranslation } from "react-i18next";
 
 const Friends = () => {
@@ -400,7 +393,8 @@ const Friends = () => {
                             </Button>
                             <Button
                               size="sm"
-                              onClick={() => setChallengeTarget(friend.user_id)}
+                              type="button"
+                              onClick={() => setChallengeTarget(prev => prev === friend.user_id ? null : friend.user_id)}
                               className="btn-mystic text-white"
                             >
                               <Swords className="w-4 h-4 mr-1" />
@@ -408,6 +402,28 @@ const Friends = () => {
                             </Button>
                           </div>
                         </div>
+
+                        {challengeTarget === friend.user_id && (
+                          <div className="mt-4 p-3 rounded-lg border border-primary/30 bg-background/70 space-y-2 animate-in fade-in slide-in-from-top-2">
+                            <p className="text-sm font-semibold text-center text-gradient-mystic">
+                              {t('friends.chooseTcg', 'Escolha o modo de duelo')}
+                            </p>
+                            <div className="grid grid-cols-1 gap-2">
+                              <Button type="button" variant="outline" className="justify-start h-12" onClick={() => challengeFriend(friend.user_id, 'yugioh')}>
+                                🃏 YGO Advanced
+                              </Button>
+                              <Button type="button" variant="outline" className="justify-start h-12" onClick={() => challengeFriend(friend.user_id, 'genesis')}>
+                                ⚛️ Genesys
+                              </Button>
+                              <Button type="button" variant="outline" className="justify-start h-12" onClick={() => challengeFriend(friend.user_id, 'rush_duel')}>
+                                ⚡ Rush Duel
+                              </Button>
+                              <Button type="button" variant="ghost" size="sm" onClick={() => setChallengeTarget(null)}>
+                                {t('common.cancel', 'Cancelar')}
+                              </Button>
+                            </div>
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
                   );
@@ -567,50 +583,6 @@ const Friends = () => {
           </TabsContent>
         </Tabs>
       </main>
-
-      {/* TCG Selector Dialog */}
-      <Dialog open={!!challengeTarget} onOpenChange={(open) => { if (!open) setChallengeTarget(null); }}>
-        <DialogContent className="card-mystic border-primary/30 max-w-sm w-[92vw] sm:w-full p-5 z-[100]">
-          <DialogHeader>
-            <DialogTitle className="text-center text-xl flex items-center justify-center gap-2">
-              <Swords className="w-6 h-6" />
-              {t('friends.chooseTcg', 'Escolha o modo de duelo')}
-            </DialogTitle>
-            <DialogDescription className="text-center">
-              {t('friends.chooseTcgDesc', 'Selecione qual versão de Yu-Gi-Oh! deseja jogar')}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col gap-3 mt-2">
-            <Button
-              type="button"
-              onClick={() => { const target = challengeTarget; if (target) challengeFriend(target, 'yugioh'); }}
-              className="w-full h-14 text-base sm:text-lg justify-start"
-              variant="outline"
-            >
-              🃏 YGO Advanced
-            </Button>
-            <Button
-              type="button"
-              onClick={() => { const target = challengeTarget; if (target) challengeFriend(target, 'genesis'); }}
-              className="w-full h-14 text-base sm:text-lg justify-start"
-              variant="outline"
-            >
-              ⚛️ Genesys
-            </Button>
-            <Button
-              type="button"
-              onClick={() => { const target = challengeTarget; if (target) challengeFriend(target, 'rush_duel'); }}
-              className="w-full h-14 text-base sm:text-lg justify-start"
-              variant="outline"
-            >
-              ⚡ Rush Duel
-            </Button>
-            <Button type="button" variant="ghost" className="mt-1" onClick={() => setChallengeTarget(null)}>
-              {t('common.cancel', 'Cancelar')}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

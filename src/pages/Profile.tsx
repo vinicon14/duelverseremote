@@ -75,16 +75,27 @@ const Profile = () => {
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'stats');
   const [rankedDifficulty, setRankedDifficulty] = useState<RankedXpDifficultyKey>(RANKED_XP_DIFFICULTIES[0].key);
 
-  const loadTcgProfile = async (userId: string) => {
+  const loadTcgProfile = async (userId: string, ownProfile: boolean) => {
+    if (ownProfile) {
+      const { data, error } = await supabase
+        .from('tcg_profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('tcg_type', activeTcg)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    }
+    // For other users: pick their most-progressed TCG profile (highest XP, then points)
     const { data, error } = await supabase
       .from('tcg_profiles')
       .select('*')
       .eq('user_id', userId)
-      .eq('tcg_type', activeTcg)
-      .maybeSingle();
-
+      .order('xp_total', { ascending: false })
+      .order('points', { ascending: false })
+      .limit(1);
     if (error) throw error;
-    return data;
+    return data?.[0] || null;
   };
 
   const loadProfile = async (userId: string) => {
@@ -163,7 +174,7 @@ const Profile = () => {
 
       const [profileResult, tcgResult, questsResult] = await Promise.allSettled([
         loadProfile(targetUserId),
-        loadTcgProfile(targetUserId),
+        loadTcgProfile(targetUserId, targetUserId === session.user.id),
         loadDailyQuests(targetUserId),
       ]);
 
@@ -290,7 +301,7 @@ const Profile = () => {
         });
       }
 
-      const freshTcgProfile = await loadTcgProfile(profile.user_id);
+      const freshTcgProfile = await loadTcgProfile(profile.user_id, true);
       const freshQuests = await loadDailyQuests(profile.user_id);
       setTcgProfile(freshTcgProfile);
       setDailyQuests(freshQuests);
@@ -342,7 +353,7 @@ const Profile = () => {
         });
       }
 
-      const freshTcgProfile = await loadTcgProfile(profile.user_id);
+      const freshTcgProfile = await loadTcgProfile(profile.user_id, true);
       const freshQuests = await loadDailyQuests(profile.user_id);
       setTcgProfile(freshTcgProfile);
       setDailyQuests(freshQuests);
