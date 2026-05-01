@@ -1163,6 +1163,7 @@ const DuelRoom = () => {
                                 : duel?.creator?.username
                             }
                             embedded
+                            tcgType={duel?.tcg_type}
                           />
                         </>
                       )}
