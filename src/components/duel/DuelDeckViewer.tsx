@@ -1236,6 +1236,7 @@ export const DuelDeckViewer = ({
                     isFullscreen={isFullscreen}
                     playmatUrl={localStorage.getItem('activePlaymatUrl')}
                     sleeveUrl={localStorage.getItem('activeSleeveUrl')}
+                    tcgType={tcgType}
                   />
                 </div>
               </ScrollArea>
