@@ -589,7 +589,7 @@ export default function RushDuelDeckBuilder() {
             )}
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-4 order-1 lg:order-2">
             <Card className="card-mystic">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-3">
