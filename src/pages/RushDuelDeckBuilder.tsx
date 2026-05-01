@@ -334,13 +334,17 @@ export default function RushDuelDeckBuilder() {
   };
 
   const removeFromDeck = (cardId: number, from: 'main' | 'extra' | 'side') => {
-    if (from === 'main') {
-      setMainDeck(prev => prev.map(c => c.id === cardId ? (c.quantity <= 1 ? null : { ...c, quantity: c.quantity - 1 }) : c).filter(Boolean) as DeckCard[]);
-    } else if (from === 'extra') {
-      setExtraDeck(prev => prev.map(c => c.id === cardId ? (c.quantity <= 1 ? null : { ...c, quantity: c.quantity - 1 }) : c).filter(Boolean) as DeckCard[]);
-    } else {
-      setSideDeck(prev => prev.map(c => c.id === cardId ? (c.quantity <= 1 ? null : { ...c, quantity: c.quantity - 1 }) : c).filter(Boolean) as DeckCard[]);
-    }
+    const setter = from === 'main' ? setMainDeck : from === 'extra' ? setExtraDeck : setSideDeck;
+    setter(prev => prev.map(c => c.id === cardId ? { ...c, quantity: c.quantity - 1 } : c).filter(c => c.quantity > 0));
+  };
+
+  const removeAllOfCard = (cardId: number, from: 'main' | 'extra' | 'side') => {
+    const setter = from === 'main' ? setMainDeck : from === 'extra' ? setExtraDeck : setSideDeck;
+    setter(prev => prev.filter(c => c.id !== cardId));
+  };
+
+  const incrementCardInDeck = (card: DeckCard, from: 'main' | 'extra' | 'side') => {
+    addToDeck(card);
   };
 
   const clearDeck = () => { setMainDeck([]); setExtraDeck([]); setSideDeck([]); setCurrentDeckId(null); setCurrentDeckName(''); };
