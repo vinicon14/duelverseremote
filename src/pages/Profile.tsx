@@ -472,7 +472,7 @@ const Profile = () => {
                         {profile?.username || t('profile.user')}
                       </h1>
                       <span className="mx-auto md:mx-0 w-fit rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                        {getTcgDisplayName(activeTcg)}
+                        {getTcgDisplayName(tcgProfile?.tcg_type || activeTcg)}
                       </span>
                     </div>
                     <p className="text-sm sm:text-base text-muted-foreground mb-4">
@@ -510,7 +510,7 @@ const Profile = () => {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <Sparkles className="h-5 w-5 text-primary" />
-                      <h2 className="text-lg font-bold text-gradient-mystic">XP {getTcgDisplayName(activeTcg)}</h2>
+                      <h2 className="text-lg font-bold text-gradient-mystic">XP {getTcgDisplayName(tcgProfile?.tcg_type || activeTcg)}</h2>
                     </div>
                     <p className="text-sm text-muted-foreground">
                       Nivel {xp.level} • {xp.total.toLocaleString('pt-BR')} XP exatos • {xp.needed.toLocaleString('pt-BR')} XP para o proximo nivel
