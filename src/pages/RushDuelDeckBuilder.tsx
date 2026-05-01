@@ -487,8 +487,8 @@ export default function RushDuelDeckBuilder() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="space-y-4 order-2 lg:order-1">
             <div className="flex flex-wrap gap-2">
               <div className="flex-1 min-w-[200px]">
                 <div className="relative">
