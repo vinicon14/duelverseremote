@@ -385,7 +385,7 @@ export const DuelFieldBoard = ({
 
           {/* Monster Zones */}
           <div className="flex gap-1 sm:gap-1.5">
-            {(['monster1', 'monster2', 'monster3', 'monster4', 'monster5'] as const).map((zone, idx) => (
+            {monsterZones.map((zone, idx) => (
               <ZoneSlot
                 key={zone}
                 zone={zone}
@@ -431,7 +431,7 @@ export const DuelFieldBoard = ({
 
           {/* Spell/Trap Zones */}
           <div className="flex gap-1 sm:gap-1.5">
-            {(['spell1', 'spell2', 'spell3', 'spell4', 'spell5'] as const).map((zone, idx) => (
+            {spellZones.map((zone, idx) => (
               <ZoneSlot
                 key={zone}
                 zone={zone}
