@@ -45,6 +45,8 @@ interface DuelDeckViewerProps {
   currentUserId?: string;
   opponentUsername?: string;
   embedded?: boolean;
+  /** TCG type of the duel — when 'rush_duel', applies Rush Duel rules (3x3 board, draw-up-to-5). */
+  tcgType?: string | null;
 }
 
 const EXTRA_DECK_TYPES = ['Fusion', 'Synchro', 'XYZ', 'Link'];
@@ -172,7 +174,9 @@ export const DuelDeckViewer = ({
   currentUserId,
   opponentUsername,
   embedded = false,
+  tcgType,
 }: DuelDeckViewerProps) => {
+  const isRushDuel = tcgType === 'rush_duel';
   const [selectedEffectCard, setSelectedEffectCard] = useState<GameCard | null>(null);
   const [effectModalOpen, setEffectModalOpen] = useState(false);
   const [fieldState, setFieldState] = useState<FieldState>(INITIAL_FIELD_STATE);
