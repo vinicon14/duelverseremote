@@ -79,6 +79,8 @@ interface DuelFieldBoardProps {
   isFullscreen?: boolean;
   playmatUrl?: string | null;
   sleeveUrl?: string | null;
+  /** When 'rush_duel', renders a 3x3 board (3 monster + 3 spell zones) and hides the Extra Monster Zones (Rush Duel has no Extra Deck / EMZ). */
+  tcgType?: string | null;
 }
 
 // Local state for effect modal will be managed inside component
