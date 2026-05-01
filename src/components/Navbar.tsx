@@ -408,6 +408,10 @@ export const Navbar = () => {
                       <User className="mr-2 h-4 w-4" />
                       {t('nav.profile')}
                     </Button>
+                    <Button variant="ghost" onClick={() => toggleBgm()} className="w-full justify-start h-11 text-base">
+                      {bgmMuted ? <VolumeX className="mr-2 h-4 w-4" /> : <Music className="mr-2 h-4 w-4" />}
+                      {bgmMuted ? 'Ativar música' : 'Silenciar música'}
+                    </Button>
                     <Button variant="ghost" onClick={handleLogout} className="w-full justify-start h-11 text-base text-destructive">
                       <LogOut className="mr-2 h-4 w-4" />
                       {t('nav.logout')}
