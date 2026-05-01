@@ -442,7 +442,7 @@ const Duels = () => {
                     {t('duels.createDuel')}
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="card-mystic max-h-[85vh] overflow-y-auto overflow-x-hidden overscroll-contain">
+                <DialogContent className="card-mystic !fixed left-[50%] top-[50%] !translate-x-[-50%] !translate-y-[-50%] w-[calc(100vw-2rem)] max-w-lg max-h-[85vh] overflow-y-auto overflow-x-hidden overscroll-contain">
                   <DialogHeader>
                     <DialogTitle className="text-gradient-mystic">{t('duels.createRoom')}</DialogTitle>
                   </DialogHeader>
@@ -776,7 +776,7 @@ const Duels = () => {
           }
         }}
       >
-        <DialogContent className="card-mystic">
+        <DialogContent className="card-mystic !fixed left-[50%] top-[50%] !translate-x-[-50%] !translate-y-[-50%] w-[calc(100vw-2rem)] max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Lock className="h-5 w-5" /> Sala privada
