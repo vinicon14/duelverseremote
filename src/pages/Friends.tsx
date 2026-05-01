@@ -290,6 +290,9 @@ const Friends = () => {
         console.error('Erro ao enviar push:', pushErr);
       }
 
+      // Sincroniza o TCG ativo do criador com o TCG do duelo
+      try { localStorage.setItem('activeTcg', tcgType); } catch {}
+
       toast({
         title: t('friends.challengeSent'),
         description: t('friends.challengeSentDesc'),
