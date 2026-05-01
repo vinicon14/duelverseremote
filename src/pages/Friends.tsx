@@ -18,12 +18,12 @@ import { Users, UserPlus, Check, X, Search, Swords } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useFriendsOnlineStatus } from "@/hooks/useFriendsOnlineStatus";
 import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogDescription,
-} from "@/components/ui/alert-dialog";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { useTranslation } from "react-i18next";
 
 const Friends = () => {
@@ -569,45 +569,48 @@ const Friends = () => {
       </main>
 
       {/* TCG Selector Dialog */}
-      <AlertDialog open={!!challengeTarget} onOpenChange={(open) => { if (!open) setChallengeTarget(null); }}>
-        <AlertDialogContent className="card-mystic border-primary/30 max-w-sm">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-center text-xl">
-              <Swords className="w-6 h-6 inline mr-2" />
-              {t('friends.chooseTcg')}
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-center">
-              {t('friends.chooseTcgDesc')}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
+      <Dialog open={!!challengeTarget} onOpenChange={(open) => { if (!open) setChallengeTarget(null); }}>
+        <DialogContent className="card-mystic border-primary/30 max-w-sm w-[92vw] sm:w-full p-5 z-[100]">
+          <DialogHeader>
+            <DialogTitle className="text-center text-xl flex items-center justify-center gap-2">
+              <Swords className="w-6 h-6" />
+              {t('friends.chooseTcg', 'Escolha o modo de duelo')}
+            </DialogTitle>
+            <DialogDescription className="text-center">
+              {t('friends.chooseTcgDesc', 'Selecione qual versão de Yu-Gi-Oh! deseja jogar')}
+            </DialogDescription>
+          </DialogHeader>
           <div className="flex flex-col gap-3 mt-2">
             <Button
-              onClick={() => challengeTarget && challengeFriend(challengeTarget, 'yugioh')}
-              className="w-full h-14 text-lg"
+              type="button"
+              onClick={() => { const target = challengeTarget; if (target) challengeFriend(target, 'yugioh'); }}
+              className="w-full h-14 text-base sm:text-lg justify-start"
               variant="outline"
             >
               🃏 YGO Advanced
             </Button>
             <Button
-              onClick={() => challengeTarget && challengeFriend(challengeTarget, 'genesis')}
-              className="w-full h-14 text-lg"
+              type="button"
+              onClick={() => { const target = challengeTarget; if (target) challengeFriend(target, 'genesis'); }}
+              className="w-full h-14 text-base sm:text-lg justify-start"
               variant="outline"
             >
               ⚛️ Genesys
             </Button>
             <Button
-              onClick={() => challengeTarget && challengeFriend(challengeTarget, 'rush_duel')}
-              className="w-full h-14 text-lg"
+              type="button"
+              onClick={() => { const target = challengeTarget; if (target) challengeFriend(target, 'rush_duel'); }}
+              className="w-full h-14 text-base sm:text-lg justify-start"
               variant="outline"
             >
               ⚡ Rush Duel
             </Button>
+            <Button type="button" variant="ghost" className="mt-1" onClick={() => setChallengeTarget(null)}>
+              {t('common.cancel', 'Cancelar')}
+            </Button>
           </div>
-          <Button variant="ghost" className="mt-2" onClick={() => setChallengeTarget(null)}>
-            {t('common.cancel')}
-          </Button>
-        </AlertDialogContent>
-      </AlertDialog>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
