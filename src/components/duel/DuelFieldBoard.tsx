@@ -417,18 +417,22 @@ export const DuelFieldBoard = ({
 
         {/* Spell/Trap Row */}
         <div className="flex justify-center items-center gap-1 sm:gap-2">
-          {/* Extra Deck (Left) */}
-          <PileZone
-            zone="extraDeck"
-            cards={fieldState.extraDeck}
-            icon={Sparkles}
-            label="Extra"
-            onClick={() => onZoneClick('extraDeck')}
-            onDragOver={handleDragOver}
-            onDrop={handleDrop('extraDeck')}
-            iconColor="text-yellow-500"
-          />
-
+          {/* Extra Deck (Left) — hidden in Rush Duel */}
+          {!isRushDuel ? (
+            <PileZone
+              zone="extraDeck"
+              cards={fieldState.extraDeck}
+              icon={Sparkles}
+              label="Extra"
+              onClick={() => onZoneClick('extraDeck')}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop('extraDeck')}
+              iconColor="text-yellow-500"
+            />
+          ) : (
+            // Spacer to keep the row centered when extra deck is hidden
+            <div className="w-[44px] sm:w-[52px] md:w-[60px] shrink-0" aria-hidden />
+          )}
           {/* Spell/Trap Zones */}
           <div className="flex gap-1 sm:gap-1.5">
             {spellZones.map((zone, idx) => (
