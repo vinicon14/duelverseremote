@@ -367,6 +367,10 @@ export const Navbar = () => {
                   {t('nav.profile')}
                   {isPro && <Crown className="ml-2 w-3 h-3 text-yellow-500" />}
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => { e.preventDefault(); toggleBgm(); }}>
+                  {bgmMuted ? <VolumeX className="mr-2 h-4 w-4" /> : <Music className="mr-2 h-4 w-4" />}
+                  {bgmMuted ? 'Ativar música' : 'Silenciar música'}
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleLogout}>
                   <LogOut className="mr-2 h-4 w-4" />
                   {t('nav.logout')}
