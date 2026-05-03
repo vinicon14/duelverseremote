@@ -499,6 +499,8 @@ serve(async (req) => {
     if (requestType === "chat_to_discord") {
       const { username, avatarUrl, userId } = body;
       const ephemeral = body?.ephemeral === true;
+      const captureMessageIds = body?.captureMessageIds === true;
+      const wantPostedId = ephemeral || captureMessageIds;
       const ephemeralDelayMs =
         typeof body?.ephemeralDelayMs === "number" && body.ephemeralDelayMs > 0
           ? Math.min(body.ephemeralDelayMs, 60000)
@@ -534,18 +536,19 @@ serve(async (req) => {
       const results: Array<{ ok: boolean; url: string; status?: number; messageId?: string }> = [];
       for (const targetUrl of urls) {
         try {
-          // wait=true so we get the posted message id back to delete later
-          const url = ephemeral ? `${targetUrl}?wait=true` : targetUrl;
+          const url = wantPostedId ? `${targetUrl}?wait=true` : targetUrl;
           const response = await fetch(url, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(webhookPayload),
           });
           let messageId: string | undefined;
-          if (ephemeral && response.ok) {
+          if (wantPostedId && response.ok) {
             const posted = await response.json().catch(() => null);
             messageId = posted?.id;
-            scheduleWebhookMessageDeletion(targetUrl, messageId, ephemeralDelayMs);
+            if (ephemeral) {
+              scheduleWebhookMessageDeletion(targetUrl, messageId, ephemeralDelayMs);
+            }
           }
           results.push({ ok: response.ok, url: targetUrl, status: response.status, messageId });
         } catch (err) {
@@ -555,6 +558,94 @@ serve(async (req) => {
       }
 
       return jsonResponse({ success: results.some((r) => r.ok), ephemeral, results });
+    }
+
+    // ============================================================
+    // Cleanup: delete Discord announcement messages for a closed duel room
+    // ============================================================
+    if (requestType === "cleanup_duel_messages") {
+      const duelId = typeof body?.duelId === "string" ? body.duelId : null;
+      if (!duelId) return jsonResponse({ error: "Missing duelId" }, 400);
+
+      const { data: duel } = await supabase
+        .from("live_duels")
+        .select("discord_messages")
+        .eq("id", duelId)
+        .maybeSingle();
+
+      const messages = Array.isArray((duel as any)?.discord_messages)
+        ? (duel as any).discord_messages
+        : [];
+
+      let deleted = 0;
+      await Promise.all(
+        messages.map(async (m: any) => {
+          if (!m?.webhookUrl || !m?.messageId) return;
+          try {
+            const res = await fetch(`${m.webhookUrl}/messages/${m.messageId}`, { method: "DELETE" });
+            if (res.ok || res.status === 404) deleted++;
+          } catch (err) {
+            console.warn("[discord-bridge] cleanup_duel_messages delete error:", err);
+          }
+        }),
+      );
+
+      if (messages.length > 0) {
+        await supabase
+          .from("live_duels")
+          .update({ discord_messages: [] } as any)
+          .eq("id", duelId);
+      }
+
+      return jsonResponse({ success: true, deleted });
+    }
+
+    // ============================================================
+    // Cleanup: delete Discord matchmaking announcement messages for a user
+    // (used when a player matched directly via the matchmake RPC)
+    // ============================================================
+    if (requestType === "cleanup_matchmaking_messages") {
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader) return jsonResponse({ error: "No auth header" }, 401);
+      const token = authHeader.replace("Bearer ", "");
+      const { data: userData, error: userError } = await supabase.auth.getUser(token);
+      if (userError || !userData.user) return jsonResponse({ error: "Invalid user token" }, 401);
+
+      const { data: invites } = await supabase
+        .from("matchmaking_invites")
+        .select("id, discord_messages")
+        .eq("host_user_id", userData.user.id)
+        .in("status", ["open", "matched"]);
+
+      let deleted = 0;
+      const ids: string[] = [];
+      for (const invite of invites ?? []) {
+        const messages = Array.isArray((invite as any).discord_messages)
+          ? (invite as any).discord_messages
+          : [];
+        if (messages.length === 0) continue;
+        ids.push((invite as any).id);
+        await Promise.all(
+          messages.map(async (m: any) => {
+            if (!m?.webhookUrl || !m?.messageId) return;
+            try {
+              const res = await fetch(`${m.webhookUrl}/messages/${m.messageId}`, { method: "DELETE" });
+              if (res.ok || res.status === 404) deleted++;
+            } catch (err) {
+              console.warn("[discord-bridge] cleanup_matchmaking_messages delete error:", err);
+            }
+          }),
+        );
+      }
+
+      if (ids.length > 0) {
+        await supabase
+          .from("matchmaking_invites")
+          .update({ discord_messages: [] })
+          .in("id", ids);
+      }
+
+      return jsonResponse({ success: true, deleted });
     }
 
     if (requestType === "announce_matchmaking") {
