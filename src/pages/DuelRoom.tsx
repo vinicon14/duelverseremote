@@ -705,6 +705,11 @@ const DuelRoom = () => {
         })
         .eq('id', id);
 
+      // Apaga as mensagens de anúncio da sala no Discord
+      if (id) {
+        cleanupDuelDiscordMessages(id);
+      }
+
       // SEMPRE registrar histórico se houver ambos os jogadores (mesmo empate)
       if (duel?.id && duel?.creator_id && duel?.opponent_id) {
         try {
