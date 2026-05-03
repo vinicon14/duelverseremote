@@ -12,12 +12,12 @@ interface AnnounceParams {
 
 /**
  * Anuncia uma nova DuelRoom no chat global e no Discord.
- * Formato: "<username> @everyone remote <link>"
  *
- * O link aponta para `/join/:duelId` que faz redirecionamento inteligente:
- * - Se o usuário está no app nativo do DuelVerse → abre /duel/:id direto
- * - Se está no Discord (UA contém Discord) → fluxo simplificado / OAuth
- * - Caso contrário → site /duel/:id (pede login se necessário)
+ * - Chat global: mensagem efêmera (apagada após poucos segundos) só para
+ *   disparar realtime/notificações.
+ * - Discord: mensagem PERSISTENTE — fica no canal até a sala ser fechada.
+ *   Quando a sala fechar (`endDuel` / delete em Duels.tsx), as mensagens
+ *   são apagadas via `cleanup_duel_messages` no edge function.
  */
 export async function announceDuelRoom({
   duelId,
@@ -29,17 +29,13 @@ export async function announceDuelRoom({
   roomName,
 }: AnnounceParams): Promise<void> {
   try {
-    // Smart link: rota /join/:id que decide o melhor destino
     const baseUrl = "https://duelverse.site";
     const joinLink = `${baseUrl}/join/${duelId}`;
 
     const roomLabel = roomName?.trim() ? ` "${roomName.trim()}"` : "";
     const message = `🎮 **${username}** criou uma nova sala${roomLabel}! @everyone remote ${joinLink}`;
 
-    // 1. Postar no chat global (banco) — efêmero: a mensagem é inserida
-    //    apenas para disparar o realtime/notificações e em seguida é apagada
-    //    do banco para não poluir o histórico do chat global. A mensagem
-    //    permanente fica no Discord (passo 2).
+    // 1. Chat global (efêmero)
     const { data: chatRow, error: chatError } = await supabase
       .from("global_chat_messages")
       .insert({
@@ -52,9 +48,6 @@ export async function announceDuelRoom({
       .maybeSingle();
     if (chatError) console.warn("[announceDuelRoom] chat insert error:", chatError);
 
-    // Apaga a mensagem do chat global após um pequeno delay para garantir
-    // que clientes conectados receberam o evento de realtime e dispararam
-    // suas notificações locais. A mensagem do Discord NÃO é afetada.
     if (chatRow?.id) {
       setTimeout(() => {
         supabase
@@ -67,11 +60,9 @@ export async function announceDuelRoom({
       }, 8000);
     }
 
-    // 2. Disparar para o Discord via bridge (envia para todos os servidores parceiros)
-    //    A mensagem é marcada como efêmera: o bot remove do canal Discord após ~10s
-    //    apenas servindo como gatilho/notificação.
+    // 2. Discord — mensagem persistente, capturando IDs para cleanup posterior
     try {
-      await fetch(
+      const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/discord-bridge`,
         {
           method: "POST",
@@ -82,15 +73,46 @@ export async function announceDuelRoom({
             username,
             avatarUrl,
             userId,
-            ephemeral: true,
-            ephemeralDelayMs: 10000,
+            captureMessageIds: true,
           }),
         },
       );
+      const json = await res.json().catch(() => null);
+      const posted: Array<{ webhookUrl: string; messageId: string }> = Array.isArray(json?.results)
+        ? json.results
+            .filter((r: any) => r?.ok && r?.messageId && r?.url)
+            .map((r: any) => ({ webhookUrl: r.url, messageId: r.messageId }))
+        : [];
+
+      if (posted.length > 0) {
+        await supabase
+          .from("live_duels")
+          .update({ discord_messages: posted } as any)
+          .eq("id", duelId);
+      }
     } catch (bridgeErr) {
       console.warn("[announceDuelRoom] discord bridge error:", bridgeErr);
     }
   } catch (err) {
     console.error("[announceDuelRoom] failed:", err);
+  }
+}
+
+/**
+ * Apaga as mensagens do Discord postadas para anunciar uma sala.
+ * Deve ser chamado quando a sala for fechada (endDuel / delete).
+ */
+export async function cleanupDuelDiscordMessages(duelId: string): Promise<void> {
+  try {
+    await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/discord-bridge`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "cleanup_duel_messages", duelId }),
+      },
+    );
+  } catch (err) {
+    console.warn("[cleanupDuelDiscordMessages] failed:", err);
   }
 }

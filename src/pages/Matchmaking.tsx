@@ -155,6 +155,14 @@ export default function Matchmaking() {
     if (currentUserId.current) {
       await supabase.from('matchmaking_queue').delete().eq('user_id', currentUserId.current);
       await supabase.from('redirects').delete().eq('user_id', currentUserId.current);
+      // Apaga as mensagens de busca no Discord agora que o match foi feito
+      try {
+        await supabase.functions.invoke('discord-bridge', {
+          body: { type: 'cleanup_matchmaking_messages' },
+        });
+      } catch (e) {
+        console.warn('cleanup_matchmaking_messages skipped:', e);
+      }
     }
     
     const opponentName = await getOpponentInfo(duelId);

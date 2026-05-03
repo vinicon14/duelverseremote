@@ -28,6 +28,7 @@ import { MagicDuelViewer } from "@/components/duel/MagicDuelViewer";
 import { PokemonDuelViewer } from "@/components/duel/PokemonDuelViewer";
 import { WebRTCVideoCall, type VideoLayout, type WebRTCVideoCallHandle } from "@/components/duel/WebRTCVideoCall";
 import { useDuelDeck } from "@/hooks/useDuelDeck";
+import { cleanupDuelDiscordMessages } from "@/utils/announceDuelRoom";
 import { useDuelPresence, useDuelCleanup } from "@/hooks/useDuelPresence";
 import { getDefaultLifePoints, isLegacyMagicTcg, isLegacyPokemonTcg, isYgoStyleTcg } from "@/utils/tcgRules";
 import { DiscordVoiceRoster } from "@/components/duel/DiscordVoiceRoster";
@@ -703,6 +704,11 @@ const DuelRoom = () => {
           winner_id: finalWinnerId,
         })
         .eq('id', id);
+
+      // Apaga as mensagens de anúncio da sala no Discord
+      if (id) {
+        cleanupDuelDiscordMessages(id);
+      }
 
       // SEMPRE registrar histórico se houver ambos os jogadores (mesmo empate)
       if (duel?.id && duel?.creator_id && duel?.opponent_id) {
