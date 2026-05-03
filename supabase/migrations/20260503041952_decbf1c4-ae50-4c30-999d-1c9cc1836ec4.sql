@@ -1,0 +1,1 @@
+ALTER TABLE public.live_duels ADD COLUMN IF NOT EXISTS discord_messages jsonb NOT NULL DEFAULT '[]'::jsonb;

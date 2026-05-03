@@ -762,6 +762,7 @@ export type Database = {
           created_at: string
           creator_id: string
           custom_counters: Json
+          discord_messages: Json
           duration_minutes: number
           finished_at: string | null
           id: string
@@ -789,6 +790,7 @@ export type Database = {
           created_at?: string
           creator_id: string
           custom_counters?: Json
+          discord_messages?: Json
           duration_minutes?: number
           finished_at?: string | null
           id?: string
@@ -816,6 +818,7 @@ export type Database = {
           created_at?: string
           creator_id?: string
           custom_counters?: Json
+          discord_messages?: Json
           duration_minutes?: number
           finished_at?: string | null
           id?: string
