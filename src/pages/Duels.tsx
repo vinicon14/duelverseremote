@@ -487,31 +487,9 @@ const Duels = () => {
                     </div>
 
                     {isRanked && (
-                      <div className="space-y-2">
-                        <Label>Dificuldade ranqueada</Label>
-                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                          {RANKED_XP_DIFFICULTIES.map((difficulty) => (
-                            <Button
-                              key={difficulty.key}
-                              type="button"
-                              variant={rankedDifficulty === difficulty.key ? "default" : "outline"}
-                              onClick={() => {
-                                setRankedDifficulty(difficulty.key);
-                                localStorage.setItem(getRankedDifficultyStorageKey(activeTcg), difficulty.key);
-                              }}
-                              className={rankedDifficulty === difficulty.key ? "btn-mystic text-white" : ""}
-                            >
-                              <span className="flex flex-col text-xs leading-tight">
-                                <span>{difficulty.label}</span>
-                                <span>{difficulty.xp} XP</span>
-                              </span>
-                            </Button>
-                          ))}
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {selectedRankedDifficulty.xp.toLocaleString('pt-BR')} XP será descontado ao entrar na Duel Room.
-                        </p>
-                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        A dificuldade/aposta de XP é definida no seu Perfil ({selectedRankedDifficulty.label} · {selectedRankedDifficulty.xp.toLocaleString('pt-BR')} XP).
+                      </p>
                     )}
 
                     <div className="space-y-2">
