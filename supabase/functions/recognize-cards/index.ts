@@ -1,8 +1,10 @@
 /**
- * DuelVerse - Edge Function: Reconhecer Cartas
+ * DuelVerse - Edge Function: Reconhecimento de Cartas
  * Desenvolvido por Vinícius
- * 
- * Utiliza Lovable AI Gateway para reconhecer cartas Yu-Gi-Oh! a partir de imagens.
+ *
+ * Recebe uma imagem (base64) de uma decklist física e devolve a lista de
+ * cartas Yu-Gi-Oh! identificadas. Usa um modelo multimodal (Gemini Flash)
+ * via gateway interno do DuelVerse.
  */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -31,7 +33,7 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    console.log("Starting card recognition with Lovable AI Gateway...");
+    console.log("Iniciando reconhecimento de cartas (gateway de IA do DuelVerse)...");
 
     // Build image URL for the API
     let imageUrl = imageBase64;

@@ -27,14 +27,14 @@ e resultam em ban. Não usamos.
 Adicione duas variáveis de ambiente antes de subir o `.jar`:
 
 ```bash
-export DUELVERSE_BOT_BRIDGE_SECRET="<o mesmo secret salvo no Lovable Cloud>"
+export DUELVERSE_BOT_BRIDGE_SECRET="<o mesmo secret salvo no backend do DuelVerse>"
 # Opcional — só se quiser apontar para outro ambiente:
 export DUELVERSE_VOICE_EVENTS_URL="https://xxttwzewtqxvpgefggah.supabase.co/functions/v1/discord-voice-events"
 ```
 
 O `DUELVERSE_BOT_BRIDGE_SECRET` é o segredo compartilhado que autoriza o bot a
-chamar a edge function `discord-voice-events`. Foi gerado pelo Lovable Cloud e
-deve ser copiado exatamente.
+chamar a edge function `discord-voice-events`. Está armazenado nos secrets do
+backend do DuelVerse e deve ser copiado exatamente.
 
 ## Permissões e intents necessários
 

@@ -1,7 +1,10 @@
 /**
- * DuelVerse - Auth Email Hook
- * Intercepts Supabase Auth emails and renders custom branded templates.
- * Sends via SMTP queue (independent of Lovable).
+ * DuelVerse - Edge Function: Auth Email Hook
+ * Desenvolvido por Vinícius
+ *
+ * Intercepta os e-mails de autenticação e renderiza templates próprios
+ * com a identidade visual do DuelVerse. A entrega é feita pela fila SMTP
+ * interna do projeto, sem provedores transacionais externos.
  */
 import * as React from 'npm:react@18.3.1'
 import { renderAsync } from 'npm:@react-email/components@0.0.22'
