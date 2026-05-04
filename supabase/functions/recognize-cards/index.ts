@@ -28,36 +28,23 @@ serve(async (req) => {
       );
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) {
+      throw new Error("GEMINI_API_KEY não está configurada");
     }
 
-    console.log("Iniciando reconhecimento de cartas (gateway de IA do DuelVerse)...");
+    console.log("Iniciando reconhecimento de cartas (Gemini)...");
 
-    // Build image URL for the API
-    let imageUrl = imageBase64;
-    if (!imageBase64.startsWith("data:")) {
-      imageUrl = `data:image/jpeg;base64,${imageBase64}`;
+    // Gemini espera o base64 puro (sem o prefixo "data:image/...;base64,")
+    let rawBase64 = imageBase64;
+    let mimeType = "image/jpeg";
+    const dataUrlMatch = imageBase64.match(/^data:(image\/[a-zA-Z+]+);base64,(.+)$/);
+    if (dataUrlMatch) {
+      mimeType = dataUrlMatch[1];
+      rawBase64 = dataUrlMatch[2];
     }
 
-    const response = await fetch(
-      "https://ai.gateway.lovable.dev/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
-          messages: [
-            {
-              role: "user",
-              content: [
-                {
-                  type: "text",
-                  text: `You are the world's leading expert on Yu-Gi-Oh! Trading Card Game. Identify EVERY Yu-Gi-Oh! card visible in this image.
+    const prompt = `You are the world's leading expert on Yu-Gi-Oh! Trading Card Game. Identify EVERY Yu-Gi-Oh! card visible in this image.
 
 IDENTIFICATION TECHNIQUES:
 1. ARTWORK ANALYSIS: Study each card's unique artwork
@@ -74,18 +61,27 @@ RULES:
 
 OUTPUT: Return ONLY a JSON array of official English card names.
 Example: ["Dark Magician", "Blue-Eyes White Dragon", "Polymerization"]
-If no cards identifiable, return: []`
-                },
-                {
-                  type: "image_url",
-                  image_url: {
-                    url: imageUrl,
-                  },
-                },
+If no cards identifiable, return: []`;
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: "user",
+              parts: [
+                { text: prompt },
+                { inline_data: { mime_type: mimeType, data: rawBase64 } },
               ],
             },
           ],
-          max_tokens: 2000,
+          generationConfig: {
+            maxOutputTokens: 2000,
+            temperature: 0.2,
+          },
         }),
       }
     );
@@ -93,17 +89,18 @@ If no cards identifiable, return: []`
     if (!response.ok) {
       if (response.status === 429) {
         return new Response(
-          JSON.stringify({ error: "Rate limit exceeded. Please try again later." }),
+          JSON.stringify({ error: "Limite de requisições excedido. Tente novamente em instantes." }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
       const errorText = await response.text();
-      console.error("AI Gateway error:", response.status, errorText);
-      throw new Error("Failed to analyze image");
+      console.error("Gemini API error:", response.status, errorText);
+      throw new Error("Falha ao analisar a imagem");
     }
 
     const data = await response.json();
-    const content = data.choices?.[0]?.message?.content || "[]";
+    const content =
+      data?.candidates?.[0]?.content?.parts?.map((p: any) => p.text).filter(Boolean).join("\n") || "[]";
     
     // Parse the JSON array from the response
     let cardNames: string[] = [];
