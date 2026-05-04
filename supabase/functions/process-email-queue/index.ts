@@ -1,6 +1,10 @@
 /**
- * DuelVerse - Edge Function: Process Email Queue
- * Sends emails via SMTP (Gmail/Outlook) instead of Lovable API
+ * DuelVerse - Edge Function: Processador da Fila de E-mails
+ * Desenvolvido por Vinícius
+ *
+ * Envia e-mails pela fila SMTP própria (Gmail/Outlook), sem depender de
+ * provedores transacionais externos. Faz retry com backoff e respeita TTLs
+ * distintos para auth e transacional.
  */
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import nodemailer from 'npm:nodemailer@6.9.16'
