@@ -1,8 +1,10 @@
 /**
- * DuelVerse - TCG Context Provider
- * Sistema de perfis multi-TCG
- * 
- * Gerencia o perfil ativo do usuário e o TCG selecionado.
+ * DuelVerse - Contexto de TCG Ativo
+ * Desenvolvido por Vinícius
+ *
+ * Mantém o perfil ativo do duelista (YGO Advanced / Rush Duel / Genesis).
+ * Centraliza a regra de "um perfil por conta" e expõe helpers de normalização
+ * para lidar com nomes legados gravados em registros antigos do banco.
  */
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';

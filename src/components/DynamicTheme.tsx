@@ -1,7 +1,10 @@
 /**
- * DuelVerse - Dynamic Theme Provider
- * 
- * Aplica temas visuais diferentes baseado no TCG ativo.
+ * DuelVerse - Provider de Tema Dinâmico
+ * Desenvolvido por Vinícius
+ *
+ * Troca a paleta HSL do app conforme o TCG selecionado pelo duelista.
+ * As variáveis CSS são injetadas no :root para que toda a UI reaja
+ * sem necessidade de remontagem de componentes.
  */
 import { useEffect } from 'react';
 import { useTcg, TcgType } from '@/contexts/TcgContext';

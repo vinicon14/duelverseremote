@@ -1,338 +1,392 @@
-# DuelVerse - Plataforma de Duelos Online
+# DuelVerse
 
-Plataforma completa para duelistas de TCG que buscam competir remotamente com experiência presencial. Combine videochamadas, economia virtual e torneios estruturados em um único ambiente.
+> Plataforma global de duelos remotos de TCG ao vivo, com videochamada, economia virtual e torneios estruturados.
+>
+> 🌐 **Site oficial:** [duelverse.site](https://duelverse.site)
+> ✉️ **Contato:** duelverse.app@gmail.com
+> 👤 **Criado e mantido por:** Vinícius
 
-(https://duelverse.site)
+---
 
 ## Sumário
 
-- [Conceito Central](#conceito-central)
-- [Como Funciona](#como-funciona)
-- [Experiência do Usuário](#experiência-do-usuário)
-- [Mecânicas Principais](#mecânicas-principais)
-- [Tecnologias Utilizadas](#tecnologias-utilizadas)
-- [Animações e Efeitos Visuais](#animações-e-efeitos-visuais)
-- [Guia de Instalação](#guia-de-instalação)
-- [Contato](#contato)
-- [Visão Futura](#visão-futura)
+1. [Visão Geral](#visão-geral)
+2. [Funcionalidades](#funcionalidades)
+3. [Arquitetura](#arquitetura)
+4. [Stack Tecnológica Completa](#stack-tecnológica-completa)
+5. [Animações e Identidade Visual](#animações-e-identidade-visual)
+6. [Guia de Instalação](#guia-de-instalação)
+7. [Scripts Disponíveis](#scripts-disponíveis)
+8. [Estrutura de Pastas](#estrutura-de-pastas)
+9. [Empacotamento Multi-Plataforma](#empacotamento-multi-plataforma)
+10. [Banco de Dados e Backend](#banco-de-dados-e-backend)
+11. [Boas Práticas Adotadas](#boas-práticas-adotadas)
+12. [Contribuindo](#contribuindo)
+13. [Roadmap](#roadmap)
+14. [Licença e Contato](#licença-e-contato)
 
 ---
 
-## Conceito Central
+## Visão Geral
 
-DuelVerse nasceu da necessidade de manter a essência dos duels presenciais no ambiente digital. Em vez de simplesmente replicar mecânicas de jogo, focamos em três pilares fundamentais:
+O **DuelVerse** nasceu da insatisfação com simuladores tradicionais: eles funcionam, mas tiram o que torna o TCG presencial inesquecível — o adversário do outro lado da mesa.
 
-| Pilar | Descrição | Benefício para o Usuário |
-|-------|-----------|--------------------------|
-| Presença | Sensação de estar frente a frente com o oponente | Reduz a distância emocional do jogo online |
-| Progresso | Sistema de evolução reconhecendo dedicação e habilidade | Motivação contínua para melhorar |
-| Comunidade | Espaço seguro para conexão entre duelistas | Pertencimento e engajamento de longo prazo |
+A proposta é simples: você joga **com cartas físicas**, em videochamada com seu oponente, dentro de um ambiente que cuida do resto — pontos de vida, timer, deck virtual de apoio, ranking, economia, torneios e premiações.
 
----
+Três pilares norteiam cada decisão de produto:
 
-## Como Funciona (Fluxo Conceitual)
+| Pilar         | O que significa na prática                                                       |
+|---------------|----------------------------------------------------------------------------------|
+| **Presença**  | Câmera e voz em primeiro plano. O cenário digital nunca rouba o foco do duelo.   |
+| **Progresso** | Cada partida vale algo: XP, DuelCoins, ranking sazonal e itens cosméticos.       |
+| **Comunidade**| Torneios semanais, chat global, sistema de juízes e amigos online.               |
 
-```mermaid
-flowchart TD
-    A[Início] --> B{Escolha do Modo}
-    B -->|Duelo Casual| C[Sala de Duelo]
-    B -->|Torneio| D[Inscrição no Evento]
-    B -->|Prática| E[Treino Solo]
-    
-    C --> F[Partida em Tempo Real]
-    D --> G[Rodadas Suíças]
-    G --> H[Eliminação Direta]
-    H --> I[Premiação Automática]
-    
-    F --> J[Resultado Registrado]
-    I --> J
-    J --> K[Atualização de Perfil]
-    K --> L[Recompensas Distribuídas]
-    
-    L --> M[Novo Ciclo Começa]
-```
-
-### Elementos-Chave do Fluxo:
-1. **Início**: Sempre acessível através da página inicial intuitiva
-2. **Escolha do Modo**: Três caminhos principais baseados no objetivo do jogador
-3. **Processo**: Cada modo segue um caminho estruturado com pontos de validação
-4. **Conclusão**: Resultados alimentam o sistema de progresso para futuras partidas
+Atualmente o DuelVerse atende três perfis de jogo:
+- **YGO Advanced** — formato competitivo principal
+- **Rush Duel** — formato dinâmico/casual
+- **Genesis** — formato lendário com regras próprias
 
 ---
 
-## Experiência do Usuário por Perfil
+## Funcionalidades
 
-### Para o Novo Jogador
-- Boas-vindas guiada com tutoriais interativos
-- Salas de treinamento sem pressão competitiva
-- Sistema de correspondência baseado em nível semelhante
-- Feedback imediato após cada partida
+### Para o Duelista
+- Matchmaking ranqueado e casual com pareamento por TCG ativo
+- Sala de duelo com videochamada **WebRTC peer-to-peer** (servidores TURN OpenRelay como fallback)
+- Calculadora de LP flutuante, timer compartilhado e chat de partida
+- Construtor de decks com importação de listas, busca por arquétipo e reconhecimento de cartas por IA (Gemini)
+- Gravação da partida (MediaRecorder) com galeria pessoal e modo público/privado
+- Equipamentos cosméticos: sleeves e playmats persistidos por usuário
 
-### Para o Jogador Regular
-- Histórico detalhado de desempenho
-- Desafios diários para habilidade específica
-- Leaderboards regionais e globais
-- Eventos comunitários regulares
+### Para a Comunidade
+- **Torneios Suíços + Top 4** com inscrição por DuelCoins e premiação automática
+- **Torneios Semanais** com taxa de inscrição e prize pool acumulado
+- Chat global com menções, moderação e push notifications
+- Sistema de **juízes** com chamada via call e recompensas por atendimento
+- Ranking isolado por TCG e leaderboard global
 
-### Para o Organizador/Torneio
-- Criação simplificada de eventos com templates
-- Ferramentas de moderação embutidas
-- Distribuição automática de prêmios
-- Relatórios completos pós-evento
+### Para o Organizador / Admin
+- Dashboard administrativo (`/admin`) com gestão de usuários, torneios, marketplace e conteúdo
+- Aprovação de produtos do marketplace e curadoria de notícias
+- Distribuição de DuelCoins e gestão de pacotes pagos
+- Configuração de itens digitais (sleeves, playmats, ringtones)
+- Painel Discord para sincronização da comunidade
+
+### Plataforma
+- **PWA instalável** (Android/iOS/Desktop) com manifesto completo
+- **App Android nativo** via Capacitor (assinaturas V1/V2/V3)
+- **Versão Desktop** via Electron com instalador NSIS para Windows
+- Internacionalização em **16 idiomas** com detecção por geolocalização
+- Modo escuro nativo, animações suaves e acessibilidade
 
 ---
 
-## Mecânicas Principais (Abordagem Conceitual)
+## Arquitetura
 
-### Sistema de Duelo
 ```
-[Preparação] 
-    ↓
-[Conexão] ←→ [Sincronização de Estado]
-    ↓
-[Interação] ←→ [Comunicação em Tempo Real]
-    ↓
-[Resolução] ←→ [Validação de Jogada]
-    ↓
-[Conclusão] ←→ [Registro de Resultado]
-```
-
-### Economia Virtual
-```mermaid
-pie
-    title Fontes de DuelCoins
-    "Vitórias em Duels" : 40
-    "Participação em Torneios" : 30
-    "Missões Diárias" : 20
-    "Eventos Especiais" : 10
-```
-
-### Progressão de Habilidade
-```
-Iniciante → Aprendiz → Competente → Expert → Mestre → Lenda
-    ↑                                       ↓
-    └────────────── Sistema de Matchmaking ──────────────┘
+┌─────────────────────────────────────────────────────────┐
+│                     CLIENTES                            │
+│  PWA Web │ Android (Capacitor) │ Desktop (Electron)     │
+└────────────────────┬────────────────────────────────────┘
+                     │ HTTPS / WSS
+┌────────────────────▼────────────────────────────────────┐
+│              FRONTEND (Vite + React 18)                 │
+│  • TanStack Query (cache de dados)                      │
+│  • React Router (SPA)                                   │
+│  • i18next (16 idiomas)                                 │
+│  • Tailwind + Design Tokens HSL                         │
+└────────────────────┬────────────────────────────────────┘
+                     │
+┌────────────────────▼────────────────────────────────────┐
+│              BACKEND (Supabase)                         │
+│  • PostgreSQL com RLS em todas as tabelas               │
+│  • Auth (email + OAuth)                                 │
+│  • Realtime (presença, chat, duelos)                    │
+│  • Storage (decks, gravações, marketplace)              │
+│  • Edge Functions (Deno) — lógica atômica e webhooks    │
+└────────────────────┬────────────────────────────────────┘
+                     │
+┌────────────────────▼────────────────────────────────────┐
+│          INTEGRAÇÕES EXTERNAS                           │
+│  WebRTC P2P │ MercadoPago │ Stripe │ Discord Bot (Java) │
+│  Gemini AI  │ MailerSend  │ Push (VAPID) │ OpenRelay TURN│
+└─────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Tecnologias Utilizadas
+## Stack Tecnológica Completa
 
-### Frontend
-- **React 18.3**: Biblioteca JavaScript para construção de interfaces de usuário
-- **TypeScript 5.8**: Superset tipado do JavaScript para desenvolvimento seguro
-- **Vite 5.4**: Ferramenta de build rápida para desenvolvimento moderno
-- **Tailwind CSS 3.4**: Framework CSS utilitário para styling eficiente
-- **Headless UI/Radix**: Componentes acessíveis e não estilizados
+### Frontend Core
+| Tecnologia          | Versão   | Função                                              |
+|---------------------|----------|-----------------------------------------------------|
+| React               | 18.3     | Biblioteca de UI declarativa                        |
+| TypeScript          | 5.8      | Tipagem estática                                    |
+| Vite                | 5.4      | Build tool + dev server (SWC)                       |
+| React Router        | 6.x      | Roteamento SPA                                      |
+| TanStack Query      | 5.83     | Cache e sincronização de dados do servidor          |
+
+### Estilo e UI
+| Tecnologia          | Versão   | Função                                              |
+|---------------------|----------|-----------------------------------------------------|
+| Tailwind CSS        | 3.4      | Utility-first styling com tokens HSL                |
+| Radix UI / shadcn   | latest   | Componentes acessíveis sem opinião visual           |
+| Lucide React        | 0.462    | Ícones SVG consistentes                             |
+| Sonner              | 1.7      | Sistema de toasts                                   |
+| Framer Motion       | latest   | Animações declarativas em componentes específicos   |
+| Embla Carousel      | 8.6      | Carrosséis touch-friendly                           |
+| Recharts            | 2.15     | Gráficos para dashboards                            |
+
+### Formulários, Estado, Internacionalização
+| Tecnologia          | Versão   | Função                                              |
+|---------------------|----------|-----------------------------------------------------|
+| React Hook Form     | 7.61     | Formulários performáticos                           |
+| Zod                 | 3.25     | Validação schema-first                              |
+| i18next             | 26.0     | i18n com 16 locales                                 |
+| date-fns            | 3.6      | Manipulação de datas                                |
 
 ### Backend e Infraestrutura
-- **Supabase**: Plataforma de backend como serviço (PostgreSQL, Auth, Realtime, Edge Functions)
-- **PostgreSQL**: Banco de dados relacional para armazenamento de informações
-- **Supabase Realtime**: Sincronização de dados em tempo real entre clientes
+| Tecnologia          | Função                                                          |
+|---------------------|-----------------------------------------------------------------|
+| Supabase            | BaaS — Postgres + Auth + Realtime + Storage + Edge Functions    |
+| PostgreSQL          | Banco relacional com RLS em todas as tabelas                    |
+| Edge Functions Deno | Lógica server-side (cobranças, webhooks, push, IA)              |
+| Vault               | Armazenamento seguro de secrets                                 |
 
-### Desktop e Mobile
-- **Electron 41.1**: Framework para aplicações desktop cross-platform
-- **Capacitor 8.2**: Plataforma para aplicações nativas mobile
-- **PWA (Progressive Web App)**: Experiência de aplicativo através do navegador
+### Comunicação em Tempo Real
+| Tecnologia              | Função                                                       |
+|-------------------------|--------------------------------------------------------------|
+| WebRTC (nativo)         | Vídeo P2P na sala de duelo                                   |
+| OpenRelay TURN          | Fallback NAT traversal                                       |
+| Supabase Realtime       | Presença, chat global, sincronização de duelos               |
+| Web Push (VAPID)        | Notificações push em PWA                                     |
 
-### Comunicação e Mídia
-- **Daily.co SDK**: Integração de videochamadas de alta qualidade
-- **WebRTC**: Tecnologia subjacente para comunicação peer-to-peer
-- **Socket.io**: Comunicação em tempo real para funcionalidades específicas
+### Inteligência Artificial
+| Tecnologia              | Função                                                       |
+|-------------------------|--------------------------------------------------------------|
+| Gemini 2.5 Flash        | Reconhecimento de cartas via foto da decklist                |
 
-### Estado e Cache
-- **TanStack Query 5.83**: Gerenciamento estado do servidor e cache
-- **React Query**: Sincronização de estado entre cliente e servidor
+### Pagamentos
+| Tecnologia              | Função                                                       |
+|-------------------------|--------------------------------------------------------------|
+| MercadoPago             | Checkout PIX/cartão para o mercado brasileiro                |
+| Stripe                  | Checkout internacional                                       |
+| CartPanda               | Webhook de assinaturas legado                                |
 
-### Internacionalização
-- **i18next 26.0**: Framework para internacionalização de aplicações
-- **Browser Language Detector**: Detecção automática de idioma do navegador
+### Empacotamento Multi-Plataforma
+| Tecnologia          | Versão   | Plataforma alvo                                     |
+|---------------------|----------|-----------------------------------------------------|
+| Capacitor           | 8.2      | Android nativo                                      |
+| Electron            | 41.1     | Desktop (Windows/macOS/Linux)                       |
+| vite-plugin-pwa     | latest   | Service Worker + manifest                           |
+| Workbox             | 7.x      | Estratégias de cache do SW                          |
 
-### Formulários e Validação
-- **React Hook Form 7.61**: Gerenciamento performático de formulários
-- **Zod 3.25**: Validação de esquema TypeScript-first
-- **React Select 2.2**: Componente select personalizável e acessível
+### Bot Discord (módulo separado)
+| Tecnologia          | Função                                                          |
+|---------------------|-----------------------------------------------------------------|
+| Java 17 + Gradle    | Bot oficial DuelVerse                                           |
+| JDA                 | Cliente Discord                                                 |
 
-### UI/UX e Componentes
-- **Lucide React 0.462**: Conjunto de ícones consistentes e leves
-- **Sonner 1.7**: Sistema de notificações toast moderno
-- **Recharts 2.15**: Biblioteca de gráficos construída sobre React e D3
-- **Embla Carousel 8.6**: Carousel touch-enabled performático
-- **Date-fns 3.6**: Biblioteca moderna para manipulação de datas
-
-### Desenvolvimento e Qualidade
-- **ESLint 9.32**: Linter para identificação e correção de problemas no código
-- **TypeScript-ESSLint 8.38**: Integração entre TypeScript e ESLint
-- **Vitest**: Framework de teste rápido e moderno
-- **Playwright**: Testes end-to-end para aplicações web
-- **Biome**: Ferramenta de formatação e linting unificada
+### Qualidade e Tooling
+| Tecnologia          | Função                                                          |
+|---------------------|-----------------------------------------------------------------|
+| ESLint 9            | Linting                                                         |
+| Vitest / Playwright | Testes unitários e E2E                                          |
+| Biome               | Formatação alternativa                                          |
 
 ---
 
-## Animações e Efeitos Visuais
+## Animações e Identidade Visual
 
-DuelVerse utiliza uma abordagem sofisticada para animações que melhora a experiência do usuário sem comprometer o desempenho:
+A identidade visual do DuelVerse é construída em camadas — nenhuma animação é gratuita, todas reforçam a sensação de "estar em um duelo".
 
-### Sistema de Animações Base
-- **CSS Variables**: Todas as animações utilizam variáveis CSS para consistência temática
-- **Prefere-reduced-motion**: Respeito às configurações de acessibilidade do sistema
-- **Hardware Aceleration**: Utilização de transform e opacity para animações suaves
+### Sistema de Tokens
+Toda a paleta vive em `src/index.css` como variáveis HSL semânticas:
+```css
+:root {
+  --background: 240 10% 4%;
+  --primary: 270 80% 55%;
+  --primary-glow: 270 90% 70%;
+  --gradient-mystic: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%);
+  --shadow-mystic: 0 10px 40px -10px hsl(var(--primary) / 0.5);
+}
+```
+Quando o usuário troca de TCG, o componente `<DynamicTheme />` reescreve essas variáveis em `:root` — toda a UI reage sem remontar componentes.
 
-### Tipos de Animações Implementadas
-1. **Transições de Página**: Fade-in, slide-in, scale-in com delays escalonados
-2. **Elementos Flutuantes**: Animações de flutuação suave para elementos decorativos
-3. **Efeitos de Hover**: Transições sutis em botões e cards interativos
-4. **Indicadores de Loading**: Spinners e shimmers personalizados
-5. **Animações de Lista**: Stagger reveal para grids e listas de conteúdo
-6. **Efeitos de Glow e Pulse**: Iluminação dinâmica para elementos de destaque
-7. **Transições de Estado**: Mudanças suaves entre diferentes estados de UI
+### Catálogo de Animações
+| Classe / animação        | Onde aparece                                            |
+|--------------------------|---------------------------------------------------------|
+| `animate-fade-in-up`     | Cards de matchmaking, dashboard, listagens              |
+| `animate-card-fall-0..4` | Loader unificado entre páginas                          |
+| `page-flip-left/right`   | Transição entre rotas (efeito de virada de carta)       |
+| `animate-pulse` + `glow` | CTAs primários e elementos em destaque                  |
+| `hover-scale`            | Cards interativos                                       |
+| `story-link`             | Underline animado em links inline                       |
+| Stagger reveal           | Listas e grids com `delay-100..500`                     |
 
-### Bibliotecas Utilizadas
-- **CSS Animations nativas**: Para máximo desempenho e controle
-- **Framer Motion** (em alguns componentes): Para animações complexas quando necessário
-- **Animate.css** (seletivamente): Para efeitos pré-definidos de uso comum
-
-### Otimizações de Performance
-- **will-change**: Otimização para propriedades animadas frequentemente
-- **contain**: Isolamento de elementos animados para reduzir reflows
-- **requestAnimationFrame**: Sincronização com o ciclo de atualização da tela
-- **Debounce e Throttle**: Controle de frequência para animações baseadas em scroll
+### Otimizações
+- `prefers-reduced-motion`: respeitado globalmente
+- Apenas `transform` e `opacity` para garantir aceleração de GPU
+- `will-change` aplicado seletivamente em elementos animados frequentemente
+- Loader unificado de página (`UnifiedPageLoader`) com fade controlado em 450ms
 
 ---
 
 ## Guia de Instalação
 
 ### Pré-requisitos
+- **Node.js** ≥ 18
+- **npm** ≥ 9 (ou pnpm/yarn)
+- **Git**
+- (Opcional) Android Studio para builds Android
+- (Opcional) JDK 17 para o bot Discord
 
-Antes de começar, certifique-se de ter instalado:
-- Node.js versão 18.0 ou superior
-- npm versão 9.0 ou superior (ou yarn/pnpm)
-- Git para controle de versão
-- Supabase account (para configurar o backend)
-
-### Passo a Passo
-
-#### 1. Clonagem do Repositório
+### 1. Clonar o repositório
 ```bash
 git clone https://github.com/vinicon14/duelverseremote.git
 cd duelverseremote
 ```
 
-#### 2. Instalação de Dependências
+### 2. Instalar dependências
 ```bash
 npm install
 ```
 
-#### 3. Configuração do Ambiente
-Crie um arquivo `.env` na raiz do projeto baseado no `.env.example`:
-
+### 3. Variáveis de ambiente
+Crie um `.env` na raiz baseado em `.env.example`:
 ```env
-VITE_SUPABASE_URL=seu_projeto.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=sua_chave_anon
+VITE_SUPABASE_URL=https://seu-projeto.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=sua_chave_publica_anon
+VITE_SUPABASE_PROJECT_ID=seu_project_id
 ```
 
-> **Importante**: Nunca commit seu arquivo `.env` público. Mantenha suas credenciais seguras.
+> ⚠️ Nunca versione o `.env`. Chaves anônimas do Supabase são públicas por design (RLS protege os dados), mas trate qualquer outro segredo com cuidado.
 
-#### 4. Inicialização do Servidor de Desenvolvimento
+### 4. Rodar em desenvolvimento
 ```bash
 npm run dev
 ```
+Acesse http://localhost:8080.
 
-O aplicativo estará disponível em http://localhost:8080
-
-#### 5. Build para Produção
+### 5. Build de produção
 ```bash
 npm run build
-```
-
-Os arquivos de produção serão gerados no diretório `dist/`
-
-#### 6. Visualização da Build de Produção
-```bash
-npm run preview
-```
-
-### Scripts Disponíveis
-
-| Script | Descrição |
-|--------|-----------|
-| `npm run dev` | Inicia o servidor de desenvolvimento com hot reload |
-| `npm run build` | Cria a versão de produção otimizada |
-| `npm run preview` | Visualiza a build de produção localmente |
-| `npm run lint` | Executa o ESLint para verificação de código |
-| `npm run package:win` | Cria pacote instalável para Windows (Electron) |
-| `npm run installer:win` | Cria instalador Windows usando NSIS |
-
-### Variáveis de Ambiente Necessárias
-
-| Variável | Descrição | Obrigatório |
-|----------|-----------|-------------|
-| VITE_SUPABASE_URL | URL do projeto Supabase | Sim |
-| VITE_SUPABASE_PUBLISHABLE_KEY | Chave pública anonima do Supabase | Sim |
-| VITE_GOOGLE_API_KEY | Chave da API do Google Translate (opcional) | Não |
-| VITE_DAILY_CO_KEY | Chave da API do Daily.co para videochamadas | Sim (para funcionalidade completa) |
-
-### Docker (Alternativa)
-
-Para desenvolvimento usando containers:
-```bash
-# Construir a imagem
-docker build -t duelverse .
-
-# Executar o container
-docker run -p 8080:80 duelverse
-```
-
-### Solução de Problemas Comuns
-
-#### Erro de Dependências
-Se encontrar problemas com dependências:
-```bash
-rm -rf node_modules package-lock.json
-npm install
-```
-
-#### Porta já em uso
-Se a porta 8080 estiver ocupada:
-```bash
-# Alterar a porta temporariamente
-npm run dev -- --port 3000
-```
-
-#### Problemas de Build
-Limpar cache de build:
-```bash
-npm run build -- --emptyOutDir
+npm run preview   # serve o build localmente
 ```
 
 ---
 
-## Contato
+## Scripts Disponíveis
 
-**Email oficial**: duelverse.app@gmail.com  
-**Website**: https://duelverse.site  
-**Suporte**: Resposta em até 24 horas úteis  
-
-Para relatar bugs, sugerir funcionalidades ou contribuir com o projeto, por favor utilize o sistema de Issues do GitHub.
+| Script                      | Descrição                                                |
+|-----------------------------|----------------------------------------------------------|
+| `npm run dev`               | Servidor de desenvolvimento com HMR                      |
+| `npm run build`             | Build otimizado para produção em `dist/`                 |
+| `npm run preview`           | Serve o build localmente                                 |
+| `npm run lint`              | Roda ESLint em todo o projeto                            |
+| `npm run package:win`       | Empacota app desktop para Windows (Electron)             |
+| `npm run installer:win`     | Gera instalador `.exe` via NSIS                          |
+| `npx cap sync android`      | Sincroniza assets para o projeto Android                 |
+| `npx cap open android`      | Abre Android Studio com o projeto                        |
 
 ---
 
-## Visão Futura
+## Estrutura de Pastas
 
-DuelVerse vê além do simples jogo online. Nosso roadmap conceitual inclui:
+```
+duelverseremote/
+├── src/
+│   ├── components/        # Componentes React reutilizáveis (UI, duelo, admin)
+│   ├── pages/             # Rotas top-level (Home, DuelRoom, Auth, Admin...)
+│   ├── hooks/             # Custom hooks (useTcg, useDuelDeck, useAdmin...)
+│   ├── contexts/          # Providers globais (TcgContext)
+│   ├── integrations/      # Cliente Supabase (auto-gerado)
+│   ├── i18n/              # Traduções e detecção de locale
+│   ├── utils/             # Helpers puros (sfx, push, plataforma)
+│   └── data/              # Dados estáticos (genesys points, etc.)
+├── supabase/
+│   ├── functions/         # Edge Functions (Deno)
+│   ├── config.toml        # Configuração do projeto Supabase
+│   └── migrations/        # Histórico SQL versionado
+├── android/               # Projeto Android nativo (Capacitor)
+├── electron/              # Entry points do app desktop
+├── public/                # Assets estáticos servidos como-está
+└── database/              # SQL utilitários e resets
+```
 
-| Horizonte | Foco | Objetivo |
-|-----------|------|----------|
-| **Curto Prazo** (3-6 meses) | Estabilização da experiência core | Reduzir friction para novos usuários |
-| **Médio Prazo** (6-12 meses) | Expansão de modos de jogo | Incluir formatos alternativos e colaborativos |
-| **Longo Prazo** (1+ ano) | Ecossistema integrado | Conectar duelistas, criadores de conteúdo e lojas físicas |
+---
 
-### Principais Objetivos de Desenvolvimento
-1. **Mobile First Experience**: Otimização completa para dispositivos móveis
-2. **Integração com Mercados Parceiros**: Conectar com lojas físicas e online de TCG
-3. **Modo Espectador Avançado**: Recursos para transmissão e comentários de duelos
-4. **Sistema de Clãs e Guildas**: Comunidades estruturadas para colaboração de longo prazo
-5. **Mercado NFT Integrado**: Criação e troca de colecionáveis digitais exclusivos
+## Empacotamento Multi-Plataforma
 
-*Última atualização: Abril de 2026*  
-*Desenvolvido com foco na experiência humana por trás de cada carta virada.*
+### PWA (padrão)
+Já vem configurado em `vite.config.ts` via `vite-plugin-pwa`. Após `npm run build`, o app fica instalável em qualquer navegador moderno.
+
+### Android
+```bash
+npm run build
+npx cap sync android
+npx cap open android
+# build no Android Studio (Generate Signed Bundle/APK)
+```
+Use sempre assinaturas **V1 + V2 + V3** ao publicar na Play Store.
+
+### Desktop (Windows)
+```bash
+npm run package:win     # gera pasta empacotada
+npm run installer:win   # gera .exe instalador (NSIS)
+```
+
+---
+
+## Banco de Dados e Backend
+
+- Toda tabela em `public` tem **RLS habilitado** — leitura/escrita só com auth válida.
+- Roles ficam em uma tabela `user_roles` separada (`admin`, `judge`, `pro`...) com função `has_role()` `SECURITY DEFINER` para evitar recursão.
+- Operações financeiras (DuelCoins, torneios) acontecem em **funções RPC atômicas** que registram em ledger.
+- Webhooks de pagamento (MercadoPago/Stripe) são edge functions com `verify_jwt = false`.
+- Notificações push usam VAPID + service worker (`public/push-sw.js`).
+
+---
+
+## Boas Práticas Adotadas
+
+- ✅ Nenhuma cor hard-coded em componentes — apenas tokens semânticos
+- ✅ Nenhum dado sensível no client — RLS + edge functions cobrem tudo
+- ✅ Single TCG Policy: um perfil por conta, isolamento estrito de dados
+- ✅ Lazy loading de todas as rotas para reduzir bundle inicial
+- ✅ Internacionalização completa em 16 idiomas
+- ✅ Acessibilidade: respeitamos `prefers-reduced-motion`, semântica HTML5
+- ✅ SEO: meta tags multilíngues, JSON-LD, sitemap, hreflang completo
+
+---
+
+## Contribuindo
+
+Sugestões e relatos de bug são bem-vindos via Issues do GitHub. Para PRs:
+1. Abra uma issue antes para alinhar escopo
+2. Mantenha o estilo do design system (tokens HSL, sem cores cruas)
+3. Inclua testes quando alterar lógica crítica de duelo/economia
+4. Descreva o problema e a solução com clareza no PR
+
+---
+
+## Roadmap
+
+| Horizonte         | Foco                                                                |
+|-------------------|---------------------------------------------------------------------|
+| Curto (3-6 meses) | Estabilidade da experiência core, redução de fricção para iniciantes|
+| Médio (6-12 meses)| Novos formatos, modo espectador avançado, integração com lojas      |
+| Longo (1+ ano)    | Ecossistema integrado: criadores, lojas físicas, NFTs colecionáveis |
+
+---
+
+## Licença e Contato
+
+**Projeto:** DuelVerse
+**Autor:** Vinícius
+**Email oficial:** duelverse.app@gmail.com
+**Site:** [duelverse.site](https://duelverse.site)
+
+> *"Construído por um duelista, para duelistas. Cada decisão de produto passa primeiro pela mesa de jogo."*
+
+*Última atualização: Maio de 2026*
