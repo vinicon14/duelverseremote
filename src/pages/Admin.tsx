@@ -23,6 +23,7 @@ import { AdminSubscriptionPlans } from "@/components/admin/AdminSubscriptionPlan
 import { AdminMarketplace } from "@/components/admin/AdminMarketplace";
 import { AdminDuelCoinsPackages } from "@/components/admin/AdminDuelCoinsPackages";
 import { AdminDiscord } from "@/components/admin/AdminDiscord";
+import { AdminCoupons } from "@/components/admin/AdminCoupons";
 import { Shield, Loader2 } from "lucide-react";
 
 export default function Admin() {
