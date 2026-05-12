@@ -567,6 +567,51 @@ const Profile = () => {
             </Card>
             </div>
 
+            {/* XP por modo (todos os TCGs) */}
+            <Card className="card-mystic animate-fade-in-up">
+              <CardContent className="pt-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <Sparkles className="h-5 w-5 text-amber-400" />
+                  <h2 className="text-lg font-bold text-gradient-mystic">XP em todos os modos</h2>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {(['yugioh', 'genesis', 'rush_duel'] as const).map((mode) => {
+                    const p = allTcgProfiles.find((x) => x.tcg_type === mode);
+                    const total = p?.xp_total || 0;
+                    const lvl = p?.xp_level || Math.floor(total / 100) + 1;
+                    const progress = Math.max(total - (lvl - 1) * 100, 0);
+                    const percent = Math.min(100, (progress / 100) * 100);
+                    const isActive = mode === activeTcg;
+                    return (
+                      <div
+                        key={mode}
+                        className={`rounded-lg border p-3 space-y-2 transition-all ${
+                          isActive
+                            ? 'border-primary/60 bg-primary/10 ring-1 ring-primary/40'
+                            : 'border-border/60 bg-background/40'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-semibold">{getTcgDisplayName(mode)}</span>
+                          {isActive && <span className="text-[10px] uppercase text-primary font-bold">Ativo</span>}
+                        </div>
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-2xl font-extrabold bg-gradient-to-br from-yellow-300 via-amber-400 to-orange-500 bg-clip-text text-transparent">
+                            Lv {lvl}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {total.toLocaleString('pt-BR')} XP
+                          </span>
+                        </div>
+                        <Progress value={percent} className="h-2" />
+                        <p className="text-[10px] text-muted-foreground">{progress}/100 XP no nível</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+
             <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
               <TabsList className="grid h-auto w-full grid-cols-2 rounded-xl bg-card/80 p-1 md:grid-cols-4">
                 <TabsTrigger value="stats" className="gap-2">
