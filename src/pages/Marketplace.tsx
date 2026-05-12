@@ -19,7 +19,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { useToast } from "@/hooks/use-toast";
 import { useAccountType } from "@/hooks/useAccountType";
 import { supabase } from "@/integrations/supabase/client";
-import { ShoppingCart, Coins, Package, Sparkles, Zap, Minus, Plus, X, Loader2, ShoppingBag, Check, Store as StoreIcon, PlusCircle, Tag, Crown, Upload, Image, Search, Edit, Trash2, ToggleLeft, ToggleRight } from "lucide-react";
+import { ShoppingCart, Coins, Package, Sparkles, Zap, Minus, Plus, X, Loader2, ShoppingBag, Check, Store as StoreIcon, PlusCircle, Tag, Crown, Upload, Image, Search, Edit, Trash2, ToggleLeft, ToggleRight, Ticket } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -76,6 +76,37 @@ export default function Marketplace() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Coupon state (applied at checkout)
+  const [couponInput, setCouponInput] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount_percent: number } | null>(null);
+  const [validatingCoupon, setValidatingCoupon] = useState(false);
+
+  const applyCoupon = async () => {
+    const code = couponInput.trim().toUpperCase();
+    if (!code) return;
+    setValidatingCoupon(true);
+    try {
+      const { data, error } = await (supabase as any).rpc("validate_marketplace_coupon", { p_code: code });
+      if (error) throw error;
+      if (!data?.valid) {
+        toast({ title: "Cupom inválido", description: data?.message || "Código inválido", variant: "destructive" });
+        setAppliedCoupon(null);
+        return;
+      }
+      setAppliedCoupon({ code: data.code, discount_percent: data.discount_percent });
+      toast({ title: "Cupom aplicado!", description: `${data.discount_percent}% de desconto` });
+    } catch (err: any) {
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    } finally {
+      setValidatingCoupon(false);
+    }
+  };
+
+  const clearCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponInput("");
+  };
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -238,13 +269,38 @@ export default function Marketplace() {
   const cartTotal = cart.reduce((sum, item) => sum + item.product.price_duelcoins * item.quantity, 0);
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
+
+  const notifyAdminsAboutPurchase = async (summary: string) => {
+    try {
+      const { data: buyerData } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('user_id', user.id)
+        .single();
+      const { data: admins } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'admin');
+      if (admins && admins.length > 0) {
+        const notifications = admins.map((admin) => ({
+          user_id: admin.user_id,
+          type: 'marketplace_purchase',
+          title: 'Nova Compra! 💰',
+          message: `${buyerData?.username || 'Um usuário'} ${summary}`,
+          read: false,
+        }));
+        await supabase.from('notifications').insert(notifications);
+      }
+    } catch (e) {
+      console.error('notify admins failed', e);
+    }
+  };
+
   const handleBuyDirect = async (product: MarketplaceProduct) => {
     if (!user) {
       toast({ title: "Faça login", description: "Você precisa estar logado para comprar", variant: "destructive" });
       return;
     }
-
-    // Check stock if applicable
     if (product.stock !== null && product.stock <= 0) {
       toast({ title: "Erro", description: "Produto sem estoque", variant: "destructive" });
       return;
@@ -252,136 +308,34 @@ export default function Marketplace() {
 
     setPurchasing(true);
     try {
-      // Check balance first
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('duelcoins_balance')
-        .eq('user_id', user.id)
-        .single();
+      const { data, error } = await (supabase as any).rpc("purchase_marketplace_items", {
+        p_items: [{ product_id: product.id, quantity: 1 }],
+        p_coupon_code: appliedCoupon?.code ?? null,
+      });
 
-      if (!profile || profile.duelcoins_balance < product.price_duelcoins) {
-        toast({ title: "Saldo insuficiente", description: "Você não tem DuelCoins suficientes", variant: "destructive" });
-        setPurchasing(false);
+      if (error) throw error;
+      if (!data?.success) {
+        toast({ title: "Erro", description: data?.message || "Falha na compra", variant: "destructive" });
         return;
       }
 
-      // Deduct balance
-      await supabase
-        .from('profiles')
-        .update({ duelcoins_balance: profile.duelcoins_balance - product.price_duelcoins })
-        .eq('user_id', user.id);
+      const total = data.total ?? product.price_duelcoins;
+      const discount = data.discount ?? 0;
 
-      // Reduce stock if applicable
-      if (product.stock !== null) {
-        await supabase
-          .from('marketplace_products')
-          .update({ stock: product.stock - 1 })
-          .eq('id', product.id);
-      }
+      await notifyAdminsAboutPurchase(
+        `comprou ${product.name} por ${total} DuelCoins${discount > 0 ? ` (cupom -${discount} DC)` : ''}`
+      );
 
-      // Record transaction
-      await supabase
-        .from('duelcoins_transactions')
-        .insert({
-          sender_id: user.id,
-          amount: product.price_duelcoins,
-          transaction_type: 'marketplace_purchase',
-          description: `Compra: ${product.name}`
-        });
-
-      // Add to inventory
-      const { error: inventoryError } = await supabase
-        .from('user_inventory' as any)
-        .insert({
-          user_id: user.id,
-          product_id: product.id,
-          quantity: 1,
-          is_used: false
-        });
-
-      if (inventoryError) {
-        console.error('Inventory error:', inventoryError);
-        throw new Error(`Erro ao adicionar ao inventário: ${inventoryError.message}`);
-      }
-
-      // Record purchase
-      const { error: purchaseError } = await supabase
-        .from('marketplace_purchases')
-        .insert({
-          user_id: user.id,
-          product_id: product.id,
-          quantity: 1,
-          total_price: product.price_duelcoins,
-          status: 'completed'
-        });
-
-      if (purchaseError) {
-        console.error('Purchase error:', purchaseError);
-        throw new Error(`Erro ao registrar compra: ${purchaseError.message}`);
-      }
-
-      // Transfer DuelCoins to third-party seller
-      if (product.is_third_party_seller && product.seller_id) {
-        // Fetch seller's current balance and increment
-        const { data: sellerData } = await supabase
-          .from('profiles')
-          .select('duelcoins_balance')
-          .eq('user_id', product.seller_id)
-          .single();
-        
-        if (sellerData) {
-          await supabase
-            .from('profiles')
-            .update({ duelcoins_balance: sellerData.duelcoins_balance + product.price_duelcoins })
-            .eq('user_id', product.seller_id);
-        }
-
-        // Record transfer transaction
-        await supabase
-          .from('duelcoins_transactions')
-          .insert({
-            sender_id: user.id,
-            receiver_id: product.seller_id,
-            amount: product.price_duelcoins,
-            transaction_type: 'marketplace_purchase',
-            description: `Compra terceiro: ${product.name}`
-          });
-      }
-
-      // Get buyer username
-      const { data: buyerData } = await supabase
-        .from('profiles')
-        .select('username')
-        .eq('user_id', user.id)
-        .single();
-
-      // Notify all admins about the purchase
-      const { data: admins } = await supabase
-        .from('user_roles')
-        .select('user_id')
-        .eq('role', 'admin');
-
-      if (admins && admins.length > 0) {
-        const notifications = admins.map((admin) => ({
-          user_id: admin.user_id,
-          type: 'marketplace_purchase',
-          title: 'Nova Compra! 💰',
-          message: `${buyerData?.username || 'Um usuário'} comprou ${product.name} por ${product.price_duelcoins} DuelCoins`,
-          read: false
-        }));
-
-        await supabase
-          .from('notifications')
-          .insert(notifications);
-      }
-
-      toast({ 
-        title: "Compra realizada! ✅", 
-        description: `Você comprou ${product.name}! Verifique em Meus Itens.`,
-        duration: 5000
+      toast({
+        title: "Compra realizada! ✅",
+        description: discount > 0
+          ? `Você comprou ${product.name} com desconto! Total: ${total} DC`
+          : `Você comprou ${product.name}! Verifique em Meus Itens.`,
+        duration: 5000,
       });
       setPurchaseSuccess(true);
       setTimeout(() => setPurchaseSuccess(false), 2000);
+      clearCoupon();
       fetchUser();
       fetchProducts();
     } catch (err: any) {
@@ -398,127 +352,41 @@ export default function Marketplace() {
     }
     if (cart.length === 0) return;
 
-    // Check stock for all items
-    for (const item of cart) {
-      if (item.product.stock !== null && item.product.stock < item.quantity) {
-        toast({ title: "Estoque insuficiente", description: `Produto ${item.product.name} não tem estoque suficiente`, variant: "destructive" });
-        return;
-      }
-    }
-
     setPurchasing(true);
     try {
-      const total = cart.reduce((sum, item) => sum + item.product.price_duelcoins * item.quantity, 0);
+      const items = cart.map((item) => ({
+        product_id: item.product.id,
+        quantity: item.quantity,
+      }));
 
-      // Check balance first
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('duelcoins_balance')
-        .eq('user_id', user.id)
-        .single();
+      const { data, error } = await (supabase as any).rpc("purchase_marketplace_items", {
+        p_items: items,
+        p_coupon_code: appliedCoupon?.code ?? null,
+      });
 
-      if (!profile || profile.duelcoins_balance < total) {
-        toast({ title: "Saldo insuficiente", description: "Você não tem DuelCoins suficientes", variant: "destructive" });
-        setPurchasing(false);
+      if (error) throw error;
+      if (!data?.success) {
+        toast({ title: "Erro", description: data?.message || "Falha na compra", variant: "destructive" });
         return;
       }
 
-      // Deduct balance
-      await supabase
-        .from('profiles')
-        .update({ duelcoins_balance: profile.duelcoins_balance - total })
-        .eq('user_id', user.id);
+      const total = data.total ?? 0;
+      const discount = data.discount ?? 0;
+      const buyerItems = cart.map((item) => item.product.name).join(', ');
 
-      // Reduce stock for each item
-      for (const item of cart) {
-        if (item.product.stock !== null) {
-          await supabase
-            .from('marketplace_products')
-            .update({ stock: item.product.stock - item.quantity })
-            .eq('id', item.product.id);
-        }
-      }
+      await notifyAdminsAboutPurchase(
+        `comprou ${cart.length} itens (${buyerItems}) por ${total} DuelCoins${discount > 0 ? ` (cupom -${discount} DC)` : ''}`
+      );
 
-      // Record transaction
-      await supabase
-        .from('duelcoins_transactions')
-        .insert({
-          sender_id: user.id,
-          amount: total,
-          transaction_type: 'marketplace_purchase',
-          description: `Compra no carrinho: ${cart.length} itens`
-        });
-
-      // Process each item
-      for (const item of cart) {
-        // Add to inventory
-        const { error: inventoryError } = await supabase
-          .from('user_inventory' as any)
-          .insert({
-            user_id: user.id,
-            product_id: item.product.id,
-            quantity: item.quantity,
-            is_used: false
-          });
-
-        if (inventoryError) {
-          console.error('Inventory error:', inventoryError);
-          throw new Error(`Erro ao adicionar ${item.product.name} ao inventário: ${inventoryError.message}`);
-        }
-
-        // Record purchase
-        const { error: purchaseError } = await supabase
-          .from('marketplace_purchases')
-          .insert({
-            user_id: user.id,
-            product_id: item.product.id,
-            quantity: item.quantity,
-            total_price: item.product.price_duelcoins * item.quantity,
-            status: 'completed'
-          });
-
-        if (purchaseError) {
-          console.error('Purchase error:', purchaseError);
-          throw new Error(`Erro ao registrar compra de ${item.product.name}: ${purchaseError.message}`);
-        }
-      }
-
-      // Notify about the purchase
-      const buyerItems = cart.map(item => item.product.name).join(', ');
-      
-      // Get buyer username
-      const { data: buyerData } = await supabase
-        .from('profiles')
-        .select('username')
-        .eq('user_id', user.id)
-        .single();
-
-      // Notify all admins about the purchase
-      const { data: admins } = await supabase
-        .from('user_roles')
-        .select('user_id')
-        .eq('role', 'admin');
-
-      if (admins && admins.length > 0) {
-        const notifications = admins.map((admin) => ({
-          user_id: admin.user_id,
-          type: 'marketplace_purchase',
-          title: 'Nova Compra no Carrinho! 💰',
-          message: `${buyerData?.username || 'Um usuário'} comprou ${cart.length} itens (${buyerItems}) por ${total} DuelCoins`,
-          read: false
-        }));
-
-        await supabase
-          .from('notifications')
-          .insert(notifications);
-      }
-
-      toast({ 
-        title: "Compra realizada! ✅", 
-        description: `Total: ${total} DuelCoins! Verifique em Meus Itens.`,
-        duration: 5000
+      toast({
+        title: "Compra realizada! ✅",
+        description: discount > 0
+          ? `Total: ${total} DuelCoins (desconto de ${discount} DC)! Verifique em Meus Itens.`
+          : `Total: ${total} DuelCoins! Verifique em Meus Itens.`,
+        duration: 5000,
       });
       setCart([]);
+      clearCoupon();
       setPurchaseSuccess(true);
       setTimeout(() => setPurchaseSuccess(false), 2000);
       fetchUser();
@@ -755,24 +623,84 @@ export default function Marketplace() {
 
                     <div className="mt-4 space-y-3">
                       <Separator />
-                      <div className="flex justify-between items-center text-lg font-bold">
-                        <span>{t('marketplace.total')}</span>
-                        <span className="text-secondary flex items-center gap-1">
-                          <Coins className="w-5 h-5" />
-                          {cartTotal.toLocaleString()}
-                        </span>
+
+                      {/* Coupon */}
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                          <Ticket className="w-3 h-3" /> Cupom de desconto
+                        </label>
+                        {appliedCoupon ? (
+                          <div className="flex items-center justify-between gap-2 p-2 rounded-md bg-primary/10 border border-primary/30">
+                            <div className="text-xs">
+                              <span className="font-mono font-bold">{appliedCoupon.code}</span>
+                              <span className="ml-2 text-primary">-{appliedCoupon.discount_percent}%</span>
+                            </div>
+                            <Button size="sm" variant="ghost" onClick={clearCoupon} className="h-6 px-2 text-xs">
+                              Remover
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex gap-2">
+                            <Input
+                              placeholder="Insira o código"
+                              value={couponInput}
+                              onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                              maxLength={32}
+                              className="h-8 text-sm font-mono"
+                              onKeyDown={(e) => { if (e.key === 'Enter') applyCoupon(); }}
+                            />
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={applyCoupon}
+                              disabled={validatingCoupon || !couponInput.trim()}
+                            >
+                              {validatingCoupon ? <Loader2 className="w-3 h-3 animate-spin" /> : "Aplicar"}
+                            </Button>
+                          </div>
+                        )}
                       </div>
-                      {cartTotal > balance && (
-                        <p className="text-xs text-destructive">{t('marketplace.insufficientBalance')}</p>
-                      )}
-                      <Button
-                        className="w-full btn-mystic"
-                        disabled={purchasing || cartTotal > balance}
-                        onClick={handleCheckout}
-                      >
-                        {purchasing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Check className="w-4 h-4 mr-2" />}
-                        {t('marketplace.checkout')}
-                      </Button>
+
+                      {(() => {
+                        const discount = appliedCoupon
+                          ? Math.floor((cartTotal * appliedCoupon.discount_percent) / 100)
+                          : 0;
+                        const finalTotal = cartTotal - discount;
+                        return (
+                          <>
+                            {discount > 0 && (
+                              <div className="flex justify-between items-center text-sm text-muted-foreground">
+                                <span>Subtotal</span>
+                                <span>{cartTotal.toLocaleString()}</span>
+                              </div>
+                            )}
+                            {discount > 0 && (
+                              <div className="flex justify-between items-center text-sm text-primary">
+                                <span>Desconto ({appliedCoupon!.discount_percent}%)</span>
+                                <span>-{discount.toLocaleString()}</span>
+                              </div>
+                            )}
+                            <div className="flex justify-between items-center text-lg font-bold">
+                              <span>{t('marketplace.total')}</span>
+                              <span className="text-secondary flex items-center gap-1">
+                                <Coins className="w-5 h-5" />
+                                {finalTotal.toLocaleString()}
+                              </span>
+                            </div>
+                            {finalTotal > balance && (
+                              <p className="text-xs text-destructive">{t('marketplace.insufficientBalance')}</p>
+                            )}
+                            <Button
+                              className="w-full btn-mystic"
+                              disabled={purchasing || finalTotal > balance}
+                              onClick={handleCheckout}
+                            >
+                              {purchasing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Check className="w-4 h-4 mr-2" />}
+                              {t('marketplace.checkout')}
+                            </Button>
+                          </>
+                        );
+                      })()}
                     </div>
                   </>
                 )}
