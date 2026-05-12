@@ -250,6 +250,35 @@ export default function BuyDuelCoins() {
 
           <DuelCoinsBalance />
 
+          {/* Coupon */}
+          <Card className="card-mystic">
+            <CardContent className="py-4">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Ticket className="w-5 h-5 text-amber-400" />
+                <span className="font-semibold">Cupom de desconto</span>
+                {appliedCoupon ? (
+                  <Badge className="bg-gradient-to-r from-amber-400 to-yellow-500 text-black font-bold ml-2">
+                    {appliedCoupon.code} · -{appliedCoupon.discount}%
+                    <button onClick={() => { setAppliedCoupon(null); setCouponInput(""); }} className="ml-2"><X className="w-3 h-3" /></button>
+                  </Badge>
+                ) : (
+                  <div className="flex gap-2 flex-1 min-w-[200px]">
+                    <Input
+                      placeholder="Digite o código"
+                      value={couponInput}
+                      onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                      className="uppercase"
+                      maxLength={32}
+                    />
+                    <Button onClick={handleApplyCoupon} disabled={validatingCoupon || !couponInput.trim()} variant="secondary">
+                      {validatingCoupon ? <Loader2 className="w-4 h-4 animate-spin" /> : "Aplicar"}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
           {packages.length === 0 ? (
             <Card className="card-mystic">
               <CardContent className="py-12 text-center">
@@ -281,7 +310,7 @@ export default function BuyDuelCoins() {
                   )}
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <Coins className="w-5 h-5 text-yellow-500" />
+                      <Coins className="w-5 h-5 text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.7)]" />
                       {pkg.name}
                     </CardTitle>
                     {pkg.description && (
@@ -290,15 +319,27 @@ export default function BuyDuelCoins() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="text-center">
-                      <div className="text-3xl font-bold text-yellow-500">
+                      <div className="text-4xl font-extrabold bg-gradient-to-br from-yellow-300 via-amber-400 to-orange-500 bg-clip-text text-transparent drop-shadow-[0_0_8px_rgba(251,191,36,0.4)]">
                         {pkg.duelcoins_amount.toLocaleString('pt-BR')}
                       </div>
                       <div className="text-sm text-muted-foreground">DuelCoins</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-2xl font-bold text-primary">
-                        R$ {Number(pkg.price_brl).toFixed(2).replace('.', ',')}
-                      </div>
+                      {appliedCoupon ? (
+                        <div>
+                          <div className="text-sm text-muted-foreground line-through">
+                            R$ {Number(pkg.price_brl).toFixed(2).replace('.', ',')}
+                          </div>
+                          <div className="text-2xl font-bold text-green-500">
+                            R$ {computePrice(Number(pkg.price_brl)).toFixed(2).replace('.', ',')}
+                          </div>
+                          <div className="text-xs text-amber-400 font-semibold">-{appliedCoupon.discount}% com {appliedCoupon.code}</div>
+                        </div>
+                      ) : (
+                        <div className="text-2xl font-bold text-primary">
+                          R$ {Number(pkg.price_brl).toFixed(2).replace('.', ',')}
+                        </div>
+                      )}
                     </div>
                     <div className="flex flex-col gap-2">
                       <Button
