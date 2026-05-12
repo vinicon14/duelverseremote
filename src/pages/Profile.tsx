@@ -63,6 +63,7 @@ const Profile = () => {
 
   const [profile, setProfile] = useState<any>(null);
   const [tcgProfile, setTcgProfile] = useState<any>(null);
+  const [allTcgProfiles, setAllTcgProfiles] = useState<any[]>([]);
   const [recentMatches, setRecentMatches] = useState<any[]>([]);
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [dailyQuests, setDailyQuests] = useState<DailyQuest[]>([]);
@@ -202,6 +203,14 @@ const Profile = () => {
       setProfile(loadedProfile);
       setTcgProfile(tcgResult.status === 'fulfilled' ? tcgResult.value : null);
       setDailyQuests(questsResult.status === 'fulfilled' ? questsResult.value : []);
+
+      // Load XP for all TCG modes (yugioh / genesis / rush_duel)
+      const { data: allProfiles } = await supabase
+        .from('tcg_profiles')
+        .select('tcg_type, xp_total, xp_level, points, level, wins, losses')
+        .eq('user_id', targetUserId);
+      if (!cancelled) setAllTcgProfiles(allProfiles || []);
+
       setProfileLoading(false);
 
       const [matchesResult, recordingsResult] = await Promise.allSettled([
