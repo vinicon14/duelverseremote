@@ -445,7 +445,7 @@ const Profile = () => {
           renderProfileSkeleton()
         ) : (
           <>
-            <div className="mb-6 grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(340px,0.9fr)]">
+            <div className="mb-6 grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(380px,0.9fr)]">
             <Card className="card-mystic h-full animate-fade-in-up">
               <CardContent className="pt-4 sm:pt-6">
                 <div className="flex flex-col md:flex-row items-center md:items-start gap-4 sm:gap-6">
