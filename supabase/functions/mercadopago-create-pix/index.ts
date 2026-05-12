@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { package_id } = await req.json();
+    const { package_id, coupon_code } = await req.json();
 
     // Get package details
     const { data: pkg, error: pkgError } = await supabase
@@ -66,6 +66,23 @@ Deno.serve(async (req) => {
       .eq('user_id', user.id)
       .single();
 
+    // Apply coupon if provided
+    let discountPercent = 0;
+    let appliedCoupon: string | null = null;
+    let finalPrice = Number(pkg.price_brl);
+    if (coupon_code && typeof coupon_code === 'string' && coupon_code.trim().length > 0) {
+      const { data: cpn, error: cpnErr } = await supabase.rpc('apply_coupon', { p_code: coupon_code.trim() });
+      if (cpnErr || !cpn || !cpn[0]?.success) {
+        return new Response(JSON.stringify({ error: 'Cupom inválido', detail: cpn?.[0]?.message }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      discountPercent = Number(cpn[0].discount_percent) || 0;
+      appliedCoupon = coupon_code.trim().toUpperCase();
+      finalPrice = Math.max(0.01, Number((finalPrice * (1 - discountPercent / 100)).toFixed(2)));
+    }
+
     // Create MercadoPago payment
     const mpResponse = await fetch('https://api.mercadopago.com/v1/payments', {
       method: 'POST',
@@ -75,8 +92,8 @@ Deno.serve(async (req) => {
         'X-Idempotency-Key': `${user.id}-${package_id}-${Date.now()}`,
       },
       body: JSON.stringify({
-        transaction_amount: Number(pkg.price_brl),
-        description: `DuelCoins - ${pkg.name}`,
+        transaction_amount: finalPrice,
+        description: `DuelCoins - ${pkg.name}${appliedCoupon ? ` (${appliedCoupon})` : ''}`,
         payment_method_id: 'pix',
         payer: {
           email: user.email || `${profile?.username || 'user'}@duelverse.app`,
@@ -108,11 +125,13 @@ Deno.serve(async (req) => {
       .insert({
         user_id: user.id,
         package_id: pkg.id,
-        amount_brl: pkg.price_brl,
+        amount_brl: finalPrice,
         duelcoins_amount: pkg.duelcoins_amount,
         status: 'pending',
         external_order_id: String(mpData.id),
         payment_method: 'pix',
+        coupon_code: appliedCoupon,
+        discount_percent: discountPercent,
       });
 
     if (orderError) {
@@ -129,7 +148,10 @@ Deno.serve(async (req) => {
       qr_code: qrCode,
       qr_code_base64: qrCodeBase64,
       ticket_url: ticketUrl,
-      amount_brl: pkg.price_brl,
+      amount_brl: finalPrice,
+      original_price_brl: pkg.price_brl,
+      discount_percent: discountPercent,
+      coupon_code: appliedCoupon,
       duelcoins_amount: pkg.duelcoins_amount,
     }), {
       status: 200,
