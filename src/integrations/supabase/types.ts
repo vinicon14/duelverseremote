@@ -2280,6 +2280,7 @@ export type Database = {
         }[]
       }
       compute_xp_level: { Args: { _total: number }; Returns: number }
+      consume_coupon: { Args: { p_code: string }; Returns: boolean }
       create_normal_tournament:
         | {
             Args: {

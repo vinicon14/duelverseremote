@@ -147,6 +147,12 @@ Deno.serve(async (req) => {
       })
       .eq('id', order.id);
 
+    // Consume coupon now that payment is confirmed (no-op if none)
+    if (order.coupon_code) {
+      const { error: cErr } = await supabase.rpc('consume_coupon', { p_code: order.coupon_code });
+      if (cErr) console.error('[MercadoPago Webhook] consume_coupon error:', cErr);
+    }
+
     // Create notification
     await supabase.rpc('create_notification', {
       p_user_id: order.user_id,
