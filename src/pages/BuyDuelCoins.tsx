@@ -8,9 +8,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Coins, ShoppingCart, Star, History, Loader2, Copy, CheckCircle2, QrCode, CreditCard } from "lucide-react";
+import { Coins, ShoppingCart, Star, History, Loader2, Copy, CheckCircle2, QrCode, CreditCard, Ticket, X } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { useBanCheck } from "@/hooks/useBanCheck";
 
 interface DuelCoinsPackage {
@@ -59,6 +60,9 @@ export default function BuyDuelCoins() {
   const [pixDialogOpen, setPixDialogOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const pollInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [couponInput, setCouponInput] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number } | null>(null);
+  const [validatingCoupon, setValidatingCoupon] = useState(false);
 
   useEffect(() => {
     checkAuthAndLoad();
@@ -126,11 +130,29 @@ export default function BuyDuelCoins() {
     setOrders((data as any[]) || []);
   };
 
+  const handleApplyCoupon = async () => {
+    const code = couponInput.trim().toUpperCase();
+    if (!code) return;
+    setValidatingCoupon(true);
+    const { data, error } = await supabase.rpc('validate_coupon', { p_code: code });
+    setValidatingCoupon(false);
+    const result = (data as any)?.[0];
+    if (error || !result?.valid) {
+      toast({ title: "Cupom inválido", description: result?.message || error?.message, variant: "destructive" });
+      return;
+    }
+    setAppliedCoupon({ code, discount: result.discount_percent });
+    toast({ title: `Cupom aplicado! -${result.discount_percent}%` });
+  };
+
+  const computePrice = (basePrice: number) =>
+    appliedCoupon ? Math.max(0.01, +(basePrice * (1 - appliedCoupon.discount / 100)).toFixed(2)) : basePrice;
+
   const handleBuyPix = async (pkg: DuelCoinsPackage) => {
     setBuying(pkg.id);
     try {
       const { data, error } = await supabase.functions.invoke('mercadopago-create-pix', {
-        body: { package_id: pkg.id },
+        body: { package_id: pkg.id, coupon_code: appliedCoupon?.code },
       });
 
       if (error) throw error;
@@ -161,7 +183,7 @@ export default function BuyDuelCoins() {
     setBuyingCard(pkg.id);
     try {
       const { data, error } = await supabase.functions.invoke('mercadopago-create-checkout', {
-        body: { package_id: pkg.id, origin_url: window.location.origin },
+        body: { package_id: pkg.id, origin_url: window.location.origin, coupon_code: appliedCoupon?.code },
       });
 
       if (error) throw error;
