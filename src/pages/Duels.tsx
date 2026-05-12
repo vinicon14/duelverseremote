@@ -384,6 +384,13 @@ const Duels = () => {
 
       console.log('[Duels] Update result:', updateResult);
 
+      // Sala fechou (alguém entrou) — apaga a mensagem de anúncio no Discord
+      try {
+        cleanupDuelDiscordMessages(duelId);
+      } catch (e) {
+        console.warn('cleanupDuelDiscordMessages skipped:', e);
+      }
+
       toast({
         title: t('duels.joiningMatch'),
         description: t('duels.joiningMatchDesc'),
