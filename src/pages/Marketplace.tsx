@@ -77,6 +77,37 @@ export default function Marketplace() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Coupon state (applied at checkout)
+  const [couponInput, setCouponInput] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount_percent: number } | null>(null);
+  const [validatingCoupon, setValidatingCoupon] = useState(false);
+
+  const applyCoupon = async () => {
+    const code = couponInput.trim().toUpperCase();
+    if (!code) return;
+    setValidatingCoupon(true);
+    try {
+      const { data, error } = await (supabase as any).rpc("validate_marketplace_coupon", { p_code: code });
+      if (error) throw error;
+      if (!data?.valid) {
+        toast({ title: "Cupom inválido", description: data?.message || "Código inválido", variant: "destructive" });
+        setAppliedCoupon(null);
+        return;
+      }
+      setAppliedCoupon({ code: data.code, discount_percent: data.discount_percent });
+      toast({ title: "Cupom aplicado!", description: `${data.discount_percent}% de desconto` });
+    } catch (err: any) {
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    } finally {
+      setValidatingCoupon(false);
+    }
+  };
+
+  const clearCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponInput("");
+  };
+
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
