@@ -623,24 +623,84 @@ export default function Marketplace() {
 
                     <div className="mt-4 space-y-3">
                       <Separator />
-                      <div className="flex justify-between items-center text-lg font-bold">
-                        <span>{t('marketplace.total')}</span>
-                        <span className="text-secondary flex items-center gap-1">
-                          <Coins className="w-5 h-5" />
-                          {cartTotal.toLocaleString()}
-                        </span>
+
+                      {/* Coupon */}
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                          <Ticket className="w-3 h-3" /> Cupom de desconto
+                        </label>
+                        {appliedCoupon ? (
+                          <div className="flex items-center justify-between gap-2 p-2 rounded-md bg-primary/10 border border-primary/30">
+                            <div className="text-xs">
+                              <span className="font-mono font-bold">{appliedCoupon.code}</span>
+                              <span className="ml-2 text-primary">-{appliedCoupon.discount_percent}%</span>
+                            </div>
+                            <Button size="sm" variant="ghost" onClick={clearCoupon} className="h-6 px-2 text-xs">
+                              Remover
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex gap-2">
+                            <Input
+                              placeholder="Insira o código"
+                              value={couponInput}
+                              onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                              maxLength={32}
+                              className="h-8 text-sm font-mono"
+                              onKeyDown={(e) => { if (e.key === 'Enter') applyCoupon(); }}
+                            />
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={applyCoupon}
+                              disabled={validatingCoupon || !couponInput.trim()}
+                            >
+                              {validatingCoupon ? <Loader2 className="w-3 h-3 animate-spin" /> : "Aplicar"}
+                            </Button>
+                          </div>
+                        )}
                       </div>
-                      {cartTotal > balance && (
-                        <p className="text-xs text-destructive">{t('marketplace.insufficientBalance')}</p>
-                      )}
-                      <Button
-                        className="w-full btn-mystic"
-                        disabled={purchasing || cartTotal > balance}
-                        onClick={handleCheckout}
-                      >
-                        {purchasing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Check className="w-4 h-4 mr-2" />}
-                        {t('marketplace.checkout')}
-                      </Button>
+
+                      {(() => {
+                        const discount = appliedCoupon
+                          ? Math.floor((cartTotal * appliedCoupon.discount_percent) / 100)
+                          : 0;
+                        const finalTotal = cartTotal - discount;
+                        return (
+                          <>
+                            {discount > 0 && (
+                              <div className="flex justify-between items-center text-sm text-muted-foreground">
+                                <span>Subtotal</span>
+                                <span>{cartTotal.toLocaleString()}</span>
+                              </div>
+                            )}
+                            {discount > 0 && (
+                              <div className="flex justify-between items-center text-sm text-primary">
+                                <span>Desconto ({appliedCoupon!.discount_percent}%)</span>
+                                <span>-{discount.toLocaleString()}</span>
+                              </div>
+                            )}
+                            <div className="flex justify-between items-center text-lg font-bold">
+                              <span>{t('marketplace.total')}</span>
+                              <span className="text-secondary flex items-center gap-1">
+                                <Coins className="w-5 h-5" />
+                                {finalTotal.toLocaleString()}
+                              </span>
+                            </div>
+                            {finalTotal > balance && (
+                              <p className="text-xs text-destructive">{t('marketplace.insufficientBalance')}</p>
+                            )}
+                            <Button
+                              className="w-full btn-mystic"
+                              disabled={purchasing || finalTotal > balance}
+                              onClick={handleCheckout}
+                            >
+                              {purchasing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Check className="w-4 h-4 mr-2" />}
+                              {t('marketplace.checkout')}
+                            </Button>
+                          </>
+                        );
+                      })()}
                     </div>
                   </>
                 )}
