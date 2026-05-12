@@ -94,12 +94,22 @@ export default function ProfileSelect() {
                 </CardTitle>
                 <CardDescription>{profile.username}</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="flex gap-4 text-sm text-muted-foreground">
+              <CardContent className="space-y-2">
+                <div className="flex gap-3 text-sm text-muted-foreground flex-wrap">
                   <span className="text-green-400">{profile.wins}W</span>
                   <span className="text-red-400">{profile.losses}L</span>
                   <span className="text-primary">{profile.points} pts</span>
-                  <span className="flex items-center gap-1"><Crown className="w-3 h-3" /> Lv.{profile.level}</span>
+                </div>
+                <div className="flex items-center justify-between rounded-md border border-amber-400/30 bg-amber-500/5 px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <Crown className="w-4 h-4 text-amber-400" />
+                    <span className="text-sm font-bold bg-gradient-to-r from-yellow-300 to-amber-500 bg-clip-text text-transparent">
+                      Lv {profile.xp_level || profile.level || 1}
+                    </span>
+                  </div>
+                  <span className="text-xs text-muted-foreground font-semibold">
+                    {(profile.xp_total || 0).toLocaleString('pt-BR')} XP
+                  </span>
                 </div>
               </CardContent>
             </Card>
