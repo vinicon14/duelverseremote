@@ -402,7 +402,7 @@ export default function BuyDuelCoins() {
                           <TableCell className="text-xs">
                             {new Date(order.created_at).toLocaleString('pt-BR')}
                           </TableCell>
-                          <TableCell className="font-bold text-yellow-500">
+                          <TableCell className="font-extrabold bg-gradient-to-r from-yellow-300 to-amber-500 bg-clip-text text-transparent">
                             {order.duelcoins_amount} <Coins className="w-3 h-3 inline" />
                           </TableCell>
                           <TableCell>
