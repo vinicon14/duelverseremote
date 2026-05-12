@@ -508,35 +508,24 @@ const DuelRoom = () => {
       const wantsToSpectate = entryRole === 'spectate' || entryRole === 'judge';
 
       if (!isAlreadyInDuel && !wantsToSpectate) {
-        // Try to join an open slot only if user is not explicitly spectating
-        let joinedSlot: string | null = null;
-        if (!data.opponent_id) {
-          joinedSlot = 'opponent_id';
-        } else if (maxPlayers >= 3 && !(data as any).player3_id) {
-          joinedSlot = 'player3_id';
-        } else if (maxPlayers >= 4 && !(data as any).player4_id) {
-          joinedSlot = 'player4_id';
-        }
+        // Try to join an open slot via secure RPC (atomic + validated server-side)
+        const hasOpenSlot =
+          !data.opponent_id ||
+          (maxPlayers >= 3 && !(data as any).player3_id) ||
+          (maxPlayers >= 4 && !(data as any).player4_id);
 
-        if (joinedSlot) {
+        if (hasOpenSlot) {
           try {
-            const updateData: any = { [joinedSlot]: userId };
-            // Check if all slots are now filled
-            const filledAfter = [data.creator_id, data.opponent_id, (data as any).player3_id, (data as any).player4_id]
-              .filter(Boolean).length + 1;
-            if (filledAfter >= maxPlayers) {
-              updateData.status = 'in_progress';
-            }
+            const { data: joinResult, error: joinError } = await (supabase as any)
+              .rpc('join_duel', { p_duel_id: id });
 
-            const { error: updateError } = await supabase
-              .from('live_duels')
-              .update(updateData)
-              .eq('id', id);
-
-            if (updateError) {
-              toast({ title: t('duelRoom.toastJoinErrorTitle'), description: t('duelRoom.toastJoinErrorDesc'), variant: "destructive" });
-              navigate('/duels');
-              return;
+            if (joinError || !joinResult?.joined) {
+              if (joinError) {
+                toast({ title: t('duelRoom.toastJoinErrorTitle'), description: t('duelRoom.toastJoinErrorDesc'), variant: "destructive" });
+                navigate('/duels');
+                return;
+              }
+              // joined=false but no error => already in or full; fall through to reload
             }
 
             // Reload duel data
