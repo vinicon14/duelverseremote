@@ -2427,10 +2427,15 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_recording_views: {
+        Args: { p_recording_id: string }
+        Returns: undefined
+      }
       increment_video_views: { Args: { video_id: string }; Returns: undefined }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_direct_video_access: { Args: never; Returns: boolean }
       is_judge: { Args: { _user_id: string }; Returns: boolean }
+      join_duel: { Args: { p_duel_id: string }; Returns: Json }
       join_weekly_tournament: {
         Args: { p_tournament_id: string }
         Returns: Json
