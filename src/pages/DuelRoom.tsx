@@ -540,6 +540,13 @@ const DuelRoom = () => {
               .maybeSingle();
 
             if (updatedData) data = updatedData;
+
+            // Sala fechou (jogador entrou) — apaga as mensagens de anúncio do Discord
+            try {
+              if (id) cleanupDuelDiscordMessages(id);
+            } catch (e) {
+              console.warn('cleanupDuelDiscordMessages skipped:', e);
+            }
           } catch (error) {
             toast({ title: t('duelRoom.toastJoinErrorTitle'), description: t('duelRoom.toastJoinErrorGeneric'), variant: "destructive" });
             navigate('/duels');
