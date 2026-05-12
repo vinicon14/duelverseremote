@@ -22,7 +22,7 @@ import { GlobalChat } from "@/components/GlobalChat";
 import { cleanupAllEmptyDuels } from "@/hooks/useDuelPresence";
 import { useTcg } from "@/contexts/TcgContext";
 import { detectPlatform } from "@/utils/platformDetection";
-import { announceDuelRoom } from "@/utils/announceDuelRoom";
+import { announceDuelRoom, cleanupDuelDiscordMessages } from "@/utils/announceDuelRoom";
 import { getDefaultLifePoints, isLegacyMagicTcg } from "@/utils/tcgRules";
 import { RANKED_XP_DIFFICULTIES, getRankedDifficulty, getRankedDifficultyStorageKey, type RankedXpDifficultyKey } from "@/utils/xpRewards";
 import { useTranslation } from "react-i18next";
@@ -383,6 +383,13 @@ const Duels = () => {
       }
 
       console.log('[Duels] Update result:', updateResult);
+
+      // Sala fechou (alguém entrou) — apaga a mensagem de anúncio no Discord
+      try {
+        cleanupDuelDiscordMessages(duelId);
+      } catch (e) {
+        console.warn('cleanupDuelDiscordMessages skipped:', e);
+      }
 
       toast({
         title: t('duels.joiningMatch'),

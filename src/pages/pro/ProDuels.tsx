@@ -125,6 +125,14 @@ export default function ProDuels() {
 
       if (error) throw error;
 
+      // Sala fechou — apaga a mensagem de anúncio no Discord
+      try {
+        const { cleanupDuelDiscordMessages } = await import('@/utils/announceDuelRoom');
+        cleanupDuelDiscordMessages(duelId);
+      } catch (e) {
+        console.warn('cleanupDuelDiscordMessages skipped:', e);
+      }
+
       navigate(`/duel/${duelId}`);
     } catch (error: any) {
       toast({
