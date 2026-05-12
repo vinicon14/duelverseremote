@@ -127,6 +127,10 @@ export default function Admin() {
             <AdminMarketplace />
           </TabsContent>
 
+          <TabsContent value="coupons" className="mt-6">
+            <AdminCoupons />
+          </TabsContent>
+
           <TabsContent value="settings" className="mt-6">
             <AdminSettings />
           </TabsContent>
