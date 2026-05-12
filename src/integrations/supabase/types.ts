@@ -232,48 +232,6 @@ export type Database = {
           },
         ]
       }
-      discount_coupons: {
-        Row: {
-          code: string
-          created_at: string
-          created_by: string | null
-          description: string | null
-          discount_percent: number
-          expires_at: string | null
-          id: string
-          is_active: boolean
-          max_uses: number | null
-          times_used: number
-          updated_at: string
-        }
-        Insert: {
-          code: string
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          discount_percent: number
-          expires_at?: string | null
-          id?: string
-          is_active?: boolean
-          max_uses?: number | null
-          times_used?: number
-          updated_at?: string
-        }
-        Update: {
-          code?: string
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          discount_percent?: number
-          expires_at?: string | null
-          id?: string
-          is_active?: boolean
-          max_uses?: number | null
-          times_used?: number
-          updated_at?: string
-        }
-        Relationships: []
-      }
       duel_invites: {
         Row: {
           created_at: string
@@ -2457,9 +2415,7 @@ export type Database = {
         }
         Returns: number
       }
-      purchase_marketplace_items:
-        | { Args: { p_items: Json }; Returns: Json }
-        | { Args: { p_coupon_code?: string; p_items: Json }; Returns: Json }
+      purchase_marketplace_items: { Args: { p_items: Json }; Returns: Json }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
@@ -2511,7 +2467,6 @@ export type Database = {
         Returns: Json
       }
       use_inventory_item: { Args: { p_inventory_id: string }; Returns: Json }
-      validate_marketplace_coupon: { Args: { p_code: string }; Returns: Json }
     }
     Enums: {
       account_type: "free" | "pro"
