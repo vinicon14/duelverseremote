@@ -506,7 +506,7 @@ const Profile = () => {
 
             <Card className="card-mystic h-full animate-fade-in-up">
               <CardContent className="pt-5">
-                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div className="flex flex-col gap-4 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <Sparkles className="h-5 w-5 text-primary" />
