@@ -78,6 +78,7 @@ export default function Admin() {
             <TabsTrigger value="judges">{t('admin.tabs.judges')}</TabsTrigger>
             <TabsTrigger value="plans">{t('admin.tabs.plans')}</TabsTrigger>
             <TabsTrigger value="marketplace">{t('admin.tabs.marketplace')}</TabsTrigger>
+            <TabsTrigger value="coupons">Cupons</TabsTrigger>
             <TabsTrigger value="settings">{t('admin.tabs.settings')}</TabsTrigger>
             </TabsList>
           </div>
