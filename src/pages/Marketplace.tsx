@@ -269,32 +269,6 @@ export default function Marketplace() {
   const cartTotal = cart.reduce((sum, item) => sum + item.product.price_duelcoins * item.quantity, 0);
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
-  const handleBuyDirect = async (product: MarketplaceProduct) => {
-    if (!user) {
-      toast({ title: "Faça login", description: "Você precisa estar logado para comprar", variant: "destructive" });
-      return;
-    }
-
-    // Check stock if applicable
-    if (product.stock !== null && product.stock <= 0) {
-      toast({ title: "Erro", description: "Produto sem estoque", variant: "destructive" });
-      return;
-    }
-
-    setPurchasing(true);
-    try {
-      // Check balance first
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('duelcoins_balance')
-        .eq('user_id', user.id)
-        .single();
-
-      if (!profile || profile.duelcoins_balance < product.price_duelcoins) {
-        toast({ title: "Saldo insuficiente", description: "Você não tem DuelCoins suficientes", variant: "destructive" });
-        setPurchasing(false);
-        return;
-      }
 
   const notifyAdminsAboutPurchase = async (summary: string) => {
     try {
