@@ -2174,6 +2174,45 @@ export type Database = {
       }
     }
     Views: {
+      discord_links_admin_view: {
+        Row: {
+          discord_avatar_url: string | null
+          discord_email: string | null
+          discord_global_name: string | null
+          discord_id: string | null
+          discord_username: string | null
+          id: string | null
+          linked_at: string | null
+          token_expires_at: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          discord_avatar_url?: string | null
+          discord_email?: string | null
+          discord_global_name?: string | null
+          discord_id?: string | null
+          discord_username?: string | null
+          id?: string | null
+          linked_at?: string | null
+          token_expires_at?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          discord_avatar_url?: string | null
+          discord_email?: string | null
+          discord_global_name?: string | null
+          discord_id?: string | null
+          discord_username?: string | null
+          id?: string | null
+          linked_at?: string | null
+          token_expires_at?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       public_profiles: {
         Row: {
           avatar_url: string | null
