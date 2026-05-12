@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { package_id, origin_url } = await req.json();
+    const { package_id, origin_url, coupon_code } = await req.json();
 
     // Get package details
     const { data: pkg, error: pkgError } = await supabase
@@ -59,6 +59,23 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Apply coupon if provided
+    let discountPercent = 0;
+    let appliedCoupon: string | null = null;
+    let finalPrice = Number(pkg.price_brl);
+    if (coupon_code && typeof coupon_code === 'string' && coupon_code.trim().length > 0) {
+      const { data: cpn, error: cpnErr } = await supabase.rpc('apply_coupon', { p_code: coupon_code.trim() });
+      if (cpnErr || !cpn || !cpn[0]?.success) {
+        return new Response(JSON.stringify({ error: 'Cupom inválido', detail: cpn?.[0]?.message }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      discountPercent = Number(cpn[0].discount_percent) || 0;
+      appliedCoupon = coupon_code.trim().toUpperCase();
+      finalPrice = Math.max(0.01, Number((finalPrice * (1 - discountPercent / 100)).toFixed(2)));
+    }
+
     // Create MercadoPago Preference (Checkout Pro) - supports card + PIX + boleto
     const mpResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
       method: 'POST',
@@ -69,10 +86,10 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         items: [
           {
-            title: `DuelCoins - ${pkg.name}`,
+            title: `DuelCoins - ${pkg.name}${appliedCoupon ? ` (${appliedCoupon})` : ''}`,
             description: `${pkg.duelcoins_amount} DuelCoins`,
             quantity: 1,
-            unit_price: Number(pkg.price_brl),
+            unit_price: finalPrice,
             currency_id: 'BRL',
           },
         ],
@@ -112,11 +129,13 @@ Deno.serve(async (req) => {
       .insert({
         user_id: user.id,
         package_id: pkg.id,
-        amount_brl: pkg.price_brl,
+        amount_brl: finalPrice,
         duelcoins_amount: pkg.duelcoins_amount,
         status: 'pending',
         external_order_id: mpData.id,
         payment_method: 'card',
+        coupon_code: appliedCoupon,
+        discount_percent: discountPercent,
       });
 
     return new Response(JSON.stringify({

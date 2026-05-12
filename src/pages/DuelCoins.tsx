@@ -207,7 +207,7 @@ export default function DuelCoins() {
         <div className="max-w-4xl mx-auto space-y-6">
           <div className="text-center space-y-2">
             <h1 className="text-4xl font-bold gradient-text flex items-center justify-center gap-2">
-              <Coins className="w-10 h-10 text-yellow-500" />
+              <Coins className="w-10 h-10 text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.6)]" />
               {t('duelCoins.title')}
             </h1>
             <p className="text-muted-foreground">
@@ -267,7 +267,7 @@ export default function DuelCoins() {
                     size="lg"
                     className="flex-1 bg-yellow-500/10 border-yellow-500/30 hover:bg-yellow-500/20"
                   >
-                    <Coins className="w-4 h-4 mr-2 text-yellow-500" />
+                    <Coins className="w-4 h-4 mr-2 text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.6)]" />
                     {t('duelCoins.buy')}
                   </Button>
                   <Button
@@ -340,7 +340,7 @@ export default function DuelCoins() {
                               <span className={received ? "text-green-500" : "text-muted-foreground"}>
                                 {received ? '+' : '-'}{tx.amount}
                               </span>
-                              <Coins className="w-3 h-3 inline ml-1 text-yellow-500" />
+                              <Coins className="w-3 h-3 inline ml-1 text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.6)]" />
                             </TableCell>
                           </TableRow>
                         );

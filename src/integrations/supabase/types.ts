@@ -315,7 +315,9 @@ export type Database = {
       duelcoins_orders: {
         Row: {
           amount_brl: number
+          coupon_code: string | null
           created_at: string
+          discount_percent: number
           duelcoins_amount: number
           external_order_id: string | null
           external_payment_id: string | null
@@ -329,7 +331,9 @@ export type Database = {
         }
         Insert: {
           amount_brl: number
+          coupon_code?: string | null
           created_at?: string
+          discount_percent?: number
           duelcoins_amount: number
           external_order_id?: string | null
           external_payment_id?: string | null
@@ -343,7 +347,9 @@ export type Database = {
         }
         Update: {
           amount_brl?: number
+          coupon_code?: string | null
           created_at?: string
+          discount_percent?: number
           duelcoins_amount?: number
           external_order_id?: string | null
           external_payment_id?: string | null
@@ -2226,6 +2232,14 @@ export type Database = {
         }
         Returns: Json
       }
+      apply_coupon: {
+        Args: { p_code: string }
+        Returns: {
+          discount_percent: number
+          message: string
+          success: boolean
+        }[]
+      }
       award_xp: {
         Args: { _amount: number; _reason?: string; _tcg_type: string }
         Returns: Json
@@ -2516,6 +2530,14 @@ export type Database = {
         Returns: Json
       }
       use_inventory_item: { Args: { p_inventory_id: string }; Returns: Json }
+      validate_coupon: {
+        Args: { p_code: string }
+        Returns: {
+          discount_percent: number
+          message: string
+          valid: boolean
+        }[]
+      }
       validate_marketplace_coupon: { Args: { p_code: string }; Returns: Json }
     }
     Enums: {
