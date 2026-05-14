@@ -74,14 +74,14 @@ export const DuelCoinsBalance = () => {
   }
 
   return (
-    <Card className="card-mystic border-amber-400/40 bg-gradient-to-br from-amber-500/5 to-orange-500/5">
+    <Card className="card-mystic border-yellow-400/40 bg-gradient-to-br from-yellow-400/10 to-yellow-500/10">
       <CardContent className="p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Coins className="w-7 h-7 text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.7)]" />
+            <Coins className="w-7 h-7 text-yellow-300 drop-shadow-[0_0_8px_rgba(250,204,21,0.7)]" />
             <div>
               <p className="text-xs text-muted-foreground">Seu Saldo</p>
-              <p className="text-2xl font-extrabold bg-gradient-to-br from-yellow-300 via-amber-400 to-orange-500 bg-clip-text text-transparent">{balance}</p>
+              <p className="text-2xl font-extrabold bg-gradient-to-br from-yellow-200 via-yellow-300 to-yellow-500 bg-clip-text text-transparent">{balance}</p>
             </div>
           </div>
           <div className="text-xs text-muted-foreground text-right font-semibold">
