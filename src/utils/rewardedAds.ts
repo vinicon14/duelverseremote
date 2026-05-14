@@ -6,7 +6,7 @@ declare global {
   }
 }
 
-type RewardedAdProvider = "easyplatform" | "google_ad_manager" | "easyplatform_dev" | "adsense_internal";
+type RewardedAdProvider = "easyplatform" | "google_ad_manager" | "easyplatform_dev" | "adsense_internal" | "adsterra" | "adsterra_dev";
 
 type RewardedAdResult = {
   provider: RewardedAdProvider;
@@ -94,11 +94,20 @@ const DEV_REWARDED_AD_UNIT = "/22639388115/rewarded_web_example";
 const EASYPLATFORM_LOGIN_URL = "https://easyplatform.com/login.php";
 
 const getRewardedProvider = (): RewardedAdProvider => {
-  const provider = String(import.meta.env.VITE_REWARDED_AD_PROVIDER || "easyplatform").toLowerCase();
+  const provider = String(import.meta.env.VITE_REWARDED_AD_PROVIDER || "adsterra").toLowerCase();
   if (provider === "google_ad_manager") return "google_ad_manager";
   if (provider === "adsense_internal") return "adsense_internal";
-  return "easyplatform" as RewardedAdProvider;
+  if (provider === "easyplatform") return "easyplatform";
+  return "adsterra" as RewardedAdProvider;
 };
+
+const getAdsterraConfig = () => ({
+  directLink: import.meta.env.VITE_ADSTERRA_DIRECT_LINK || "",
+  scriptUrl: import.meta.env.VITE_ADSTERRA_SCRIPT_URL || "",
+  iframeUrl: import.meta.env.VITE_ADSTERRA_IFRAME_URL || "",
+  zoneId: import.meta.env.VITE_ADSTERRA_ZONE_ID || "",
+  minSeconds: Number(import.meta.env.VITE_ADSTERRA_MIN_SECONDS || (import.meta.env.DEV ? 5 : 15)),
+});
 
 const getConfiguredRewardedAdUnit = () => {
   const configured =
@@ -402,12 +411,96 @@ const showAdSenseInternalRewardedAd = (): Promise<RewardedAdResult> => {
   });
 };
 
+const showAdsterraRewardedAd = (timeoutMs = 60000): Promise<RewardedAdResult> => {
+  const sessionId = createAdSessionId();
+  const config = getAdsterraConfig();
+
+  return new Promise((resolve, reject) => {
+    let resolved = false;
+    let provider: RewardedAdProvider = "adsterra";
+    const shell = createRewardedShell("Anuncio Adsterra");
+    // Override provider label in header
+    const headerLabel = shell.overlay.querySelector("span");
+    if (headerLabel) headerLabel.textContent = "Adsterra";
+
+    let secondsLeft = Math.max(config.minSeconds, 3);
+    shell.status.textContent = `Aguarde ${secondsLeft}s para liberar a recompensa...`;
+
+    const tick = window.setInterval(() => {
+      secondsLeft -= 1;
+      if (secondsLeft > 0) {
+        shell.status.textContent = `Aguarde ${secondsLeft}s para liberar a recompensa...`;
+      } else {
+        window.clearInterval(tick);
+        shell.complete.disabled = false;
+        shell.complete.style.opacity = "1";
+        shell.status.textContent = "Pronto! Confirme para receber a recompensa.";
+      }
+    }, 1000);
+
+    const finish = (result?: RewardedAdResult, error?: Error) => {
+      if (resolved) return;
+      resolved = true;
+      window.clearInterval(tick);
+      window.clearTimeout(timeout);
+      shell.overlay.remove();
+      clearRewardedHash();
+      if (error) reject(error);
+      else if (result) resolve(result);
+    };
+
+    const timeout = window.setTimeout(() => {
+      finish(undefined, new Error("O anuncio demorou demais para concluir. Tente novamente."));
+    }, timeoutMs);
+
+    shell.close.onclick = () =>
+      finish(undefined, new Error("O anuncio foi fechado antes da conclusao."));
+    shell.complete.onclick = () => {
+      if (!shell.complete.disabled) {
+        finish({ provider, sessionId, rewarded: true, videoCompleted: true });
+      }
+    };
+
+    // Render Adsterra ad
+    try {
+      if (config.iframeUrl || config.directLink) {
+        const iframe = document.createElement("iframe");
+        iframe.src = config.iframeUrl || config.directLink;
+        iframe.allow = "autoplay; fullscreen";
+        iframe.referrerPolicy = "no-referrer-when-downgrade";
+        iframe.style.cssText = "width:100%;height:280px;border:0;background:white;";
+        shell.body.replaceChildren(iframe);
+      } else if (config.scriptUrl) {
+        const container = document.createElement("div");
+        container.style.cssText = "width:100%;min-height:260px;display:flex;align-items:center;justify-content:center;background:#0b1220;";
+        shell.body.replaceChildren(container);
+        const script = document.createElement("script");
+        script.src = config.scriptUrl;
+        script.async = true;
+        script.referrerPolicy = "no-referrer-when-downgrade";
+        container.appendChild(script);
+      } else if (import.meta.env.DEV) {
+        provider = "adsterra_dev";
+        shell.body.innerHTML = `<div style="text-align:center;padding:24px"><div style="font-size:42px;margin-bottom:12px">AD</div><p style="margin:0;color:#cbd5e1">Simulacao local Adsterra</p><p style="margin:8px 0 0;color:#94a3b8;font-size:13px">Configure VITE_ADSTERRA_DIRECT_LINK ou VITE_ADSTERRA_SCRIPT_URL para usar anuncios reais.</p></div>`;
+      } else {
+        finish(undefined, new Error("Configure o tag/link da Adsterra (VITE_ADSTERRA_DIRECT_LINK ou VITE_ADSTERRA_SCRIPT_URL)."));
+      }
+    } catch (error) {
+      finish(undefined, error instanceof Error ? error : new Error("Falha ao iniciar anuncio Adsterra."));
+    }
+  });
+};
+
 export const hasRewardedAdUnit = () => {
   const provider = getRewardedProvider();
   if (provider === "google_ad_manager") return Boolean(getConfiguredRewardedAdUnit());
   if (provider === "easyplatform") {
     const config = getEasyPlatformConfig();
     return Boolean(config.scriptUrl || config.embedUrl || import.meta.env.DEV);
+  }
+  if (provider === "adsterra") {
+    const config = getAdsterraConfig();
+    return Boolean(config.directLink || config.scriptUrl || config.iframeUrl || import.meta.env.DEV);
   }
   return true; // adsense_internal sempre disponível
 };
@@ -416,6 +509,7 @@ export const showRewardedVideoAd = (timeoutMs = 60000): Promise<RewardedAdResult
   const provider = getRewardedProvider();
   if (provider === "google_ad_manager") return showGoogleRewardedVideoAd(timeoutMs);
   if (provider === "easyplatform") return showEasyPlatformRewardedVideoAd(timeoutMs);
+  if (provider === "adsterra") return showAdsterraRewardedAd(timeoutMs);
   return showAdSenseInternalRewardedAd();
 };
 
