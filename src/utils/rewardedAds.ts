@@ -94,11 +94,20 @@ const DEV_REWARDED_AD_UNIT = "/22639388115/rewarded_web_example";
 const EASYPLATFORM_LOGIN_URL = "https://easyplatform.com/login.php";
 
 const getRewardedProvider = (): RewardedAdProvider => {
-  const provider = String(import.meta.env.VITE_REWARDED_AD_PROVIDER || "easyplatform").toLowerCase();
+  const provider = String(import.meta.env.VITE_REWARDED_AD_PROVIDER || "adsterra").toLowerCase();
   if (provider === "google_ad_manager") return "google_ad_manager";
   if (provider === "adsense_internal") return "adsense_internal";
-  return "easyplatform" as RewardedAdProvider;
+  if (provider === "easyplatform") return "easyplatform";
+  return "adsterra" as RewardedAdProvider;
 };
+
+const getAdsterraConfig = () => ({
+  directLink: import.meta.env.VITE_ADSTERRA_DIRECT_LINK || "",
+  scriptUrl: import.meta.env.VITE_ADSTERRA_SCRIPT_URL || "",
+  iframeUrl: import.meta.env.VITE_ADSTERRA_IFRAME_URL || "",
+  zoneId: import.meta.env.VITE_ADSTERRA_ZONE_ID || "",
+  minSeconds: Number(import.meta.env.VITE_ADSTERRA_MIN_SECONDS || (import.meta.env.DEV ? 5 : 15)),
+});
 
 const getConfiguredRewardedAdUnit = () => {
   const configured =
