@@ -6,7 +6,7 @@ declare global {
   }
 }
 
-type RewardedAdProvider = "easyplatform" | "google_ad_manager" | "easyplatform_dev" | "adsense_internal";
+type RewardedAdProvider = "easyplatform" | "google_ad_manager" | "easyplatform_dev" | "adsense_internal" | "adsterra" | "adsterra_dev";
 
 type RewardedAdResult = {
   provider: RewardedAdProvider;
