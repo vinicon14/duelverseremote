@@ -24,6 +24,7 @@ export default function Home() {
         <Navbar />
         
         <main className="flex-1 container max-w-5xl mx-auto px-4 pt-24 pb-12">
+        <h1 className="sr-only">{t('home.quickMatchTitle')} - Duelverse</h1>
         <div className="flex flex-col md:flex-row gap-6 mb-10">
           {/* Quick Match - HERO SECTION */}
           <Card className="card-mystic hover:border-primary/40 transition-all cursor-pointer animate-fade-in-up delay-100 flex-1 group" onClick={() => navigate('/matchmaking')}>

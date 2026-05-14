@@ -349,9 +349,9 @@ export const Navbar = () => {
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                <Button variant="ghost" className="relative h-10 w-10 rounded-full" aria-label={`${profile?.username || t('nav.profile')} - ${t('nav.profile')}`}>
                   <Avatar>
-                    <AvatarImage src={profile?.avatar_url || ""} />
+                    <AvatarImage src={profile?.avatar_url || ""} alt={profile?.username ? `${profile.username} avatar` : "User avatar"} />
                     <AvatarFallback className={isPro ? "bg-yellow-500/20" : "bg-primary/20"}>
                       {profile?.username?.charAt(0).toUpperCase() || "U"}
                     </AvatarFallback>
@@ -389,7 +389,7 @@ export const Navbar = () => {
         {/* Mobile Navigation */}
         <Sheet>
           <SheetTrigger asChild className="md:hidden">
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" aria-label={t('nav.menu', { defaultValue: 'Open menu' })}>
               <Menu className="h-6 w-6" />
             </Button>
           </SheetTrigger>

@@ -125,7 +125,7 @@ const Ranking = () => {
 
                       {/* Avatar */}
                       <Avatar className={`flex-shrink-0 ${isTopThree ? 'w-12 h-12 sm:w-16 sm:h-16 border-2 border-primary' : 'w-10 h-10 sm:w-14 sm:h-14'}`}>
-                        <AvatarImage src={player.avatar_url || ""} />
+                        <AvatarImage src={player.avatar_url || ""} alt={player.username ? `${player.username} avatar` : "Player avatar"} />
                         <AvatarFallback className="bg-primary/20 text-sm sm:text-lg">
                           {player.username?.charAt(0).toUpperCase() || "U"}
                         </AvatarFallback>
