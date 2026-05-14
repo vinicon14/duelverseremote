@@ -686,9 +686,9 @@ export default function Marketplace() {
 
           <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
             {/* Balance */}
-            <div className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg bg-card border border-border">
-              <Coins className="w-4 h-4 sm:w-5 sm:h-5 text-secondary" />
-              <span className="font-bold text-sm sm:text-base text-secondary">{balance.toLocaleString()}</span>
+            <div className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg bg-card border border-yellow-400/40">
+              <Coins className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-300 drop-shadow-[0_0_6px_rgba(250,204,21,0.7)]" />
+              <span className="font-bold text-sm sm:text-base text-yellow-300">{balance.toLocaleString()}</span>
             </div>
 
             {/* Cart button */}
