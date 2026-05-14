@@ -312,8 +312,9 @@ export default function MatchGallery() {
                           size="icon"
                           className="flex-shrink-0"
                           onClick={() => setDeleteId(recording.id)}
+                          aria-label={`Excluir gravação ${recording.title}`}
                         >
-                          <Trash2 className="w-4 h-4 text-destructive" />
+                          <Trash2 className="w-4 h-4 text-destructive" aria-hidden="true" />
                         </Button>
                       )}
                     </div>
@@ -366,6 +367,7 @@ export default function MatchGallery() {
                         checked={recording.is_public}
                         onCheckedChange={() => togglePublicStatus(recording.id, recording.is_public)}
                         disabled={updatingPublic === recording.id}
+                        aria-label={recording.is_public ? "Tornar gravação privada" : "Tornar gravação pública"}
                       />
                     </div>
                   )}

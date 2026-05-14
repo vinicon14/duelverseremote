@@ -170,8 +170,8 @@ export const NotificationBell = ({ userId }: { userId: string }) => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
+        <Button variant="ghost" size="icon" className="relative" aria-label={`Notificações${unreadCount > 0 ? ` (${unreadCount} não lidas)` : ''}`}>
+          <Bell className="h-5 w-5" aria-hidden="true" />
           {unreadCount > 0 && (
             <Badge
               variant="destructive"
@@ -229,8 +229,9 @@ export const NotificationBell = ({ userId }: { userId: string }) => {
                   size="icon"
                   className="h-5 w-5 shrink-0 text-muted-foreground hover:text-destructive"
                   onClick={(e) => handleDismiss(e, notification)}
+                  aria-label="Dispensar notificação"
                 >
-                  <X className="h-3 w-3" />
+                  <X className="h-3 w-3" aria-hidden="true" />
                 </Button>
               </DropdownMenuItem>
             ))

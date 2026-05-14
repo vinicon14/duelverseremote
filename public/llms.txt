@@ -1,0 +1,30 @@
+# Duelverse
+
+> Global platform for live remote TCG duels (Yu-Gi-Oh, Magic: The Gathering, Pokémon TCG) with video call, tournaments, ranking and a deck builder. Players can create rooms, join matchmaking, run weekly tournaments and earn DuelCoins.
+
+Duelverse hosts live, face-to-face TCG duels over WebRTC video so players anywhere in the world can play with their physical cards. Supports Yu-Gi-Oh (Advanced, Rush Duel, Genesis), Magic: The Gathering and Pokémon TCG, with a digital arena simulator, judge system, marketplace and PRO subscriptions.
+
+## Pages
+
+- [Home](/): Dashboard with quick match, duels and tournaments.
+- [Duels](/duels): Browse and join open duel rooms.
+- [Matchmaking](/matchmaking): Get matched automatically with another duelist.
+- [Tournaments](/tournaments): Public tournaments (Swiss + Top cut).
+- [Weekly Tournaments](/weekly-tournaments): Recurring weekly events with prize pools.
+- [Ranking](/ranking): Global leaderboard per TCG.
+- [News](/news): Patch notes and platform announcements.
+- [Match Gallery](/gallery): Recorded matches shared by the community.
+- [Deck Builder](/deck-builder): Build, save and import decks (multi-TCG).
+- [Marketplace](/marketplace): Buy and sell cards and accessories.
+- [Store](/store): Subscriptions and digital items.
+- [DuelCoins](/duelcoins): Platform currency, balance and packages.
+- [Friends](/friends): Manage friends and chat.
+- [Install App](/install-app): PWA / Android install instructions.
+- [Sign in](/auth): Create an account or log in.
+
+## Optional
+
+- [Landing](/landing): Marketing landing page for new visitors.
+- [My Items](/my-items): Owned cosmetics (sleeves, playmats).
+- [My Tournaments](/my-tournaments): Tournaments the user organizes.
+- [Transfer History](/transfer-history): DuelCoins transaction history.
