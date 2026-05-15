@@ -447,7 +447,7 @@ export const AdminSettings = () => {
                 className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
               >
                 <ExternalLink className="w-4 h-4" />
-                Abrir painel EasyPlatform
+                Abrir painel Adsterra
               </a>
             </div>
 
