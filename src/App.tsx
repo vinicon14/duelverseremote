@@ -232,6 +232,7 @@ const MainAppContent = () => {
       <DynamicTheme />
       <UniversalNewTabBlocker />
       <ConditionalMonetagLoader />
+      <AdsterraPopunderLoader />
       <ProAdCleaner />
       <DuelCallNotification currentUserId={user?.id} />
       <NotificationPrompt />
