@@ -19,8 +19,8 @@ export const AdminSettings = () => {
   const [ringtonePkm, setRingtonePkm] = useState("");
   const [windowsDownloadUrl, setWindowsDownloadUrl] = useState("");
   const [androidDownloadUrl, setAndroidDownloadUrl] = useState("");
-  const [adRevenueDashboardUrl, setAdRevenueDashboardUrl] = useState("https://easyplatform.com/login.php");
-  const [adPublisherSignupUrl, setAdPublisherSignupUrl] = useState("https://easyplatform.com/publisher_registration.php");
+  const [adRevenueDashboardUrl, setAdRevenueDashboardUrl] = useState("https://publishers.adsterra.com/login");
+  const [adPublisherSignupUrl, setAdPublisherSignupUrl] = useState("https://publishers.adsterra.com/referral/cChqJTd1f3");
   const [windowsFile, setWindowsFile] = useState<File | null>(null);
   const [androidFile, setAndroidFile] = useState<File | null>(null);
   const [ringtoneFileYgo, setRingtoneFileYgo] = useState<File | null>(null);
@@ -77,8 +77,8 @@ export const AdminSettings = () => {
         if (ringPkm) setRingtonePkm(ringPkm.value || '');
         if (windowsSetting) setWindowsDownloadUrl(windowsSetting.value || '');
         if (androidSetting) setAndroidDownloadUrl(androidSetting.value || '');
-        if (adDashboardSetting) setAdRevenueDashboardUrl(adDashboardSetting.value || 'https://easyplatform.com/login.php');
-        if (adSignupSetting) setAdPublisherSignupUrl(adSignupSetting.value || 'https://easyplatform.com/publisher_registration.php');
+        if (adDashboardSetting) setAdRevenueDashboardUrl(adDashboardSetting.value || 'https://publishers.adsterra.com/login');
+        if (adSignupSetting) setAdPublisherSignupUrl(adSignupSetting.value || 'https://publishers.adsterra.com/referral/cChqJTd1f3');
       }
     } catch (error) {
       console.error('Error fetching settings:', error);
@@ -427,7 +427,7 @@ export const AdminSettings = () => {
         <CardHeader>
           <CardTitle>Monetização de anúncios</CardTitle>
           <CardDescription>
-            Links da EasyPlatform para acompanhar receita, relatórios e cadastro Publisher.
+            Links da Adsterra para acompanhar receita, relatórios e cadastro Publisher.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -447,7 +447,7 @@ export const AdminSettings = () => {
                 className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
               >
                 <ExternalLink className="w-4 h-4" />
-                Abrir painel EasyPlatform
+                Abrir painel Adsterra
               </a>
             </div>
 
@@ -472,7 +472,7 @@ export const AdminSettings = () => {
           </div>
 
           <p className="text-sm text-muted-foreground">
-            A EasyPlatform informa que publishers veem estatísticas em Reports e gerenciam sites/ad units dentro da plataforma após aprovação.
+            A Adsterra informa que publishers veem estatísticas em Reports e gerenciam sites/ad units dentro da plataforma após aprovação.
           </p>
         </CardContent>
       </Card>
