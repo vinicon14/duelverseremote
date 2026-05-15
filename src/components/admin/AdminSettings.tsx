@@ -77,8 +77,8 @@ export const AdminSettings = () => {
         if (ringPkm) setRingtonePkm(ringPkm.value || '');
         if (windowsSetting) setWindowsDownloadUrl(windowsSetting.value || '');
         if (androidSetting) setAndroidDownloadUrl(androidSetting.value || '');
-        if (adDashboardSetting) setAdRevenueDashboardUrl(adDashboardSetting.value || 'https://easyplatform.com/login.php');
-        if (adSignupSetting) setAdPublisherSignupUrl(adSignupSetting.value || 'https://easyplatform.com/publisher_registration.php');
+        if (adDashboardSetting) setAdRevenueDashboardUrl(adDashboardSetting.value || 'https://publishers.adsterra.com/login');
+        if (adSignupSetting) setAdPublisherSignupUrl(adSignupSetting.value || 'https://publishers.adsterra.com/referral/cChqJTd1f3');
       }
     } catch (error) {
       console.error('Error fetching settings:', error);
