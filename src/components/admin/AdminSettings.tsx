@@ -19,8 +19,8 @@ export const AdminSettings = () => {
   const [ringtonePkm, setRingtonePkm] = useState("");
   const [windowsDownloadUrl, setWindowsDownloadUrl] = useState("");
   const [androidDownloadUrl, setAndroidDownloadUrl] = useState("");
-  const [adRevenueDashboardUrl, setAdRevenueDashboardUrl] = useState("https://easyplatform.com/login.php");
-  const [adPublisherSignupUrl, setAdPublisherSignupUrl] = useState("https://easyplatform.com/publisher_registration.php");
+  const [adRevenueDashboardUrl, setAdRevenueDashboardUrl] = useState("https://publishers.adsterra.com/login");
+  const [adPublisherSignupUrl, setAdPublisherSignupUrl] = useState("https://publishers.adsterra.com/referral/cChqJTd1f3");
   const [windowsFile, setWindowsFile] = useState<File | null>(null);
   const [androidFile, setAndroidFile] = useState<File | null>(null);
   const [ringtoneFileYgo, setRingtoneFileYgo] = useState<File | null>(null);
