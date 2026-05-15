@@ -472,7 +472,7 @@ export const AdminSettings = () => {
           </div>
 
           <p className="text-sm text-muted-foreground">
-            A EasyPlatform informa que publishers veem estatísticas em Reports e gerenciam sites/ad units dentro da plataforma após aprovação.
+            A Adsterra informa que publishers veem estatísticas em Reports e gerenciam sites/ad units dentro da plataforma após aprovação.
           </p>
         </CardContent>
       </Card>
