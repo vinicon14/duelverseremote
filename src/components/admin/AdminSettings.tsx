@@ -427,7 +427,7 @@ export const AdminSettings = () => {
         <CardHeader>
           <CardTitle>Monetização de anúncios</CardTitle>
           <CardDescription>
-            Links da EasyPlatform para acompanhar receita, relatórios e cadastro Publisher.
+            Links da Adsterra para acompanhar receita, relatórios e cadastro Publisher.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
