@@ -800,7 +800,7 @@ const Profile = () => {
                           )}
                           {adQuest?.claimed
                             ? 'Bônus de anúncios coletado'
-                            : `Assistir anúncio (${adQuest?.progress || 0}/${adQuest?.target || 5})`}
+                            : `Assistir anúncio (${adQuest?.progress ?? adsCycleProgress}/${adQuest?.target || 10})`}
                         </Button>
                       )}
                     </div>
