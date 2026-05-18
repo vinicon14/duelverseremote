@@ -360,6 +360,29 @@ export default function RushDuelDeckBuilder() {
 
   const clearDeck = () => { setMainDeck([]); setExtraDeck([]); setSideDeck([]); setCurrentDeckId(null); setCurrentDeckName(''); };
 
+  const exportYDK = () => {
+    if (mainDeck.length === 0 && extraDeck.length === 0 && sideDeck.length === 0) {
+      toast({ title: 'Deck vazio', description: 'Adicione cartas antes de exportar', variant: 'destructive' });
+      return;
+    }
+    const buildSection = (deck: DeckCard[]) =>
+      deck.flatMap(c => Array(c.quantity).fill(c.id)).join('\n');
+
+    const ydk = `#created by DuelVerse Rush Duel Deck Builder\n#main\n${buildSection(mainDeck)}\n#extra\n${buildSection(extraDeck)}\n!side\n${buildSection(sideDeck)}\n`;
+
+    const safeName = (currentDeckName || 'rush-deck').replace(/[^a-z0-9_-]+/gi, '_');
+    const blob = new Blob([ydk], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${safeName}.ydk`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast({ title: 'YDK exportado', description: `${safeName}.ydk baixado` });
+  };
+
   const totalMain = getTotal(mainDeck);
   const totalExtra = getTotal(extraDeck);
   const totalSide = getTotal(sideDeck);
