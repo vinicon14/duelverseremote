@@ -101,8 +101,11 @@ const getRewardedProvider = (): RewardedAdProvider => {
   return "adsterra" as RewardedAdProvider;
 };
 
+const DEFAULT_ADSTERRA_DIRECT_LINK =
+  "https://www.effectivecpmnetwork.com/ppb9cyguy?key=71b2853e4e56eec144f4d8290d8aa8f2";
+
 const getAdsterraConfig = () => ({
-  directLink: import.meta.env.VITE_ADSTERRA_DIRECT_LINK || "",
+  directLink: import.meta.env.VITE_ADSTERRA_DIRECT_LINK || DEFAULT_ADSTERRA_DIRECT_LINK,
   scriptUrl: import.meta.env.VITE_ADSTERRA_SCRIPT_URL || "",
   iframeUrl: import.meta.env.VITE_ADSTERRA_IFRAME_URL || "",
   zoneId: import.meta.env.VITE_ADSTERRA_ZONE_ID || "",
