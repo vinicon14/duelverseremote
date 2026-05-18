@@ -396,10 +396,13 @@ const DeckBuilder = () => {
           .map(([id, quantity]) => {
             const card = cardsMap.get(id);
             if (!card) return null;
-            return { ...card, quantity: Math.min(quantity, getMaxCopiesAdvanced(card)) };
+            const max = getMaxCopiesAdvanced(card);
+            if (max <= 0) return null;
+            return { ...card, quantity: Math.min(quantity, max) };
           })
           .filter(Boolean) as DeckCard[];
       };
+
 
       setMainDeck(buildDeck(mainIds));
       setExtraDeck(buildDeck(extraIds));
