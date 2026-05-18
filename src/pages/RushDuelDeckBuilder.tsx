@@ -624,6 +624,9 @@ export default function RushDuelDeckBuilder() {
                     <Button size="icon" variant="ghost" onClick={() => setShowSaveModal(true)} disabled={mainDeck.length === 0}>
                       <Save className="w-4 h-4" />
                     </Button>
+                    <Button size="icon" variant="ghost" onClick={exportYDK} disabled={mainDeck.length === 0 && extraDeck.length === 0 && sideDeck.length === 0} title="Baixar .ydk">
+                      <Download className="w-4 h-4" />
+                    </Button>
                     <Button size="icon" variant="ghost" onClick={clearDeck} disabled={mainDeck.length === 0 && extraDeck.length === 0 && sideDeck.length === 0}>
                       <Trash2 className="w-4 h-4" />
                     </Button>
