@@ -388,8 +388,8 @@ const Profile = () => {
       description: `+${DAILY_XP_REWARDS.casualDuel} XP ao concluir um duelo casual`,
     },
     watch_ad: {
-      title: 'Assistir 5 anuncios',
-      description: `+${DAILY_XP_REWARDS.adsBundle} XP ao concluir 5 videos`,
+      title: 'Assistir 10 anuncios',
+      description: `+${DAILY_XP_REWARDS.adsBundle} XP ao concluir 10 videos`,
     },
     forum_interaction: {
       title: 'Interagir no forum',
