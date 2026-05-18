@@ -425,7 +425,9 @@ const Profile = () => {
   const dailyLoginQuest = dailyQuests.find(q => q.quest_type === 'daily_login');
   const completedDailyQuests = dailyQuests.filter(q => q.claimed).length;
   const totalDailyQuests = dailyQuests.length || 4;
-  const adProgress = `${adQuest?.progress || 0}/${adQuest?.target || 5}`;
+  const adsWatchedTotal = tcgProfile?.xp_ads_watched || 0;
+  const adsCycleProgress = adsWatchedTotal % 10;
+  const adProgress = `${adQuest?.progress ?? adsCycleProgress}/${adQuest?.target || 10}`;
   const selectedRankedDifficulty = RANKED_XP_DIFFICULTIES.find(difficulty => difficulty.key === rankedDifficulty) || RANKED_XP_DIFFICULTIES[0];
 
   const handleSelectRankedDifficulty = (difficulty: RankedXpDifficultyKey) => {
