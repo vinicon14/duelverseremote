@@ -27,6 +27,12 @@ export interface YugiohCard {
     image_url_small: string;
     image_url_cropped: string;
   }[];
+  banlist_info?: {
+    ban_tcg?: string;
+    ban_ocg?: string;
+    ban_goat?: string;
+  };
+
 }
 
 export interface CardFilters {
