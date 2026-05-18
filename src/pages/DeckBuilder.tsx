@@ -396,7 +396,7 @@ const DeckBuilder = () => {
           .map(([id, quantity]) => {
             const card = cardsMap.get(id);
             if (!card) return null;
-            return { ...card, quantity: Math.min(quantity, 3) };
+            return { ...card, quantity: Math.min(quantity, getMaxCopiesAdvanced(card)) };
           })
           .filter(Boolean) as DeckCard[];
       };
