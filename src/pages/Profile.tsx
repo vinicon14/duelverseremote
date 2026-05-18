@@ -388,8 +388,8 @@ const Profile = () => {
       description: `+${DAILY_XP_REWARDS.casualDuel} XP ao concluir um duelo casual`,
     },
     watch_ad: {
-      title: 'Assistir 5 anuncios',
-      description: `+${DAILY_XP_REWARDS.adsBundle} XP ao concluir 5 videos`,
+      title: 'Assistir 10 anuncios',
+      description: `+${DAILY_XP_REWARDS.adsBundle} XP ao concluir 10 videos`,
     },
     forum_interaction: {
       title: 'Interagir no forum',
@@ -425,7 +425,9 @@ const Profile = () => {
   const dailyLoginQuest = dailyQuests.find(q => q.quest_type === 'daily_login');
   const completedDailyQuests = dailyQuests.filter(q => q.claimed).length;
   const totalDailyQuests = dailyQuests.length || 4;
-  const adProgress = `${adQuest?.progress || 0}/${adQuest?.target || 5}`;
+  const adsWatchedTotal = tcgProfile?.xp_ads_watched || 0;
+  const adsCycleProgress = adsWatchedTotal % 10;
+  const adProgress = `${adQuest?.progress ?? adsCycleProgress}/${adQuest?.target || 10}`;
   const selectedRankedDifficulty = RANKED_XP_DIFFICULTIES.find(difficulty => difficulty.key === rankedDifficulty) || RANKED_XP_DIFFICULTIES[0];
 
   const handleSelectRankedDifficulty = (difficulty: RankedXpDifficultyKey) => {
@@ -798,7 +800,7 @@ const Profile = () => {
                           )}
                           {adQuest?.claimed
                             ? 'Bônus de anúncios coletado'
-                            : `Assistir anúncio (${adQuest?.progress || 0}/${adQuest?.target || 5})`}
+                            : `Assistir anúncio (${adQuest?.progress ?? adsCycleProgress}/${adQuest?.target || 10})`}
                         </Button>
                       )}
                     </div>
