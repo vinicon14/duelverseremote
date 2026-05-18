@@ -134,7 +134,13 @@ export const CardRecognitionModal = ({
             deckType = parsed.deckType;
           }
           
-          foundCards.push({ card, deckType, quantity: Math.min(parsed.quantity, 3) });
+          const maxCopies = getMaxCopiesAdvanced(card);
+          if (maxCopies <= 0) {
+            notFound.push(`${parsed.name} (banida)`);
+            continue;
+          }
+          foundCards.push({ card, deckType, quantity: Math.min(parsed.quantity, maxCopies) });
+
         } else {
           notFound.push(parsed.name);
         }
