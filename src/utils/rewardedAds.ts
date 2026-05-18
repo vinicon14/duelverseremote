@@ -101,18 +101,12 @@ const getRewardedProvider = (): RewardedAdProvider => {
   return "adsterra" as RewardedAdProvider;
 };
 
-// Default Adsterra rewarded Direct Link (profile "Assistir" button).
-// Pode ser sobrescrito via env (VITE_ADSTERRA_DIRECT_LINK / VITE_ADSTERRA_SCRIPT_URL / VITE_ADSTERRA_IFRAME_URL).
-const ADSTERRA_DEFAULT_DIRECT_LINK =
-  "https://www.effectivecpmnetwork.com/ppb9cyguy?key=71b2853e4e56eec144f4d8290d8aa8f2";
-const ADSTERRA_DEFAULT_MIN_SECONDS = 35;
-
 const getAdsterraConfig = () => ({
-  directLink: import.meta.env.VITE_ADSTERRA_DIRECT_LINK || ADSTERRA_DEFAULT_DIRECT_LINK,
+  directLink: import.meta.env.VITE_ADSTERRA_DIRECT_LINK || "",
   scriptUrl: import.meta.env.VITE_ADSTERRA_SCRIPT_URL || "",
   iframeUrl: import.meta.env.VITE_ADSTERRA_IFRAME_URL || "",
   zoneId: import.meta.env.VITE_ADSTERRA_ZONE_ID || "",
-  minSeconds: Number(import.meta.env.VITE_ADSTERRA_MIN_SECONDS || ADSTERRA_DEFAULT_MIN_SECONDS),
+  minSeconds: Number(import.meta.env.VITE_ADSTERRA_MIN_SECONDS || (import.meta.env.DEV ? 5 : 15)),
 });
 
 const getConfiguredRewardedAdUnit = () => {
