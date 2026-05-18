@@ -19,6 +19,8 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { Layers, Search, Globe, Save, FolderOpen, Wand2 } from 'lucide-react';
+import { getMaxCopiesAdvanced, getAdvancedBanStatus, getBanStatusLabel } from '@/utils/banlist';
+
 import {
   ResizableHandle,
   ResizablePanel,
