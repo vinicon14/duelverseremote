@@ -212,14 +212,25 @@ const DeckBuilder = () => {
   };
 
   const handleAddQuantity = (cardId: number, deckType: 'main' | 'extra' | 'side' | 'tokens') => {
-    // Tokens don't count towards 3-copy limit
+    // Tokens don't count towards banlist limits
     if (deckType !== 'tokens') {
+      const cardRef =
+        mainDeck.find((c) => c.id === cardId) ||
+        extraDeck.find((c) => c.id === cardId) ||
+        sideDeck.find((c) => c.id === cardId);
       const totalCopies = getCardCount(cardId);
-      if (totalCopies >= 3) {
-        toast.error(t.maxCopies);
+      const maxCopies = getMaxCopiesAdvanced(cardRef);
+      if (totalCopies >= maxCopies) {
+        const status = getAdvancedBanStatus(cardRef);
+        toast.error(
+          language === 'pt'
+            ? `Carta ${getBanStatusLabel(status, 'pt')} — máximo ${maxCopies} cópia(s) permitida(s)`
+            : `${getBanStatusLabel(status, 'en')} card — max ${maxCopies} copy(ies) allowed`
+        );
         return;
       }
     }
+
 
     // Extra + Tokens combined cannot exceed 20
     if (deckType === 'extra') {
