@@ -2516,6 +2516,15 @@ export type Database = {
         }
         Returns: number
       }
+      place_ranked_bet: {
+        Args: {
+          p_difficulty: string
+          p_duel_id?: string
+          p_tcg_type: string
+          p_xp_bet: number
+        }
+        Returns: Json
+      }
       purchase_marketplace_items:
         | { Args: { p_items: Json }; Returns: Json }
         | { Args: { p_coupon_code?: string; p_items: Json }; Returns: Json }
