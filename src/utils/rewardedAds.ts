@@ -101,8 +101,11 @@ const getRewardedProvider = (): RewardedAdProvider => {
   return "adsterra" as RewardedAdProvider;
 };
 
+const DEFAULT_ADSTERRA_DIRECT_LINK =
+  "https://www.effectivecpmnetwork.com/ppb9cyguy?key=71b2853e4e56eec144f4d8290d8aa8f2";
+
 const getAdsterraConfig = () => ({
-  directLink: import.meta.env.VITE_ADSTERRA_DIRECT_LINK || "",
+  directLink: import.meta.env.VITE_ADSTERRA_DIRECT_LINK || DEFAULT_ADSTERRA_DIRECT_LINK,
   scriptUrl: import.meta.env.VITE_ADSTERRA_SCRIPT_URL || "",
   iframeUrl: import.meta.env.VITE_ADSTERRA_IFRAME_URL || "",
   zoneId: import.meta.env.VITE_ADSTERRA_ZONE_ID || "",
@@ -463,13 +466,22 @@ const showAdsterraRewardedAd = (timeoutMs = 60000): Promise<RewardedAdResult> =>
 
     // Render Adsterra ad
     try {
-      if (config.iframeUrl || config.directLink) {
+      if (config.iframeUrl) {
         const iframe = document.createElement("iframe");
-        iframe.src = config.iframeUrl || config.directLink;
+        iframe.src = config.iframeUrl;
         iframe.allow = "autoplay; fullscreen";
         iframe.referrerPolicy = "no-referrer-when-downgrade";
         iframe.style.cssText = "width:100%;height:280px;border:0;background:white;";
         shell.body.replaceChildren(iframe);
+      } else if (config.directLink) {
+        // Direct links (Monetag/Adsterra) block iframe embedding, open in new tab
+        const opened = window.open(config.directLink, "_blank", "noopener,noreferrer");
+        const info = document.createElement("div");
+        info.style.cssText = "text-align:center;padding:24px;color:#cbd5e1;";
+        info.innerHTML = opened
+          ? `<div style="font-size:42px;margin-bottom:12px">📺</div><p style="margin:0">O anúncio foi aberto em uma nova aba.</p><p style="margin:8px 0 0;color:#94a3b8;font-size:13px">Aguarde o contador para liberar a recompensa.</p>`
+          : `<div style="font-size:42px;margin-bottom:12px">⚠️</div><p style="margin:0">Permita pop-ups e <a href="${config.directLink}" target="_blank" rel="noopener noreferrer" style="color:#facc15;text-decoration:underline">clique aqui para abrir o anúncio</a>.</p>`;
+        shell.body.replaceChildren(info);
       } else if (config.scriptUrl) {
         const container = document.createElement("div");
         container.style.cssText = "width:100%;min-height:260px;display:flex;align-items:center;justify-content:center;background:#0b1220;";
@@ -481,9 +493,9 @@ const showAdsterraRewardedAd = (timeoutMs = 60000): Promise<RewardedAdResult> =>
         container.appendChild(script);
       } else if (import.meta.env.DEV) {
         provider = "adsterra_dev";
-        shell.body.innerHTML = `<div style="text-align:center;padding:24px"><div style="font-size:42px;margin-bottom:12px">AD</div><p style="margin:0;color:#cbd5e1">Simulacao local Adsterra</p><p style="margin:8px 0 0;color:#94a3b8;font-size:13px">Configure VITE_ADSTERRA_DIRECT_LINK ou VITE_ADSTERRA_SCRIPT_URL para usar anuncios reais.</p></div>`;
+        shell.body.innerHTML = `<div style="text-align:center;padding:24px"><div style="font-size:42px;margin-bottom:12px">AD</div><p style="margin:0;color:#cbd5e1">Simulacao local Adsterra</p></div>`;
       } else {
-        finish(undefined, new Error("Configure o tag/link da Adsterra (VITE_ADSTERRA_DIRECT_LINK ou VITE_ADSTERRA_SCRIPT_URL)."));
+        finish(undefined, new Error("Configure o link de anuncios."));
       }
     } catch (error) {
       finish(undefined, error instanceof Error ? error : new Error("Falha ao iniciar anuncio Adsterra."));
