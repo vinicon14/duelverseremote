@@ -491,7 +491,7 @@ const Profile = () => {
                     <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:gap-3 sm:justify-center md:justify-start">
                       <div className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg bg-primary/10">
                         <Trophy className="w-4 h-4 sm:w-5 sm:h-5 text-secondary" />
-                        <span className="text-sm sm:text-base font-semibold">{t('profile.level', { level: stats.level })}</span>
+                        <span className="text-sm sm:text-base font-semibold">{t('profile.level', { level: xp.level })}</span>
                       </div>
                       <div className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg bg-primary/10">
                         <Star className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
