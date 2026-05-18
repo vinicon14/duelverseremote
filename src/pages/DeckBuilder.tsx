@@ -125,14 +125,21 @@ const DeckBuilder = () => {
 
   const handleAddToDeck = useCallback(
     (card: YugiohCard, deckType: 'main' | 'extra' | 'side' | 'tokens') => {
-      // Tokens don't count towards 3-copy limit
+      // Tokens don't count towards banlist limits
       if (deckType !== 'tokens') {
         const totalCopies = getCardCount(card.id);
-        if (totalCopies >= 3) {
-          toast.error(t.maxCopies);
+        const maxCopies = getMaxCopiesAdvanced(card);
+        if (totalCopies >= maxCopies) {
+          const status = getAdvancedBanStatus(card);
+          toast.error(
+            language === 'pt'
+              ? `Carta ${getBanStatusLabel(status, 'pt')} — máximo ${maxCopies} cópia(s) permitida(s)`
+              : `${getBanStatusLabel(status, 'en')} card — max ${maxCopies} copy(ies) allowed`
+          );
           return;
         }
       }
+
 
       // Extra + Tokens combined cannot exceed 20
       if (deckType === 'extra') {
