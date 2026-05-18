@@ -437,18 +437,20 @@ const DeckBuilder = () => {
         let newDeck = [...prevMain];
         
         cards.forEach((card, index) => {
-          const quantityToAdd = Math.min(deckQuantities[index] || 1, 3);
+          const maxCopies = getMaxCopiesAdvanced(card);
+          if (maxCopies <= 0) return;
+          const quantityToAdd = Math.min(deckQuantities[index] || 1, maxCopies);
           const totalInDeck = newDeck.reduce((acc, c) => acc + c.quantity, 0);
           if (totalInDeck >= 60) return;
           
           const totalCopies = newDeck.filter(c => c.id === card.id).reduce((acc, c) => acc + c.quantity, 0);
-          const availableSlots = Math.min(3 - totalCopies, quantityToAdd);
+          const availableSlots = Math.min(maxCopies - totalCopies, quantityToAdd);
           if (availableSlots <= 0) return;
           
           const existing = newDeck.find((c) => c.id === card.id);
           if (existing) {
             newDeck = newDeck.map((c) =>
-              c.id === card.id ? { ...c, quantity: Math.min(c.quantity + availableSlots, 3) } : c
+              c.id === card.id ? { ...c, quantity: Math.min(c.quantity + availableSlots, maxCopies) } : c
             );
           } else {
             newDeck = [...newDeck, { ...card, quantity: availableSlots }];
@@ -462,18 +464,20 @@ const DeckBuilder = () => {
         let newDeck = [...prevExtra];
         
         cards.forEach((card, index) => {
-          const quantityToAdd = Math.min(deckQuantities[index] || 1, 3);
+          const maxCopies = getMaxCopiesAdvanced(card);
+          if (maxCopies <= 0) return;
+          const quantityToAdd = Math.min(deckQuantities[index] || 1, maxCopies);
           const totalInDeck = newDeck.reduce((acc, c) => acc + c.quantity, 0);
           if (totalInDeck >= 15) return;
           
           const totalCopies = newDeck.filter(c => c.id === card.id).reduce((acc, c) => acc + c.quantity, 0);
-          const availableSlots = Math.min(3 - totalCopies, quantityToAdd);
+          const availableSlots = Math.min(maxCopies - totalCopies, quantityToAdd);
           if (availableSlots <= 0) return;
           
           const existing = newDeck.find((c) => c.id === card.id);
           if (existing) {
             newDeck = newDeck.map((c) =>
-              c.id === card.id ? { ...c, quantity: Math.min(c.quantity + availableSlots, 3) } : c
+              c.id === card.id ? { ...c, quantity: Math.min(c.quantity + availableSlots, maxCopies) } : c
             );
           } else {
             newDeck = [...newDeck, { ...card, quantity: availableSlots }];
@@ -487,18 +491,20 @@ const DeckBuilder = () => {
         let newDeck = [...prevSide];
         
         cards.forEach((card, index) => {
-          const quantityToAdd = Math.min(deckQuantities[index] || 1, 3);
+          const maxCopies = getMaxCopiesAdvanced(card);
+          if (maxCopies <= 0) return;
+          const quantityToAdd = Math.min(deckQuantities[index] || 1, maxCopies);
           const totalInDeck = newDeck.reduce((acc, c) => acc + c.quantity, 0);
           if (totalInDeck >= 15) return;
           
           const totalCopies = newDeck.filter(c => c.id === card.id).reduce((acc, c) => acc + c.quantity, 0);
-          const availableSlots = Math.min(3 - totalCopies, quantityToAdd);
+          const availableSlots = Math.min(maxCopies - totalCopies, quantityToAdd);
           if (availableSlots <= 0) return;
           
           const existing = newDeck.find((c) => c.id === card.id);
           if (existing) {
             newDeck = newDeck.map((c) =>
-              c.id === card.id ? { ...c, quantity: Math.min(c.quantity + availableSlots, 3) } : c
+              c.id === card.id ? { ...c, quantity: Math.min(c.quantity + availableSlots, maxCopies) } : c
             );
           } else {
             newDeck = [...newDeck, { ...card, quantity: availableSlots }];
@@ -508,6 +514,7 @@ const DeckBuilder = () => {
         return newDeck;
       });
     }
+
   }, []);
 
   const canAddToMain = selectedCard
