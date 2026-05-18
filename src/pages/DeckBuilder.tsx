@@ -19,6 +19,8 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { Layers, Search, Globe, Save, FolderOpen, Wand2 } from 'lucide-react';
+import { getMaxCopiesAdvanced, getAdvancedBanStatus, getBanStatusLabel } from '@/utils/banlist';
+
 import {
   ResizableHandle,
   ResizablePanel,
@@ -123,14 +125,21 @@ const DeckBuilder = () => {
 
   const handleAddToDeck = useCallback(
     (card: YugiohCard, deckType: 'main' | 'extra' | 'side' | 'tokens') => {
-      // Tokens don't count towards 3-copy limit
+      // Tokens don't count towards banlist limits
       if (deckType !== 'tokens') {
         const totalCopies = getCardCount(card.id);
-        if (totalCopies >= 3) {
-          toast.error(t.maxCopies);
+        const maxCopies = getMaxCopiesAdvanced(card);
+        if (totalCopies >= maxCopies) {
+          const status = getAdvancedBanStatus(card);
+          toast.error(
+            language === 'pt'
+              ? `Carta ${getBanStatusLabel(status, 'pt')} — máximo ${maxCopies} cópia(s) permitida(s)`
+              : `${getBanStatusLabel(status, 'en')} card — max ${maxCopies} copy(ies) allowed`
+          );
           return;
         }
       }
+
 
       // Extra + Tokens combined cannot exceed 20
       if (deckType === 'extra') {
@@ -203,14 +212,25 @@ const DeckBuilder = () => {
   };
 
   const handleAddQuantity = (cardId: number, deckType: 'main' | 'extra' | 'side' | 'tokens') => {
-    // Tokens don't count towards 3-copy limit
+    // Tokens don't count towards banlist limits
     if (deckType !== 'tokens') {
+      const cardRef =
+        mainDeck.find((c) => c.id === cardId) ||
+        extraDeck.find((c) => c.id === cardId) ||
+        sideDeck.find((c) => c.id === cardId);
       const totalCopies = getCardCount(cardId);
-      if (totalCopies >= 3) {
-        toast.error(t.maxCopies);
+      const maxCopies = getMaxCopiesAdvanced(cardRef);
+      if (totalCopies >= maxCopies) {
+        const status = getAdvancedBanStatus(cardRef);
+        toast.error(
+          language === 'pt'
+            ? `Carta ${getBanStatusLabel(status, 'pt')} — máximo ${maxCopies} cópia(s) permitida(s)`
+            : `${getBanStatusLabel(status, 'en')} card — max ${maxCopies} copy(ies) allowed`
+        );
         return;
       }
     }
+
 
     // Extra + Tokens combined cannot exceed 20
     if (deckType === 'extra') {
@@ -376,10 +396,13 @@ const DeckBuilder = () => {
           .map(([id, quantity]) => {
             const card = cardsMap.get(id);
             if (!card) return null;
-            return { ...card, quantity: Math.min(quantity, 3) };
+            const max = getMaxCopiesAdvanced(card);
+            if (max <= 0) return null;
+            return { ...card, quantity: Math.min(quantity, max) };
           })
           .filter(Boolean) as DeckCard[];
       };
+
 
       setMainDeck(buildDeck(mainIds));
       setExtraDeck(buildDeck(extraIds));
@@ -414,18 +437,20 @@ const DeckBuilder = () => {
         let newDeck = [...prevMain];
         
         cards.forEach((card, index) => {
-          const quantityToAdd = Math.min(deckQuantities[index] || 1, 3);
+          const maxCopies = getMaxCopiesAdvanced(card);
+          if (maxCopies <= 0) return;
+          const quantityToAdd = Math.min(deckQuantities[index] || 1, maxCopies);
           const totalInDeck = newDeck.reduce((acc, c) => acc + c.quantity, 0);
           if (totalInDeck >= 60) return;
           
           const totalCopies = newDeck.filter(c => c.id === card.id).reduce((acc, c) => acc + c.quantity, 0);
-          const availableSlots = Math.min(3 - totalCopies, quantityToAdd);
+          const availableSlots = Math.min(maxCopies - totalCopies, quantityToAdd);
           if (availableSlots <= 0) return;
           
           const existing = newDeck.find((c) => c.id === card.id);
           if (existing) {
             newDeck = newDeck.map((c) =>
-              c.id === card.id ? { ...c, quantity: Math.min(c.quantity + availableSlots, 3) } : c
+              c.id === card.id ? { ...c, quantity: Math.min(c.quantity + availableSlots, maxCopies) } : c
             );
           } else {
             newDeck = [...newDeck, { ...card, quantity: availableSlots }];
@@ -439,18 +464,20 @@ const DeckBuilder = () => {
         let newDeck = [...prevExtra];
         
         cards.forEach((card, index) => {
-          const quantityToAdd = Math.min(deckQuantities[index] || 1, 3);
+          const maxCopies = getMaxCopiesAdvanced(card);
+          if (maxCopies <= 0) return;
+          const quantityToAdd = Math.min(deckQuantities[index] || 1, maxCopies);
           const totalInDeck = newDeck.reduce((acc, c) => acc + c.quantity, 0);
           if (totalInDeck >= 15) return;
           
           const totalCopies = newDeck.filter(c => c.id === card.id).reduce((acc, c) => acc + c.quantity, 0);
-          const availableSlots = Math.min(3 - totalCopies, quantityToAdd);
+          const availableSlots = Math.min(maxCopies - totalCopies, quantityToAdd);
           if (availableSlots <= 0) return;
           
           const existing = newDeck.find((c) => c.id === card.id);
           if (existing) {
             newDeck = newDeck.map((c) =>
-              c.id === card.id ? { ...c, quantity: Math.min(c.quantity + availableSlots, 3) } : c
+              c.id === card.id ? { ...c, quantity: Math.min(c.quantity + availableSlots, maxCopies) } : c
             );
           } else {
             newDeck = [...newDeck, { ...card, quantity: availableSlots }];
@@ -464,18 +491,20 @@ const DeckBuilder = () => {
         let newDeck = [...prevSide];
         
         cards.forEach((card, index) => {
-          const quantityToAdd = Math.min(deckQuantities[index] || 1, 3);
+          const maxCopies = getMaxCopiesAdvanced(card);
+          if (maxCopies <= 0) return;
+          const quantityToAdd = Math.min(deckQuantities[index] || 1, maxCopies);
           const totalInDeck = newDeck.reduce((acc, c) => acc + c.quantity, 0);
           if (totalInDeck >= 15) return;
           
           const totalCopies = newDeck.filter(c => c.id === card.id).reduce((acc, c) => acc + c.quantity, 0);
-          const availableSlots = Math.min(3 - totalCopies, quantityToAdd);
+          const availableSlots = Math.min(maxCopies - totalCopies, quantityToAdd);
           if (availableSlots <= 0) return;
           
           const existing = newDeck.find((c) => c.id === card.id);
           if (existing) {
             newDeck = newDeck.map((c) =>
-              c.id === card.id ? { ...c, quantity: Math.min(c.quantity + availableSlots, 3) } : c
+              c.id === card.id ? { ...c, quantity: Math.min(c.quantity + availableSlots, maxCopies) } : c
             );
           } else {
             newDeck = [...newDeck, { ...card, quantity: availableSlots }];
@@ -485,6 +514,7 @@ const DeckBuilder = () => {
         return newDeck;
       });
     }
+
   }, []);
 
   const canAddToMain = selectedCard

@@ -13,6 +13,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Camera, Upload, Loader2, X, Plus, Wand2, FileText } from 'lucide-react';
 import { YugiohCard } from '@/hooks/useYugiohCards';
+import { getMaxCopiesAdvanced } from '@/utils/banlist';
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -134,7 +136,13 @@ export const CardRecognitionModal = ({
             deckType = parsed.deckType;
           }
           
-          foundCards.push({ card, deckType, quantity: Math.min(parsed.quantity, 3) });
+          const maxCopies = getMaxCopiesAdvanced(card);
+          if (maxCopies <= 0) {
+            notFound.push(`${parsed.name} (banida)`);
+            continue;
+          }
+          foundCards.push({ card, deckType, quantity: Math.min(parsed.quantity, maxCopies) });
+
         } else {
           notFound.push(parsed.name);
         }
