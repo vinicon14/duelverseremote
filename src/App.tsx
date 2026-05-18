@@ -9,7 +9,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ConditionalMonetagLoader } from "@/components/ConditionalMonetagLoader";
-import { AdsterraPopunderLoader } from "@/components/AdsterraPopunderLoader";
 import { UniversalNewTabBlocker } from "@/components/UniversalNewTabBlocker";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
@@ -232,7 +231,6 @@ const MainAppContent = () => {
       <DynamicTheme />
       <UniversalNewTabBlocker />
       <ConditionalMonetagLoader />
-      <AdsterraPopunderLoader />
       <ProAdCleaner />
       <DuelCallNotification currentUserId={user?.id} />
       <NotificationPrompt />
