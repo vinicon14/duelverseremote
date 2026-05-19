@@ -22,10 +22,10 @@ export interface BanlistInfo {
 export type CardWithBanlist = YugiohCard & { banlist_info?: BanlistInfo };
 
 export const getAdvancedBanStatus = (card: CardWithBanlist | null | undefined): BanStatus => {
-  const status = card?.banlist_info?.ban_tcg;
-  if (status === 'Banned') return 'Banned';
-  if (status === 'Limited') return 'Limited';
-  if (status === 'Semi-Limited') return 'Semi-Limited';
+  const status = (card?.banlist_info?.ban_tcg || '').toString().trim().toLowerCase();
+  if (status === 'banned' || status === 'forbidden') return 'Banned';
+  if (status === 'limited') return 'Limited';
+  if (status === 'semi-limited') return 'Semi-Limited';
   return 'Unlimited';
 };
 
