@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Store as StoreIcon, Crown, Loader2, Coins, Check, Clock, ShoppingBag } from "lucide-react";
+import { VerificationCard } from "@/components/VerificationCard";
 
 interface SubscriptionPlan {
   id: string;
@@ -354,6 +355,9 @@ export default function Store() {
               )}
             </CardContent>
           </Card>
+
+          {/* Verification (Free) */}
+          <VerificationCard userId={user?.id ?? null} isVerified={!!profile?.is_verified} />
 
           {/* Support Card */}
           <Card>
