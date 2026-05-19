@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, Ban, Crown, User, Loader2 } from "lucide-react";
+import { Shield, Ban, Crown, User, Loader2, BadgeCheck } from "lucide-react";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { Input } from "@/components/ui/input";
 
 export const AdminUsers = () => {
@@ -221,6 +222,24 @@ export const AdminUsers = () => {
         description: error.message || "Ocorreu um erro inesperado",
         variant: "destructive" 
       });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const toggleVerified = async (userId: string, isCurrentlyVerified: boolean) => {
+    setActionLoading(`verify-${userId}`);
+    try {
+      const { error } = await (supabase as any).rpc('admin_set_user_verified', {
+        _user_id: userId,
+        _verified: !isCurrentlyVerified,
+      });
+      if (error) {
+        toast({ title: "Erro", description: error.message, variant: "destructive" });
+      } else {
+        toast({ title: isCurrentlyVerified ? "Selo removido" : "✅ Usuário verificado" });
+        await fetchUsers();
+      }
     } finally {
       setActionLoading(null);
     }
@@ -455,6 +474,7 @@ export const AdminUsers = () => {
           {filteredUsers.map((user) => {
             const isAdmin = user.user_roles?.some((r: any) => r.role === 'admin');
             const isPro = user.account_type === 'pro';
+            const isVerified = !!user.is_verified;
 
             return (
               <Card key={user.id}>
@@ -464,6 +484,7 @@ export const AdminUsers = () => {
                       <CardTitle className="text-lg flex items-center gap-2">
                         <User className="w-5 h-5" />
                         {user.display_name || user.username}
+                        {isVerified && <VerifiedBadge size={18} />}
                         {isAdmin && <Badge variant="secondary"><Shield className="w-3 h-3 mr-1" />Admin</Badge>}
                         {isPro && <Badge className="bg-gradient-to-r from-yellow-500 to-amber-500"><Crown className="w-3 h-3 mr-1" />PRO</Badge>}
                       </CardTitle>
@@ -500,6 +521,20 @@ export const AdminUsers = () => {
                         <Crown className="w-4 h-4 mr-1" />
                       )}
                       {isPro ? 'Remover' : 'Promover'} PRO
+                    </Button>
+                    <Button
+                      variant={isVerified ? "outline" : "default"}
+                      size="sm"
+                      onClick={() => toggleVerified(user.user_id, isVerified)}
+                      disabled={actionLoading === `verify-${user.user_id}`}
+                      className={!isVerified ? "bg-sky-500 hover:bg-sky-600 text-white" : ""}
+                    >
+                      {actionLoading === `verify-${user.user_id}` ? (
+                        <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                      ) : (
+                        <BadgeCheck className="w-4 h-4 mr-1" />
+                      )}
+                      {isVerified ? 'Remover Verificação' : 'Verificar'}
                     </Button>
                     <Button
                       variant="destructive"

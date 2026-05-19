@@ -1454,6 +1454,7 @@ export type Database = {
           duelcoins_balance: number
           is_banned: boolean
           is_online: boolean
+          is_verified: boolean
           language_code: string
           last_seen: string
           level: number
@@ -1462,6 +1463,7 @@ export type Database = {
           updated_at: string
           user_id: string
           username: string
+          verified_at: string | null
           wins: number
         }
         Insert: {
@@ -1472,6 +1474,7 @@ export type Database = {
           duelcoins_balance?: number
           is_banned?: boolean
           is_online?: boolean
+          is_verified?: boolean
           language_code?: string
           last_seen?: string
           level?: number
@@ -1480,6 +1483,7 @@ export type Database = {
           updated_at?: string
           user_id: string
           username: string
+          verified_at?: string | null
           wins?: number
         }
         Update: {
@@ -1490,6 +1494,7 @@ export type Database = {
           duelcoins_balance?: number
           is_banned?: boolean
           is_online?: boolean
+          is_verified?: boolean
           language_code?: string
           last_seen?: string
           level?: number
@@ -1498,6 +1503,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
           username?: string
+          verified_at?: string | null
           wins?: number
         }
         Relationships: []
@@ -2172,6 +2178,48 @@ export type Database = {
           },
         ]
       }
+      verification_requests: {
+        Row: {
+          birth_date: string | null
+          cpf: string
+          created_at: string
+          full_name: string
+          id: string
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          birth_date?: string | null
+          cpf: string
+          created_at?: string
+          full_name: string
+          id?: string
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          birth_date?: string | null
+          cpf?: string
+          created_at?: string
+          full_name?: string
+          id?: string
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       discord_links_admin_view: {
@@ -2269,6 +2317,10 @@ export type Database = {
           p_reason?: string
           p_user_id: string
         }
+        Returns: Json
+      }
+      admin_set_user_verified: {
+        Args: { _user_id: string; _verified: boolean }
         Returns: Json
       }
       apply_coupon: {
@@ -2551,6 +2603,10 @@ export type Database = {
           p_winner_id: string
         }
         Returns: string
+      }
+      review_verification_request: {
+        Args: { _approve: boolean; _reason?: string; _request_id: string }
+        Returns: Json
       }
       reward_judge_resolution: {
         Args: { p_judge_id: string; p_log_id: string }
