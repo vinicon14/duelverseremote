@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, Ban, Crown, User, Loader2 } from "lucide-react";
+import { Shield, Ban, Crown, User, Loader2, BadgeCheck } from "lucide-react";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { Input } from "@/components/ui/input";
 
 export const AdminUsers = () => {
