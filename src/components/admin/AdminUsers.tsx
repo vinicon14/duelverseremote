@@ -227,6 +227,24 @@ export const AdminUsers = () => {
     }
   };
 
+  const toggleVerified = async (userId: string, isCurrentlyVerified: boolean) => {
+    setActionLoading(`verify-${userId}`);
+    try {
+      const { error } = await (supabase as any).rpc('admin_set_user_verified', {
+        _user_id: userId,
+        _verified: !isCurrentlyVerified,
+      });
+      if (error) {
+        toast({ title: "Erro", description: error.message, variant: "destructive" });
+      } else {
+        toast({ title: isCurrentlyVerified ? "Selo removido" : "✅ Usuário verificado" });
+        await fetchUsers();
+      }
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const cleanOrphanedUsers = async () => {
     setCleaningOrphans(true);
     try {
