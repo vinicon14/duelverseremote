@@ -24,6 +24,7 @@ import { AdminMarketplace } from "@/components/admin/AdminMarketplace";
 import { AdminDuelCoinsPackages } from "@/components/admin/AdminDuelCoinsPackages";
 import { AdminDiscord } from "@/components/admin/AdminDiscord";
 import { AdminCoupons } from "@/components/admin/AdminCoupons";
+import { AdminVerifications } from "@/components/admin/AdminVerifications";
 import { Shield, Loader2 } from "lucide-react";
 
 export default function Admin() {
@@ -79,6 +80,7 @@ export default function Admin() {
             <TabsTrigger value="plans">{t('admin.tabs.plans')}</TabsTrigger>
             <TabsTrigger value="marketplace">{t('admin.tabs.marketplace')}</TabsTrigger>
             <TabsTrigger value="coupons">Cupons</TabsTrigger>
+            <TabsTrigger value="verifications">Verificações</TabsTrigger>
             <TabsTrigger value="settings">{t('admin.tabs.settings')}</TabsTrigger>
             </TabsList>
           </div>
@@ -129,6 +131,10 @@ export default function Admin() {
 
           <TabsContent value="coupons" className="mt-6">
             <AdminCoupons />
+          </TabsContent>
+
+          <TabsContent value="verifications" className="mt-6">
+            <AdminVerifications />
           </TabsContent>
 
           <TabsContent value="settings" className="mt-6">
