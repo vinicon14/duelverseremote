@@ -24,6 +24,7 @@ import { getLanguageForCountry, normalizeBrowserLanguage } from "@/i18n/countrie
 import { setAppLanguage } from "@/i18n";
 import { SEOHead } from "@/components/SEOHead";
 import { isDiscordEmbedded, isRunningInsideDiscord } from "@/utils/discordEmbed";
+import { TwoFactorChallenge } from "@/components/TwoFactorChallenge";
 
 const DiscordIcon = ({ className = "" }: { className?: string }) => (
   <svg className={className} viewBox="0 0 127.14 96.36" aria-hidden="true" fill="currentColor">
@@ -43,6 +44,7 @@ const Auth = () => {
   const { toast } = useToast();
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
+  const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
   const [selectedTcg, setSelectedTcg] = useState<TcgType>('yugioh');
   const [signupCountry, setSignupCountry] = useState<string | null>(null);
   const insideDiscord = isDiscordEmbedded();
