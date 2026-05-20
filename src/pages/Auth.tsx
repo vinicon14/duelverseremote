@@ -233,8 +233,19 @@ const Auth = () => {
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
+        try {
+          const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+          if (aal?.nextLevel === 'aal2' && aal?.currentLevel === 'aal1') {
+            const { data: factorsData } = await supabase.auth.mfa.listFactors();
+            const verified = (factorsData?.totp || []).find((f: any) => f.status === 'verified');
+            if (verified) {
+              setMfaFactorId(verified.id);
+              return;
+            }
+          }
+        } catch {}
         navigate(defaultRedirect, { replace: true });
       }
     });
