@@ -11,7 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/Navbar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { Trophy, Swords, Star, Calendar, Video, Eye, Play, Sparkles, Loader2, Gift, CheckCircle2, Clapperboard, Target } from "lucide-react";
+import { Trophy, Swords, Star, Calendar, Video, Eye, Play, Sparkles, Loader2, Gift, CheckCircle2, Clapperboard, Target, Shield } from "lucide-react";
+import { TwoFactorSetup } from "@/components/TwoFactorSetup";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { ChangePasswordForm } from "@/components/ChangePasswordForm";
 import { LanguageSelector } from "@/components/LanguageSelector";
@@ -615,7 +616,7 @@ const Profile = () => {
             </Card>
 
             <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-              <TabsList className="grid h-auto w-full grid-cols-2 rounded-xl bg-card/80 p-1 md:grid-cols-4">
+              <TabsList className="grid h-auto w-full grid-cols-2 rounded-xl bg-card/80 p-1 md:grid-cols-5">
                 <TabsTrigger value="stats" className="gap-2">
                   <Trophy className="h-4 w-4" />
                   {t('profile.tabStats')}
@@ -631,6 +632,10 @@ const Profile = () => {
                 <TabsTrigger value="gallery" className="gap-2">
                   <Video className="h-4 w-4" />
                   {t('profile.tabGallery')}
+                </TabsTrigger>
+                <TabsTrigger value="security" className="gap-2">
+                  <Shield className="h-4 w-4" />
+                  Segurança
                 </TabsTrigger>
               </TabsList>
 
