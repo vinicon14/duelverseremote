@@ -464,6 +464,23 @@ const Auth = () => {
   };
   const currentColors = tcgColors[selectedTcg];
 
+  if (mfaFactorId) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <SEOHead tKey="auth" path="/auth" />
+        <TwoFactorChallenge
+          factorId={mfaFactorId}
+          onSuccess={() => {
+            setMfaFactorId(null);
+            const defaultRedirect = returnTo || (runningInDiscord ? '/duels' : '/');
+            navigate(defaultRedirect, { replace: true });
+          }}
+          onCancel={() => setMfaFactorId(null)}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative transition-all duration-700">
       <SEOHead tKey="auth" path="/auth" />
