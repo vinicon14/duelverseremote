@@ -170,6 +170,21 @@ const Auth = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (session?.user) {
+          // Block navigation if 2FA is required
+          try {
+            const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+            if (aal?.nextLevel === 'aal2' && aal?.currentLevel === 'aal1') {
+              const { data: factorsData } = await supabase.auth.mfa.listFactors();
+              const verified = (factorsData?.totp || []).find((f: any) => f.status === 'verified');
+              if (verified) {
+                setMfaFactorId(verified.id);
+                return;
+              }
+            }
+          } catch (err) {
+            console.error('[AUTH] MFA check failed:', err);
+          }
+
           if (event === 'SIGNED_IN') {
             const { data: tcgProfiles } = await supabase
               .from('tcg_profiles')
