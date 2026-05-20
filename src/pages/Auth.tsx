@@ -24,6 +24,7 @@ import { getLanguageForCountry, normalizeBrowserLanguage } from "@/i18n/countrie
 import { setAppLanguage } from "@/i18n";
 import { SEOHead } from "@/components/SEOHead";
 import { isDiscordEmbedded, isRunningInsideDiscord } from "@/utils/discordEmbed";
+import { TwoFactorChallenge } from "@/components/TwoFactorChallenge";
 
 const DiscordIcon = ({ className = "" }: { className?: string }) => (
   <svg className={className} viewBox="0 0 127.14 96.36" aria-hidden="true" fill="currentColor">
@@ -43,6 +44,7 @@ const Auth = () => {
   const { toast } = useToast();
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
+  const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
   const [selectedTcg, setSelectedTcg] = useState<TcgType>('yugioh');
   const [signupCountry, setSignupCountry] = useState<string | null>(null);
   const insideDiscord = isDiscordEmbedded();
@@ -168,6 +170,21 @@ const Auth = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (session?.user) {
+          // Block navigation if 2FA is required
+          try {
+            const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+            if (aal?.nextLevel === 'aal2' && aal?.currentLevel === 'aal1') {
+              const { data: factorsData } = await supabase.auth.mfa.listFactors();
+              const verified = (factorsData?.totp || []).find((f: any) => f.status === 'verified');
+              if (verified) {
+                setMfaFactorId(verified.id);
+                return;
+              }
+            }
+          } catch (err) {
+            console.error('[AUTH] MFA check failed:', err);
+          }
+
           if (event === 'SIGNED_IN') {
             const { data: tcgProfiles } = await supabase
               .from('tcg_profiles')
@@ -216,8 +233,19 @@ const Auth = () => {
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
+        try {
+          const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+          if (aal?.nextLevel === 'aal2' && aal?.currentLevel === 'aal1') {
+            const { data: factorsData } = await supabase.auth.mfa.listFactors();
+            const verified = (factorsData?.totp || []).find((f: any) => f.status === 'verified');
+            if (verified) {
+              setMfaFactorId(verified.id);
+              return;
+            }
+          }
+        } catch {}
         navigate(defaultRedirect, { replace: true });
       }
     });
@@ -435,6 +463,23 @@ const Auth = () => {
     rush_duel: { primary: '45 100% 50%', accent: '210 80% 55%', glow: '45 100% 55%' },
   };
   const currentColors = tcgColors[selectedTcg];
+
+  if (mfaFactorId) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <SEOHead tKey="auth" path="/auth" />
+        <TwoFactorChallenge
+          factorId={mfaFactorId}
+          onSuccess={() => {
+            setMfaFactorId(null);
+            const defaultRedirect = returnTo || (runningInDiscord ? '/duels' : '/');
+            navigate(defaultRedirect, { replace: true });
+          }}
+          onCancel={() => setMfaFactorId(null)}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative transition-all duration-700">
