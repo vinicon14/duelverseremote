@@ -945,6 +945,10 @@ const Profile = () => {
                   </CardContent>
                 </Card>
               </TabsContent>
+
+              <TabsContent value="security" className="space-y-6">
+                <TwoFactorSetup />
+              </TabsContent>
             </Tabs>
           </>
         )}
