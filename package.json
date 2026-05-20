@@ -1,7 +1,7 @@
 {
   "name": "duelverse-desktop",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.8.2",
   "description": "Duelverse desktop app wrapper with background tray and notifications",
   "author": "Duelverse",
   "license": "UNLICENSED",
