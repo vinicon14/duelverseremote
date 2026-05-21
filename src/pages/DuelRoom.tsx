@@ -1104,10 +1104,11 @@ const DuelRoom = () => {
                 className="w-full h-full absolute inset-0"
                 layout={videoLayout}
                 maxPlayers={(duel as any)?.max_players || 2}
-                isSpectator={!!isSpectator && !isJudge}
+                isSpectator={!!isSpectator}
+                audioBroadcastOnly={!!isJudge}
                 creatorId={duel?.creator_id}
                 onLayoutChange={setVideoLayout}
-                spectatorLpOverlay={isSpectator && !isJudge ? {
+                spectatorLpOverlay={isSpectator ? {
                   localLabel: duel.creator?.username || 'Player 1',
                   localLp: player1LP,
                   remotePlayers: [
