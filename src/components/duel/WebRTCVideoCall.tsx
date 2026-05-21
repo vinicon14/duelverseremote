@@ -457,6 +457,20 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     let disposed = false;
 
     const acquireMedia = async (): Promise<MediaStream | null> => {
+      // Audio-broadcast spectator (judge): mic only, no camera
+      if (isSpectator && audioBroadcastOnly) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+            video: false,
+          });
+          console.log("[WebRTC] Judge spectator audio-only stream acquired");
+          return stream;
+        } catch (err) {
+          console.error("[WebRTC] Judge mic acquisition failed:", err);
+          return null;
+        }
+      }
       // Spectators don't need local media - receive only
       if (isSpectator) return null;
 
