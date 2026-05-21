@@ -88,6 +88,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   remoteDeckOpenSlots,
   spectatorLpOverlay,
   isSpectator = false,
+  audioBroadcastOnly = false,
   creatorId,
 }, ref) => {
   const localVideoRef = useRef<HTMLVideoElement>(null);
