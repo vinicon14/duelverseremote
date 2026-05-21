@@ -36,6 +36,9 @@ interface WebRTCVideoCallProps {
   };
   /** When true, user is a spectator: receive-only, no local media, no controls */
   isSpectator?: boolean;
+  /** Spectator variant: judge spectator that ALSO transmits microphone audio to players
+   *  (still no local camera, still receives players' video). */
+  audioBroadcastOnly?: boolean;
   /** Creator user ID - used by spectators to correctly order peers (creator on left) */
   creatorId?: string;
 }
@@ -85,6 +88,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   remoteDeckOpenSlots,
   spectatorLpOverlay,
   isSpectator = false,
+  audioBroadcastOnly = false,
   creatorId,
 }, ref) => {
   const localVideoRef = useRef<HTMLVideoElement>(null);
@@ -240,6 +244,15 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       localStream.getTracks().forEach((track) => {
         pc.addTrack(track, localStream);
       });
+      // Judge spectator (audio-only broadcaster) still needs a recvonly video
+      // transceiver so the SDP includes a video m-line to receive players' video.
+      if (isSpectator && audioBroadcastOnly) {
+        try {
+          pc.addTransceiver("video", { direction: "recvonly" });
+        } catch (err) {
+          console.error("[WebRTC] Failed to add recvonly video transceiver:", err);
+        }
+      }
     } else if (isSpectator) {
       // Spectators: ensure SDP includes media sections to receive audio + video
       try {
@@ -324,7 +337,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     };
 
     return pc;
-  }, [userId, isSpectator]);
+  }, [userId, isSpectator, audioBroadcastOnly]);
 
   const handleSignal = useCallback(
     async (payload: any) => {
@@ -444,6 +457,20 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     let disposed = false;
 
     const acquireMedia = async (): Promise<MediaStream | null> => {
+      // Audio-broadcast spectator (judge): mic only, no camera
+      if (isSpectator && audioBroadcastOnly) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+            video: false,
+          });
+          console.log("[WebRTC] Judge spectator audio-only stream acquired");
+          return stream;
+        } catch (err) {
+          console.error("[WebRTC] Judge mic acquisition failed:", err);
+          return null;
+        }
+      }
       // Spectators don't need local media - receive only
       if (isSpectator) return null;
 
@@ -546,7 +573,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         channelRef.current = null;
       }
     };
-  }, [duelId, userId, handleSignal, isSpectator]);
+  }, [duelId, userId, handleSignal, isSpectator, audioBroadcastOnly]);
 
   // Attach remote streams to video elements
   useEffect(() => {
@@ -909,17 +936,20 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         </>
       )}
 
-      {/* Controls bar — hidden for spectators */}
-      {!isSpectator && (
+      {/* Controls bar — hidden for pure receive-only spectators */}
+      {(!isSpectator || audioBroadcastOnly) && (
         <div className="absolute bottom-1.5 sm:bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 sm:gap-2 z-20">
           <Button
             variant="outline"
             size="icon"
             onClick={toggleMute}
             className={`rounded-full w-8 h-8 sm:w-10 sm:h-10 backdrop-blur-sm ${isMuted ? "bg-destructive/80 text-destructive-foreground" : "bg-card/80"}`}
+            title={isMuted ? "Ativar microfone" : "Silenciar microfone"}
           >
             {isMuted ? <MicOff className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Mic className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
           </Button>
+          {!isSpectator && (
+          <>
           <Button
             variant="outline"
             size="icon"
@@ -1021,6 +1051,8 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
             >
               {isSideBySide ? <PictureInPicture2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <LayoutGrid className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
             </Button>
+          )}
+          </>
           )}
         </div>
       )}
