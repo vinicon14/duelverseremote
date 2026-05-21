@@ -573,7 +573,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         channelRef.current = null;
       }
     };
-  }, [duelId, userId, handleSignal, isSpectator]);
+  }, [duelId, userId, handleSignal, isSpectator, audioBroadcastOnly]);
 
   // Attach remote streams to video elements
   useEffect(() => {
