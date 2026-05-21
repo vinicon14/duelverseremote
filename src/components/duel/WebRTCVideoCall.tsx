@@ -625,20 +625,29 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   const isSideBySide = layout === "side-by-side";
 
   // Build remote slots: fill with connected peers, pad with waiting slots
-  // For spectators: sort peers so creator comes first (local panel = left = creator)
-  const sortedPeerIds = isSpectator && creatorId
-    ? [...remotePeerIds].sort((a, b) => {
-        if (a === creatorId) return -1;
-        if (b === creatorId) return 1;
-        return 0;
-      })
+  // For spectators: the "local panel" slot is reserved for the creator (player 1),
+  // and remaining slots are for the other (non-creator) peers in the order they connected.
+  // IMPORTANT: we must look up the creator peer explicitly — not by array position —
+  // because remotePeerIds only contains peers whose stream has actually arrived,
+  // so the order is non-deterministic and the creator may not be first (or may not
+  // be present yet). Using array order made player 2 occupy the player 1 slot when
+  // they connected first, leaving the player 2 slot empty.
+  const creatorPeerId = isSpectator && creatorId && remotePeerIds.includes(creatorId)
+    ? creatorId
+    : null;
+  const nonCreatorPeerIds = isSpectator
+    ? remotePeerIds.filter((pid) => pid !== creatorId)
+    : remotePeerIds;
+  // Expose to renderLocalPanel via the sortedPeerIds name it already reads.
+  const sortedPeerIds = isSpectator
+    ? [creatorPeerId, ...nonCreatorPeerIds].filter((x): x is string => !!x)
     : remotePeerIds;
 
   const remoteSlots: (string | null)[] = [];
   if (isSpectator) {
-    // Skip first peer (used in local panel), use rest for remote slots
+    // Non-creator peers fill the remote slots, regardless of how many slots exist.
     for (let i = 0; i < totalSlots - 1; i++) {
-      remoteSlots.push(sortedPeerIds[i + 1] || null);
+      remoteSlots.push(nonCreatorPeerIds[i] || null);
     }
   } else {
     for (let i = 0; i < totalSlots - 1; i++) {
