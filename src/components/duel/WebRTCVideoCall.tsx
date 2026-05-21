@@ -244,6 +244,15 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       localStream.getTracks().forEach((track) => {
         pc.addTrack(track, localStream);
       });
+      // Judge spectator (audio-only broadcaster) still needs a recvonly video
+      // transceiver so the SDP includes a video m-line to receive players' video.
+      if (isSpectator && audioBroadcastOnly) {
+        try {
+          pc.addTransceiver("video", { direction: "recvonly" });
+        } catch (err) {
+          console.error("[WebRTC] Failed to add recvonly video transceiver:", err);
+        }
+      }
     } else if (isSpectator) {
       // Spectators: ensure SDP includes media sections to receive audio + video
       try {
