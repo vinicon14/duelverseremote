@@ -36,6 +36,9 @@ interface WebRTCVideoCallProps {
   };
   /** When true, user is a spectator: receive-only, no local media, no controls */
   isSpectator?: boolean;
+  /** Spectator variant: judge spectator that ALSO transmits microphone audio to players
+   *  (still no local camera, still receives players' video). */
+  audioBroadcastOnly?: boolean;
   /** Creator user ID - used by spectators to correctly order peers (creator on left) */
   creatorId?: string;
 }
