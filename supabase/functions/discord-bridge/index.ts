@@ -502,13 +502,17 @@ serve(async (req) => {
     // ============================================================
     if (requestType === "chat_to_discord") {
       const { username, avatarUrl, userId } = body;
-      const ephemeral = body?.ephemeral === true;
+      const hasLink = containsLink(body?.content);
+      // Mensagens com links são apagadas automaticamente após 3 minutos
+      const linkAutoDeleteMs = 3 * 60 * 1000;
+      const ephemeral = body?.ephemeral === true || hasLink;
       const captureMessageIds = body?.captureMessageIds === true;
       const wantPostedId = ephemeral || captureMessageIds;
-      const ephemeralDelayMs =
+      const requestedDelay =
         typeof body?.ephemeralDelayMs === "number" && body.ephemeralDelayMs > 0
-          ? Math.min(body.ephemeralDelayMs, 60000)
+          ? Math.min(body.ephemeralDelayMs, linkAutoDeleteMs)
           : 10000;
+      const ephemeralDelayMs = hasLink ? linkAutoDeleteMs : requestedDelay;
       const servers = Array.isArray(botStatus.servers) ? botStatus.servers : [];
       const activeServers = servers.filter((server: any) => server.enabled && server.webhookUrl);
       const urls: string[] = activeServers.map((server: any) => server.webhookUrl);
@@ -561,8 +565,9 @@ serve(async (req) => {
         }
       }
 
-      return jsonResponse({ success: results.some((r) => r.ok), ephemeral, results });
+      return jsonResponse({ success: results.some((r) => r.ok), ephemeral, hasLink, results });
     }
+
 
     // ============================================================
     // Cleanup: delete Discord announcement messages for a closed duel room
