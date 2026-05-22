@@ -46,6 +46,10 @@ async function discordFetch(path: string, init: RequestInit = {}) {
   return { ok: res.ok, status: res.status, data };
 }
 
+const URL_REGEX = /https?:\/\/[^\s<>"']+/i;
+const containsLink = (text: unknown): boolean =>
+  typeof text === "string" && URL_REGEX.test(text);
+
 const scheduleWebhookMessageDeletion = (
   webhookUrl: string,
   messageId: string | undefined | null,
