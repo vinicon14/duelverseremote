@@ -424,3 +424,21 @@ div[id^="google_ads_iframe"] {
   height: 0 !important;
   overflow: hidden !important;
 }
+
+/* ===========================================================
+   Modo Duelista Imersivo — animações e acessibilidade globais
+   =========================================================== */
+@keyframes immersive-float-up {
+  0%   { opacity: 0; transform: translateY(6px) scale(0.95); }
+  20%  { opacity: 1; transform: translateY(-4px) scale(1.05); }
+  100% { opacity: 0; transform: translateY(-26px) scale(1); }
+}
+
+/* Acessibilidade aplicada pelo provider via classes no <html> */
+html.immersive-large-fonts { font-size: 18px; }
+html.immersive-high-contrast {
+  filter: contrast(1.18) saturate(1.12);
+}
+html[data-colorblind="protanopia"]   body { filter: url("#cb-protanopia"); }
+html[data-colorblind="deuteranopia"] body { filter: url("#cb-deuteranopia"); }
+html[data-colorblind="tritanopia"]   body { filter: url("#cb-tritanopia"); }
