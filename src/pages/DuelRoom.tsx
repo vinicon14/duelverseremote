@@ -1043,33 +1043,27 @@ const DuelRoomInner = () => {
   const myDeckIsOpenRef = useRef(myDeckIsOpen);
   myDeckIsOpenRef.current = myDeckIsOpen;
 
-  const arenaDigitalReady =
-    !!duel &&
-    isYgoStyleTcg(duel.tcg_type) &&
-    !!duel.creator_id &&
-    !!duel.opponent_id &&
-    (duel.creator_arena_digital_enabled ?? true) !== false &&
-    (duel.opponent_arena_digital_enabled ?? true) !== false;
+  const isYgoDigitalDuel = !!duel && isYgoStyleTcg(duel.tcg_type);
+  const creatorDigitalDeckOpen = isYgoDigitalDuel && (isPlayer1 ? myDeckIsOpen : creatorDeckOpen);
+  const opponentDigitalDeckOpen = isYgoDigitalDuel && (isPlayer2 ? myDeckIsOpen : opponentPlayerDeckOpen);
+  const bothDuelistsDigitalDecksOpen =
+    isYgoDigitalDuel &&
+    !!duel?.creator_id &&
+    !!duel?.opponent_id &&
+    creatorDigitalDeckOpen &&
+    opponentDigitalDeckOpen;
 
-  // Modo Duelista Imersivo: ativa por consenso salvo no duelo ou por ambos abrirem a Arena.
+  // Modo Duelista Imersivo: ativa apenas quando os dois duelistas abrem seus decks digitais.
   const { active: immersiveModeActive, settings: immersiveSettings, setArenaState } = useImmersiveMode();
   useEffect(() => {
     setArenaState({
-      localOpen: myDeckIsOpen || arenaDigitalReady,
-      remoteOpen: opponentDeckOpen || arenaDigitalReady,
-      dbReady: arenaDigitalReady,
+      localOpen: creatorDigitalDeckOpen,
+      remoteOpen: opponentDigitalDeckOpen,
     });
-  }, [myDeckIsOpen, opponentDeckOpen, arenaDigitalReady, setArenaState]);
+  }, [creatorDigitalDeckOpen, opponentDigitalDeckOpen, setArenaState]);
 
   useEffect(() => {
-    if (!arenaDigitalReady || !isParticipant || isJudge) return;
-    setShowMagicViewer(false);
-    setShowPokemonViewer(false);
-    setShowDeckViewer(true);
-  }, [arenaDigitalReady, isParticipant, isJudge]);
-
-  useEffect(() => {
-    if (!arenaDigitalReady || !duel?.id || !currentUser?.id || !isParticipant || duel.immersive_mode_started_at) {
+    if (!bothDuelistsDigitalDecksOpen || !duel?.id || !currentUser?.id || !isParticipant || duel.immersive_mode_started_at) {
       if (duel?.immersive_mode_started_at) immersiveStartLoggedRef.current = true;
       return;
     }
@@ -1096,7 +1090,7 @@ const DuelRoomInner = () => {
 
     startMode();
   }, [
-    arenaDigitalReady,
+    bothDuelistsDigitalDecksOpen,
     duel?.id,
     duel?.tcg_type,
     duel?.immersive_mode_started_at,
@@ -1346,7 +1340,7 @@ const DuelRoomInner = () => {
               </div>
             )}
 
-            {/* Modo Duelista Imersivo — overlay visual (ativa quando ambos jogadores aceitam Arena Digital) */}
+            {/* Modo Duelista Imersivo — overlay visual (ativa quando os dois duelistas abrem os decks digitais) */}
             {duel && (
               <ImmersiveOverlay
                 player1Label={duel.creator?.username || "Jogador 1"}

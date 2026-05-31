@@ -12,11 +12,11 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useImmersiveMode } from "./ImmersiveModeProvider";
+import { useImmersiveMode, type ImmersiveSettings } from "./ImmersiveModeProvider";
 import { RotateCcw, Volume2, Layout, Sparkles, Wand2, Eye } from "lucide-react";
 
 export const ImmersiveSettingsPanel = () => {
-  const { settingsOpen, setSettingsOpen, settings, updateSetting, resetSettings, userEnabled, setUserEnabled } =
+  const { settingsOpen, setSettingsOpen, settings, updateSetting, resetSettings } =
     useImmersiveMode();
 
   const SliderRow = ({
@@ -61,14 +61,6 @@ export const ImmersiveSettingsPanel = () => {
           </SheetDescription>
         </SheetHeader>
 
-        <div className="mt-4 flex items-center justify-between rounded-lg border border-border p-3">
-          <div>
-            <Label className="text-sm font-medium">Ativar Modo Imersivo</Label>
-            <p className="text-xs text-muted-foreground">Quando desligado, mostra o Arena Digital padrão.</p>
-          </div>
-          <Switch checked={userEnabled} onCheckedChange={setUserEnabled} />
-        </div>
-
         <Tabs defaultValue="audio" className="mt-4">
           <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="audio" title="Áudio"><Volume2 className="h-4 w-4" /></TabsTrigger>
@@ -110,7 +102,10 @@ export const ImmersiveSettingsPanel = () => {
             </div>
             <div className="space-y-2">
               <Label className="text-sm">Idioma da narração</Label>
-              <Select value={settings.narrationLanguage} onValueChange={(v: any) => updateSetting("narrationLanguage", v)}>
+              <Select
+                value={settings.narrationLanguage}
+                onValueChange={(v) => updateSetting("narrationLanguage", v as ImmersiveSettings["narrationLanguage"])}
+              >
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="pt-BR">Português (BR)</SelectItem>
@@ -120,7 +115,10 @@ export const ImmersiveSettingsPanel = () => {
             </div>
             <div className="space-y-2">
               <Label className="text-sm">Frequência da narração</Label>
-              <Select value={settings.narrationFrequency} onValueChange={(v: any) => updateSetting("narrationFrequency", v)}>
+              <Select
+                value={settings.narrationFrequency}
+                onValueChange={(v) => updateSetting("narrationFrequency", v as ImmersiveSettings["narrationFrequency"])}
+              >
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos os eventos</SelectItem>
@@ -142,7 +140,10 @@ export const ImmersiveSettingsPanel = () => {
           <TabsContent value="a11y" className="mt-4 space-y-4">
             <div className="space-y-2">
               <Label className="text-sm">Modo daltônico</Label>
-              <Select value={settings.colorblindMode} onValueChange={(v: any) => updateSetting("colorblindMode", v)}>
+              <Select
+                value={settings.colorblindMode}
+                onValueChange={(v) => updateSetting("colorblindMode", v as ImmersiveSettings["colorblindMode"])}
+              >
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="off">Desligado</SelectItem>
