@@ -28,7 +28,7 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { DuelFieldBoard, FieldState, FieldZoneType, GameCard } from './DuelFieldBoard';
 import { CardEffectModal } from './CardEffectModal';
-import { ZonePlacementModal } from './ZonePlacementModal';
+import { ZonePlacementModal, type SummonType } from './ZonePlacementModal';
 import { ZoneViewerModal } from './ZoneViewerModal';
 import { FieldCardActionsModal } from './FieldCardActionsModal';
 import { SideDeckSwapModal } from './SideDeckSwapModal';
@@ -47,6 +47,8 @@ interface DuelDeckViewerProps {
   embedded?: boolean;
   /** TCG type of the duel — when 'rush_duel', applies Rush Duel rules (3x3 board, draw-up-to-5). */
   tcgType?: string | null;
+  immersiveActive?: boolean;
+  onDuelEvent?: (eventType: string, message: string, payload?: Record<string, unknown>) => void | Promise<void>;
 }
 
 const EXTRA_DECK_TYPES = ['Fusion', 'Synchro', 'XYZ', 'Link'];
@@ -140,6 +142,16 @@ const isExtraDeckCardType = (type: string): boolean => {
 const generateInstanceId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
 const CARD_BACK_URL = 'https://images.ygoprodeck.com/images/cards/back_high.jpg';
+const ICONIC_CARD_MATCHERS = [
+  'blue-eyes white dragon',
+  'dark magician',
+  'red-eyes black dragon',
+  'slifer',
+  'obelisk',
+  'winged dragon of ra',
+  'stardust dragon',
+  'number 39',
+];
 
 const INITIAL_FIELD_STATE: FieldState = {
   monster1: null,
@@ -163,6 +175,41 @@ const INITIAL_FIELD_STATE: FieldState = {
   hand: [],
 };
 
+const toPublicCard = (card: GameCard) => ({
+  id: card.id,
+  name: card.name,
+  image: card.card_images?.[0]?.image_url_small || '',
+  type: card.type,
+  race: card.race,
+  atk: card.atk,
+  def: card.def,
+});
+
+const getSummonTypeFromCard = (card: GameCard, faceDown = false): SummonType => {
+  if (faceDown) return 'set';
+  const type = card.type.toLowerCase();
+  if (type.includes('synchro')) return 'synchro';
+  if (type.includes('xyz') || type.includes('x-y-z')) return 'xyz';
+  if (type.includes('link')) return 'link';
+  if (type.includes('pendulum')) return 'pendulum';
+  if (isExtraDeckCardType(card.type)) return 'special';
+  return isMonsterCard(card.type) ? 'normal' : 'activate';
+};
+
+const getSummonTypeLabel = (summonType: SummonType) => {
+  const labels: Record<SummonType, string> = {
+    normal: 'Invocação Normal',
+    special: 'Invocação Especial',
+    synchro: 'Invocação Sincro',
+    xyz: 'Invocação Xyz',
+    link: 'Invocação Link',
+    pendulum: 'Invocação Pêndulo',
+    set: 'Baixar carta',
+    activate: 'Ativação',
+  };
+  return labels[summonType];
+};
+
 export const DuelDeckViewer = ({
   isOpen,
   onClose,
@@ -175,6 +222,8 @@ export const DuelDeckViewer = ({
   opponentUsername,
   embedded = false,
   tcgType,
+  immersiveActive = false,
+  onDuelEvent,
 }: DuelDeckViewerProps) => {
   const isRushDuel = tcgType === 'rush_duel';
   const [selectedEffectCard, setSelectedEffectCard] = useState<GameCard | null>(null);
@@ -203,6 +252,9 @@ export const DuelDeckViewer = ({
   const [showSearch, setShowSearch] = useState(false);
   const [attachMode, setAttachMode] = useState<{ targetZone: FieldZoneType; cardToAttach: GameCard } | null>(null);
   const [showSideSwap, setShowSideSwap] = useState(false);
+  const [allowSpectatorHandReveal, setAllowSpectatorHandReveal] = useState(false);
+  const [visualEvent, setVisualEvent] = useState<{ message: string; tone: SummonType | 'iconic' } | null>(null);
+  const visualEventTimeoutRef = useRef<number | null>(null);
 
   // Draggable functionality
   const { position, isDragging, elementRef, dragHandlers } = useDraggable({
@@ -217,6 +269,52 @@ export const DuelDeckViewer = ({
   useEffect(() => {
     isOpenRef.current = isOpen;
   }, [isOpen]);
+
+  useEffect(() => {
+    return () => {
+      if (visualEventTimeoutRef.current) {
+        window.clearTimeout(visualEventTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const emitDuelEvent = useCallback((eventType: string, message: string, payload: Record<string, unknown> = {}) => {
+    void onDuelEvent?.(eventType, message, {
+      source: 'arena_digital',
+      tcg_type: tcgType || 'yugioh',
+      ...payload,
+    });
+  }, [onDuelEvent, tcgType]);
+
+  const triggerVisualEffect = useCallback((message: string, tone: SummonType | 'iconic') => {
+    if (!immersiveActive) return;
+    if (visualEventTimeoutRef.current) {
+      window.clearTimeout(visualEventTimeoutRef.current);
+    }
+    setVisualEvent({ message, tone });
+    visualEventTimeoutRef.current = window.setTimeout(() => setVisualEvent(null), 1600);
+  }, [immersiveActive]);
+
+  const announcePlacement = useCallback((card: GameCard, zone: FieldZoneType, summonType: SummonType, faceDown: boolean) => {
+    const publicCard = toPublicCard(card);
+    const isIconic = ICONIC_CARD_MATCHERS.some((matcher) => card.name.toLowerCase().includes(matcher));
+    const isSummon = ['normal', 'special', 'synchro', 'xyz', 'link', 'pendulum'].includes(summonType);
+    const eventType = isSummon ? 'summon' : summonType === 'activate' ? 'effect' : 'card_set';
+    const label = getSummonTypeLabel(summonType);
+    const message = faceDown
+      ? `${label} em ${zone}.`
+      : `${label}: ${card.name}.`;
+
+    emitDuelEvent(eventType, message, {
+      zone,
+      summon_type: summonType,
+      card: faceDown ? { face_down: true, type: card.type } : publicCard,
+      iconic: isIconic,
+    });
+    if (isSummon || summonType === 'activate') {
+      triggerVisualEffect(message, isIconic ? 'iconic' : summonType);
+    }
+  }, [emitDuelEvent, triggerVisualEffect]);
 
   // Setup broadcast channel
   useEffect(() => {
@@ -281,6 +379,8 @@ export const DuelDeckViewer = ({
       payload: {
         userId: currentUserId,
         hand: fieldState.hand.length,
+        handPreview: allowSpectatorHandReveal ? fieldState.hand.map(toPublicCard) : null,
+        handRevealed: allowSpectatorHandReveal,
         field: getFieldCards(),
         monsterZones: {
           monster1: fieldState.monster1 ? { id: fieldState.monster1.id, name: fieldState.monster1.isFaceDown ? 'Face-down' : fieldState.monster1.name, image: fieldState.monster1.isFaceDown ? CARD_BACK_URL : fieldState.monster1.card_images?.[0]?.image_url_small, isFaceDown: fieldState.monster1.isFaceDown, position: fieldState.monster1.position, materials: fieldState.monster1.attachedCards?.length || 0, atk: fieldState.monster1.atk, def: fieldState.monster1.def, desc: fieldState.monster1.desc, type: fieldState.monster1.type, race: fieldState.monster1.race } : null,
@@ -327,7 +427,7 @@ export const DuelDeckViewer = ({
         sleeveUrl: localStorage.getItem('activeSleeveUrl') || null,
       }
     });
-  }, [broadcastChannel, currentUserId, fieldState]);
+  }, [allowSpectatorHandReveal, broadcastChannel, currentUserId, fieldState]);
 
   useEffect(() => {
     broadcastStateRef.current = broadcastState;
@@ -394,6 +494,9 @@ export const DuelDeckViewer = ({
   };
 
   const drawCard = useCallback(() => {
+    if (fieldState.deck.length > 0) {
+      emitDuelEvent('draw', 'Jogador comprou 1 carta.', { action: 'draw', count: 1 });
+    }
     setFieldState(prev => {
       if (prev.deck.length === 0) return prev;
       // Random draw - select a random card from the deck
@@ -406,9 +509,13 @@ export const DuelDeckViewer = ({
         hand: [...prev.hand, { ...drawnCard, isFaceDown: false }],
       };
     });
-  }, []);
+  }, [emitDuelEvent, fieldState.deck.length]);
 
   const drawMultiple = useCallback((count: number) => {
+    const toDrawNow = Math.min(count, fieldState.deck.length);
+    if (toDrawNow > 0) {
+      emitDuelEvent('draw', `Jogador comprou ${toDrawNow} cartas.`, { action: 'draw', count: toDrawNow });
+    }
     setFieldState(prev => {
       const toDraw = Math.min(count, prev.deck.length);
       if (toDraw === 0) return prev;
@@ -429,10 +536,17 @@ export const DuelDeckViewer = ({
         hand: [...prev.hand, ...drawnCards],
       };
     });
-  }, []);
+  }, [emitDuelEvent, fieldState.deck.length]);
 
   // Rush Duel: at the start of each turn, draw until you have 5 cards in hand.
   const drawUpToFive = useCallback(() => {
+    const toDrawNow = Math.min(Math.max(0, 5 - fieldState.hand.length), fieldState.deck.length);
+    if (toDrawNow > 0) {
+      emitDuelEvent('draw', `Jogador comprou até 5 (${toDrawNow} carta${toDrawNow === 1 ? '' : 's'}).`, {
+        action: 'rush_draw_to_five',
+        count: toDrawNow,
+      });
+    }
     setFieldState(prev => {
       const need = 5 - prev.hand.length;
       if (need <= 0 || prev.deck.length === 0) return prev;
@@ -450,16 +564,18 @@ export const DuelDeckViewer = ({
         hand: [...prev.hand, ...drawnCards],
       };
     });
-  }, []);
+  }, [emitDuelEvent, fieldState.deck.length, fieldState.hand.length]);
 
   const shuffleDeck = useCallback(() => {
+    emitDuelEvent('deck_shuffle', 'Deck embaralhado.', { deck_count: fieldState.deck.length });
     setFieldState(prev => ({
       ...prev,
       deck: shuffleArray(prev.deck),
     }));
-  }, []);
+  }, [emitDuelEvent, fieldState.deck.length]);
 
   const returnAllToDeck = useCallback(() => {
+    emitDuelEvent('deck_reset', 'Campo, mão e zonas públicas retornaram ao Deck.', { action: 'return_all_to_deck' });
     setFieldState(prev => {
       const fieldZones: FieldZoneType[] = [
         'monster1', 'monster2', 'monster3', 'monster4', 'monster5',
@@ -507,7 +623,7 @@ export const DuelDeckViewer = ({
         sideDeck: prev.sideDeck,
       };
     });
-  }, []);
+  }, [emitDuelEvent]);
 
   const getOccupiedZones = useCallback((): FieldZoneType[] => {
     const zones: FieldZoneType[] = [
@@ -526,7 +642,7 @@ export const DuelDeckViewer = ({
     });
   }, [fieldState]);
 
-  const handlePlaceCard = useCallback((zone: FieldZoneType, faceDown: boolean, position: 'attack' | 'defense') => {
+  const handlePlaceCard = useCallback((zone: FieldZoneType, faceDown: boolean, position: 'attack' | 'defense', summonType: SummonType) => {
     const card = placementModal.card;
     if (!card) return;
 
@@ -551,8 +667,9 @@ export const DuelDeckViewer = ({
       };
     });
 
+    announcePlacement(card, zone, summonType, faceDown);
     setPlacementModal({ open: false, card: null });
-  }, [placementModal.card]);
+  }, [announcePlacement, placementModal.card]);
 
   const handleZoneClick = useCallback((zone: FieldZoneType) => {
     // Open zone viewer for pile zones
@@ -595,14 +712,43 @@ export const DuelDeckViewer = ({
           graveyard: newGraveyard,
         } as FieldState;
       });
+      emitDuelEvent('material_attach', `${cardToAttach.name} foi anexada como material de ${card.name}.`, {
+        to_zone: zone,
+        target: toPublicCard(card),
+        material: toPublicCard(cardToAttach),
+      });
       setAttachMode(null);
       return;
     }
     
     setCardActionsModal({ open: true, card, zone });
-  }, [attachMode, fieldState]);
+  }, [attachMode, emitDuelEvent, fieldState]);
 
   const handleCardDrop = useCallback((zone: FieldZoneType, card: GameCard & { sourceZone?: FieldZoneType }) => {
+    const destinationIsSingleZone = !['graveyard', 'banished', 'deck', 'extraDeck', 'sideDeck'].includes(zone);
+    if (destinationIsSingleZone && fieldState[zone] !== null) return;
+
+    if (destinationIsSingleZone) {
+      announcePlacement(card, zone, getSummonTypeFromCard(card), false);
+    } else if (zone === 'graveyard') {
+      emitDuelEvent('card_move', `${card.name} foi enviado ao Cemitério.`, {
+        to_zone: zone,
+        from_zone: card.sourceZone || 'hand',
+        card: toPublicCard(card),
+      });
+    } else if (zone === 'banished') {
+      emitDuelEvent('card_move', `${card.name} foi banido.`, {
+        to_zone: zone,
+        from_zone: card.sourceZone || 'hand',
+        card: toPublicCard(card),
+      });
+    } else {
+      emitDuelEvent('card_move', `Carta movida para ${zone}.`, {
+        to_zone: zone,
+        from_zone: card.sourceZone || 'hand',
+      });
+    }
+
     // Handle dropped card from drag and drop
     setFieldState(prev => {
       const sourceZone = card.sourceZone;
@@ -669,7 +815,7 @@ export const DuelDeckViewer = ({
 
       return newState;
     });
-  }, []);
+  }, [announcePlacement, emitDuelEvent, fieldState]);
 
   // Handle drop on hand zone
   const handleHandDrop = useCallback((e: React.DragEvent) => {
@@ -684,6 +830,12 @@ export const DuelDeckViewer = ({
       if ((card as any).sourceZone === 'hand') {
         return;
       }
+
+      emitDuelEvent('card_move', 'Carta adicionada à mão.', {
+        from_zone: card.sourceZone || 'unknown',
+        to_zone: 'hand',
+        card: card.sourceZone && card.sourceZone !== 'deck' ? toPublicCard(card) : undefined,
+      });
       
       setFieldState(prev => {
         const sourceZone = card.sourceZone;
@@ -722,7 +874,7 @@ export const DuelDeckViewer = ({
     } catch (err) {
       console.error('Failed to parse dropped card:', err);
     }
-  }, []);
+  }, [emitDuelEvent]);
 
   const handleHandCardClick = useCallback((card: GameCard) => {
     // Open effect modal for hand cards (click shows effect)
@@ -732,6 +884,12 @@ export const DuelDeckViewer = ({
 
   const searchCardInDeck = useCallback((cardName: string) => {
     if (!cardName.trim()) return;
+
+    const found = fieldState.deck.find(c => c.name.toLowerCase().includes(cardName.toLowerCase()));
+    emitDuelEvent('deck_search', 'Jogador pesquisou o Deck e adicionou uma carta à mão.', {
+      found: !!found,
+      deck_count_before: fieldState.deck.length,
+    });
     
     setFieldState(prev => {
       const lowerQuery = cardName.toLowerCase();
@@ -752,7 +910,7 @@ export const DuelDeckViewer = ({
     });
     setSearchQuery('');
     setShowSearch(false);
-  }, []);
+  }, [emitDuelEvent, fieldState.deck]);
 
   // Card actions from modal
   const handleFieldCardAction = useCallback((action: string) => {
@@ -849,9 +1007,30 @@ export const DuelDeckViewer = ({
       
       return { ...prev, ...updates } as FieldState;
     });
+
+    const actionLabels: Record<string, { eventType: string; message: string }> = {
+      flipUp: { eventType: 'card_flip', message: `${card.name} foi revelada.` },
+      flipDown: { eventType: 'card_flip', message: `${card.name} foi virada para baixo.` },
+      togglePosition: { eventType: 'card_position', message: `${card.name} mudou de posição.` },
+      toGraveyard: { eventType: 'card_move', message: `${card.name} foi enviado ao Cemitério.` },
+      toBanished: { eventType: 'card_move', message: `${card.name} foi banido.` },
+      toHand: { eventType: 'card_move', message: `${card.name} voltou para a mão.` },
+      toTopDeck: { eventType: 'card_move', message: `${card.name} voltou ao topo do Deck.` },
+      toBottomDeck: { eventType: 'card_move', message: `${card.name} voltou ao fundo do Deck.` },
+      shuffleIntoDeck: { eventType: 'deck_shuffle', message: `${card.name} foi embaralhada no Deck.` },
+      toExtraDeck: { eventType: 'card_move', message: `${card.name} voltou ao Extra Deck.` },
+    };
+    const actionEvent = actionLabels[action];
+    if (actionEvent) {
+      emitDuelEvent(actionEvent.eventType, actionEvent.message, {
+        action,
+        from_zone: zone,
+        card: toPublicCard(card),
+      });
+    }
     
     setCardActionsModal({ open: false, card: null, zone: null });
-  }, [cardActionsModal]);
+  }, [cardActionsModal, emitDuelEvent]);
 
   // Ref to track if detach is in progress to prevent double-clicks
   const isDetachingRef = useRef(false);
@@ -871,6 +1050,12 @@ export const DuelDeckViewer = ({
 
     // Close the modal immediately
     setCardActionsModal({ open: false, card: null, zone: null });
+    const detachedPreview = card.attachedCards[materialIndex];
+    emitDuelEvent('material_detach', `Material destacado de ${card.name}.`, {
+      from_zone: zone,
+      card: toPublicCard(card),
+      material: detachedPreview ? toPublicCard(detachedPreview) : undefined,
+    });
 
     setFieldState(prev => {
       const currentCard = prev[zone] as GameCard;
@@ -904,11 +1089,33 @@ export const DuelDeckViewer = ({
         graveyard: [...prev.graveyard, detached],
       };
     });
-  }, [cardActionsModal]);
+  }, [cardActionsModal, emitDuelEvent]);
 
   const handleZoneViewerAction = useCallback((action: string, card: GameCard, index: number) => {
     const zone = viewerModal.zone;
     if (!zone) return;
+
+    const sourceIsPrivate = zone === 'deck' || zone === 'extraDeck' || zone === 'sideDeck';
+    if (action === 'toField') {
+      const occupiedZones = ['monster1', 'monster2', 'monster3', 'monster4', 'monster5', 'spell1', 'spell2', 'spell3', 'spell4', 'spell5', 'extraMonster1', 'extraMonster2', 'fieldSpell'].filter(z => fieldState[z as keyof FieldState] !== null);
+      const result = findPriorityZone(card, zone as CardSourceZone, occupiedZones as FieldZoneType[]);
+      if (result.zone) {
+        announcePlacement(card, result.zone, getSummonTypeFromCard(card, result.faceDown), result.faceDown);
+      }
+    } else {
+      const messageByAction: Record<string, string> = {
+        toHand: sourceIsPrivate ? 'Carta adicionada à mão.' : `${card.name} foi adicionada à mão.`,
+        toGY: sourceIsPrivate ? 'Carta enviada ao Cemitério.' : `${card.name} foi enviado ao Cemitério.`,
+        toBanished: sourceIsPrivate ? 'Carta banida.' : `${card.name} foi banido.`,
+        toTop: 'Carta movida para o topo do Deck.',
+        toBottom: 'Carta movida para o fundo do Deck.',
+      };
+      emitDuelEvent(action === 'toGY' || action === 'toBanished' ? 'card_move' : 'card_move', messageByAction[action] || 'Carta movida.', {
+        action,
+        from_zone: zone,
+        card: sourceIsPrivate ? undefined : toPublicCard(card),
+      });
+    }
 
     setFieldState(prev => {
       const newState = { ...prev };
@@ -951,7 +1158,7 @@ export const DuelDeckViewer = ({
 
       return newState;
     });
-  }, [viewerModal.zone]);
+  }, [announcePlacement, emitDuelEvent, fieldState, viewerModal.zone]);
 
   // Calculate total cards
   const totalMainDeck = deck.reduce((acc, c) => acc + c.quantity, 0);
@@ -1056,6 +1263,27 @@ export const DuelDeckViewer = ({
               </div>
             )}
 
+            {visualEvent && (
+              <div className="pointer-events-none absolute inset-x-0 top-1/2 z-50 flex -translate-y-1/2 justify-center px-4">
+                <div
+                  className={cn(
+                    "rounded-lg border px-5 py-3 text-center text-sm font-bold uppercase shadow-2xl backdrop-blur-md animate-fade-in-up",
+                    visualEvent.tone === 'iconic'
+                      ? "border-yellow-300 bg-yellow-400/25 text-yellow-100"
+                      : visualEvent.tone === 'synchro'
+                        ? "border-cyan-300 bg-cyan-500/25 text-cyan-100"
+                        : visualEvent.tone === 'xyz'
+                          ? "border-violet-300 bg-violet-500/25 text-violet-100"
+                          : visualEvent.tone === 'link'
+                            ? "border-blue-300 bg-blue-500/25 text-blue-100"
+                            : "border-primary/50 bg-primary/25 text-primary-foreground"
+                  )}
+                >
+                  {visualEvent.message}
+                </div>
+              </div>
+            )}
+
             {!hasDeck ? (
               <div className="flex-1 flex flex-col items-center justify-center p-4 gap-4">
                 <BookOpen className="h-12 w-12 text-muted-foreground" />
@@ -1089,6 +1317,23 @@ export const DuelDeckViewer = ({
                       )}
                     </div>
                     <div className="flex items-center gap-1">
+                      <Button
+                        variant={allowSpectatorHandReveal ? "secondary" : "ghost"}
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => {
+                          const next = !allowSpectatorHandReveal;
+                          setAllowSpectatorHandReveal(next);
+                          emitDuelEvent(
+                            'spectator_hand_visibility',
+                            next ? 'Mão revelada para espectadores.' : 'Mão ocultada dos espectadores.',
+                            { revealed: next }
+                          );
+                        }}
+                        title={allowSpectatorHandReveal ? "Ocultar mão dos espectadores" : "Revelar mão aos espectadores"}
+                      >
+                        {allowSpectatorHandReveal ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                      </Button>
                       {fieldState.sideDeck.length > 0 && (
                         <Button
                           variant="ghost"
@@ -1274,9 +1519,17 @@ export const DuelDeckViewer = ({
         onDraw={viewerModal.zone === 'deck' ? drawCard : undefined}
         onInvokeToField={(card, idx) => handleZoneViewerAction('toField', card, idx)}
         hasXYZMonster={hasXYZOnField()}
-        onAttachAsMaterial={(card, idx) => {
+        onAttachAsMaterial={(card) => {
           if (attachMode) {
             // We already know the target XYZ monster zone - attach directly
+            const targetCard = fieldState[attachMode.targetZone] as GameCard | null;
+            if (targetCard) {
+              emitDuelEvent('material_attach', `${card.name} foi anexada como material de ${targetCard.name}.`, {
+                to_zone: attachMode.targetZone,
+                target: toPublicCard(targetCard),
+                material: toPublicCard(card),
+              });
+            }
             setFieldState(prev => {
               const targetZone = attachMode.targetZone;
               const currentTarget = prev[targetZone as keyof FieldState];
@@ -1296,6 +1549,10 @@ export const DuelDeckViewer = ({
             setViewerModal({ open: false, zone: null });
           } else {
             // Generic attach mode - user will need to click XYZ monster next
+            emitDuelEvent('material_attach', `${card.name} foi selecionada como material.`, {
+              from_zone: viewerModal.zone || 'graveyard',
+              material: toPublicCard(card),
+            });
             setAttachMode({ targetZone: 'monster1' as FieldZoneType, cardToAttach: card });
             setViewerModal({ open: false, zone: null });
           }
@@ -1352,6 +1609,11 @@ export const DuelDeckViewer = ({
         extraDeck={fieldState.extraDeck}
         sideDeck={fieldState.sideDeck}
         onSwapComplete={(newMainDeck, newExtraDeck, newSideDeck) => {
+          emitDuelEvent('side_deck', 'Side Deck ajustado.', {
+            deck_count: newMainDeck.length,
+            extra_count: newExtraDeck.length,
+            side_count: newSideDeck.length,
+          });
           setFieldState(prev => ({
             ...prev,
             deck: shuffleArray(newMainDeck),

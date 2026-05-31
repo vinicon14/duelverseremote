@@ -80,6 +80,8 @@ interface ExtraMonsterZones {
 
 interface OpponentState {
   hand: number;
+  handPreview?: OpponentCard[] | null;
+  handRevealed?: boolean;
   field: OpponentCard[];
   monsterZones?: ZoneCards;
   spellZones?: SpellZoneCards;
@@ -278,6 +280,8 @@ export const FloatingOpponentViewer = ({
           } else {
             newState = {
               hand: payload.hand || 0,
+              handPreview: payload.handPreview || null,
+              handRevealed: !!payload.handRevealed,
               field: payload.field || [],
               monsterZones: payload.monsterZones || undefined,
               spellZones: payload.spellZones || undefined,
@@ -582,6 +586,28 @@ export const FloatingOpponentViewer = ({
                 {isCollapsed ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3" />}
               </Button>
             </div>
+
+            {!isCollapsed && opponentState.handRevealed && opponentState.handPreview && opponentState.handPreview.length > 0 && (
+              <div className="rounded-lg border border-primary/25 bg-background/60 p-2">
+                <div className="mb-2 flex items-center gap-1 text-xs font-medium">
+                  <Eye className="h-3 w-3 text-primary" />
+                  Mão revelada
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {opponentState.handPreview.map((card, index) => (
+                    <button
+                      key={`${card.id}-${index}`}
+                      type="button"
+                      className="h-16 w-auto overflow-hidden rounded-sm border border-border/50 bg-muted"
+                      onClick={() => { setSelectedCard(card); setModalOpen(true); }}
+                      title={card.name}
+                    >
+                      <img src={card.image || cardBack} alt={card.name} className="h-full w-auto object-cover" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {!isCollapsed && opponentState.tcgType === 'magic' && (
               <div
