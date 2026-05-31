@@ -1244,6 +1244,16 @@ const DuelRoomInner = () => {
                 </div>
               </div>
             )}
+
+            {/* Modo Duelista Imersivo — overlay visual (ativa quando ambos jogadores estão em Arena Digital) */}
+            {duel && !isSpectator && (
+              <ImmersiveOverlay
+                player1Label={duel.creator?.username || "Jogador 1"}
+                player1Lp={currentUser?.id === duel.creator_id ? player1LP : player2LP}
+                player2Label={duel.opponent?.username || "Jogador 2"}
+                player2Lp={currentUser?.id === duel.creator_id ? player2LP : player1LP}
+              />
+            )}
           </div>
 
           {/* Botão de Sair e Timer - Fixo no canto superior direito */}
