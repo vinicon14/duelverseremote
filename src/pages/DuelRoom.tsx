@@ -33,8 +33,10 @@ import { useDuelPresence, useDuelCleanup } from "@/hooks/useDuelPresence";
 import { getDefaultLifePoints, isLegacyMagicTcg, isLegacyPokemonTcg, isYgoStyleTcg } from "@/utils/tcgRules";
 import { DiscordVoiceRoster } from "@/components/duel/DiscordVoiceRoster";
 import { BroadcastDuelToDiscordButton } from "@/components/duel/BroadcastDuelToDiscordButton";
+import { ImmersiveModeProvider, useImmersiveMode } from "@/components/duel/immersive/ImmersiveModeProvider";
+import { ImmersiveOverlay } from "@/components/duel/immersive/ImmersiveOverlay";
 
-const DuelRoom = () => {
+const DuelRoomInner = () => {
   useBanCheck(); // Proteger contra usuários banidos
   const { id } = useParams();
   const [searchParams] = useSearchParams();
