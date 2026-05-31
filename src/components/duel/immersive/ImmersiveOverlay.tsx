@@ -1,8 +1,8 @@
 /**
  * Overlay visual do Modo Duelista Imersivo.
  *
- * Renderiza apenas quando `active === true` (ambos jogadores em Arena Digital
- * + toggle global ligado). Contém:
+ * Renderiza apenas quando `active === true` (ambos duelistas com decks digitais
+ * abertos). Contém:
  *  - LP animado de cada jogador (cantos superiores)
  *  - Botão flutuante para abrir o painel de configurações
  *  - Painel de configurações (Sheet)

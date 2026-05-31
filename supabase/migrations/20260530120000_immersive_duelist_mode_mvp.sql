@@ -1,11 +1,6 @@
 -- MVP do Modo Duelista Imersivo / Arena Digital
 ALTER TABLE public.live_duels
-  ADD COLUMN IF NOT EXISTS creator_arena_digital_enabled boolean NOT NULL DEFAULT true,
-  ADD COLUMN IF NOT EXISTS opponent_arena_digital_enabled boolean NOT NULL DEFAULT true,
   ADD COLUMN IF NOT EXISTS immersive_mode_started_at timestamptz;
-
-ALTER TABLE public.matchmaking_queue
-  ADD COLUMN IF NOT EXISTS arena_digital_enabled boolean NOT NULL DEFAULT true;
 
 CREATE TABLE IF NOT EXISTS public.duel_events (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -77,8 +72,7 @@ CREATE OR REPLACE FUNCTION public.matchmake(
   p_match_type text,
   p_tcg_type text DEFAULT 'yugioh'::text,
   p_max_players integer DEFAULT 2,
-  p_language_code text DEFAULT 'en'::text,
-  p_arena_digital_enabled boolean DEFAULT true
+  p_language_code text DEFAULT 'en'::text
 )
 RETURNS TABLE(duel_id uuid, status text)
 LANGUAGE plpgsql
@@ -145,7 +139,6 @@ BEGIN
     IF v_open_room.opponent_id IS NULL THEN
       UPDATE public.live_duels AS ld
         SET opponent_id = p_user_id,
-            opponent_arena_digital_enabled = COALESCE(p_arena_digital_enabled, true),
             started_at = COALESCE(ld.started_at, now()),
             status = CASE WHEN COALESCE(ld.max_players, 2) = 2 THEN 'in_progress'::game_status ELSE ld.status END
         WHERE ld.id = v_open_room.id;
@@ -191,13 +184,11 @@ BEGIN
   IF v_opponent.user_id IS NOT NULL THEN
     INSERT INTO public.live_duels (
       creator_id, opponent_id, status, tcg_type,
-      player1_lp, player2_lp, bet_amount, max_players, is_ranked,
-      creator_arena_digital_enabled, opponent_arena_digital_enabled
+      player1_lp, player2_lp, bet_amount, max_players, is_ranked
     )
     VALUES (
       v_opponent.user_id, p_user_id, 'in_progress'::game_status, p_tcg_type,
-      v_default_lp, v_default_lp, v_default_bet, p_max_players, v_is_ranked,
-      COALESCE(v_opponent.arena_digital_enabled, true), COALESCE(p_arena_digital_enabled, true)
+      v_default_lp, v_default_lp, v_default_bet, p_max_players, v_is_ranked
     )
     RETURNING id INTO v_new_duel;
 
@@ -219,11 +210,11 @@ BEGIN
 
   INSERT INTO public.matchmaking_queue (
     user_id, match_type, tcg_type, max_players, language_code,
-    arena_digital_enabled, status, expires_at
+    status, expires_at
   )
   VALUES (
     p_user_id, p_match_type, p_tcg_type, p_max_players, p_language_code,
-    COALESCE(p_arena_digital_enabled, true), 'waiting', now() + interval '5 minutes'
+    'waiting', now() + interval '5 minutes'
   )
   ON CONFLICT DO NOTHING;
 

@@ -1,7 +1,7 @@
 /**
  * Modo Duelista Imersivo — Provider Central
  *
- * Ativa automaticamente quando ambos os jogadores estão com Arena Digital aberta.
+ * Ativa automaticamente quando ambos os duelistas estão com seus decks digitais abertos.
  * Gerencia configurações persistidas em localStorage (áudio, animações, narração,
  * automações, acessibilidade) e expõe estado para os subcomponentes imersivos.
  *
@@ -59,19 +59,15 @@ const DEFAULTS: ImmersiveSettings = {
 };
 
 const STORAGE_KEY = "duelverse_immersive_settings_v1";
-const ENABLED_KEY = "duelverse_immersive_enabled_v1";
 
 type Ctx = {
-  /** True quando o modo está visualmente ativo (ambos com Arena aberta + toggle global on). */
+  /** True quando o modo está visualmente ativo (ambos os duelistas abriram seus decks digitais). */
   active: boolean;
-  /** Toggle global do usuário — permite desligar mesmo com Arena aberta. */
-  userEnabled: boolean;
-  setUserEnabled: (v: boolean) => void;
   settings: ImmersiveSettings;
   updateSetting: <K extends keyof ImmersiveSettings>(key: K, value: ImmersiveSettings[K]) => void;
   resetSettings: () => void;
-  /** Estado das aberturas de Arena Digital, alimentado pelo DuelRoom. */
-  setArenaState: (state: { localOpen: boolean; remoteOpen: boolean; dbReady?: boolean }) => void;
+  /** Estado das aberturas dos decks digitais dos dois duelistas, alimentado pelo DuelRoom. */
+  setArenaState: (state: { localOpen: boolean; remoteOpen: boolean }) => void;
   /** Painel de configurações (Sheet) aberto. */
   settingsOpen: boolean;
   setSettingsOpen: (v: boolean) => void;
@@ -84,33 +80,22 @@ export const ImmersiveModeProvider = ({ children }: { children: ReactNode }) => 
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) return { ...DEFAULTS, ...JSON.parse(raw) };
-    } catch {}
+    } catch (error) {
+      console.warn("[immersive] settings load skipped:", error);
+    }
     return DEFAULTS;
   });
-  const [userEnabled, setUserEnabledState] = useState<boolean>(() => {
-    try {
-      const v = localStorage.getItem(ENABLED_KEY);
-      return v === null ? true : v === "1";
-    } catch {
-      return true;
-    }
-  });
-  const [arena, setArena] = useState({ localOpen: false, remoteOpen: false, dbReady: false });
+  const [arena, setArena] = useState({ localOpen: false, remoteOpen: false });
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   // Persistência
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-    } catch {}
+    } catch (error) {
+      console.warn("[immersive] settings save skipped:", error);
+    }
   }, [settings]);
-
-  const setUserEnabled = useCallback((v: boolean) => {
-    setUserEnabledState(v);
-    try {
-      localStorage.setItem(ENABLED_KEY, v ? "1" : "0");
-    } catch {}
-  }, []);
 
   const updateSetting: Ctx["updateSetting"] = useCallback((key, value) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
@@ -119,19 +104,18 @@ export const ImmersiveModeProvider = ({ children }: { children: ReactNode }) => 
   const resetSettings = useCallback(() => setSettings(DEFAULTS), []);
 
   const setArenaState = useCallback(
-    (state: { localOpen: boolean; remoteOpen: boolean; dbReady?: boolean }) => {
+    (state: { localOpen: boolean; remoteOpen: boolean }) => {
       setArena((prev) =>
         prev.localOpen === state.localOpen &&
-        prev.remoteOpen === state.remoteOpen &&
-        prev.dbReady === !!state.dbReady
+        prev.remoteOpen === state.remoteOpen
           ? prev
-          : { ...state, dbReady: !!state.dbReady }
+          : state
       );
     },
     []
   );
 
-  const active = userEnabled && ((arena.localOpen && arena.remoteOpen) || arena.dbReady);
+  const active = arena.localOpen && arena.remoteOpen;
 
   // Aplica classes globais de acessibilidade no <html>
   useEffect(() => {
@@ -149,8 +133,6 @@ export const ImmersiveModeProvider = ({ children }: { children: ReactNode }) => 
   const value = useMemo<Ctx>(
     () => ({
       active,
-      userEnabled,
-      setUserEnabled,
       settings,
       updateSetting,
       resetSettings,
@@ -158,7 +140,7 @@ export const ImmersiveModeProvider = ({ children }: { children: ReactNode }) => 
       settingsOpen,
       setSettingsOpen,
     }),
-    [active, userEnabled, setUserEnabled, settings, updateSetting, resetSettings, setArenaState, settingsOpen]
+    [active, settings, updateSetting, resetSettings, setArenaState, settingsOpen]
   );
 
   return <ImmersiveCtx.Provider value={value}>{children}</ImmersiveCtx.Provider>;

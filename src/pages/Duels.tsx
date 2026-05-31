@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Navbar } from "@/components/Navbar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
@@ -24,8 +23,7 @@ import { cleanupAllEmptyDuels } from "@/hooks/useDuelPresence";
 import { useTcg } from "@/contexts/TcgContext";
 import { detectPlatform } from "@/utils/platformDetection";
 import { announceDuelRoom, cleanupDuelDiscordMessages } from "@/utils/announceDuelRoom";
-import { getDefaultLifePoints, isLegacyMagicTcg, isYgoStyleTcg } from "@/utils/tcgRules";
-import { loadArenaDigitalPreference, saveArenaDigitalPreference } from "@/utils/arenaDigitalPreference";
+import { getDefaultLifePoints, isLegacyMagicTcg } from "@/utils/tcgRules";
 import { RANKED_XP_DIFFICULTIES, getRankedDifficulty, getRankedDifficultyStorageKey, type RankedXpDifficultyKey } from "@/utils/xpRewards";
 import { useTranslation } from "react-i18next";
 
@@ -47,7 +45,6 @@ const Duels = () => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [rankedDifficulty, setRankedDifficulty] = useState<RankedXpDifficultyKey>(RANKED_XP_DIFFICULTIES[0].key);
   const [searchQuery, setSearchQuery] = useState("");
-  const [arenaDigitalEnabled, setArenaDigitalEnabled] = useState(loadArenaDigitalPreference);
   // Password prompt for joining private rooms
   const [passwordPrompt, setPasswordPrompt] = useState<{ duelId: string; expected: string } | null>(null);
   const [enteredPassword, setEnteredPassword] = useState("");
@@ -55,12 +52,6 @@ const Duels = () => {
   const platform = detectPlatform();
   const isWebBrowser = !platform.isStandalone && !(window as any).electronAPI?.isElectron && !platform.isNativeApp;
   const selectedRankedDifficulty = getRankedDifficulty(rankedDifficulty);
-  const supportsArenaDigital = isYgoStyleTcg(activeTcg);
-  const arenaDigitalForCurrentTcg = supportsArenaDigital && arenaDigitalEnabled;
-
-  useEffect(() => {
-    saveArenaDigitalPreference(arenaDigitalEnabled);
-  }, [arenaDigitalEnabled]);
 
   useEffect(() => {
     const stored = localStorage.getItem(getRankedDifficultyStorageKey(activeTcg));
@@ -204,8 +195,6 @@ const Duels = () => {
           max_players: playerCount,
           is_private: isPrivate,
           password: isPrivate ? roomPassword.trim() : null,
-          creator_arena_digital_enabled: arenaDigitalForCurrentTcg,
-          opponent_arena_digital_enabled: supportsArenaDigital,
         } as any)
         .select()
         .single();
@@ -363,9 +352,6 @@ const Duels = () => {
 
       if (!d.opponent_id) {
         updatePayload.opponent_id = user.id;
-        updatePayload.opponent_arena_digital_enabled = isYgoStyleTcg(d.tcg_type)
-          ? arenaDigitalEnabled
-          : false;
         if (maxPlayers === 2) {
           updatePayload.started_at = new Date().toISOString();
         }
@@ -513,20 +499,6 @@ const Duels = () => {
                       </p>
                     )}
 
-                    {supportsArenaDigital && (
-                      <div className="flex items-center justify-between rounded-lg border border-primary/20 bg-background/40 p-3">
-                        <Label htmlFor="arena-digital-create" className="flex items-center gap-2 text-sm font-medium">
-                          <Sparkles className="h-4 w-4 text-primary" />
-                          Arena Digital
-                        </Label>
-                        <Switch
-                          id="arena-digital-create"
-                          checked={arenaDigitalEnabled}
-                          onCheckedChange={setArenaDigitalEnabled}
-                        />
-                      </div>
-                    )}
-
                     <div className="space-y-2">
                       <Label htmlFor="duration">{t('duels.duration')}</Label>
                       <div className="grid grid-cols-4 gap-2">
@@ -618,22 +590,6 @@ const Duels = () => {
               </Dialog>
               </div>
             </div>
-
-            {supportsArenaDigital && (
-              <Card className="mb-4 border-primary/20 bg-card/70 p-3">
-                <div className="flex items-center justify-between gap-3">
-                  <Label htmlFor="arena-digital-list" className="flex items-center gap-2 text-sm font-medium">
-                    <Sparkles className="h-4 w-4 text-primary" />
-                    Arena Digital
-                  </Label>
-                  <Switch
-                    id="arena-digital-list"
-                    checked={arenaDigitalEnabled}
-                    onCheckedChange={setArenaDigitalEnabled}
-                  />
-                </div>
-              </Card>
-            )}
 
             {!loading && duels.length > 10 && (
               <div className="relative mb-4">
