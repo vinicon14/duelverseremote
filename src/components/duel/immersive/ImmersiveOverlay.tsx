@@ -17,7 +17,6 @@ import { Settings2, Sparkles } from "lucide-react";
 import { useImmersiveMode } from "./ImmersiveModeProvider";
 import { ImmersiveLPDisplay } from "./ImmersiveLPDisplay";
 import { ImmersiveSettingsPanel } from "./ImmersiveSettingsPanel";
-import { ImmersiveTimeline } from "./ImmersiveTimeline";
 import { useImmersiveAudio } from "./useImmersiveAudio";
 import type { DuelEvent } from "@/hooks/useDuelEvents";
 
@@ -27,7 +26,6 @@ type Props = {
   player2Label: string;
   player2Lp: number;
   events?: DuelEvent[];
-  isSpectator?: boolean;
 };
 
 export const ImmersiveOverlay = ({
@@ -36,7 +34,6 @@ export const ImmersiveOverlay = ({
   player2Label,
   player2Lp,
   events = [],
-  isSpectator = false,
 }: Props) => {
   const { active, settings, setSettingsOpen } = useImmersiveMode();
   useImmersiveAudio(active, settings, events[events.length - 1] || null);
@@ -66,8 +63,6 @@ export const ImmersiveOverlay = ({
           <div className="absolute right-2 top-10 sm:right-4 sm:top-12 pointer-events-auto">
             <ImmersiveLPDisplay label={player2Label} lp={player2Lp} align="right" />
           </div>
-
-          <ImmersiveTimeline events={events} isSpectator={isSpectator} />
 
           {/* Botão de configurações */}
           <div className="absolute bottom-3 right-3 pointer-events-auto">

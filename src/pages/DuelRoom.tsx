@@ -1348,7 +1348,6 @@ const DuelRoomInner = () => {
                 player2Label={duel.opponent?.username || "Jogador 2"}
                 player2Lp={player2LP}
                 events={duelEvents}
-                isSpectator={!!isSpectator}
               />
             )}
           </div>
