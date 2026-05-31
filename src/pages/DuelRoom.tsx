@@ -1449,4 +1449,10 @@ const DuelRoomInner = () => {
   );
 };
 
+const DuelRoom = () => (
+  <ImmersiveModeProvider>
+    <DuelRoomInner />
+  </ImmersiveModeProvider>
+);
+
 export default DuelRoom;
