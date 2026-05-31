@@ -1000,6 +1000,12 @@ const DuelRoomInner = () => {
   const myDeckIsOpen = showDeckViewer || showMagicViewer || showPokemonViewer;
   const myDeckIsOpenRef = useRef(myDeckIsOpen);
   myDeckIsOpenRef.current = myDeckIsOpen;
+
+  // Modo Duelista Imersivo: ativa quando ambos jogadores estão com Arena Digital aberta
+  const { setArenaState } = useImmersiveMode();
+  useEffect(() => {
+    setArenaState({ localOpen: myDeckIsOpen, remoteOpen: opponentDeckOpen });
+  }, [myDeckIsOpen, opponentDeckOpen, setArenaState]);
   
   useEffect(() => {
     if (!id || !currentUser) return;
