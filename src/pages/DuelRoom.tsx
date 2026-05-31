@@ -35,6 +35,7 @@ import { DiscordVoiceRoster } from "@/components/duel/DiscordVoiceRoster";
 import { BroadcastDuelToDiscordButton } from "@/components/duel/BroadcastDuelToDiscordButton";
 import { ImmersiveModeProvider, useImmersiveMode } from "@/components/duel/immersive/ImmersiveModeProvider";
 import { ImmersiveOverlay } from "@/components/duel/immersive/ImmersiveOverlay";
+import { useDuelEvents } from "@/hooks/useDuelEvents";
 
 const DuelRoomInner = () => {
   useBanCheck(); // Proteger contra usuários banidos
@@ -72,6 +73,7 @@ const DuelRoomInner = () => {
   const callDurationRef = useRef<number>(0);
   const webrtcRef = useRef<WebRTCVideoCallHandle>(null);
   const deckToggleChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const immersiveStartLoggedRef = useRef(false);
   
   const isJudge = searchParams.get('role') === 'judge';
   const [hideControls, setHideControls] = useState(false);
@@ -85,6 +87,7 @@ const DuelRoomInner = () => {
   const [showDeckViewer, setShowDeckViewer] = useState(false);
   const { mainDeck, extraDeck, sideDeck, tokensDeck, importDeckFromYDK, loadDeckFromSaved, isLoading: isDeckLoading } = useDuelDeck();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { events: duelEvents, logEvent } = useDuelEvents(id, currentUser?.id);
 
   // Judge reward timer - fetch judge_log and countdown
   const handleJudgeReward = useCallback(async (logId: string) => {
@@ -292,6 +295,7 @@ const DuelRoomInner = () => {
             setPlayer2LP(newP2LP);
             setPlayer3LP(newP3LP);
             setPlayer4LP(newP4LP);
+            setDuel((prev: any) => prev ? { ...prev, ...payload.new } : prev);
             
             // Sync custom counters
             if ((payload.new as any).custom_counters) {
@@ -634,13 +638,28 @@ const DuelRoomInner = () => {
     }
   };
 
+  const getPlayerLabel = useCallback((player: 'player1' | 'player2' | 'player3' | 'player4') => {
+    if (player === 'player1') return duel?.creator?.username || "Jogador 1";
+    if (player === 'player2') return duel?.opponent?.username || "Jogador 2";
+    if (player === 'player3') return "Jogador 3";
+    return "Jogador 4";
+  }, [duel]);
+
   const updateLP = async (player: 'player1' | 'player2' | 'player3' | 'player4', amount: number) => {
     if (!id) return;
     const lpMap = { player1: player1LP, player2: player2LP, player3: player3LP, player4: player4LP };
-    const newLP = Math.max(0, lpMap[player] + amount);
+    const previousLP = lpMap[player];
+    const newLP = Math.max(0, previousLP + amount);
     try {
       const { error } = await supabase.from('live_duels').update({ [player + '_lp']: newLP }).eq('id', id);
       if (error) throw error;
+      await logEvent(
+        'lp_change',
+        amount < 0
+          ? `${getPlayerLabel(player)} sofreu ${Math.abs(amount)} de dano.`
+          : `${getPlayerLabel(player)} recuperou ${amount} LP.`,
+        { player, previous_lp: previousLP, new_lp: newLP, delta: newLP - previousLP }
+      );
     } catch (error: any) {
       toast({ title: t('duelRoom.toastUpdateLpError'), description: error.message, variant: "destructive" });
     }
@@ -648,10 +667,17 @@ const DuelRoomInner = () => {
 
   const setLP = async (player: 'player1' | 'player2' | 'player3' | 'player4', value: number) => {
     if (!id) return;
+    const lpMap = { player1: player1LP, player2: player2LP, player3: player3LP, player4: player4LP };
+    const previousLP = lpMap[player];
     const newLP = Math.max(0, value);
     try {
       const { error } = await supabase.from('live_duels').update({ [player + '_lp']: newLP }).eq('id', id);
       if (error) throw error;
+      await logEvent(
+        'lp_set',
+        `${getPlayerLabel(player)} teve os LP ajustados para ${newLP}.`,
+        { player, previous_lp: previousLP, new_lp: newLP, delta: newLP - previousLP }
+      );
     } catch (error: any) {
       toast({ title: t('duelRoom.toastUpdateLpError'), description: error.message, variant: "destructive" });
     }
@@ -702,6 +728,22 @@ const DuelRoomInner = () => {
           winner_id: finalWinnerId,
         })
         .eq('id', id);
+
+      const winnerLabel =
+        finalWinnerId === duel?.creator_id
+          ? duel?.creator?.username || "Jogador 1"
+          : finalWinnerId === duel?.opponent_id
+            ? duel?.opponent?.username || "Jogador 2"
+            : null;
+      await logEvent(
+        'duel_finished',
+        winnerLabel ? `Duelo encerrado. Vencedor: ${winnerLabel}.` : 'Duelo encerrado sem vencedor definido.',
+        {
+          winner_id: finalWinnerId || null,
+          player1_lp: player1LP,
+          player2_lp: player2LP,
+        }
+      );
 
       // Apaga as mensagens de anúncio da sala no Discord
       if (id) {
@@ -1001,11 +1043,67 @@ const DuelRoomInner = () => {
   const myDeckIsOpenRef = useRef(myDeckIsOpen);
   myDeckIsOpenRef.current = myDeckIsOpen;
 
-  // Modo Duelista Imersivo: ativa quando ambos jogadores estão com Arena Digital aberta
-  const { setArenaState } = useImmersiveMode();
+  const arenaDigitalReady =
+    !!duel &&
+    isYgoStyleTcg(duel.tcg_type) &&
+    !!duel.creator_id &&
+    !!duel.opponent_id &&
+    (duel.creator_arena_digital_enabled ?? true) !== false &&
+    (duel.opponent_arena_digital_enabled ?? true) !== false;
+
+  // Modo Duelista Imersivo: ativa por consenso salvo no duelo ou por ambos abrirem a Arena.
+  const { active: immersiveModeActive, settings: immersiveSettings, setArenaState } = useImmersiveMode();
   useEffect(() => {
-    setArenaState({ localOpen: myDeckIsOpen, remoteOpen: opponentDeckOpen });
-  }, [myDeckIsOpen, opponentDeckOpen, setArenaState]);
+    setArenaState({
+      localOpen: myDeckIsOpen || arenaDigitalReady,
+      remoteOpen: opponentDeckOpen || arenaDigitalReady,
+      dbReady: arenaDigitalReady,
+    });
+  }, [myDeckIsOpen, opponentDeckOpen, arenaDigitalReady, setArenaState]);
+
+  useEffect(() => {
+    if (!arenaDigitalReady || !isParticipant || isJudge) return;
+    setShowMagicViewer(false);
+    setShowPokemonViewer(false);
+    setShowDeckViewer(true);
+  }, [arenaDigitalReady, isParticipant, isJudge]);
+
+  useEffect(() => {
+    if (!arenaDigitalReady || !duel?.id || !currentUser?.id || !isParticipant || duel.immersive_mode_started_at) {
+      if (duel?.immersive_mode_started_at) immersiveStartLoggedRef.current = true;
+      return;
+    }
+    if (immersiveStartLoggedRef.current) return;
+    immersiveStartLoggedRef.current = true;
+
+    const startedAt = new Date().toISOString();
+    const startMode = async () => {
+      const { data, error } = await supabase
+        .from('live_duels')
+        .update({ immersive_mode_started_at: startedAt } as any)
+        .eq('id', duel.id)
+        .is('immersive_mode_started_at', null)
+        .select('id')
+        .maybeSingle();
+
+      if (!error && data) {
+        await logEvent('mode_started', 'Modo Duelista Imersivo iniciado.', {
+          tcg_type: duel.tcg_type,
+          started_at: startedAt,
+        });
+      }
+    };
+
+    startMode();
+  }, [
+    arenaDigitalReady,
+    duel?.id,
+    duel?.tcg_type,
+    duel?.immersive_mode_started_at,
+    currentUser?.id,
+    isParticipant,
+    logEvent,
+  ]);
   
   useEffect(() => {
     if (!id || !currentUser) return;
@@ -1114,6 +1212,7 @@ const DuelRoomInner = () => {
                 maxPlayers={(duel as any)?.max_players || 2}
                 isSpectator={!!isSpectator}
                 audioBroadcastOnly={!!isJudge}
+                remoteVolume={Math.max(0, Math.min(1, immersiveSettings.voiceChatVolume / 100))}
                 creatorId={duel?.creator_id}
                 onLayoutChange={setVideoLayout}
                 spectatorLpOverlay={isSpectator ? {
@@ -1175,6 +1274,8 @@ const DuelRoomInner = () => {
                             }
                             embedded
                             tcgType={duel?.tcg_type}
+                            immersiveActive={immersiveModeActive}
+                            onDuelEvent={logEvent}
                           />
                         </>
                       )}
@@ -1245,13 +1346,15 @@ const DuelRoomInner = () => {
               </div>
             )}
 
-            {/* Modo Duelista Imersivo — overlay visual (ativa quando ambos jogadores estão em Arena Digital) */}
-            {duel && !isSpectator && (
+            {/* Modo Duelista Imersivo — overlay visual (ativa quando ambos jogadores aceitam Arena Digital) */}
+            {duel && (
               <ImmersiveOverlay
                 player1Label={duel.creator?.username || "Jogador 1"}
-                player1Lp={currentUser?.id === duel.creator_id ? player1LP : player2LP}
+                player1Lp={player1LP}
                 player2Label={duel.opponent?.username || "Jogador 2"}
-                player2Lp={currentUser?.id === duel.creator_id ? player2LP : player1LP}
+                player2Lp={player2LP}
+                events={duelEvents}
+                isSpectator={!!isSpectator}
               />
             )}
           </div>

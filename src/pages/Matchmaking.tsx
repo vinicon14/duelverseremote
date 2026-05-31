@@ -10,12 +10,15 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Navbar } from "@/components/Navbar";
-import { Loader2, Swords, Users, Clock, Video, CheckCircle2 } from "lucide-react";
+import { Loader2, Swords, Users, Clock, Video, CheckCircle2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useBanCheck } from "@/hooks/useBanCheck";
 import { useTcg } from "@/contexts/TcgContext";
-import { isLegacyMagicTcg } from "@/utils/tcgRules";
+import { isLegacyMagicTcg, isYgoStyleTcg } from "@/utils/tcgRules";
+import { loadArenaDigitalPreference, saveArenaDigitalPreference } from "@/utils/arenaDigitalPreference";
 import { useTranslation } from "react-i18next";
 
 interface MatchData {
@@ -34,11 +37,18 @@ export default function Matchmaking() {
   const [isRanked, setIsRanked] = useState(true);
   const [playerCount, setPlayerCount] = useState<2 | 4>(2);
   const [matchFound, setMatchFound] = useState<MatchData | null>(null);
+  const [arenaDigitalEnabled, setArenaDigitalEnabled] = useState(loadArenaDigitalPreference);
   
   const currentUserId = useRef<string | null>(null);
   const timerInterval = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollingInterval = useRef<ReturnType<typeof setInterval> | null>(null);
   const isRedirecting = useRef(false);
+  const supportsArenaDigital = isYgoStyleTcg(activeTcg);
+  const arenaDigitalForCurrentTcg = supportsArenaDigital && arenaDigitalEnabled;
+
+  useEffect(() => {
+    saveArenaDigitalPreference(arenaDigitalEnabled);
+  }, [arenaDigitalEnabled]);
 
   const cancelOpenMatchmakingInvite = useCallback(async () => {
     if (!currentUserId.current) return;
@@ -247,6 +257,7 @@ export default function Matchmaking() {
           p_tcg_type: activeTcg,
           p_max_players: playerCount,
           p_language_code: languageCode,
+          p_arena_digital_enabled: arenaDigitalForCurrentTcg,
         });
 
       if (matchError) throw matchError;
@@ -267,6 +278,7 @@ export default function Matchmaking() {
             tcgType: activeTcg,
             maxPlayers: playerCount,
             languageCode,
+            arenaDigitalEnabled: arenaDigitalForCurrentTcg,
           },
         });
       } catch (discordError) {
@@ -432,6 +444,20 @@ export default function Matchmaking() {
                       <p className="text-xs text-muted-foreground text-center">
                         {playerCount === 4 ? t('matchmaking.ffaDesc') : t('matchmaking.duel1v1Desc')}
                       </p>
+                    </div>
+                  )}
+
+                  {supportsArenaDigital && (
+                    <div className="flex items-center justify-between rounded-lg border border-primary/20 bg-background/40 p-3">
+                      <Label htmlFor="arena-digital-matchmaking" className="flex items-center gap-2 text-sm font-medium">
+                        <Sparkles className="h-4 w-4 text-primary" />
+                        Arena Digital
+                      </Label>
+                      <Switch
+                        id="arena-digital-matchmaking"
+                        checked={arenaDigitalEnabled}
+                        onCheckedChange={setArenaDigitalEnabled}
+                      />
                     </div>
                   )}
                   

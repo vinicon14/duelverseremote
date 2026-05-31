@@ -70,8 +70,8 @@ type Ctx = {
   settings: ImmersiveSettings;
   updateSetting: <K extends keyof ImmersiveSettings>(key: K, value: ImmersiveSettings[K]) => void;
   resetSettings: () => void;
-  /** Estado das aberturas de Arena Digital (local + remoto), alimentado pelo DuelRoom. */
-  setArenaState: (state: { localOpen: boolean; remoteOpen: boolean }) => void;
+  /** Estado das aberturas de Arena Digital, alimentado pelo DuelRoom. */
+  setArenaState: (state: { localOpen: boolean; remoteOpen: boolean; dbReady?: boolean }) => void;
   /** Painel de configurações (Sheet) aberto. */
   settingsOpen: boolean;
   setSettingsOpen: (v: boolean) => void;
@@ -95,7 +95,7 @@ export const ImmersiveModeProvider = ({ children }: { children: ReactNode }) => 
       return true;
     }
   });
-  const [arena, setArena] = useState({ localOpen: false, remoteOpen: false });
+  const [arena, setArena] = useState({ localOpen: false, remoteOpen: false, dbReady: false });
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   // Persistência
@@ -119,15 +119,19 @@ export const ImmersiveModeProvider = ({ children }: { children: ReactNode }) => 
   const resetSettings = useCallback(() => setSettings(DEFAULTS), []);
 
   const setArenaState = useCallback(
-    (state: { localOpen: boolean; remoteOpen: boolean }) => {
+    (state: { localOpen: boolean; remoteOpen: boolean; dbReady?: boolean }) => {
       setArena((prev) =>
-        prev.localOpen === state.localOpen && prev.remoteOpen === state.remoteOpen ? prev : state
+        prev.localOpen === state.localOpen &&
+        prev.remoteOpen === state.remoteOpen &&
+        prev.dbReady === !!state.dbReady
+          ? prev
+          : { ...state, dbReady: !!state.dbReady }
       );
     },
     []
   );
 
-  const active = userEnabled && arena.localOpen && arena.remoteOpen;
+  const active = userEnabled && ((arena.localOpen && arena.remoteOpen) || arena.dbReady);
 
   // Aplica classes globais de acessibilidade no <html>
   useEffect(() => {

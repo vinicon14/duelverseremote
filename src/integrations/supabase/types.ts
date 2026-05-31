@@ -274,6 +274,58 @@ export type Database = {
         }
         Relationships: []
       }
+      duel_events: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          duel_id: string
+          event_type: string
+          id: string
+          message: string
+          payload: Json
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          duel_id: string
+          event_type: string
+          id?: string
+          message: string
+          payload?: Json
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          duel_id?: string
+          event_type?: string
+          id?: string
+          message?: string
+          payload?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "duel_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "duel_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "duel_events_duel_id_fkey"
+            columns: ["duel_id"]
+            isOneToOne: false
+            referencedRelation: "live_duels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       duel_invites: {
         Row: {
           created_at: string
@@ -808,16 +860,19 @@ export type Database = {
         Row: {
           bet_amount: number
           created_at: string
+          creator_arena_digital_enabled: boolean
           creator_id: string
           custom_counters: Json
           discord_messages: Json
           duration_minutes: number
           finished_at: string | null
           id: string
+          immersive_mode_started_at: string | null
           is_private: boolean
           is_ranked: boolean
           is_timer_paused: boolean
           max_players: number
+          opponent_arena_digital_enabled: boolean
           opponent_id: string | null
           password: string | null
           player1_lp: number
@@ -836,16 +891,19 @@ export type Database = {
         Insert: {
           bet_amount?: number
           created_at?: string
+          creator_arena_digital_enabled?: boolean
           creator_id: string
           custom_counters?: Json
           discord_messages?: Json
           duration_minutes?: number
           finished_at?: string | null
           id?: string
+          immersive_mode_started_at?: string | null
           is_private?: boolean
           is_ranked?: boolean
           is_timer_paused?: boolean
           max_players?: number
+          opponent_arena_digital_enabled?: boolean
           opponent_id?: string | null
           password?: string | null
           player1_lp?: number
@@ -864,16 +922,19 @@ export type Database = {
         Update: {
           bet_amount?: number
           created_at?: string
+          creator_arena_digital_enabled?: boolean
           creator_id?: string
           custom_counters?: Json
           discord_messages?: Json
           duration_minutes?: number
           finished_at?: string | null
           id?: string
+          immersive_mode_started_at?: string | null
           is_private?: boolean
           is_ranked?: boolean
           is_timer_paused?: boolean
           max_players?: number
+          opponent_arena_digital_enabled?: boolean
           opponent_id?: string | null
           password?: string | null
           player1_lp?: number
@@ -1246,6 +1307,7 @@ export type Database = {
       }
       matchmaking_queue: {
         Row: {
+          arena_digital_enabled: boolean
           duel_id: string | null
           expires_at: string
           id: string
@@ -1258,6 +1320,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          arena_digital_enabled?: boolean
           duel_id?: string | null
           expires_at: string
           id?: string
@@ -1270,6 +1333,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          arena_digital_enabled?: boolean
           duel_id?: string | null
           expires_at?: string
           id?: string
@@ -2548,6 +2612,7 @@ export type Database = {
       }
       matchmake: {
         Args: {
+          p_arena_digital_enabled?: boolean
           p_language_code?: string
           p_match_type: string
           p_max_players?: number

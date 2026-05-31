@@ -39,6 +39,8 @@ interface WebRTCVideoCallProps {
   /** Spectator variant: judge spectator that ALSO transmits microphone audio to players
    *  (still no local camera, still receives players' video). */
   audioBroadcastOnly?: boolean;
+  /** Volume applied to received peer audio (0-1). */
+  remoteVolume?: number;
   /** Creator user ID - used by spectators to correctly order peers (creator on left) */
   creatorId?: string;
 }
@@ -89,6 +91,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   spectatorLpOverlay,
   isSpectator = false,
   audioBroadcastOnly = false,
+  remoteVolume = 1,
   creatorId,
 }, ref) => {
   const localVideoRef = useRef<HTMLVideoElement>(null);
@@ -582,8 +585,9 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       if (el && el.srcObject !== stream) {
         el.srcObject = stream;
       }
+      if (el) el.volume = remoteVolume;
     });
-  }, [remoteStreams, remotePeerIds]);
+  }, [remoteStreams, remotePeerIds, remoteVolume]);
 
   const toggleMute = () => {
     const stream = localStreamRef.current;
@@ -641,10 +645,11 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       if (stream && el.srcObject !== stream) {
         el.srcObject = stream;
       }
+      el.volume = remoteVolume;
     } else {
       remoteVideoRefs.current.delete(peerId);
     }
-  }, [remoteStreams]);
+  }, [remoteStreams, remoteVolume]);
 
   const hasRemotePeers = remotePeerIds.length > 0;
   const totalSlots = maxPlayers;

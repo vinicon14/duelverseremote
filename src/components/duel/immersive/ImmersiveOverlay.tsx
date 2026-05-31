@@ -17,16 +17,30 @@ import { Settings2, Sparkles } from "lucide-react";
 import { useImmersiveMode } from "./ImmersiveModeProvider";
 import { ImmersiveLPDisplay } from "./ImmersiveLPDisplay";
 import { ImmersiveSettingsPanel } from "./ImmersiveSettingsPanel";
+import { ImmersiveTimeline } from "./ImmersiveTimeline";
+import { useImmersiveAudio } from "./useImmersiveAudio";
+import type { DuelEvent } from "@/hooks/useDuelEvents";
 
 type Props = {
   player1Label: string;
   player1Lp: number;
   player2Label: string;
   player2Lp: number;
+  events?: DuelEvent[];
+  isSpectator?: boolean;
 };
 
-export const ImmersiveOverlay = ({ player1Label, player1Lp, player2Label, player2Lp }: Props) => {
-  const { active, setSettingsOpen } = useImmersiveMode();
+export const ImmersiveOverlay = ({
+  player1Label,
+  player1Lp,
+  player2Label,
+  player2Lp,
+  events = [],
+  isSpectator = false,
+}: Props) => {
+  const { active, settings, setSettingsOpen } = useImmersiveMode();
+  useImmersiveAudio(active, settings, events[events.length - 1] || null);
+  const panelOpacity = Math.max(0.35, settings.uiOpacity / 100);
 
   return (
     <>
@@ -34,7 +48,7 @@ export const ImmersiveOverlay = ({ player1Label, player1Lp, player2Label, player
       <ImmersiveSettingsPanel />
 
       {!active ? null : (
-        <div className="pointer-events-none absolute inset-0 z-40">
+        <div className="pointer-events-none absolute inset-0 z-40" style={{ opacity: panelOpacity }}>
           {/* Badge de modo ativo */}
           <div className="absolute left-1/2 top-2 -translate-x-1/2 pointer-events-none">
             <Badge variant="secondary" className="gap-1 border-primary/40 bg-background/70 backdrop-blur">
@@ -52,6 +66,8 @@ export const ImmersiveOverlay = ({ player1Label, player1Lp, player2Label, player
           <div className="absolute right-2 top-10 sm:right-4 sm:top-12 pointer-events-auto">
             <ImmersiveLPDisplay label={player2Label} lp={player2Lp} align="right" />
           </div>
+
+          <ImmersiveTimeline events={events} isSpectator={isSpectator} />
 
           {/* Botão de configurações */}
           <div className="absolute bottom-3 right-3 pointer-events-auto">

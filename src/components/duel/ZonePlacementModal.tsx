@@ -1,15 +1,17 @@
+import { useEffect, useMemo, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
 import { Eye, EyeOff, Shield, Sword, Sparkles } from 'lucide-react';
 import { FieldZoneType, GameCard } from './DuelFieldBoard';
+
+export type SummonType = 'normal' | 'special' | 'synchro' | 'xyz' | 'link' | 'pendulum' | 'set' | 'activate';
 
 interface ZonePlacementModalProps {
   open: boolean;
   onClose: () => void;
   card: GameCard | null;
-  onPlaceCard: (zone: FieldZoneType, faceDown: boolean, position: 'attack' | 'defense') => void;
+  onPlaceCard: (zone: FieldZoneType, faceDown: boolean, position: 'attack' | 'defense', summonType: SummonType) => void;
   occupiedZones: FieldZoneType[];
 }
 
@@ -49,14 +51,39 @@ export const ZonePlacementModal = ({
   onPlaceCard,
   occupiedZones,
 }: ZonePlacementModalProps) => {
+  const defaultSummonType = useMemo<SummonType>(() => {
+    if (!card) return 'normal';
+    const type = card.type.toLowerCase();
+    const cardIsMonster = isMonsterCard(card.type);
+    const cardIsExtraDeck = isExtraDeckCardType(card.type);
+    if (type.includes('synchro')) return 'synchro';
+    if (type.includes('xyz') || type.includes('x-y-z')) return 'xyz';
+    if (type.includes('link')) return 'link';
+    if (type.includes('pendulum')) return 'pendulum';
+    if (cardIsExtraDeck) return 'special';
+    return cardIsMonster ? 'normal' : 'activate';
+  }, [card]);
+  const [summonType, setSummonType] = useState<SummonType>(defaultSummonType);
+
+  useEffect(() => {
+    setSummonType(defaultSummonType);
+  }, [defaultSummonType, open, card?.instanceId]);
+
   if (!card) return null;
 
   const isMonster = isMonsterCard(card.type);
-  const isSpell = isSpellCard(card.type);
-  const isTrap = isTrapCard(card.type);
   const isField = isFieldSpell(card);
   const isExtraDeck = isExtraDeckCardType(card.type);
   const isLinkMonster = card.type.includes('Link');
+
+  const summonOptions: Array<{ value: SummonType; label: string }> = [
+    { value: 'normal', label: 'Normal' },
+    { value: 'special', label: 'Especial' },
+    { value: 'synchro', label: 'Sincro' },
+    { value: 'xyz', label: 'Xyz' },
+    { value: 'link', label: 'Link' },
+    { value: 'pendulum', label: 'Pêndulo' },
+  ];
 
   const getAvailableMonsterZones = (): FieldZoneType[] => {
     const zones = MONSTER_ZONES.filter(z => !occupiedZones.includes(z));
@@ -71,8 +98,13 @@ export const ZonePlacementModal = ({
     return SPELL_TRAP_ZONES.filter(z => !occupiedZones.includes(z));
   };
 
-  const handlePlace = (zone: FieldZoneType, faceDown: boolean, position: 'attack' | 'defense') => {
-    onPlaceCard(zone, faceDown, position);
+  const handlePlace = (
+    zone: FieldZoneType,
+    faceDown: boolean,
+    position: 'attack' | 'defense',
+    overrideType?: SummonType
+  ) => {
+    onPlaceCard(zone, faceDown, position, overrideType || (faceDown ? 'set' : summonType));
     onClose();
   };
 
@@ -114,6 +146,26 @@ export const ZonePlacementModal = ({
               )}
             </div>
 
+            {isMonster && (
+              <div className="space-y-2">
+                <p className="text-xs font-medium">Tipo de invocação:</p>
+                <div className="grid grid-cols-3 gap-1">
+                  {summonOptions.map((option) => (
+                    <Button
+                      key={option.value}
+                      type="button"
+                      variant={summonType === option.value ? 'default' : 'outline'}
+                      size="sm"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => setSummonType(option.value)}
+                    >
+                      {option.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Field Spell Placement - Priority for Field Spells */}
             {isField && (
               <div className="space-y-2">
@@ -122,7 +174,7 @@ export const ZonePlacementModal = ({
                   variant="outline"
                   size="sm"
                   className="h-8"
-                  onClick={() => handlePlace('fieldSpell', false, 'attack')}
+                  onClick={() => handlePlace('fieldSpell', false, 'attack', 'activate')}
                   disabled={occupiedZones.includes('fieldSpell')}
                 >
                   <Eye className="h-3 w-3 mr-1" />
@@ -150,7 +202,7 @@ export const ZonePlacementModal = ({
                         className="h-7 px-2 text-xs"
                         onClick={() => handlePlace(zone, false, 'attack')}
                       >
-                        {zone.includes('extra') ? 'EMZ' : `M${MONSTER_ZONES.indexOf(zone as any) + 1}`}
+                        {zone.includes('extra') ? 'EMZ' : `M${MONSTER_ZONES.indexOf(zone as (typeof MONSTER_ZONES)[number]) + 1}`}
                       </Button>
                     ))}
                   </div>
@@ -171,7 +223,7 @@ export const ZonePlacementModal = ({
                           className="h-7 px-2 text-xs"
                           onClick={() => handlePlace(zone, false, 'defense')}
                         >
-                          M{MONSTER_ZONES.indexOf(zone as any) + 1}
+                          M{MONSTER_ZONES.indexOf(zone as (typeof MONSTER_ZONES)[number]) + 1}
                         </Button>
                       ))}
                     </div>
@@ -190,10 +242,10 @@ export const ZonePlacementModal = ({
                           key={zone}
                           variant="secondary"
                           size="sm"
-                          className="h-7 px-2 text-xs"
-                          onClick={() => handlePlace(zone, true, 'defense')}
-                        >
-                          M{MONSTER_ZONES.indexOf(zone as any) + 1}
+                        className="h-7 px-2 text-xs"
+                        onClick={() => handlePlace(zone, true, 'defense', 'set')}
+                      >
+                          M{MONSTER_ZONES.indexOf(zone as (typeof MONSTER_ZONES)[number]) + 1}
                         </Button>
                       ))}
                     </div>
@@ -219,9 +271,9 @@ export const ZonePlacementModal = ({
                         variant="outline"
                         size="sm"
                         className="h-7 px-2 text-xs"
-                        onClick={() => handlePlace(zone, false, 'attack')}
+                        onClick={() => handlePlace(zone, false, 'attack', 'activate')}
                       >
-                        S/T{SPELL_TRAP_ZONES.indexOf(zone as any) + 1}
+                        S/T{SPELL_TRAP_ZONES.indexOf(zone as (typeof SPELL_TRAP_ZONES)[number]) + 1}
                       </Button>
                     ))}
                   </div>
@@ -239,9 +291,9 @@ export const ZonePlacementModal = ({
                         variant="secondary"
                         size="sm"
                         className="h-7 px-2 text-xs"
-                        onClick={() => handlePlace(zone, true, 'attack')}
+                        onClick={() => handlePlace(zone, true, 'attack', 'set')}
                       >
-                        S/T{SPELL_TRAP_ZONES.indexOf(zone as any) + 1}
+                        S/T{SPELL_TRAP_ZONES.indexOf(zone as (typeof SPELL_TRAP_ZONES)[number]) + 1}
                       </Button>
                     ))}
                   </div>
