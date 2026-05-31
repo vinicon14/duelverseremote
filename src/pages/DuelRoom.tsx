@@ -33,8 +33,10 @@ import { useDuelPresence, useDuelCleanup } from "@/hooks/useDuelPresence";
 import { getDefaultLifePoints, isLegacyMagicTcg, isLegacyPokemonTcg, isYgoStyleTcg } from "@/utils/tcgRules";
 import { DiscordVoiceRoster } from "@/components/duel/DiscordVoiceRoster";
 import { BroadcastDuelToDiscordButton } from "@/components/duel/BroadcastDuelToDiscordButton";
+import { ImmersiveModeProvider, useImmersiveMode } from "@/components/duel/immersive/ImmersiveModeProvider";
+import { ImmersiveOverlay } from "@/components/duel/immersive/ImmersiveOverlay";
 
-const DuelRoom = () => {
+const DuelRoomInner = () => {
   useBanCheck(); // Proteger contra usuários banidos
   const { id } = useParams();
   const [searchParams] = useSearchParams();
@@ -998,6 +1000,12 @@ const DuelRoom = () => {
   const myDeckIsOpen = showDeckViewer || showMagicViewer || showPokemonViewer;
   const myDeckIsOpenRef = useRef(myDeckIsOpen);
   myDeckIsOpenRef.current = myDeckIsOpen;
+
+  // Modo Duelista Imersivo: ativa quando ambos jogadores estão com Arena Digital aberta
+  const { setArenaState } = useImmersiveMode();
+  useEffect(() => {
+    setArenaState({ localOpen: myDeckIsOpen, remoteOpen: opponentDeckOpen });
+  }, [myDeckIsOpen, opponentDeckOpen, setArenaState]);
   
   useEffect(() => {
     if (!id || !currentUser) return;
@@ -1236,6 +1244,16 @@ const DuelRoom = () => {
                 </div>
               </div>
             )}
+
+            {/* Modo Duelista Imersivo — overlay visual (ativa quando ambos jogadores estão em Arena Digital) */}
+            {duel && !isSpectator && (
+              <ImmersiveOverlay
+                player1Label={duel.creator?.username || "Jogador 1"}
+                player1Lp={currentUser?.id === duel.creator_id ? player1LP : player2LP}
+                player2Label={duel.opponent?.username || "Jogador 2"}
+                player2Lp={currentUser?.id === duel.creator_id ? player2LP : player1LP}
+              />
+            )}
           </div>
 
           {/* Botão de Sair e Timer - Fixo no canto superior direito */}
@@ -1446,5 +1464,11 @@ const DuelRoom = () => {
     </div>
   );
 };
+
+const DuelRoom = () => (
+  <ImmersiveModeProvider>
+    <DuelRoomInner />
+  </ImmersiveModeProvider>
+);
 
 export default DuelRoom;
