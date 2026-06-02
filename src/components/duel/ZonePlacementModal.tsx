@@ -16,7 +16,7 @@ interface ZonePlacementModalProps {
 }
 
 const MONSTER_ZONES: FieldZoneType[] = ['monster1', 'monster2', 'monster3', 'monster4', 'monster5'];
-const EXTRA_MONSTER_ZONES: FieldZoneType[] = ['extraMonster1', 'extraMonster2'];
+const EXTRA_MONSTER_ZONES: FieldZoneType[] = ['extraMonster1'];
 const SPELL_TRAP_ZONES: FieldZoneType[] = ['spell1', 'spell2', 'spell3', 'spell4', 'spell5'];
 
 const isExtraDeckCardType = (type: string): boolean => {

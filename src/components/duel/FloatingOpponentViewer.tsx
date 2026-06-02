@@ -360,11 +360,36 @@ export const FloatingOpponentViewer = ({
   }
 
   const cardBack = getCardBack(opponentState?.tcgType, opponentState?.sleeveUrl);
+  const ygoFieldGridStyle = {
+    gridTemplateColumns: 'minmax(32px, 44px) repeat(5, minmax(32px, 44px)) minmax(32px, 44px)',
+  };
+  const opponentExtraMonsterCard =
+    opponentState?.extraMonsterZones?.extraMonster1 ||
+    opponentState?.extraMonsterZones?.extraMonster2 ||
+    null;
+  const ygoMonsterZoneCards = opponentState?.monsterZones
+    ? [
+        opponentState.monsterZones.monster1,
+        opponentState.monsterZones.monster2,
+        opponentState.monsterZones.monster3,
+        opponentState.monsterZones.monster4,
+        opponentState.monsterZones.monster5,
+      ]
+    : [];
+  const ygoSpellZoneCards = opponentState?.spellZones
+    ? [
+        opponentState.spellZones.spell1,
+        opponentState.spellZones.spell2,
+        opponentState.spellZones.spell3,
+        opponentState.spellZones.spell4,
+        opponentState.spellZones.spell5,
+      ]
+    : [];
 
   const ZoneSlotDisplay = ({ card, label }: { card: OpponentCard | null; label: string }) => (
     <div className={cn(
-      "w-8 h-12 border border-dashed border-muted-foreground/30 rounded flex items-center justify-center",
-      card && "border-solid border-primary/30"
+      "relative flex h-12 w-8 items-center justify-center overflow-visible rounded-sm border border-white/35 bg-black/20 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)] sm:h-14 sm:w-10 md:h-16 md:w-11",
+      card && "border-primary/45"
     )}>
       {card ? (
         <div 
@@ -383,7 +408,7 @@ export const FloatingOpponentViewer = ({
             src={card.isFaceDown ? cardBack : (card.image || cardBack)}
             alt={card.isFaceDown ? 'Carta virada' : card.name}
             title={card.isFaceDown ? 'Carta virada' : card.name}
-            className="w-full h-full object-cover rounded"
+            className="h-full w-full rounded-sm object-cover"
           />
           {card.isFaceDown && (
             <div className="absolute top-0 right-0">
@@ -407,10 +432,97 @@ export const FloatingOpponentViewer = ({
           )}
         </div>
       ) : (
-        <span className="text-[6px] text-muted-foreground/50">{label}</span>
+        <span className="absolute inset-x-0 bottom-1 px-0.5 text-center text-[5px] font-semibold uppercase leading-tight text-white/60">
+          {label}
+        </span>
       )}
     </div>
   );
+
+  const PileSlotDisplay = ({
+    label,
+    cards = [],
+    count,
+    icon: Icon,
+    iconColor,
+    faceDown = false,
+  }: {
+    label: string;
+    cards?: OpponentCard[];
+    count: number;
+    icon: typeof Layers;
+    iconColor: string;
+    faceDown?: boolean;
+  }) => {
+    const hasCards = count > 0;
+    const topCard = cards[cards.length - 1] || null;
+    const image = faceDown ? cardBack : topCard?.image || cardBack;
+
+    return (
+      <button
+        type="button"
+        className={cn(
+          "relative flex h-12 w-8 items-center justify-center overflow-visible rounded-sm border border-white/35 bg-black/20 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)] transition-colors hover:border-primary/70 sm:h-14 sm:w-10 md:h-16 md:w-11",
+          hasCards && "border-primary/45"
+        )}
+        onClick={() => {
+          if (topCard && !faceDown) {
+            setSelectedCard(topCard);
+            setModalOpen(true);
+          }
+        }}
+        disabled={!topCard || faceDown}
+        title={label}
+      >
+        {hasCards ? (
+          <>
+            <img src={image} alt={label} className="h-full w-full rounded-sm object-cover" />
+            <Badge className="absolute -right-1 -top-1 h-4 px-1 text-[8px]">
+              {count}
+            </Badge>
+          </>
+        ) : (
+          <>
+            <Icon className={cn("h-3 w-3", iconColor)} />
+            <span className="absolute inset-x-0 bottom-1 px-0.5 text-center text-[5px] font-semibold uppercase leading-tight text-white/60">
+              {label}
+            </span>
+          </>
+        )}
+      </button>
+    );
+  };
+
+  const HiddenHandDisplay = () => {
+    const visibleBacks = Math.min(opponentState?.hand || 0, 7);
+
+    return (
+      <div className="rounded-lg border border-border/60 bg-background/50 p-2">
+        <div className="mb-2 flex items-center gap-1">
+          <Hand className="h-3 w-3 text-primary" />
+          <span className="text-xs font-medium">Mão</span>
+          <Badge variant="secondary" className="ml-auto h-4 px-1 text-[10px]">
+            {opponentState?.hand || 0}
+          </Badge>
+        </div>
+        <div className="flex min-h-12 items-center overflow-hidden pl-1">
+          {visibleBacks > 0 ? (
+            Array.from({ length: visibleBacks }).map((_, index) => (
+              <div
+                key={`opponent-hand-back-${index}`}
+                className="h-12 w-8 shrink-0 rounded-sm border border-white/20 bg-muted shadow-sm"
+                style={{ marginLeft: index === 0 ? 0 : -14 }}
+              >
+                <img src={cardBack} alt="Carta na mão" className="h-full w-full rounded-sm object-cover" />
+              </div>
+            ))
+          ) : (
+            <span className="w-full py-3 text-center text-xs text-muted-foreground">0 cartas</span>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   const ZoneDisplay = ({ 
     title, 
@@ -587,26 +699,30 @@ export const FloatingOpponentViewer = ({
               </Button>
             </div>
 
-            {!isCollapsed && opponentState.handRevealed && opponentState.handPreview && opponentState.handPreview.length > 0 && (
-              <div className="rounded-lg border border-primary/25 bg-background/60 p-2">
-                <div className="mb-2 flex items-center gap-1 text-xs font-medium">
-                  <Eye className="h-3 w-3 text-primary" />
-                  Mão revelada
+            {!isCollapsed && (
+              opponentState.handRevealed && opponentState.handPreview && opponentState.handPreview.length > 0 ? (
+                <div className="rounded-lg border border-primary/25 bg-background/60 p-2">
+                  <div className="mb-2 flex items-center gap-1 text-xs font-medium">
+                    <Eye className="h-3 w-3 text-primary" />
+                    Mão revelada
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {opponentState.handPreview.map((card, index) => (
+                      <button
+                        key={`${card.id}-${index}`}
+                        type="button"
+                        className="h-16 w-auto overflow-hidden rounded-sm border border-border/50 bg-muted"
+                        onClick={() => { setSelectedCard(card); setModalOpen(true); }}
+                        title={card.name}
+                      >
+                        <img src={card.image || cardBack} alt={card.name} className="h-full w-auto object-cover" />
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-1">
-                  {opponentState.handPreview.map((card, index) => (
-                    <button
-                      key={`${card.id}-${index}`}
-                      type="button"
-                      className="h-16 w-auto overflow-hidden rounded-sm border border-border/50 bg-muted"
-                      onClick={() => { setSelectedCard(card); setModalOpen(true); }}
-                      title={card.name}
-                    >
-                      <img src={card.image || cardBack} alt={card.name} className="h-full w-auto object-cover" />
-                    </button>
-                  ))}
-                </div>
-              </div>
+              ) : (
+                <HiddenHandDisplay />
+              )
             )}
 
             {!isCollapsed && opponentState.tcgType === 'magic' && (
@@ -739,66 +855,86 @@ export const FloatingOpponentViewer = ({
 
             {!isCollapsed && opponentState.tcgType !== 'magic' && opponentState.tcgType !== 'pokemon' && (
               <>
-                {/* YGO Field with opponent playmat */}
                 {opponentState.monsterZones && (
                   <div
-                    className="space-y-2 p-2 rounded-lg relative overflow-hidden"
+                    className="relative overflow-hidden rounded-lg border border-border/50 p-2"
                     style={{
-                      backgroundImage: opponentState.playmatUrl ? `url("${opponentState.playmatUrl}")` : undefined,
+                      backgroundImage: opponentState.playmatUrl
+                        ? `url("${opponentState.playmatUrl}")`
+                        : `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cpath d='M20 0L40 20 20 40 0 20z' fill='%23ffffff' fill-opacity='0.03'/%3E%3C/svg%3E")`,
                       backgroundSize: 'cover',
                       backgroundPosition: 'center',
-                      backgroundColor: opponentState.playmatUrl ? undefined : 'hsl(var(--muted) / 0.2)',
+                      backgroundColor: opponentState.playmatUrl ? undefined : 'hsl(var(--background) / 0.88)',
                     }}
                   >
                     {opponentState.playmatUrl && (
                       <div className="absolute inset-0 bg-black/40 rounded-lg pointer-events-none z-0" />
                     )}
-                    <div className="relative z-10">
-                      <span className="text-[10px] font-medium text-muted-foreground">Zonas de Campo do Oponente</span>
-                      
-                      {opponentState.extraMonsterZones && (
-                        <div className="flex justify-center gap-8">
-                          <ZoneSlotDisplay card={opponentState.extraMonsterZones.extraMonster1} label="EM1" />
-                          <ZoneSlotDisplay card={opponentState.extraMonsterZones.extraMonster2} label="EM2" />
+                    <div className="relative z-10 mx-auto flex w-full max-w-md flex-col gap-1.5">
+                      <div className="grid gap-1" style={ygoFieldGridStyle}>
+                        <div style={{ gridColumn: '4 / span 1' }}>
+                          <ZoneSlotDisplay card={opponentExtraMonsterCard} label="Extra Monster Zone" />
                         </div>
-                      )}
-
-                      <div className="flex justify-center gap-1">
-                        <ZoneSlotDisplay card={opponentState.monsterZones.monster1} label="M1" />
-                        <ZoneSlotDisplay card={opponentState.monsterZones.monster2} label="M2" />
-                        <ZoneSlotDisplay card={opponentState.monsterZones.monster3} label="M3" />
-                        <ZoneSlotDisplay card={opponentState.monsterZones.monster4} label="M4" />
-                        <ZoneSlotDisplay card={opponentState.monsterZones.monster5} label="M5" />
                       </div>
 
-                      {opponentState.spellZones && (
-                        <div className="flex justify-center gap-1">
-                          <ZoneSlotDisplay card={opponentState.spellZones.spell1} label="S1" />
-                          <ZoneSlotDisplay card={opponentState.spellZones.spell2} label="S2" />
-                          <ZoneSlotDisplay card={opponentState.spellZones.spell3} label="S3" />
-                          <ZoneSlotDisplay card={opponentState.spellZones.spell4} label="S4" />
-                          <ZoneSlotDisplay card={opponentState.spellZones.spell5} label="S5" />
-                        </div>
-                      )}
+                      <div className="grid items-center gap-1" style={ygoFieldGridStyle}>
+                        <ZoneSlotDisplay card={opponentState.fieldSpell || null} label="Field Zone" />
+                        {ygoMonsterZoneCards.map((card, index) => (
+                          <ZoneSlotDisplay key={`op-monster-${index}`} card={card} label="Main Monster Zone" />
+                        ))}
+                        <PileSlotDisplay
+                          label="Graveyard"
+                          cards={opponentState.graveyard}
+                          count={opponentState.graveyard.length}
+                          icon={Flame}
+                          iconColor="text-orange-500"
+                        />
+                      </div>
 
-                      {opponentState.fieldSpell && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] text-muted-foreground">Campo:</span>
-                          <ZoneSlotDisplay card={opponentState.fieldSpell} label="FS" />
+                      <div className="grid items-center gap-1" style={ygoFieldGridStyle}>
+                        <PileSlotDisplay
+                          label="Extra Deck"
+                          count={opponentState.extraCount}
+                          icon={Sparkles}
+                          iconColor="text-yellow-500"
+                          faceDown
+                        />
+                        {ygoSpellZoneCards.map((card, index) => (
+                          <ZoneSlotDisplay key={`op-spell-${index}`} card={card} label="Spell & Trap Zone" />
+                        ))}
+                        <PileSlotDisplay
+                          label="Deck"
+                          count={opponentState.deckCount}
+                          icon={Layers}
+                          iconColor="text-blue-500"
+                          faceDown
+                        />
+                      </div>
+
+                      <div className="grid items-center gap-1" style={ygoFieldGridStyle}>
+                        <div style={{ gridColumn: '7 / span 1' }}>
+                          <PileSlotDisplay
+                            label="Banished"
+                            cards={opponentState.banished}
+                            count={opponentState.banished.length}
+                            icon={Ban}
+                            iconColor="text-purple-500"
+                          />
                         </div>
-                      )}
+                      </div>
                     </div>
                   </div>
                 )}
 
                 {!opponentState.monsterZones && opponentState.field.length > 0 && (
-                  <ZoneDisplay title="Campo" cards={opponentState.field} icon={Layers} color="text-primary" />
+                  <>
+                    <ZoneDisplay title="Campo" cards={opponentState.field} icon={Layers} color="text-primary" />
+                    <div className="grid grid-cols-2 gap-2">
+                      <ZoneDisplay title="Cemitério" cards={opponentState.graveyard} icon={Flame} color="text-destructive" compact />
+                      <ZoneDisplay title="Banido" cards={opponentState.banished} icon={Ban} color="text-muted-foreground" compact />
+                    </div>
+                  </>
                 )}
-
-                <div className="grid grid-cols-2 gap-2">
-                  <ZoneDisplay title="Cemitério" cards={opponentState.graveyard} icon={Flame} color="text-destructive" compact />
-                  <ZoneDisplay title="Banido" cards={opponentState.banished} icon={Ban} color="text-muted-foreground" compact />
-                </div>
               </>
             )}
           </div>
