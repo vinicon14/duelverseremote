@@ -788,47 +788,8 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     const hasSingleContent = remoteDeckContent && index === 0 && !remoteDeckContents;
     const deckContentForSlot = hasPerSlotContent || (hasSingleContent ? remoteDeckContent : null);
 
-    // Only show deck overlay when deck is explicitly open AND content exists
-    const showMobileDeckPanel = mobileArenaMode && !!deckContentForSlot;
-    const showDeckOverlay = !showMobileDeckPanel && isDeckOpenForSlot && deckContentForSlot;
-
-    if (showMobileDeckPanel) {
-      return (
-        <div key={peerId || `waiting-${index}`} className="relative w-full h-full overflow-hidden bg-black flex flex-col">
-          <div className="relative h-[36%] min-h-[96px] overflow-hidden bg-black flex items-center justify-center shrink-0">
-            {peerId ? (
-              <video
-                ref={(el) => setRemoteVideoRef(peerId, el)}
-                autoPlay
-                playsInline
-                className="w-full h-full object-contain"
-              />
-            ) : (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/80">
-                <div className="text-center space-y-2">
-                  <Loader2 className="w-6 h-6 mx-auto text-primary animate-spin" />
-                  <p className="text-[10px] text-muted-foreground">Aguardando câmera do oponente...</p>
-                </div>
-              </div>
-            )}
-            {spectatorLpOverlay?.remotePlayers?.[index] && (
-              <div className="absolute top-1 left-1 px-2 py-1 rounded bg-black/70 backdrop-blur-sm text-white z-20 flex items-center gap-1.5">
-                <span className="text-[10px] font-medium truncate max-w-[80px]">{spectatorLpOverlay.remotePlayers[index].label}</span>
-                <span className="text-xs font-bold text-green-400">{spectatorLpOverlay.remotePlayers[index].lp}</span>
-              </div>
-            )}
-            {!spectatorLpOverlay && (
-              <div className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded bg-black/60 text-[10px] text-white z-10">
-                {peerId ? `Oponente ${remoteSlots.length > 1 ? index + 1 : ''}` : `Jogador ${index + 2}`}
-              </div>
-            )}
-          </div>
-          <div className="flex-1 min-h-0 overflow-hidden bg-background touch-none border-t border-border">
-            {deckContentForSlot}
-          </div>
-        </div>
-      );
-    }
+    // The remote panel is exclusive: digital arena when open, otherwise camera.
+    const showDeckOverlay = isDeckOpenForSlot && deckContentForSlot;
 
     return (
       <div key={peerId || `waiting-${index}`} className="relative w-full h-full overflow-hidden bg-black flex items-center justify-center">

@@ -1031,8 +1031,9 @@ const DuelRoom = () => {
         }
       }
     })
-    // Players respond to spectator requests with their current deck state
-    .on('broadcast', { event: 'deck-state-request' }, () => {
+    // Players respond to room requests with their current deck-open state.
+    .on('broadcast', { event: 'deck-state-request' }, ({ payload }) => {
+      if (payload?.requesterId === currentUser.id) return;
       // Only players respond (not spectators)
       if (currentUser.id === duel?.creator_id || currentUser.id === duel?.opponent_id) {
         channel.send({
@@ -1042,19 +1043,20 @@ const DuelRoom = () => {
         });
       }
     })
-    .subscribe(() => {
+    .subscribe((status) => {
+      if (status !== 'SUBSCRIBED') return;
+
       deckToggleChannelRef.current = channel;
-      // Spectator: request current deck states from players already in the room
-      const isSpec = currentUser.id !== duel?.creator_id && currentUser.id !== duel?.opponent_id;
-      if (isSpec) {
-        setTimeout(() => {
-          channel.send({
-            type: 'broadcast',
-            event: 'deck-state-request',
-            payload: {},
-          });
-        }, 500);
-      }
+      const requestCurrentDeckStates = () => {
+        channel.send({
+          type: 'broadcast',
+          event: 'deck-state-request',
+          payload: { requesterId: currentUser.id },
+        });
+      };
+
+      requestCurrentDeckStates();
+      setTimeout(requestCurrentDeckStates, 700);
     });
 
     return () => { 
@@ -1136,7 +1138,7 @@ const DuelRoom = () => {
                 remoteDeckOpen={
                   isSpectator && !isJudge
                     ? opponentPlayerDeckOpen
-                    : (mobileDigitalArenaOpen || opponentDeckOpen) && isParticipant && !isJudge
+                    : opponentDeckOpen && isParticipant && !isJudge
                 }
                 localDeckContent={
                   isSpectator && !isJudge && currentUser && id && duel && ((duel as any)?.max_players || 2) <= 2 ? (

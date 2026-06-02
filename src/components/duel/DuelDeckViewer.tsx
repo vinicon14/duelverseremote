@@ -224,6 +224,8 @@ export const DuelDeckViewer = ({
   // Persistent channel for broadcasting
   const [broadcastChannel, setBroadcastChannel] = useState<ReturnType<typeof supabase.channel> | null>(null);
   const broadcastStateRef = useRef<() => void>(() => {});
+  const broadcastChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const broadcastReadyRef = useRef(false);
   const isOpenRef = useRef(isOpen);
   const mobileDragRef = useRef(mobileDrag);
 
@@ -242,6 +244,8 @@ export const DuelDeckViewer = ({
     const channel = supabase.channel(`deck-sync-${duelId}`, {
       config: { broadcast: { self: false } },
     });
+    broadcastChannelRef.current = channel;
+    broadcastReadyRef.current = false;
 
     channel
       .on('broadcast', { event: 'deck-state-request' }, ({ payload }) => {
@@ -254,11 +258,18 @@ export const DuelDeckViewer = ({
       })
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
+          broadcastReadyRef.current = true;
           setBroadcastChannel(channel);
+          setTimeout(() => broadcastStateRef.current(), 0);
+          setTimeout(() => broadcastStateRef.current(), 250);
         }
       });
 
     return () => {
+      if (broadcastChannelRef.current === channel) {
+        broadcastChannelRef.current = null;
+        broadcastReadyRef.current = false;
+      }
       supabase.removeChannel(channel);
       setBroadcastChannel(null);
     };
@@ -266,7 +277,8 @@ export const DuelDeckViewer = ({
 
   // Broadcast state changes to opponent
   const broadcastState = useCallback(() => {
-    if (!broadcastChannel || !currentUserId) return;
+    const channel = broadcastChannelRef.current;
+    if (!channel || !broadcastReadyRef.current || !currentUserId) return;
     
     const getFieldCards = (): { id: number; name: string; image: string; isFaceDown?: boolean; position?: string; materials?: number; zone: string }[] => {
       const zones: FieldZoneType[] = [
@@ -292,7 +304,7 @@ export const DuelDeckViewer = ({
         .filter((card): card is NonNullable<typeof card> => card !== null);
     };
 
-    broadcastChannel.send({
+    channel.send({
       type: 'broadcast',
       event: 'deck-state',
       payload: {
@@ -344,7 +356,7 @@ export const DuelDeckViewer = ({
         sleeveUrl: localStorage.getItem('activeSleeveUrl') || null,
       }
     });
-  }, [broadcastChannel, currentUserId, fieldState]);
+  }, [currentUserId, fieldState]);
 
   useEffect(() => {
     broadcastStateRef.current = broadcastState;
@@ -1184,9 +1196,17 @@ export const DuelDeckViewer = ({
         </div>
 
         <div className="h-9 shrink-0 grid grid-cols-5 gap-1">
-          <Button size="sm" variant="outline" className="h-9 px-1 text-[10px] gap-1" onClick={drawCard} disabled={fieldState.deck.length === 0}>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-9 px-1 text-[9px] gap-1"
+            onClick={drawCard}
+            disabled={fieldState.deck.length === 0}
+            title="Comprar card"
+            aria-label="Comprar card"
+          >
             <Plus className="h-3.5 w-3.5" />
-            1
+            Comprar
           </Button>
           <Button
             size="sm"
