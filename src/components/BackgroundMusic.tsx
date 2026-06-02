@@ -18,7 +18,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { startBgm, stopBgm } from "@/utils/bgm";
+import { startBgm, stopBgm, getBgmVolume } from "@/utils/bgm";
 import { supabase } from "@/integrations/supabase/client";
 
 const STORAGE_KEY = "duelverse_bgm_muted";
@@ -132,6 +132,8 @@ export const BackgroundMusic = () => {
       return;
     }
 
+    const volume = getBgmVolume();
+
     if (trackUrl) {
       // Modo: arquivo (vídeo/áudio) configurado pelo admin
       stopBgm();
@@ -140,23 +142,35 @@ export const BackgroundMusic = () => {
         el = new Audio();
         el.loop = true;
         el.preload = "auto";
-        el.volume = 0.32;
         el.crossOrigin = "anonymous";
         audioRef.current = el;
       }
+      el.volume = volume;
       if (el.src !== trackUrl) {
         el.src = trackUrl;
       }
       el.play().catch(() => {
         // fallback ao sintetizador se a URL falhar (CORS, formato, etc.)
-        startBgm(0.32);
+        startBgm(volume);
       });
     } else {
       // Modo: sintetizador
       if (audioRef.current) audioRef.current.pause();
-      startBgm(0.32);
+      startBgm(volume);
     }
   }, [location.pathname, muted, ready, trackUrl]);
+
+  // Sync <audio> element volume with global volume events
+  useEffect(() => {
+    const onVol = (e: Event) => {
+      const v = (e as CustomEvent).detail?.volume;
+      if (typeof v === "number" && audioRef.current) {
+        audioRef.current.volume = Math.max(0, Math.min(1, v));
+      }
+    };
+    window.addEventListener("duelverse:bgm-volume", onVol);
+    return () => window.removeEventListener("duelverse:bgm-volume", onVol);
+  }, []);
 
   // Para tudo ao desmontar
   useEffect(() => {
