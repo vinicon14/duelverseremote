@@ -21,7 +21,8 @@ import {
   Move,
   ArrowLeftRight,
   Zap,
-  Ban
+  Ban,
+  Plus
 } from 'lucide-react';
 import { DeckCard } from '@/components/deckbuilder/DeckPanel';
 import { cn } from '@/lib/utils';
@@ -47,6 +48,7 @@ interface DuelDeckViewerProps {
   embedded?: boolean;
   /** TCG type of the duel — when 'rush_duel', applies Rush Duel rules (3x3 board, draw-up-to-5). */
   tcgType?: string | null;
+  mobileArenaMode?: boolean;
 }
 
 const EXTRA_DECK_TYPES = ['Fusion', 'Synchro', 'XYZ', 'Link'];
@@ -175,6 +177,7 @@ export const DuelDeckViewer = ({
   opponentUsername,
   embedded = false,
   tcgType,
+  mobileArenaMode = false,
 }: DuelDeckViewerProps) => {
   const isRushDuel = tcgType === 'rush_duel';
   const [selectedEffectCard, setSelectedEffectCard] = useState<GameCard | null>(null);
@@ -203,6 +206,15 @@ export const DuelDeckViewer = ({
   const [showSearch, setShowSearch] = useState(false);
   const [attachMode, setAttachMode] = useState<{ targetZone: FieldZoneType; cardToAttach: GameCard } | null>(null);
   const [showSideSwap, setShowSideSwap] = useState(false);
+  const [mobileDrag, setMobileDrag] = useState<{
+    card: GameCard;
+    sourceZone: 'hand';
+    startX: number;
+    startY: number;
+    x: number;
+    y: number;
+    moved: boolean;
+  } | null>(null);
 
   // Draggable functionality
   const { position, isDragging, elementRef, dragHandlers } = useDraggable({
@@ -213,6 +225,11 @@ export const DuelDeckViewer = ({
   const [broadcastChannel, setBroadcastChannel] = useState<ReturnType<typeof supabase.channel> | null>(null);
   const broadcastStateRef = useRef<() => void>(() => {});
   const isOpenRef = useRef(isOpen);
+  const mobileDragRef = useRef(mobileDrag);
+
+  useEffect(() => {
+    mobileDragRef.current = mobileDrag;
+  }, [mobileDrag]);
 
   useEffect(() => {
     isOpenRef.current = isOpen;
@@ -602,7 +619,7 @@ export const DuelDeckViewer = ({
     setCardActionsModal({ open: true, card, zone });
   }, [attachMode, fieldState]);
 
-  const handleCardDrop = useCallback((zone: FieldZoneType, card: GameCard & { sourceZone?: FieldZoneType }) => {
+  const handleCardDrop = useCallback((zone: FieldZoneType, card: GameCard & { sourceZone?: FieldZoneType | 'hand' }) => {
     // Handle dropped card from drag and drop
     setFieldState(prev => {
       const sourceZone = card.sourceZone;
@@ -729,6 +746,63 @@ export const DuelDeckViewer = ({
     setSelectedEffectCard(card);
     setEffectModalOpen(true);
   }, []);
+
+  const finishMobileHandDrag = useCallback((clientX: number, clientY: number) => {
+    const drag = mobileDragRef.current;
+    if (!drag) return;
+
+    const targetElement = document
+      .elementFromPoint(clientX, clientY)
+      ?.closest<HTMLElement>('[data-field-zone]');
+    const targetZone = targetElement?.dataset.fieldZone;
+
+    if (targetZone && targetZone !== 'hand' && drag.moved) {
+      handleCardDrop(targetZone as FieldZoneType, { ...drag.card, sourceZone: drag.sourceZone });
+    } else if (!drag.moved) {
+      handleHandCardClick(drag.card);
+    }
+
+    setMobileDrag(null);
+  }, [handleCardDrop, handleHandCardClick]);
+
+  const beginMobileHandDrag = useCallback((card: GameCard, e: React.PointerEvent<HTMLElement>) => {
+    if (!mobileArenaMode) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setMobileDrag({
+      card,
+      sourceZone: 'hand',
+      startX: e.clientX,
+      startY: e.clientY,
+      x: e.clientX,
+      y: e.clientY,
+      moved: false,
+    });
+  }, [mobileArenaMode]);
+
+  const moveMobileHandDrag = useCallback((e: React.PointerEvent<HTMLElement>) => {
+    const drag = mobileDragRef.current;
+    if (!drag) return;
+
+    e.preventDefault();
+    const distance = Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY);
+    setMobileDrag({
+      ...drag,
+      x: e.clientX,
+      y: e.clientY,
+      moved: drag.moved || distance > 8,
+    });
+  }, []);
+
+  const endMobileHandDrag = useCallback((e: React.PointerEvent<HTMLElement>) => {
+    if (!mobileDragRef.current) return;
+    e.preventDefault();
+    e.stopPropagation();
+    finishMobileHandDrag(e.clientX, e.clientY);
+  }, [finishMobileHandDrag]);
 
   const searchCardInDeck = useCallback((cardName: string) => {
     if (!cardName.trim()) return;
@@ -958,9 +1032,193 @@ export const DuelDeckViewer = ({
   const totalExtraDeck = extraDeck.reduce((acc, c) => acc + c.quantity, 0);
   const hasDeck = totalMainDeck > 0 || totalExtraDeck > 0;
 
+  const renderMobileArenaContent = () => {
+    if (!hasDeck) {
+      return (
+        <div className="h-full min-h-0 flex flex-col items-center justify-center p-4 gap-3 bg-background">
+          <BookOpen className="h-9 w-9 text-muted-foreground" />
+          <Button onClick={onLoadDeck} className="gap-2 min-h-[44px]">
+            <Upload className="h-4 w-4" />
+            Importar Deck
+          </Button>
+        </div>
+      );
+    }
+
+    const handColumns = Math.max(fieldState.hand.length, 1);
+
+    return (
+      <div className="h-full min-h-0 overflow-hidden bg-background flex flex-col gap-1 p-1">
+        <div className="h-8 shrink-0 flex items-center gap-1 rounded-md bg-muted/40 border border-border/60 px-1">
+          <Badge variant="outline" className="h-6 px-1.5 text-[10px] tabular-nums">
+            D {fieldState.deck.length}
+          </Badge>
+          <Badge variant="outline" className="h-6 px-1.5 text-[10px] tabular-nums">
+            E {fieldState.extraDeck.length}
+          </Badge>
+          <Badge variant="outline" className="h-6 px-1.5 text-[10px] tabular-nums">
+            M {fieldState.hand.length}
+          </Badge>
+          <div className="ml-auto flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => setShowSearch(!showSearch)}
+              title="Buscar carta"
+            >
+              <Search className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={shuffleDeck}
+              title="Embaralhar"
+            >
+              <Shuffle className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={returnAllToDeck}
+              title="Resetar campo"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
+
+        {showSearch && (
+          <div className="h-8 shrink-0 flex gap-1">
+            <Input
+              placeholder="Nome da carta"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && searchCardInDeck(searchQuery)}
+              className="h-8 text-xs"
+            />
+            <Button
+              size="icon"
+              className="h-8 w-8 shrink-0"
+              onClick={() => searchCardInDeck(searchQuery)}
+              title="Buscar"
+            >
+              <Search className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        )}
+
+        <div className="flex-1 min-h-0 flex items-center justify-center overflow-hidden">
+          <DuelFieldBoard
+            fieldState={fieldState}
+            onZoneClick={handleZoneClick}
+            onCardClick={handleCardOnFieldClick}
+            onCardDrop={handleCardDrop}
+            isFullscreen={false}
+            playmatUrl={localStorage.getItem('activePlaymatUrl')}
+            sleeveUrl={localStorage.getItem('activeSleeveUrl')}
+            tcgType={tcgType}
+            mobileCompact
+          />
+        </div>
+
+        <div
+          data-field-zone="hand"
+          className={cn(
+            "h-[62px] shrink-0 rounded-md border border-green-500/30 bg-green-500/10 p-1 overflow-hidden",
+            mobileDrag && "ring-2 ring-primary/50"
+          )}
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.currentTarget.classList.add('border-primary', 'bg-primary/10');
+          }}
+          onDragLeave={(e) => {
+            e.currentTarget.classList.remove('border-primary', 'bg-primary/10');
+          }}
+          onDrop={(e) => {
+            e.currentTarget.classList.remove('border-primary', 'bg-primary/10');
+            handleHandDrop(e);
+          }}
+        >
+          <div
+            className="grid h-full items-center gap-0.5"
+            style={{ gridTemplateColumns: `repeat(${handColumns}, minmax(0, 1fr))` }}
+          >
+            {fieldState.hand.length === 0 ? (
+              <div className="h-full flex items-center justify-center text-[10px] text-muted-foreground">
+                Mão vazia
+              </div>
+            ) : fieldState.hand.map((card) => (
+              <button
+                key={card.instanceId}
+                type="button"
+                className={cn(
+                  "relative h-full min-w-0 touch-none rounded-sm focus:outline-none focus:ring-2 focus:ring-primary",
+                  mobileDrag?.card.instanceId === card.instanceId && "opacity-40"
+                )}
+                draggable={!mobileArenaMode}
+                onDragStart={(e) => {
+                  e.dataTransfer.setData('application/json', JSON.stringify({ ...card, sourceZone: 'hand' }));
+                  e.dataTransfer.effectAllowed = 'move';
+                }}
+                onPointerDown={(e) => beginMobileHandDrag(card, e)}
+                onPointerMove={moveMobileHandDrag}
+                onPointerUp={endMobileHandDrag}
+                onPointerCancel={() => setMobileDrag(null)}
+                onClick={() => {
+                  if (!mobileArenaMode) handleHandCardClick(card);
+                }}
+                title={card.name}
+              >
+                <img
+                  src={card.card_images?.[0]?.image_url_small}
+                  alt={card.name}
+                  className="h-full max-h-[54px] w-full object-contain rounded-sm shadow-sm"
+                  draggable={false}
+                />
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="h-9 shrink-0 grid grid-cols-5 gap-1">
+          <Button size="sm" variant="outline" className="h-9 px-1 text-[10px] gap-1" onClick={drawCard} disabled={fieldState.deck.length === 0}>
+            <Plus className="h-3.5 w-3.5" />
+            1
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-9 px-1 text-[10px] gap-1"
+            onClick={isRushDuel ? drawUpToFive : () => drawMultiple(5)}
+            disabled={fieldState.deck.length === 0 || (isRushDuel && fieldState.hand.length >= 5)}
+          >
+            <Hand className="h-3.5 w-3.5" />
+            {isRushDuel ? "5" : "+5"}
+          </Button>
+          <Button size="sm" variant="outline" className="h-9 px-1 text-[10px]" onClick={() => setViewerModal({ open: true, zone: 'deck' })}>
+            <Layers className="h-3.5 w-3.5" />
+          </Button>
+          <Button size="sm" variant="outline" className="h-9 px-1 text-[10px]" onClick={() => setViewerModal({ open: true, zone: 'graveyard' })}>
+            <Ban className="h-3.5 w-3.5 text-orange-500" />
+          </Button>
+          <Button size="sm" variant="outline" className="h-9 px-1 text-[10px]" onClick={() => setViewerModal({ open: true, zone: 'banished' })}>
+            <Zap className="h-3.5 w-3.5 text-purple-500" />
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
   if (!isOpen) return null;
 
-  const containerClasses = embedded
+  const isMobileArenaEmbedded = embedded && mobileArenaMode;
+
+  const containerClasses = isMobileArenaEmbedded
+    ? "absolute inset-0 z-10 bg-card flex flex-col overflow-hidden"
+    : embedded
     ? "absolute inset-0 z-10 bg-card flex flex-col"
     : isFullscreen
     ? "fixed inset-4 z-50 bg-card/98 backdrop-blur-md border border-border rounded-xl shadow-2xl flex flex-col"
@@ -980,6 +1238,19 @@ export const DuelDeckViewer = ({
 
   return (
     <>
+      {mobileDrag && (
+        <div
+          className="fixed z-[80] pointer-events-none -translate-x-1/2 -translate-y-1/2 drop-shadow-2xl"
+          style={{ left: mobileDrag.x, top: mobileDrag.y }}
+          aria-hidden
+        >
+          <img
+            src={mobileDrag.card.card_images?.[0]?.image_url_small}
+            alt=""
+            className="h-20 w-auto rounded-md border-2 border-primary bg-background"
+          />
+        </div>
+      )}
       <div 
         ref={elementRef}
         className={containerClasses}
@@ -995,49 +1266,51 @@ export const DuelDeckViewer = ({
         ) : (
           <div className="flex flex-col h-full">
             {/* Draggable Header */}
-            <div 
-              className={cn(
-                "flex items-center justify-between p-2 border-b border-border flex-shrink-0",
-                !isFullscreen && "cursor-grab hover:bg-muted/30"
-              )}
-              {...(!isFullscreen ? dragHandlers : {})}
-            >
-              <div className="flex items-center gap-2">
-                {!isFullscreen && <Move className="h-3 w-3 text-muted-foreground" />}
-                <Layers className="h-4 w-4 text-primary" />
-                <span className="font-semibold text-sm">Arena Digital</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  className="h-6 px-2 text-xs gap-1"
-                  onClick={onClose}
-                >
-                  <X className="h-3 w-3" />
-                  Sair
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => setIsFullscreen(!isFullscreen)}
-                  title={isFullscreen ? "Sair da Tela Cheia" : "Tela Cheia"}
-                >
-                  {isFullscreen ? <Minimize2 className="h-3 w-3" /> : <Maximize2 className="h-3 w-3" />}
-                </Button>
-                {!isFullscreen && (
+            {!isMobileArenaEmbedded && (
+              <div
+                className={cn(
+                  "flex items-center justify-between p-2 border-b border-border flex-shrink-0",
+                  !isFullscreen && "cursor-grab hover:bg-muted/30"
+                )}
+                {...(!isFullscreen ? dragHandlers : {})}
+              >
+                <div className="flex items-center gap-2">
+                  {!isFullscreen && <Move className="h-3 w-3 text-muted-foreground" />}
+                  <Layers className="h-4 w-4 text-primary" />
+                  <span className="font-semibold text-sm">Arena Digital</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="h-6 px-2 text-xs gap-1"
+                    onClick={onClose}
+                  >
+                    <X className="h-3 w-3" />
+                    Sair
+                  </Button>
                   <Button
                     variant="ghost"
                     size="icon"
                     className="h-6 w-6"
-                    onClick={() => setIsMinimized(true)}
+                    onClick={() => setIsFullscreen(!isFullscreen)}
+                    title={isFullscreen ? "Sair da Tela Cheia" : "Tela Cheia"}
                   >
-                    <Minus className="h-3 w-3" />
+                    {isFullscreen ? <Minimize2 className="h-3 w-3" /> : <Maximize2 className="h-3 w-3" />}
                   </Button>
-                )}
+                  {!isFullscreen && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => setIsMinimized(true)}
+                    >
+                      <Minus className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Attach mode banner */}
             {attachMode && (
@@ -1056,7 +1329,9 @@ export const DuelDeckViewer = ({
               </div>
             )}
 
-            {!hasDeck ? (
+            {isMobileArenaEmbedded ? (
+              renderMobileArenaContent()
+            ) : !hasDeck ? (
               <div className="flex-1 flex flex-col items-center justify-center p-4 gap-4">
                 <BookOpen className="h-12 w-12 text-muted-foreground" />
                 <p className="text-sm text-muted-foreground text-center">

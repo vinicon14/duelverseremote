@@ -118,6 +118,7 @@ interface FloatingOpponentViewerProps {
   filterOpponentId?: string;
   /** Map of peerId -> username for 4-player labeling */
   opponentUsernames?: Record<string, string>;
+  mobileArenaMode?: boolean;
 }
 
 const buildPkmEffectText = (card: OpponentCard): string => {
@@ -155,6 +156,7 @@ export const FloatingOpponentViewer = ({
   embedded = false,
   filterOpponentId,
   opponentUsernames,
+  mobileArenaMode = false,
 }: FloatingOpponentViewerProps) => {
   // Multi-opponent support: store states keyed by opponent userId
   const [opponentStates, setOpponentStates] = useState<Map<string, OpponentState>>(new Map());
@@ -357,9 +359,10 @@ export const FloatingOpponentViewer = ({
 
   const cardBack = getCardBack(opponentState?.tcgType, opponentState?.sleeveUrl);
 
-  const ZoneSlotDisplay = ({ card, label }: { card: OpponentCard | null; label: string }) => (
+  const ZoneSlotDisplay = ({ card, label, compact = false }: { card: OpponentCard | null; label: string; compact?: boolean }) => (
     <div className={cn(
-      "w-8 h-12 border border-dashed border-muted-foreground/30 rounded flex items-center justify-center",
+      compact ? "w-[30px] h-[43px] min-[380px]:w-[34px] min-[380px]:h-[49px]" : "w-8 h-12",
+      "border border-dashed border-muted-foreground/30 rounded flex items-center justify-center",
       card && "border-solid border-primary/30"
     )}>
       {card ? (
@@ -482,6 +485,153 @@ export const FloatingOpponentViewer = ({
       )}
     </div>
   );
+
+  if (embedded && mobileArenaMode) {
+    const viewerTitle = isMultiOpponent
+      ? (opponentUsernames?.[activeOpponentId || ''] || 'Oponente')
+      : (filterOpponentId ? (opponentUsernames?.[filterOpponentId] || opponentUsername) : opponentUsername);
+
+    const MiniPile = ({
+      icon: Icon,
+      label,
+      count,
+      color,
+    }: {
+      icon: typeof Layers;
+      label: string;
+      count: number;
+      color: string;
+    }) => (
+      <div className="h-[43px] min-[380px]:h-[49px] min-w-[30px] min-[380px]:min-w-[34px] rounded border border-dashed border-muted-foreground/30 bg-background/70 flex flex-col items-center justify-center px-1">
+        <Icon className={cn("h-3 w-3", color)} />
+        <span className="text-[6px] leading-none text-muted-foreground">{label}</span>
+        <span className="text-[9px] leading-none font-bold tabular-nums">{count}</span>
+      </div>
+    );
+
+    return (
+      <>
+        <div className="h-full min-h-0 overflow-hidden bg-card flex flex-col gap-1 p-1">
+          <div className="h-8 shrink-0 flex items-center gap-1 rounded-md bg-muted/40 border border-border/60 px-1">
+            <Eye className="h-3.5 w-3.5 text-primary shrink-0" />
+            <span className="text-[11px] font-semibold truncate min-w-0">{viewerTitle}</span>
+            <div className="ml-auto flex items-center gap-1">
+              <Badge variant="outline" className="h-6 px-1.5 text-[10px] tabular-nums">
+                M {opponentState?.hand ?? 0}
+              </Badge>
+              <Badge variant="outline" className="h-6 px-1.5 text-[10px] tabular-nums">
+                D {opponentState?.deckCount ?? 0}
+              </Badge>
+              <Badge variant="outline" className="h-6 px-1.5 text-[10px] tabular-nums">
+                E {opponentState?.extraCount ?? 0}
+              </Badge>
+            </div>
+          </div>
+
+          {!opponentState ? (
+            <div className="flex-1 min-h-0 flex items-center justify-center text-center text-xs text-muted-foreground px-4">
+              Aguardando oponente abrir a Arena Digital
+            </div>
+          ) : (
+            <div
+              className="flex-1 min-h-0 rounded-md border border-border/50 relative overflow-hidden p-1 flex flex-col justify-center gap-1"
+              style={{
+                backgroundImage: opponentState.playmatUrl ? `url("${opponentState.playmatUrl}")` : undefined,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundColor: opponentState.playmatUrl ? undefined : 'hsl(var(--muted) / 0.18)',
+              }}
+            >
+              {opponentState.playmatUrl && (
+                <div className="absolute inset-0 bg-black/40 pointer-events-none z-0" />
+              )}
+              <div className="relative z-10 flex flex-col gap-1">
+                {opponentState.extraMonsterZones && (
+                  <div className="flex justify-center gap-10">
+                    <ZoneSlotDisplay card={opponentState.extraMonsterZones.extraMonster1} label="EM1" compact />
+                    <ZoneSlotDisplay card={opponentState.extraMonsterZones.extraMonster2} label="EM2" compact />
+                  </div>
+                )}
+
+                <div className="flex justify-center items-center gap-1">
+                  <ZoneSlotDisplay card={opponentState.fieldSpell || null} label="FS" compact />
+                  {opponentState.monsterZones ? (
+                    <>
+                      <ZoneSlotDisplay card={opponentState.monsterZones.monster1} label="M1" compact />
+                      <ZoneSlotDisplay card={opponentState.monsterZones.monster2} label="M2" compact />
+                      <ZoneSlotDisplay card={opponentState.monsterZones.monster3} label="M3" compact />
+                      <ZoneSlotDisplay card={opponentState.monsterZones.monster4} label="M4" compact />
+                      <ZoneSlotDisplay card={opponentState.monsterZones.monster5} label="M5" compact />
+                    </>
+                  ) : (
+                    opponentState.field.slice(0, 5).map((card, idx) => (
+                      <ZoneSlotDisplay key={`${card.id}-${idx}`} card={card} label={`C${idx + 1}`} compact />
+                    ))
+                  )}
+                  <MiniPile icon={Flame} label="GY" count={opponentState.graveyard.length} color="text-orange-500" />
+                </div>
+
+                <div className="flex justify-center items-center gap-1">
+                  <MiniPile icon={Sparkles} label="EXT" count={opponentState.extraCount} color="text-yellow-500" />
+                  {opponentState.spellZones ? (
+                    <>
+                      <ZoneSlotDisplay card={opponentState.spellZones.spell1} label="S1" compact />
+                      <ZoneSlotDisplay card={opponentState.spellZones.spell2} label="S2" compact />
+                      <ZoneSlotDisplay card={opponentState.spellZones.spell3} label="S3" compact />
+                      <ZoneSlotDisplay card={opponentState.spellZones.spell4} label="S4" compact />
+                      <ZoneSlotDisplay card={opponentState.spellZones.spell5} label="S5" compact />
+                    </>
+                  ) : (
+                    Array.from({ length: 5 }).map((_, idx) => (
+                      <ZoneSlotDisplay key={`empty-spell-${idx}`} card={null} label={`S${idx + 1}`} compact />
+                    ))
+                  )}
+                  <MiniPile icon={Layers} label="Deck" count={opponentState.deckCount} color="text-blue-500" />
+                </div>
+
+                <div className="grid grid-cols-3 gap-1">
+                  <div className="h-7 rounded border border-border/60 bg-background/80 flex items-center justify-center gap-1 text-[10px] font-semibold">
+                    <Hand className="h-3 w-3 text-primary" />
+                    <span className="tabular-nums">{opponentState.hand}</span>
+                  </div>
+                  <div className="h-7 rounded border border-border/60 bg-background/80 flex items-center justify-center gap-1 text-[10px] font-semibold">
+                    <Ban className="h-3 w-3 text-purple-500" />
+                    <span className="tabular-nums">{opponentState.banished.length}</span>
+                  </div>
+                  <div className="h-7 rounded border border-border/60 bg-background/80 flex items-center justify-center gap-1 text-[10px] font-semibold">
+                    <Flame className="h-3 w-3 text-orange-500" />
+                    <span className="tabular-nums">{opponentState.graveyard.length}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <CardEffectModal
+          open={modalOpen}
+          onClose={() => setModalOpen(false)}
+          card={selectedCard ? {
+            name: selectedCard.name,
+            type: selectedCard.type_line || selectedCard.type || (selectedCard.supertype || '') + (selectedCard.types ? ' — ' + selectedCard.types.join('/') : ''),
+            desc: selectedCard.oracle_text || selectedCard.desc || buildPkmEffectText(selectedCard),
+            race: selectedCard.race || '',
+            atk: selectedCard.atk,
+            def: selectedCard.def,
+            card_images: [{ image_url_small: selectedCard.image }],
+            power: selectedCard.power,
+            toughness: selectedCard.toughness,
+            mana_cost: selectedCard.mana_cost,
+            oracle_text: selectedCard.oracle_text,
+            type_line: selectedCard.type_line,
+            hp: selectedCard.hp,
+            types: selectedCard.types,
+            supertype: selectedCard.supertype,
+          } : null}
+        />
+      </>
+    );
+  }
 
   return (
     <div 

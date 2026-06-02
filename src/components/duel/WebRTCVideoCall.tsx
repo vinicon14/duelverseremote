@@ -41,6 +41,8 @@ interface WebRTCVideoCallProps {
   audioBroadcastOnly?: boolean;
   /** Creator user ID - used by spectators to correctly order peers (creator on left) */
   creatorId?: string;
+  /** Compact mobile arena: opponent field above, own field below, no internal scrollbars. */
+  mobileArenaMode?: boolean;
 }
 
 const ICE_SERVERS: RTCIceServer[] = [
@@ -90,6 +92,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   isSpectator = false,
   audioBroadcastOnly = false,
   creatorId,
+  mobileArenaMode = false,
 }, ref) => {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
@@ -713,7 +716,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
             </div>
           )}
           {localDeckOpen && localDeckContent && (
-            <div className="w-full h-full overflow-auto bg-background touch-pan-y">
+            <div className={mobileArenaMode ? "w-full h-full overflow-hidden bg-background touch-none" : "w-full h-full overflow-auto bg-background touch-pan-y"}>
               {localDeckContent}
             </div>
           )}
@@ -747,7 +750,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
           onPointerCancel={handlePanEnd}
         />
         {localDeckOpen && localDeckContent ? (
-          <div className="w-full h-full overflow-auto bg-background touch-pan-y">
+          <div className={mobileArenaMode ? "w-full h-full overflow-hidden bg-background touch-none" : "w-full h-full overflow-auto bg-background touch-pan-y"}>
             {localDeckContent}
           </div>
         ) : (
@@ -800,7 +803,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
           />
         )}
         {showDeckOverlay ? (
-          <div className="w-full h-full overflow-auto bg-background touch-pan-y">
+          <div className={mobileArenaMode ? "w-full h-full overflow-hidden bg-background touch-none" : "w-full h-full overflow-auto bg-background touch-pan-y"}>
             {deckContentForSlot}
           </div>
         ) : !peerId ? (
@@ -854,7 +857,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       ) : isSideBySide ? (
         /* ===== SIDE-BY-SIDE (desktop) / STACKED (mobile) ===== */
         <div 
-          className={`flex flex-col sm:flex-row w-full h-full transition-transform duration-200 origin-center ${zoomLevel < 1 ? 'rounded-2xl border-2 border-purple-500 overflow-hidden' : ''}`}
+          className={`${mobileArenaMode ? 'flex flex-col-reverse' : 'flex flex-col sm:flex-row'} w-full h-full transition-transform duration-200 origin-center ${zoomLevel < 1 ? 'rounded-2xl border-2 border-purple-500 overflow-hidden' : ''}`}
           style={zoomLevel < 1 ? { transform: `scale(${zoomLevel})` } : undefined}
         >
           <div className="relative flex-1 min-h-0">
@@ -937,7 +940,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       )}
 
       {/* Controls bar — hidden for pure receive-only spectators */}
-      {(!isSpectator || audioBroadcastOnly) && (
+      {(!isSpectator || audioBroadcastOnly) && !mobileArenaMode && (
         <div className="absolute bottom-1.5 sm:bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 sm:gap-2 z-20">
           <Button
             variant="outline"

@@ -81,6 +81,7 @@ interface DuelFieldBoardProps {
   sleeveUrl?: string | null;
   /** When 'rush_duel', renders a 3x3 board (3 monster + 3 spell zones) and hides the Extra Monster Zones (Rush Duel has no Extra Deck / EMZ). */
   tcgType?: string | null;
+  mobileCompact?: boolean;
 }
 
 // Local state for effect modal will be managed inside component
@@ -96,6 +97,7 @@ const ZoneSlot = ({
   className,
   isHorizontal = false,
   sleeveUrl,
+  mobileCompact = false,
 }: {
   zone: FieldZoneType;
   card: GameCard | null;
@@ -107,6 +109,7 @@ const ZoneSlot = ({
   className?: string;
   isHorizontal?: boolean;
   sleeveUrl?: string | null;
+  mobileCompact?: boolean;
 }) => {
   const hasCard = card !== null;
 
@@ -123,9 +126,12 @@ const ZoneSlot = ({
   
   return (
     <div
+      data-field-zone={zone}
       className={cn(
         "relative border-2 border-dashed border-muted-foreground/30 rounded-md flex items-center justify-center cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all",
-        "w-[44px] h-[64px] sm:w-[52px] sm:h-[76px] md:w-[60px] md:h-[88px]",
+        mobileCompact
+          ? "w-[30px] h-[43px] min-[380px]:w-[34px] min-[380px]:h-[49px]"
+          : "w-[44px] h-[64px] sm:w-[52px] sm:h-[76px] md:w-[60px] md:h-[88px]",
         hasCard && "border-solid border-primary/20 bg-transparent",
         className
       )}
@@ -172,7 +178,10 @@ const ZoneSlot = ({
           {/* ATK/DEF Display for monsters */}
           {card.atk !== undefined && !card.isFaceDown && (
             <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 z-20">
-              <div className="bg-background/90 border border-border text-[6px] sm:text-[7px] font-bold px-1 py-0.5 rounded flex items-center gap-0.5 whitespace-nowrap">
+              <div className={cn(
+                "bg-background/90 border border-border font-bold rounded flex items-center gap-0.5 whitespace-nowrap",
+                mobileCompact ? "text-[5px] px-0.5 py-0" : "text-[6px] sm:text-[7px] px-1 py-0.5"
+              )}>
                 <Swords className="h-2 w-2 text-destructive" />
                 <span className="text-destructive">{card.atk}</span>
                 <span className="text-muted-foreground">/</span>
@@ -195,7 +204,7 @@ const ZoneSlot = ({
           />
         </div>
       ) : (
-        <span className="text-[8px] sm:text-[10px] text-muted-foreground/50 text-center px-1">
+        <span className={cn("text-muted-foreground/50 text-center px-1", mobileCompact ? "text-[6px]" : "text-[8px] sm:text-[10px]")}>
           {label}
         </span>
       )}
@@ -213,6 +222,7 @@ const PileZone = ({
   onDrop,
   iconColor,
   sleeveUrl,
+  mobileCompact = false,
 }: {
   zone: FieldZoneType;
   cards: GameCard[];
@@ -223,12 +233,16 @@ const PileZone = ({
   onDrop: (e: React.DragEvent) => void;
   iconColor: string;
   sleeveUrl?: string | null;
+  mobileCompact?: boolean;
 }) => {
   return (
     <div
+      data-field-zone={zone}
       className={cn(
         "relative border-2 border-dashed border-muted-foreground/30 rounded-md flex flex-col items-center justify-center cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all",
-        "w-[44px] h-[64px] sm:w-[52px] sm:h-[76px] md:w-[60px] md:h-[88px]",
+        mobileCompact
+          ? "w-[30px] h-[43px] min-[380px]:w-[34px] min-[380px]:h-[49px]"
+          : "w-[44px] h-[64px] sm:w-[52px] sm:h-[76px] md:w-[60px] md:h-[88px]",
         cards.length > 0 && "border-solid border-primary/20"
       )}
       onClick={onClick}
@@ -257,8 +271,8 @@ const PileZone = ({
         </div>
       ) : (
         <>
-          <Icon className={cn("h-4 w-4 mb-1", iconColor)} />
-          <span className="text-[8px] sm:text-[10px] text-muted-foreground/50 text-center">
+          <Icon className={cn(mobileCompact ? "h-3 w-3 mb-0.5" : "h-4 w-4 mb-1", iconColor)} />
+          <span className={cn("text-muted-foreground/50 text-center", mobileCompact ? "text-[6px]" : "text-[8px] sm:text-[10px]")}>
             {label}
           </span>
         </>
@@ -276,6 +290,7 @@ export const DuelFieldBoard = ({
   playmatUrl,
   sleeveUrl,
   tcgType,
+  mobileCompact = false,
 }: DuelFieldBoardProps) => {
   const isRushDuel = tcgType === 'rush_duel';
   // Rush Duel uses a 3x3 board: 3 monster zones + 3 spell/trap zones, no Extra Monster Zones, no Extra Deck.
@@ -316,7 +331,8 @@ export const DuelFieldBoard = ({
   return (
     <div 
       className={cn(
-        "relative w-full rounded-lg p-2 sm:p-3 border border-border/50 overflow-hidden",
+        "relative w-full rounded-lg border border-border/50 overflow-hidden",
+        mobileCompact ? "p-1" : "p-2 sm:p-3",
         !playmatUrl && "bg-gradient-to-b from-cyan-900/40 via-blue-900/30 to-cyan-900/40",
         isFullscreen && "scale-100 origin-top-left"
       )}
@@ -334,12 +350,12 @@ export const DuelFieldBoard = ({
         <div className="absolute inset-0 bg-black/40 rounded-lg pointer-events-none z-0" />
       )}
       {/* Field Layout */}
-      <div className="relative z-10 flex flex-col gap-2 sm:gap-3">
+      <div className={cn("relative z-10 flex flex-col", mobileCompact ? "gap-1" : "gap-2 sm:gap-3")}>
         
         {/* Extra Monster Zones Row (hidden in Rush Duel — no Extra Deck / EMZ) */}
         {!isRushDuel && (
-          <div className="flex justify-center gap-1 sm:gap-2">
-            <div className="flex items-center gap-8 sm:gap-16">
+          <div className={cn("flex justify-center", mobileCompact ? "gap-1" : "gap-1 sm:gap-2")}>
+            <div className={cn("flex items-center", mobileCompact ? "gap-10" : "gap-8 sm:gap-16")}>
               <ZoneSlot
                 zone="extraMonster1"
                 card={fieldState.extraMonster1}
@@ -351,6 +367,7 @@ export const DuelFieldBoard = ({
                 className="border-purple-500/30"
                 isHorizontal
                 sleeveUrl={sleeveUrl}
+                mobileCompact={mobileCompact}
               />
               <ZoneSlot
                 zone="extraMonster2"
@@ -363,13 +380,14 @@ export const DuelFieldBoard = ({
                 className="border-purple-500/30"
                 isHorizontal
                 sleeveUrl={sleeveUrl}
+                mobileCompact={mobileCompact}
               />
             </div>
           </div>
         )}
 
         {/* Main Field Row */}
-        <div className="flex justify-center items-center gap-1 sm:gap-2">
+        <div className={cn("flex justify-center items-center", mobileCompact ? "gap-1" : "gap-1 sm:gap-2")}>
           {/* Field Spell Zone (Left) */}
           <ZoneSlot
             zone="fieldSpell"
@@ -381,10 +399,11 @@ export const DuelFieldBoard = ({
             onDrop={handleDrop('fieldSpell')}
             className="border-green-500/30"
             sleeveUrl={sleeveUrl}
+            mobileCompact={mobileCompact}
           />
 
           {/* Monster Zones */}
-          <div className="flex gap-1 sm:gap-1.5">
+          <div className={cn("flex", mobileCompact ? "gap-1" : "gap-1 sm:gap-1.5")}>
             {monsterZones.map((zone, idx) => (
               <ZoneSlot
                 key={zone}
@@ -398,6 +417,7 @@ export const DuelFieldBoard = ({
                 className="border-orange-500/30"
                 isHorizontal
                 sleeveUrl={sleeveUrl}
+                mobileCompact={mobileCompact}
               />
             ))}
           </div>
@@ -412,11 +432,12 @@ export const DuelFieldBoard = ({
             onDragOver={handleDragOver}
             onDrop={handleDrop('graveyard')}
             iconColor="text-orange-500"
+            mobileCompact={mobileCompact}
           />
         </div>
 
         {/* Spell/Trap Row */}
-        <div className="flex justify-center items-center gap-1 sm:gap-2">
+        <div className={cn("flex justify-center items-center", mobileCompact ? "gap-1" : "gap-1 sm:gap-2")}>
           {/* Extra Deck (Left) — hidden in Rush Duel */}
           {!isRushDuel ? (
             <PileZone
@@ -428,13 +449,14 @@ export const DuelFieldBoard = ({
               onDragOver={handleDragOver}
               onDrop={handleDrop('extraDeck')}
               iconColor="text-yellow-500"
+              mobileCompact={mobileCompact}
             />
           ) : (
             // Spacer to keep the row centered when extra deck is hidden
-            <div className="w-[44px] sm:w-[52px] md:w-[60px] shrink-0" aria-hidden />
+            <div className={cn(mobileCompact ? "w-[30px] min-[380px]:w-[34px]" : "w-[44px] sm:w-[52px] md:w-[60px]", "shrink-0")} aria-hidden />
           )}
           {/* Spell/Trap Zones */}
-          <div className="flex gap-1 sm:gap-1.5">
+          <div className={cn("flex", mobileCompact ? "gap-1" : "gap-1 sm:gap-1.5")}>
             {spellZones.map((zone, idx) => (
               <ZoneSlot
                 key={zone}
@@ -447,6 +469,7 @@ export const DuelFieldBoard = ({
                 onDrop={handleDrop(zone)}
                 className="border-blue-500/30"
                 sleeveUrl={sleeveUrl}
+                mobileCompact={mobileCompact}
               />
             ))}
           </div>
@@ -462,6 +485,7 @@ export const DuelFieldBoard = ({
             onDrop={handleDrop('deck')}
             iconColor="text-blue-500"
             sleeveUrl={sleeveUrl}
+            mobileCompact={mobileCompact}
           />
         </div>
 
@@ -477,6 +501,7 @@ export const DuelFieldBoard = ({
             onDragOver={handleDragOver}
             onDrop={handleDrop('sideDeck')}
             iconColor="text-cyan-500"
+            mobileCompact={mobileCompact}
           />
           
           {/* Banished (Right) */}
@@ -489,6 +514,7 @@ export const DuelFieldBoard = ({
             onDragOver={handleDragOver}
             onDrop={handleDrop('banished')}
             iconColor="text-purple-500"
+            mobileCompact={mobileCompact}
           />
         </div>
       </div>
