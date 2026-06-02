@@ -1,66 +1,61 @@
-# Modo Duelista Imersivo — Plano de Entrega
 
-Você pediu "tudo de uma vez", mas o escopo é equivalente a 4–6 features grandes (UI, áudio, narração, replay, espectador avançado, automações de regras, acessibilidade). Tentar entregar tudo em uma única mensagem quebraria o que já funciona (Arena Digital, WebRTC, espectador, juiz). Proponho entregar em **5 fases consecutivas**, cada uma testável e sem regressão. Posso emendar uma na outra sem te pedir confirmação entre elas, mas preciso que você aprove o plano primeiro.
 
-## Decisões já tomadas
-- **Narração**: Web Speech API (gratuita, no navegador)
-- **Música**: você fornecerá os MP3; eu deixo o player pronto + bucket público `arena-music`
-- **Ativação**: automática quando ambos jogadores estão com Arena Digital aberta
+## Plan: Fix Matchmaking, Discord → DuelVerse Bridge, and Auto Server Setup
 
----
+### 1. Matchmaking — Resolve function ambiguity
 
-## Fase 1 — Núcleo Imersivo (base de tudo)
-**Arquivos novos:** `src/components/duel/immersive/ImmersiveModeProvider.tsx`, `useImmersiveMode.ts`, `ImmersiveSettingsPanel.tsx`, `ImmersiveLPDisplay.tsx`
-**Editado:** `DuelRoom.tsx`
+**Problem**: There are two `public.matchmake` overloads (4-arg and 5-arg). PostgreSQL throws "function is not unique" when called.
 
-- Detecção automática: quando `duel_participants.arena_digital_open = true` para ambos, ativa o modo (broadcast realtime).
-- Provider central com estado de configurações (volumes, animações, narração, acessibilidade) persistido em `localStorage`.
-- LP animado: contador rolando 8000→6500, badge flutuante "−1500" / "+500", shake no impacto, pulse vermelho < 2000 LP.
-- Painel de configurações próprio (Sheet lateral) com todas as seções: Áudio, Interface, Animações, Automações, Acessibilidade.
+**Fix** (migration):
+- DROP the old 4-argument `matchmake(p_match_type, p_user_id, p_tcg_type, p_max_players)`.
+- Keep only the 5-arg version with `p_language_code` (already correct, ambiguity-free).
+- Verify queue insert respects `language_code` filter properly.
 
-## Fase 2 — Áudio Imersivo
-**Arquivos novos:** `src/utils/immersiveAudio.ts`, `ImmersiveMusicPlayer.tsx`
-**Storage:** bucket público `arena-music` com pastas `calm/`, `energetic/`, `danger/`, `epic/`
+### 2. Discord → DuelVerse — Make incoming messages actually arrive
 
-- Player de música dinâmica com crossfade entre trilhas (início → meio → perigo < 2000 LP → final/ataque direto vencedor).
-- **Ducking automático**: quando o WebRTC detecta voz ativa (já existe `analyserNode`), música cai para 15% e volta gradualmente.
-- SFX expandidos no `utils/sfx.ts`: dano, cura, invocação normal, especial, sincro, xyz, link, pêndulo.
-- Volumes independentes (música 30% / SFX 70% / narração / voz 100%) salvos por usuário.
+**Root causes**:
+- The Java bot's `DiscordServerManager` keeps the enabled-servers list **in memory only** — every restart wipes it, so `isServerEnabled()` returns false and `onMessageReceived` exits early before even POSTing to the bridge.
+- The Java bot doesn't read from `system_settings.discord_bot_status` (the same source the admin panel writes to).
 
-## Fase 3 — Narração + Efeitos Visuais
-**Arquivos novos:** `src/utils/immersiveNarrator.ts` (Web Speech API), `ImmersiveSummonEffect.tsx`, `ImmersiveEventBus.tsx`
+**Fix**:
+- **Java bot (`DiscordServerManager.java` + `DiscordBot.java`)**: On startup and every 60s, fetch `system_settings` row `discord_bot_status` from Supabase (REST + service-role key) and rebuild the enabled-servers / channels map. Drop the in-memory-only design.
+- **Java bot (`DiscordMessageHandler.java`)**: Confirm POST URL is `https://xxttwzewtqxvpgefggah.supabase.co/functions/v1/discord-bridge/webhook` and payload includes `{ author: { id, username, avatar_url, bot:false }, content }`. Add a `Bridge POST [status]` log line so we can see it in logs.
+- **Edge function (`discord-bridge`)**: Tighten loop protection — only skip when `body.author.bot === true` (not username matching), so users with "DuelVerse" in their name aren't wrongly filtered. Also accept `discord_user_id` at top-level as an alias.
+- **Fallback for unlinked Discord users**: instead of inserting with a random profile (which is incorrect and confusing), require the sender to be linked via OAuth. If unlinked, skip silently and log it. This matches the "OAuth + linked profiles" decision approved earlier.
 
-- Event bus interno: ao mover carta para zona de monstro / mudar LP / declarar ataque → dispara narração + animação.
-- Animações sobrepostas ao `DuelFieldBoard` (camada absoluta z-50): brilho, partículas CSS, flash por tipo de invocação. Sem alterar a lógica do board.
-- Narrador PT-BR/EN com `speechSynthesis`: configurável (idioma, voz, velocidade, frequência: tudo/só importantes/desligado).
-- Frases padronizadas: "Monstro X foi invocado", "Y de dano causado", "Vitória do jogador Z".
+### 3. Admin Discord — One-click "Add server" automation
 
-## Fase 4 — Espectador Avançado + Histórico
-**Arquivos novos:** `src/components/duel/immersive/MatchHistoryLog.tsx`, `SpectatorStatsPanel.tsx`
-**DB:** tabela `duel_event_log` (duel_id, turn, player_id, action_type, payload jsonb, created_at) + RLS
+**Problem**: Admin must manually paste serverId, channelId, inviteLink, and webhookUrl.
 
-- Registro de eventos do duelo (invocações, ataques, LP, efeitos) gravado em tempo real.
-- Painel de histórico colapsável dentro do DuelRoom.
-- Espectador vê estatísticas ao vivo (turnos, dano total, monstros no campo) sem ver mão — autorização opcional via toggle do duelista.
+**Fix**:
+- Add new edge function action `type: "list_guilds"` in `discord-bridge`: using the bot token (stored as Supabase secret `DISCORD_BOT_TOKEN`), call `GET https://discord.com/api/v10/users/@me/guilds` then for each guild `GET /guilds/:id/channels` (text channels only). Return list of `{ guildId, guildName, channels:[{id,name}] }`.
+- Add `type: "auto_setup_server"`: takes `{ guildId, channelId }`, automatically:
+  - Creates a webhook in that channel (`POST /channels/:id/webhooks`)
+  - Generates an invite link (`POST /channels/:id/invites`)
+  - Fetches guild name
+  - Upserts the server entry into `system_settings.discord_bot_status`
+  - Returns the saved server config
+- Move `DISCORD_BOT_TOKEN` from a UI input to a Supabase secret (request via `add_secret` if not present). Remove the bot-token input field from the admin UI.
+- Rewrite `AdminDiscord.tsx`:
+  - "Refresh servers" button → calls `list_guilds`, shows a dropdown of guilds the bot is in.
+  - When admin picks a guild, second dropdown shows that guild's text channels.
+  - Single "Add" button → calls `auto_setup_server` (no manual IDs, invite, or webhook URL needed).
+  - Keep the manual-add fallback collapsed under an "Advanced" expander for edge cases.
 
-## Fase 5 — Tela de Resultado + Acessibilidade
-**Arquivos novos:** `ImmersiveResultScreen.tsx`, `useA11y.ts`
+### Files affected
 
-- Tela final com vencedor, turnos, dano total, tempo de duelo, cartas mais usadas, gráfico de LP por turno (usando `duel_event_log`).
-- Acessibilidade: modo daltônico (filtros CSS), fonte ampliada (escala root), alto contraste, leitor de tela em todos os botões já existentes do DuelRoom.
+```text
+supabase/migrations/<new>.sql               # drop old matchmake overload
+supabase/functions/discord-bridge/index.ts  # new actions + tighter loop guard
+src/components/admin/AdminDiscord.tsx       # auto-setup UI
+src/main/java/com/duelverse/admin/DiscordServerManager.java
+src/main/java/com/duelverse/bot/DiscordBot.java
+src/main/java/com/duelverse/discord/DiscordMessageHandler.java
+```
 
----
+### Required user action after deploy
 
-## Itens que **não** vou entregar (precisam de decisão sua depois)
-- **Replay gravado com pause/avançar/retroceder**: exigiria gravar todo o estado a cada tick (~MB por partida) e um player customizado. Recomendo fazer só depois da Fase 5, como projeto separado, usando o `duel_event_log` como base.
-- **Automação de invocações Sincro/Xyz/Link/Pêndulo** (tributar materiais automaticamente, validar níveis, etc.): isso é um motor de regras de Yu-Gi-Oh! completo — meses de trabalho e altíssimo risco de bug. O Modo Imersivo vai **visualizar** e **narrar** as invocações, mas o jogador continua arrastando as cartas como hoje.
-- **Música dinâmica fornecida por mim**: você confirmou que vai subir os MP3.
+- Add `DISCORD_BOT_TOKEN` as a Supabase secret if not already set (will request via secret prompt).
+- Recompile and restart the Java bot (`./gradlew build` + run the new `.jar`) so it picks up the DB-synced server config.
+- Ensure **Message Content Intent** is enabled in the Discord Developer Portal for the bot.
 
-## Detalhes técnicos
-- Sem alterações em WebRTC core, regras do jogo, ou `DuelFieldBoard` lógico — apenas camadas visuais por cima.
-- Migration nova só na Fase 4 (`duel_event_log` + bucket de áudio).
-- Tudo opt-out: se o usuário desativar nas configurações, volta ao Arena Digital atual.
-- Compatível com espectador, juiz (já corrigido), mobile e desktop.
-
-## Próximo passo
-Se aprovar este plano, começo pela **Fase 1** já na próxima mensagem e sigo emendando até a Fase 5. Cada fase entra como uma alteração isolada que você pode testar antes de continuarmos.

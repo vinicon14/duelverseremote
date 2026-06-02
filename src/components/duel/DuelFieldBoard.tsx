@@ -1,10 +1,12 @@
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { 
   Layers, 
   Flame, 
   Ban, 
   Sparkles, 
+  Eye,
   EyeOff,
   RotateCw,
   Link2
@@ -13,7 +15,6 @@ import { Shield, Swords } from 'lucide-react';
 
 // Card back image for face-down cards
 const CARD_BACK_URL = 'https://images.ygoprodeck.com/images/cards/back_high.jpg';
-const PRIVATE_PILE_ZONES: FieldZoneType[] = ['deck', 'extraDeck', 'sideDeck'];
 
 export interface GameCard {
   id: number;
@@ -123,9 +124,9 @@ const ZoneSlot = ({
   return (
     <div
       className={cn(
-        "relative flex items-center justify-center overflow-visible rounded-sm border border-white/35 bg-black/20 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)] cursor-pointer hover:border-primary/80 hover:bg-primary/10 transition-all",
-        "h-[56px] w-[38px] sm:h-[76px] sm:w-[52px] md:h-[88px] md:w-[60px]",
-        hasCard && "border-primary/45 bg-transparent shadow-[0_0_16px_rgba(255,255,255,0.08)]",
+        "relative border-2 border-dashed border-muted-foreground/30 rounded-md flex items-center justify-center cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all",
+        "w-[44px] h-[64px] sm:w-[52px] sm:h-[76px] md:w-[60px] md:h-[88px]",
+        hasCard && "border-solid border-primary/20 bg-transparent",
         className
       )}
       onClick={() => hasCard ? onCardClick(card!) : onClick()}
@@ -194,7 +195,7 @@ const ZoneSlot = ({
           />
         </div>
       ) : (
-        <span className="absolute inset-x-0 bottom-1 px-1 text-center text-[6px] sm:text-[7px] font-semibold uppercase leading-tight text-white/60">
+        <span className="text-[8px] sm:text-[10px] text-muted-foreground/50 text-center px-1">
           {label}
         </span>
       )}
@@ -223,17 +224,12 @@ const PileZone = ({
   iconColor: string;
   sleeveUrl?: string | null;
 }) => {
-  const isPrivatePile = PRIVATE_PILE_ZONES.includes(zone);
-  const topCardImage = isPrivatePile
-    ? sleeveUrl || CARD_BACK_URL
-    : cards[cards.length - 1]?.card_images?.[0]?.image_url_small || CARD_BACK_URL;
-
   return (
     <div
       className={cn(
-        "relative flex flex-col items-center justify-center overflow-visible rounded-sm border border-white/35 bg-black/20 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)] cursor-pointer hover:border-primary/80 hover:bg-primary/10 transition-all",
-        "h-[56px] w-[38px] sm:h-[76px] sm:w-[52px] md:h-[88px] md:w-[60px]",
-        cards.length > 0 && "border-primary/45"
+        "relative border-2 border-dashed border-muted-foreground/30 rounded-md flex flex-col items-center justify-center cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all",
+        "w-[44px] h-[64px] sm:w-[52px] sm:h-[76px] md:w-[60px] md:h-[88px]",
+        cards.length > 0 && "border-solid border-primary/20"
       )}
       onClick={onClick}
       onDragOver={onDragOver}
@@ -241,11 +237,20 @@ const PileZone = ({
     >
       {cards.length > 0 ? (
         <div className="relative w-full h-full">
-          <img
-            src={topCardImage}
-            alt={label}
-            className="w-full h-full object-cover rounded-sm shadow-sm"
-          />
+          {/* Show top card back for deck, or top card for others */}
+          {zone === 'deck' ? (
+            <img
+              src={sleeveUrl || CARD_BACK_URL}
+              alt="Deck"
+              className="w-full h-full object-cover rounded-md shadow-sm"
+            />
+          ) : (
+            <img
+              src={cards[cards.length - 1]?.card_images?.[0]?.image_url_small || CARD_BACK_URL}
+              alt={label}
+              className="w-full h-full object-cover rounded-md shadow-sm"
+            />
+          )}
           <Badge className="absolute -top-1 -right-1 text-[10px] h-5 px-1.5 bg-background/90 border border-border text-foreground">
             {cards.length}
           </Badge>
@@ -253,7 +258,7 @@ const PileZone = ({
       ) : (
         <>
           <Icon className={cn("h-4 w-4 mb-1", iconColor)} />
-          <span className="absolute inset-x-0 bottom-1 px-1 text-center text-[6px] sm:text-[7px] font-semibold uppercase leading-tight text-white/60">
+          <span className="text-[8px] sm:text-[10px] text-muted-foreground/50 text-center">
             {label}
           </span>
         </>
@@ -280,16 +285,6 @@ export const DuelFieldBoard = ({
   const spellZones = (isRushDuel
     ? (['spell1', 'spell2', 'spell3'] as const)
     : (['spell1', 'spell2', 'spell3', 'spell4', 'spell5'] as const));
-  const fieldGridStyle = {
-    gridTemplateColumns: `minmax(38px, 60px) repeat(${monsterZones.length}, minmax(38px, 60px)) minmax(38px, 60px)`,
-  };
-  const extraMonsterZone: FieldZoneType = fieldState.extraMonster1
-    ? 'extraMonster1'
-    : fieldState.extraMonster2
-      ? 'extraMonster2'
-      : 'extraMonster1';
-  const extraMonsterCard = fieldState[extraMonsterZone] as GameCard | null;
-  const extraMonsterColumn = Math.floor((monsterZones.length + 2) / 2) + 1;
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -319,38 +314,53 @@ export const DuelFieldBoard = ({
   };
 
   return (
-    <div
+    <div 
       className={cn(
-        "relative w-full overflow-hidden rounded-lg border border-border/50 p-1.5 sm:p-3",
-        !playmatUrl && "bg-[radial-gradient(circle_at_50%_0%,rgba(34,211,238,0.16),rgba(15,23,42,0.84)_42%,rgba(2,6,23,0.96))]",
+        "relative w-full rounded-lg p-2 sm:p-3 border border-border/50 overflow-hidden",
+        !playmatUrl && "bg-gradient-to-b from-cyan-900/40 via-blue-900/30 to-cyan-900/40",
         isFullscreen && "scale-100 origin-top-left"
       )}
       style={{
-        backgroundImage: playmatUrl
-          ? `url("${playmatUrl}")`
+        backgroundImage: playmatUrl 
+          ? `url("${playmatUrl}")` 
           : `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cpath d='M20 0L40 20 20 40 0 20z' fill='%23ffffff' fill-opacity='0.03'/%3E%3C/svg%3E")`,
         backgroundSize: playmatUrl ? 'cover' : undefined,
         backgroundPosition: playmatUrl ? 'center' : undefined,
         backgroundRepeat: playmatUrl ? 'no-repeat' : undefined,
       }}
     >
+      {/* Dark overlay for readability when using playmat */}
       {playmatUrl && (
-        <div className="pointer-events-none absolute inset-0 z-0 rounded-lg bg-black/40" />
+        <div className="absolute inset-0 bg-black/40 rounded-lg pointer-events-none z-0" />
       )}
-
-      <div className="relative z-10 mx-auto flex w-full max-w-[560px] flex-col gap-1.5 sm:gap-2">
+      {/* Field Layout */}
+      <div className="relative z-10 flex flex-col gap-2 sm:gap-3">
+        
+        {/* Extra Monster Zones Row (hidden in Rush Duel — no Extra Deck / EMZ) */}
         {!isRushDuel && (
-          <div className="grid gap-1 sm:gap-1.5" style={fieldGridStyle}>
-            <div style={{ gridColumn: `${extraMonsterColumn} / span 1` }}>
+          <div className="flex justify-center gap-1 sm:gap-2">
+            <div className="flex items-center gap-8 sm:gap-16">
               <ZoneSlot
-                zone={extraMonsterZone}
-                card={extraMonsterCard}
-                label="Extra Monster Zone"
-                onClick={() => onZoneClick(extraMonsterZone)}
-                onCardClick={(card) => handleCardClickLocal(card, extraMonsterZone)}
+                zone="extraMonster1"
+                card={fieldState.extraMonster1}
+                label="Extra Monster"
+                onClick={() => onZoneClick('extraMonster1')}
+                onCardClick={(card) => handleCardClickLocal(card, 'extraMonster1')}
                 onDragOver={handleDragOver}
-                onDrop={handleDrop(extraMonsterZone)}
-                className="border-violet-300/60 bg-violet-950/20"
+                onDrop={handleDrop('extraMonster1')}
+                className="border-purple-500/30"
+                isHorizontal
+                sleeveUrl={sleeveUrl}
+              />
+              <ZoneSlot
+                zone="extraMonster2"
+                card={fieldState.extraMonster2}
+                label="Extra Monster"
+                onClick={() => onZoneClick('extraMonster2')}
+                onCardClick={(card) => handleCardClickLocal(card, 'extraMonster2')}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop('extraMonster2')}
+                className="border-purple-500/30"
                 isHorizontal
                 sleeveUrl={sleeveUrl}
               />
@@ -358,40 +368,46 @@ export const DuelFieldBoard = ({
           </div>
         )}
 
-        <div className="grid items-center gap-1 sm:gap-1.5" style={fieldGridStyle}>
+        {/* Main Field Row */}
+        <div className="flex justify-center items-center gap-1 sm:gap-2">
+          {/* Field Spell Zone (Left) */}
           <ZoneSlot
             zone="fieldSpell"
             card={fieldState.fieldSpell}
-            label="Field Zone"
+            label="Field"
             onClick={() => onZoneClick('fieldSpell')}
             onCardClick={(card) => handleCardClickLocal(card, 'fieldSpell')}
             onDragOver={handleDragOver}
             onDrop={handleDrop('fieldSpell')}
-            className="border-emerald-300/60 bg-emerald-950/20"
+            className="border-green-500/30"
             sleeveUrl={sleeveUrl}
           />
 
-          {monsterZones.map((zone) => (
-            <ZoneSlot
-              key={zone}
-              zone={zone}
-              card={fieldState[zone]}
-              label="Main Monster Zone"
-              onClick={() => onZoneClick(zone)}
-              onCardClick={(card) => handleCardClickLocal(card, zone)}
-              onDragOver={handleDragOver}
-              onDrop={handleDrop(zone)}
-              className="border-orange-300/60 bg-orange-950/20"
-              isHorizontal
-              sleeveUrl={sleeveUrl}
-            />
-          ))}
+          {/* Monster Zones */}
+          <div className="flex gap-1 sm:gap-1.5">
+            {monsterZones.map((zone, idx) => (
+              <ZoneSlot
+                key={zone}
+                zone={zone}
+                card={fieldState[zone]}
+                label={`M${idx + 1}`}
+                onClick={() => onZoneClick(zone)}
+                onCardClick={(card) => handleCardClickLocal(card, zone)}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop(zone)}
+                className="border-orange-500/30"
+                isHorizontal
+                sleeveUrl={sleeveUrl}
+              />
+            ))}
+          </div>
 
+          {/* Graveyard (Right) */}
           <PileZone
             zone="graveyard"
             cards={fieldState.graveyard}
             icon={Flame}
-            label="Graveyard"
+            label="GY"
             onClick={() => onZoneClick('graveyard')}
             onDragOver={handleDragOver}
             onDrop={handleDrop('graveyard')}
@@ -399,38 +415,43 @@ export const DuelFieldBoard = ({
           />
         </div>
 
-        <div className="grid items-center gap-1 sm:gap-1.5" style={fieldGridStyle}>
+        {/* Spell/Trap Row */}
+        <div className="flex justify-center items-center gap-1 sm:gap-2">
+          {/* Extra Deck (Left) — hidden in Rush Duel */}
           {!isRushDuel ? (
             <PileZone
               zone="extraDeck"
               cards={fieldState.extraDeck}
               icon={Sparkles}
-              label="Extra Deck"
+              label="Extra"
               onClick={() => onZoneClick('extraDeck')}
               onDragOver={handleDragOver}
               onDrop={handleDrop('extraDeck')}
               iconColor="text-yellow-500"
-              sleeveUrl={sleeveUrl}
             />
           ) : (
-            <div className="w-[38px] shrink-0 sm:w-[52px] md:w-[60px]" aria-hidden />
+            // Spacer to keep the row centered when extra deck is hidden
+            <div className="w-[44px] sm:w-[52px] md:w-[60px] shrink-0" aria-hidden />
           )}
+          {/* Spell/Trap Zones */}
+          <div className="flex gap-1 sm:gap-1.5">
+            {spellZones.map((zone, idx) => (
+              <ZoneSlot
+                key={zone}
+                zone={zone}
+                card={fieldState[zone]}
+                label={`S/T${idx + 1}`}
+                onClick={() => onZoneClick(zone)}
+                onCardClick={(card) => handleCardClickLocal(card, zone)}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop(zone)}
+                className="border-blue-500/30"
+                sleeveUrl={sleeveUrl}
+              />
+            ))}
+          </div>
 
-          {spellZones.map((zone) => (
-            <ZoneSlot
-              key={zone}
-              zone={zone}
-              card={fieldState[zone]}
-              label="Spell & Trap Zone"
-              onClick={() => onZoneClick(zone)}
-              onCardClick={(card) => handleCardClickLocal(card, zone)}
-              onDragOver={handleDragOver}
-              onDrop={handleDrop(zone)}
-              className="border-sky-300/60 bg-sky-950/20"
-              sleeveUrl={sleeveUrl}
-            />
-          ))}
-
+          {/* Deck (Right) */}
           <PileZone
             zone="deck"
             cards={fieldState.deck}
@@ -444,33 +465,34 @@ export const DuelFieldBoard = ({
           />
         </div>
 
-        <div className="grid items-center gap-1 sm:gap-1.5" style={fieldGridStyle}>
+        {/* Bottom Row: Banished and Side */}
+        <div className="flex justify-between items-center">
+          {/* Side Deck (Left) */}
           <PileZone
             zone="sideDeck"
             cards={fieldState.sideDeck}
             icon={Layers}
-            label="Side Deck"
+            label="Side"
             onClick={() => onZoneClick('sideDeck')}
             onDragOver={handleDragOver}
             onDrop={handleDrop('sideDeck')}
             iconColor="text-cyan-500"
-            sleeveUrl={sleeveUrl}
           />
-
-          <div style={{ gridColumn: `${monsterZones.length + 2} / span 1` }}>
-            <PileZone
-              zone="banished"
-              cards={fieldState.banished}
-              icon={Ban}
-              label="Banished"
-              onClick={() => onZoneClick('banished')}
-              onDragOver={handleDragOver}
-              onDrop={handleDrop('banished')}
-              iconColor="text-purple-500"
-            />
-          </div>
+          
+          {/* Banished (Right) */}
+          <PileZone
+            zone="banished"
+            cards={fieldState.banished}
+            icon={Ban}
+            label="Banish"
+            onClick={() => onZoneClick('banished')}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop('banished')}
+            iconColor="text-purple-500"
+          />
         </div>
       </div>
+
     </div>
   );
 };

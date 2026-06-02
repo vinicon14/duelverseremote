@@ -274,58 +274,6 @@ export type Database = {
         }
         Relationships: []
       }
-      duel_events: {
-        Row: {
-          actor_id: string | null
-          created_at: string
-          duel_id: string
-          event_type: string
-          id: string
-          message: string
-          payload: Json
-        }
-        Insert: {
-          actor_id?: string | null
-          created_at?: string
-          duel_id: string
-          event_type: string
-          id?: string
-          message: string
-          payload?: Json
-        }
-        Update: {
-          actor_id?: string | null
-          created_at?: string
-          duel_id?: string
-          event_type?: string
-          id?: string
-          message?: string
-          payload?: Json
-        }
-        Relationships: [
-          {
-            foreignKeyName: "duel_events_actor_id_fkey"
-            columns: ["actor_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "duel_events_actor_id_fkey"
-            columns: ["actor_id"]
-            isOneToOne: false
-            referencedRelation: "public_profiles"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "duel_events_duel_id_fkey"
-            columns: ["duel_id"]
-            isOneToOne: false
-            referencedRelation: "live_duels"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       duel_invites: {
         Row: {
           created_at: string
@@ -866,7 +814,6 @@ export type Database = {
           duration_minutes: number
           finished_at: string | null
           id: string
-          immersive_mode_started_at: string | null
           is_private: boolean
           is_ranked: boolean
           is_timer_paused: boolean
@@ -895,7 +842,6 @@ export type Database = {
           duration_minutes?: number
           finished_at?: string | null
           id?: string
-          immersive_mode_started_at?: string | null
           is_private?: boolean
           is_ranked?: boolean
           is_timer_paused?: boolean
@@ -924,7 +870,6 @@ export type Database = {
           duration_minutes?: number
           finished_at?: string | null
           id?: string
-          immersive_mode_started_at?: string | null
           is_private?: boolean
           is_ranked?: boolean
           is_timer_paused?: boolean

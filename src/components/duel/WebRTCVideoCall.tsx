@@ -39,8 +39,6 @@ interface WebRTCVideoCallProps {
   /** Spectator variant: judge spectator that ALSO transmits microphone audio to players
    *  (still no local camera, still receives players' video). */
   audioBroadcastOnly?: boolean;
-  /** Volume applied to received peer audio (0-1). */
-  remoteVolume?: number;
   /** Creator user ID - used by spectators to correctly order peers (creator on left) */
   creatorId?: string;
 }
@@ -91,7 +89,6 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   spectatorLpOverlay,
   isSpectator = false,
   audioBroadcastOnly = false,
-  remoteVolume = 1,
   creatorId,
 }, ref) => {
   const localVideoRef = useRef<HTMLVideoElement>(null);
@@ -585,9 +582,8 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       if (el && el.srcObject !== stream) {
         el.srcObject = stream;
       }
-      if (el) el.volume = remoteVolume;
     });
-  }, [remoteStreams, remotePeerIds, remoteVolume]);
+  }, [remoteStreams, remotePeerIds]);
 
   const toggleMute = () => {
     const stream = localStreamRef.current;
@@ -645,11 +641,10 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       if (stream && el.srcObject !== stream) {
         el.srcObject = stream;
       }
-      el.volume = remoteVolume;
     } else {
       remoteVideoRefs.current.delete(peerId);
     }
-  }, [remoteStreams, remoteVolume]);
+  }, [remoteStreams]);
 
   const hasRemotePeers = remotePeerIds.length > 0;
   const totalSlots = maxPlayers;
@@ -686,11 +681,6 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       remoteSlots.push(remotePeerIds[i] || null);
     }
   }
-
-  const hasDuelOverlay =
-    (localDeckOpen && !!localDeckContent) ||
-    (remoteDeckOpen && !!remoteDeckContent && !remoteDeckOpenSlots);
-  const isDuelTableMode = !is4Player && isSideBySide && hasDuelOverlay;
 
   const localVideoCallbackRef = useCallback((el: HTMLVideoElement | null) => {
     (localVideoRef as React.MutableRefObject<HTMLVideoElement | null>).current = el;
@@ -862,30 +852,17 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
           </div>
         </div>
       ) : isSideBySide ? (
-        /* ===== DUEL TABLE / SIDE-BY-SIDE ===== */
+        /* ===== SIDE-BY-SIDE (desktop) / STACKED (mobile) ===== */
         <div 
-          className={`flex ${isDuelTableMode ? 'flex-col' : 'flex-col sm:flex-row'} w-full h-full transition-transform duration-200 origin-center ${zoomLevel < 1 ? 'rounded-2xl border-2 border-purple-500 overflow-hidden' : ''}`}
+          className={`flex flex-col sm:flex-row w-full h-full transition-transform duration-200 origin-center ${zoomLevel < 1 ? 'rounded-2xl border-2 border-purple-500 overflow-hidden' : ''}`}
           style={zoomLevel < 1 ? { transform: `scale(${zoomLevel})` } : undefined}
         >
-          {isDuelTableMode ? (
-            <>
-              <div className="relative flex-[0.94] min-h-0 border-b border-primary/20">
-                {renderRemotePanel(remoteSlots[0], 0)}
-              </div>
-              <div className="relative flex-1 min-h-0">
-                {renderLocalPanel()}
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="relative flex-1 min-h-0">
-                {renderLocalPanel()}
-              </div>
-              <div className="relative flex-1 min-h-0">
-                {renderRemotePanel(remoteSlots[0], 0)}
-              </div>
-            </>
-          )}
+          <div className="relative flex-1 min-h-0">
+            {renderLocalPanel()}
+          </div>
+          <div className="relative flex-1 min-h-0">
+            {renderRemotePanel(remoteSlots[0], 0)}
+          </div>
         </div>
       ) : (
         /* ===== PIP LAYOUT (2 players) — click small to swap ===== */

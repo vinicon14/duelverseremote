@@ -434,7 +434,7 @@ export default function Matchmaking() {
                       </p>
                     </div>
                   )}
-
+                  
                   <Button onClick={joinQueue} className="w-full btn-mystic" size="lg">
                     <Swords className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                     {t('matchmaking.searchMatch')} {isRanked ? t('matchmaking.ranked') : t('matchmaking.casual')} {isMagic && playerCount === 4 ? '(4P)' : ''}
