@@ -1305,6 +1305,7 @@ const DuelRoomInner = () => {
                             : duel.creator?.username
                       }
                       filterOpponentId={isSpectator ? (duel.opponent_id || undefined) : undefined}
+                      tableOrientation="opponent"
                       embedded
                     />
                   ) : undefined
@@ -1317,6 +1318,7 @@ const DuelRoomInner = () => {
                           key={`opponent-slot-${_slotIdx}`}
                           duelId={id}
                           currentUserId={currentUser.id}
+                          tableOrientation="opponent"
                           embedded
                         />
                       ))

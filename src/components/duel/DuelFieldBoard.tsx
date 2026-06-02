@@ -124,7 +124,7 @@ const ZoneSlot = ({
     <div
       className={cn(
         "relative flex items-center justify-center overflow-visible rounded-sm border border-white/35 bg-black/20 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)] cursor-pointer hover:border-primary/80 hover:bg-primary/10 transition-all",
-        "w-[44px] h-[64px] sm:w-[52px] sm:h-[76px] md:w-[60px] md:h-[88px]",
+        "h-[56px] w-[38px] sm:h-[76px] sm:w-[52px] md:h-[88px] md:w-[60px]",
         hasCard && "border-primary/45 bg-transparent shadow-[0_0_16px_rgba(255,255,255,0.08)]",
         className
       )}
@@ -232,7 +232,7 @@ const PileZone = ({
     <div
       className={cn(
         "relative flex flex-col items-center justify-center overflow-visible rounded-sm border border-white/35 bg-black/20 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)] cursor-pointer hover:border-primary/80 hover:bg-primary/10 transition-all",
-        "w-[44px] h-[64px] sm:w-[52px] sm:h-[76px] md:w-[60px] md:h-[88px]",
+        "h-[56px] w-[38px] sm:h-[76px] sm:w-[52px] md:h-[88px] md:w-[60px]",
         cards.length > 0 && "border-primary/45"
       )}
       onClick={onClick}
@@ -281,7 +281,7 @@ export const DuelFieldBoard = ({
     ? (['spell1', 'spell2', 'spell3'] as const)
     : (['spell1', 'spell2', 'spell3', 'spell4', 'spell5'] as const));
   const fieldGridStyle = {
-    gridTemplateColumns: `minmax(44px, 60px) repeat(${monsterZones.length}, minmax(44px, 60px)) minmax(44px, 60px)`,
+    gridTemplateColumns: `minmax(38px, 60px) repeat(${monsterZones.length}, minmax(38px, 60px)) minmax(38px, 60px)`,
   };
   const extraMonsterZone: FieldZoneType = fieldState.extraMonster1
     ? 'extraMonster1'
@@ -321,7 +321,7 @@ export const DuelFieldBoard = ({
   return (
     <div
       className={cn(
-        "relative w-full overflow-hidden rounded-lg border border-border/50 p-2 sm:p-3",
+        "relative w-full overflow-hidden rounded-lg border border-border/50 p-1.5 sm:p-3",
         !playmatUrl && "bg-[radial-gradient(circle_at_50%_0%,rgba(34,211,238,0.16),rgba(15,23,42,0.84)_42%,rgba(2,6,23,0.96))]",
         isFullscreen && "scale-100 origin-top-left"
       )}
@@ -413,7 +413,7 @@ export const DuelFieldBoard = ({
               sleeveUrl={sleeveUrl}
             />
           ) : (
-            <div className="w-[44px] shrink-0 sm:w-[52px] md:w-[60px]" aria-hidden />
+            <div className="w-[38px] shrink-0 sm:w-[52px] md:w-[60px]" aria-hidden />
           )}
 
           {spellZones.map((zone) => (
