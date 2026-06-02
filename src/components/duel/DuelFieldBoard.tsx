@@ -112,6 +112,10 @@ const ZoneSlot = ({
   mobileCompact?: boolean;
 }) => {
   const hasCard = card !== null;
+  const isMonsterCard = (type?: string) => {
+    const normalized = type?.toLowerCase() || '';
+    return normalized.includes('monster') && !normalized.includes('spell') && !normalized.includes('trap');
+  };
 
   const isDefensePos = (pos?: string) => {
     if (!pos) return false;
@@ -176,7 +180,7 @@ const ZoneSlot = ({
           )}
           
           {/* ATK/DEF Display for monsters */}
-          {card.atk !== undefined && !card.isFaceDown && (
+          {isMonsterCard(card.type) && card.atk !== undefined && !card.isFaceDown && (
             <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 z-20">
               <div className={cn(
                 "bg-background/90 border border-border font-bold rounded flex items-center gap-0.5 whitespace-nowrap",

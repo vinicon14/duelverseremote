@@ -149,6 +149,11 @@ const getCardBack = (tcgType?: string, sleeveUrl?: string | null) => {
   return YGO_CARD_BACK_URL;
 };
 
+const isMonsterOpponentCard = (card: OpponentCard) => {
+  const normalized = card.type?.toLowerCase() || '';
+  return normalized.includes('monster') && !normalized.includes('spell') && !normalized.includes('trap');
+};
+
 export const FloatingOpponentViewer = ({ 
   duelId, 
   currentUserId, 
@@ -166,6 +171,7 @@ export const FloatingOpponentViewer = ({
   const [isVisible, setIsVisible] = useState(true);
   const [selectedCard, setSelectedCard] = useState<OpponentCard | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [showMobileGraveyard, setShowMobileGraveyard] = useState(false);
   const opponentStatesRef = useRef(opponentStates);
 
   const { position, isDragging, elementRef, dragHandlers } = useDraggable({
@@ -395,7 +401,7 @@ export const FloatingOpponentViewer = ({
             </Badge>
           )}
           {/* ATK/DEF for YGO monsters */}
-          {!card.isFaceDown && card.atk !== undefined && (
+          {!card.isFaceDown && card.atk !== undefined && isMonsterOpponentCard(card) && (
             <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 z-10">
               <div className="bg-background/90 border border-border text-[5px] font-bold px-0.5 rounded flex items-center gap-0.5 whitespace-nowrap">
                 <span className="text-destructive">{card.atk}</span>
@@ -496,18 +502,47 @@ export const FloatingOpponentViewer = ({
       label,
       count,
       color,
+      onClick,
+      active = false,
     }: {
       icon: typeof Layers;
       label: string;
       count: number;
       color: string;
-    }) => (
-      <div className="h-[43px] min-[380px]:h-[49px] min-w-[30px] min-[380px]:min-w-[34px] rounded border border-dashed border-muted-foreground/30 bg-background/70 flex flex-col items-center justify-center px-1">
-        <Icon className={cn("h-3 w-3", color)} />
-        <span className="text-[6px] leading-none text-muted-foreground">{label}</span>
-        <span className="text-[9px] leading-none font-bold tabular-nums">{count}</span>
-      </div>
-    );
+      onClick?: () => void;
+      active?: boolean;
+    }) => {
+      const className = cn(
+        "h-[43px] min-[380px]:h-[49px] min-w-[30px] min-[380px]:min-w-[34px] rounded border border-dashed border-muted-foreground/30 bg-background/70 flex flex-col items-center justify-center px-1",
+        onClick && "touch-manipulation",
+        active && "border-orange-400 bg-orange-500/15",
+        onClick && count === 0 && "opacity-60"
+      );
+      const content = (
+        <>
+          <Icon className={cn("h-3 w-3", color)} />
+          <span className="text-[6px] leading-none text-muted-foreground">{label}</span>
+          <span className="text-[9px] leading-none font-bold tabular-nums">{count}</span>
+        </>
+      );
+
+      if (onClick) {
+        return (
+          <button
+            type="button"
+            className={className}
+            onClick={onClick}
+            disabled={count === 0}
+            title="Ver cemitério do oponente"
+            aria-label="Ver cemitério do oponente"
+          >
+            {content}
+          </button>
+        );
+      }
+
+      return <div className={className}>{content}</div>;
+    };
 
     return (
       <>
@@ -568,7 +603,14 @@ export const FloatingOpponentViewer = ({
                       <ZoneSlotDisplay key={`${card.id}-${idx}`} card={card} label={`C${idx + 1}`} compact />
                     ))
                   )}
-                  <MiniPile icon={Flame} label="GY" count={opponentState.graveyard.length} color="text-orange-500" />
+                  <MiniPile
+                    icon={Flame}
+                    label="GY"
+                    count={opponentState.graveyard.length}
+                    color="text-orange-500"
+                    active={showMobileGraveyard}
+                    onClick={() => setShowMobileGraveyard((value) => !value)}
+                  />
                 </div>
 
                 <div className="flex justify-center items-center gap-1">
@@ -604,6 +646,45 @@ export const FloatingOpponentViewer = ({
                   </div>
                 </div>
               </div>
+              {showMobileGraveyard && (
+                <div className="absolute left-1 right-1 bottom-1 z-20 h-[78px] rounded-md border border-orange-400/60 bg-background/95 shadow-lg p-1">
+                  <div className="h-5 flex items-center gap-1 text-[10px] font-semibold">
+                    <Flame className="h-3 w-3 text-orange-500" />
+                    <span className="truncate">Cemitério do oponente</span>
+                    <span className="ml-auto tabular-nums text-muted-foreground">{opponentState.graveyard.length}</span>
+                    <button
+                      type="button"
+                      className="h-5 w-5 inline-flex items-center justify-center rounded hover:bg-muted"
+                      onClick={() => setShowMobileGraveyard(false)}
+                      aria-label="Fechar cemitério"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                  <div className="h-[52px] overflow-x-auto overflow-y-hidden">
+                    <div className="h-full flex items-center gap-1">
+                      {opponentState.graveyard.map((card, idx) => (
+                        <button
+                          key={`${card.id}-${idx}-mobile-gy`}
+                          type="button"
+                          className="h-[48px] w-[34px] shrink-0 rounded-sm overflow-hidden border border-border bg-muted"
+                          onClick={() => {
+                            setSelectedCard(card);
+                            setModalOpen(true);
+                          }}
+                          title={card.name}
+                        >
+                          <img
+                            src={card.image || cardBack}
+                            alt={card.name}
+                            className="h-full w-full object-cover"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

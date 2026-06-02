@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Eye, EyeOff, Heart } from "lucide-react";
+import { Eye, EyeOff, Heart, Plus } from "lucide-react";
 import { DuelRoomAudioControls } from "@/components/duel/DuelRoomAudioControls";
 
 interface Props {
@@ -10,6 +10,7 @@ interface Props {
   opponentLp?: number;
   focusMode?: boolean;
   onToggleFocusMode?: (value: boolean) => void;
+  onQuickDraw?: () => void;
 }
 
 export const MobileArenaLayout = ({
@@ -19,6 +20,7 @@ export const MobileArenaLayout = ({
   opponentLp,
   focusMode = false,
   onToggleFocusMode,
+  onQuickDraw,
 }: Props) => {
   useEffect(() => {
     if (!active) return;
@@ -48,6 +50,19 @@ export const MobileArenaLayout = ({
       </div>
 
       <div className="ml-auto pointer-events-auto flex items-center gap-1">
+        {onQuickDraw && (
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={onQuickDraw}
+            className="h-8 w-8 bg-sky-600/95 hover:bg-sky-700 text-white border-sky-400/40"
+            title="Comprar carta"
+            aria-label="Comprar carta"
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+        )}
         <Button
           type="button"
           variant={focusMode ? "default" : "outline"}

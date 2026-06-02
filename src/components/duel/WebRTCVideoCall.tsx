@@ -715,8 +715,12 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
               </div>
             </div>
           )}
-          {localDeckOpen && localDeckContent && (
-            <div className={mobileArenaMode ? "w-full h-full overflow-hidden bg-background touch-none" : "w-full h-full overflow-auto bg-background touch-pan-y"}>
+          {localDeckContent && (
+            <div className={
+              localDeckOpen
+                ? (mobileArenaMode ? "absolute inset-0 overflow-hidden bg-background touch-none" : "absolute inset-0 overflow-auto bg-background touch-pan-y")
+                : "hidden"
+            }>
               {localDeckContent}
             </div>
           )}
@@ -749,11 +753,16 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
           onPointerUp={handlePanEnd}
           onPointerCancel={handlePanEnd}
         />
-        {localDeckOpen && localDeckContent ? (
-          <div className={mobileArenaMode ? "w-full h-full overflow-hidden bg-background touch-none" : "w-full h-full overflow-auto bg-background touch-pan-y"}>
+        {localDeckContent && (
+          <div className={
+            localDeckOpen
+              ? (mobileArenaMode ? "absolute inset-0 overflow-hidden bg-background touch-none" : "absolute inset-0 overflow-auto bg-background touch-pan-y")
+              : "hidden"
+          }>
             {localDeckContent}
           </div>
-        ) : (
+        )}
+        {!localDeckOpen && (
           <>
             {isVideoOff && (
               <div className="absolute inset-0 bg-muted flex items-center justify-center">

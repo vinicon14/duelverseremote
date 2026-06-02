@@ -49,6 +49,7 @@ interface DuelDeckViewerProps {
   /** TCG type of the duel — when 'rush_duel', applies Rush Duel rules (3x3 board, draw-up-to-5). */
   tcgType?: string | null;
   mobileArenaMode?: boolean;
+  quickDrawSignal?: number;
 }
 
 const EXTRA_DECK_TYPES = ['Fusion', 'Synchro', 'XYZ', 'Link'];
@@ -178,6 +179,7 @@ export const DuelDeckViewer = ({
   embedded = false,
   tcgType,
   mobileArenaMode = false,
+  quickDrawSignal = 0,
 }: DuelDeckViewerProps) => {
   const isRushDuel = tcgType === 'rush_duel';
   const [selectedEffectCard, setSelectedEffectCard] = useState<GameCard | null>(null);
@@ -227,6 +229,7 @@ export const DuelDeckViewer = ({
   const broadcastChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const broadcastReadyRef = useRef(false);
   const isOpenRef = useRef(isOpen);
+  const lastQuickDrawSignalRef = useRef(quickDrawSignal);
   const mobileDragRef = useRef(mobileDrag);
 
   useEffect(() => {
@@ -808,6 +811,12 @@ export const DuelDeckViewer = ({
       moved: drag.moved || distance > 8,
     });
   }, []);
+
+  useEffect(() => {
+    if (quickDrawSignal === lastQuickDrawSignalRef.current) return;
+    lastQuickDrawSignalRef.current = quickDrawSignal;
+    drawCard();
+  }, [quickDrawSignal, drawCard]);
 
   const endMobileHandDrag = useCallback((e: React.PointerEvent<HTMLElement>) => {
     if (!mobileDragRef.current) return;

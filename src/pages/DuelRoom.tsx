@@ -11,7 +11,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { PhoneOff, Loader2, Scale, Layers, Sparkles, Zap, Clock, Coins } from "lucide-react";
+import { PhoneOff, Loader2, Scale, Layers, Sparkles, Zap, Clock, Coins, Plus } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Navbar } from "@/components/Navbar";
 import { DuelChat } from "@/components/DuelChat";
@@ -84,6 +84,7 @@ const DuelRoom = () => {
   
   // Deck viewer state
   const [showDeckViewer, setShowDeckViewer] = useState(false);
+  const [quickDrawSignal, setQuickDrawSignal] = useState(0);
   const { mainDeck, extraDeck, sideDeck, tokensDeck, importDeckFromYDK, loadDeckFromSaved, isLoading: isDeckLoading } = useDuelDeck();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -1150,9 +1151,9 @@ const DuelRoom = () => {
                       embedded
                       mobileArenaMode={mobileDigitalArenaOpen}
                     />
-                  ) : myDeckIsOpen && isParticipant && !isJudge ? (
+                  ) : isParticipant && !isJudge ? (
                     <>
-                      {isYgoStyleTcg(duel?.tcg_type) && showDeckViewer && (
+                      {isYgoStyleTcg(duel?.tcg_type) && (
                         <>
                           <input
                             ref={fileInputRef}
@@ -1182,6 +1183,7 @@ const DuelRoom = () => {
                             embedded
                             tcgType={duel?.tcg_type}
                             mobileArenaMode={mobileDigitalArenaOpen}
+                            quickDrawSignal={quickDrawSignal}
                           />
                         </>
                       )}
@@ -1383,6 +1385,18 @@ const DuelRoom = () => {
                               <Layers className="w-3 h-3 sm:w-4 sm:h-4" />
                             </Button>
                           )}
+                          {mobileArenaActive && !mobileDigitalArenaOpen && isYgoStyleTcg(duel?.tcg_type) && (
+                            <Button
+                              onClick={() => setQuickDrawSignal((value) => value + 1)}
+                              variant="outline"
+                              size="sm"
+                              className="sm:hidden bg-sky-600/95 hover:bg-sky-700 text-white backdrop-blur-sm text-xs"
+                              title="Comprar carta"
+                              aria-label="Comprar carta"
+                            >
+                              <Plus className="w-3 h-3" />
+                            </Button>
+                          )}
                           <Button
                             onClick={callJudge}
                             disabled={judgeCalled}
@@ -1477,6 +1491,7 @@ const DuelRoom = () => {
         opponentLp={currentUser?.id === duel?.creator_id ? player2LP : player1LP}
         focusMode={hideControls}
         onToggleFocusMode={(v) => setHideControls(v)}
+        onQuickDraw={isYgoStyleTcg(duel?.tcg_type) ? () => setQuickDrawSignal((value) => value + 1) : undefined}
       />
 
     </div>
