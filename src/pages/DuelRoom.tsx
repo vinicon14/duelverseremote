@@ -1089,12 +1089,12 @@ const DuelRoom = () => {
   // Auto-disable camera when deck opens, re-enable when it closes
   useEffect(() => {
     if (!webrtcRef.current) return;
-    if (myDeckIsOpen) {
+    if (myDeckIsOpen && !mobileDigitalArenaOpen) {
       webrtcRef.current.setVideoEnabled(false);
     } else {
       webrtcRef.current.setVideoEnabled(true);
     }
-  }, [myDeckIsOpen]);
+  }, [myDeckIsOpen, mobileDigitalArenaOpen]);
 
   return (
     <div className="min-h-screen bg-transparent">
@@ -1136,7 +1136,7 @@ const DuelRoom = () => {
                 remoteDeckOpen={
                   isSpectator && !isJudge
                     ? opponentPlayerDeckOpen
-                    : opponentDeckOpen && isParticipant && !isJudge
+                    : (mobileDigitalArenaOpen || opponentDeckOpen) && isParticipant && !isJudge
                 }
                 localDeckContent={
                   isSpectator && !isJudge && currentUser && id && duel && ((duel as any)?.max_players || 2) <= 2 ? (
