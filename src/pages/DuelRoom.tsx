@@ -33,6 +33,9 @@ import { useDuelPresence, useDuelCleanup } from "@/hooks/useDuelPresence";
 import { getDefaultLifePoints, isLegacyMagicTcg, isLegacyPokemonTcg, isYgoStyleTcg } from "@/utils/tcgRules";
 import { DiscordVoiceRoster } from "@/components/duel/DiscordVoiceRoster";
 import { BroadcastDuelToDiscordButton } from "@/components/duel/BroadcastDuelToDiscordButton";
+import { MobileArenaLayout } from "@/components/duel/mobile/MobileArenaLayout";
+import { DuelRoomAudioControls } from "@/components/duel/DuelRoomAudioControls";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const DuelRoom = () => {
   useBanCheck(); // Proteger contra usuários banidos
