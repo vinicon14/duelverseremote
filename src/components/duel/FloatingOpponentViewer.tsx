@@ -114,6 +114,7 @@ interface FloatingOpponentViewerProps {
   currentUserId: string;
   opponentUsername?: string;
   embedded?: boolean;
+  tableOrientation?: 'normal' | 'opponent';
   /** For 4-player mode: show only the opponent with this userId */
   filterOpponentId?: string;
   /** Map of peerId -> username for 4-player labeling */
@@ -153,6 +154,7 @@ export const FloatingOpponentViewer = ({
   currentUserId, 
   opponentUsername = 'Oponente',
   embedded = false,
+  tableOrientation = 'normal',
   filterOpponentId,
   opponentUsernames,
 }: FloatingOpponentViewerProps) => {
@@ -356,6 +358,7 @@ export const FloatingOpponentViewer = ({
   }
 
   const cardBack = getCardBack(opponentState?.tcgType, opponentState?.sleeveUrl);
+  const fieldFacesOpponent = embedded && tableOrientation === 'opponent';
 
   const ZoneSlotDisplay = ({ card, label }: { card: OpponentCard | null; label: string }) => (
     <div className={cn(
@@ -729,38 +732,45 @@ export const FloatingOpponentViewer = ({
                     )}
                     <div className="relative z-10">
                       <span className="text-[10px] font-medium text-muted-foreground">Zonas de Campo do Oponente</span>
-                      
-                      {opponentState.extraMonsterZones && (
-                        <div className="flex justify-center gap-8">
-                          <ZoneSlotDisplay card={opponentState.extraMonsterZones.extraMonster1} label="EM1" />
-                          <ZoneSlotDisplay card={opponentState.extraMonsterZones.extraMonster2} label="EM2" />
-                        </div>
-                      )}
 
-                      <div className="flex justify-center gap-1">
-                        <ZoneSlotDisplay card={opponentState.monsterZones.monster1} label="M1" />
-                        <ZoneSlotDisplay card={opponentState.monsterZones.monster2} label="M2" />
-                        <ZoneSlotDisplay card={opponentState.monsterZones.monster3} label="M3" />
-                        <ZoneSlotDisplay card={opponentState.monsterZones.monster4} label="M4" />
-                        <ZoneSlotDisplay card={opponentState.monsterZones.monster5} label="M5" />
-                      </div>
+                      <div className={cn(
+                        "mx-auto mt-1 flex w-full max-w-md flex-col gap-1.5 transition-transform",
+                        fieldFacesOpponent && "rotate-180"
+                      )}>
+                        {opponentState.extraMonsterZones && (
+                          <div className="flex justify-center">
+                            <ZoneSlotDisplay
+                              card={opponentState.extraMonsterZones.extraMonster2 || opponentState.extraMonsterZones.extraMonster1}
+                              label="Extra"
+                            />
+                          </div>
+                        )}
 
-                      {opponentState.spellZones && (
                         <div className="flex justify-center gap-1">
-                          <ZoneSlotDisplay card={opponentState.spellZones.spell1} label="S1" />
-                          <ZoneSlotDisplay card={opponentState.spellZones.spell2} label="S2" />
-                          <ZoneSlotDisplay card={opponentState.spellZones.spell3} label="S3" />
-                          <ZoneSlotDisplay card={opponentState.spellZones.spell4} label="S4" />
-                          <ZoneSlotDisplay card={opponentState.spellZones.spell5} label="S5" />
+                          <ZoneSlotDisplay card={opponentState.monsterZones.monster1} label="M1" />
+                          <ZoneSlotDisplay card={opponentState.monsterZones.monster2} label="M2" />
+                          <ZoneSlotDisplay card={opponentState.monsterZones.monster3} label="M3" />
+                          <ZoneSlotDisplay card={opponentState.monsterZones.monster4} label="M4" />
+                          <ZoneSlotDisplay card={opponentState.monsterZones.monster5} label="M5" />
                         </div>
-                      )}
 
-                      {opponentState.fieldSpell && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] text-muted-foreground">Campo:</span>
-                          <ZoneSlotDisplay card={opponentState.fieldSpell} label="FS" />
-                        </div>
-                      )}
+                        {opponentState.spellZones && (
+                          <div className="flex justify-center gap-1">
+                            <ZoneSlotDisplay card={opponentState.spellZones.spell1} label="S1" />
+                            <ZoneSlotDisplay card={opponentState.spellZones.spell2} label="S2" />
+                            <ZoneSlotDisplay card={opponentState.spellZones.spell3} label="S3" />
+                            <ZoneSlotDisplay card={opponentState.spellZones.spell4} label="S4" />
+                            <ZoneSlotDisplay card={opponentState.spellZones.spell5} label="S5" />
+                          </div>
+                        )}
+
+                        {opponentState.fieldSpell && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-muted-foreground">Campo:</span>
+                            <ZoneSlotDisplay card={opponentState.fieldSpell} label="FS" />
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}

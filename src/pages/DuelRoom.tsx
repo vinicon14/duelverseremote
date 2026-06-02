@@ -33,6 +33,19 @@ import { getDefaultLifePoints, isLegacyMagicTcg, isLegacyPokemonTcg, isYgoStyleT
 import { DiscordVoiceRoster } from "@/components/duel/DiscordVoiceRoster";
 import { BroadcastDuelToDiscordButton } from "@/components/duel/BroadcastDuelToDiscordButton";
 
+const DUEL_MUSIC_SETTINGS_KEY: Record<string, string> = {
+  yugioh: 'ringtone_ygo',
+  genesis: 'ringtone_mtg',
+  rush_duel: 'ringtone_pkm',
+  magic: 'ringtone_mtg',
+  pokemon: 'ringtone_pkm',
+};
+
+const getDuelMusicSettingsKey = (tcgType?: string | null) =>
+  DUEL_MUSIC_SETTINGS_KEY[tcgType || ''] || 'ringtone_ygo';
+
+const cleanAudioUrl = (url?: string | null) => url?.split('?t=')[0]?.trim() || '';
+
 const DuelRoom = () => {
   useBanCheck(); // Proteger contra usuários banidos
   const { id } = useParams();
@@ -68,7 +81,9 @@ const DuelRoom = () => {
   const timeWarningShownRef = useRef(false);
   const callDurationRef = useRef<number>(0);
   const webrtcRef = useRef<WebRTCVideoCallHandle>(null);
+  const duelMusicRef = useRef<HTMLAudioElement | null>(null);
   const deckToggleChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const [duelMusicUrl, setDuelMusicUrl] = useState("");
   
   const isJudge = searchParams.get('role') === 'judge';
   const [hideControls, setHideControls] = useState(false);
@@ -1053,6 +1068,83 @@ const DuelRoom = () => {
     }
   }, [myDeckIsOpen]);
 
+  useEffect(() => {
+    if (!duel?.tcg_type || isJudge) {
+      setDuelMusicUrl("");
+      return;
+    }
+
+    let cancelled = false;
+
+    const fetchDuelMusic = async () => {
+      const settingsKey = getDuelMusicSettingsKey(duel.tcg_type);
+      const { data, error } = await supabase
+        .from('system_settings')
+        .select('value')
+        .eq('key', settingsKey)
+        .maybeSingle();
+
+      if (cancelled) return;
+      if (error) {
+        console.warn('[DuelRoom] Failed to load duel music:', error);
+        setDuelMusicUrl("");
+        return;
+      }
+
+      setDuelMusicUrl(data?.value || "");
+    };
+
+    fetchDuelMusic();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [duel?.tcg_type, isJudge]);
+
+  useEffect(() => {
+    const audioUrl = cleanAudioUrl(duelMusicUrl);
+    const currentAudio = duelMusicRef.current;
+
+    if (!audioUrl || isJudge) {
+      currentAudio?.pause();
+      duelMusicRef.current = null;
+      return;
+    }
+
+    const audio = new Audio(audioUrl);
+    audio.loop = true;
+    audio.volume = 0.28;
+    audio.preload = 'auto';
+    audio.crossOrigin = 'anonymous';
+    duelMusicRef.current = audio;
+
+    const startMusic = () => {
+      audio.play()
+        .then(() => {
+          window.removeEventListener('pointerdown', startMusic);
+          window.removeEventListener('touchstart', startMusic);
+          window.removeEventListener('keydown', startMusic);
+        })
+        .catch(() => undefined);
+    };
+
+    startMusic();
+    window.addEventListener('pointerdown', startMusic);
+    window.addEventListener('touchstart', startMusic);
+    window.addEventListener('keydown', startMusic);
+
+    return () => {
+      window.removeEventListener('pointerdown', startMusic);
+      window.removeEventListener('touchstart', startMusic);
+      window.removeEventListener('keydown', startMusic);
+      audio.pause();
+      audio.src = '';
+      if (duelMusicRef.current === audio) {
+        duelMusicRef.current = null;
+      }
+    };
+  }, [duelMusicUrl, isJudge]);
+
   return (
     <div className="min-h-screen bg-transparent">
       <NoMonetagAds />
@@ -1167,6 +1259,7 @@ const DuelRoom = () => {
                             : duel.creator?.username
                       }
                       filterOpponentId={isSpectator ? (duel.opponent_id || undefined) : undefined}
+                      tableOrientation="opponent"
                       embedded
                     />
                   ) : undefined
@@ -1179,6 +1272,7 @@ const DuelRoom = () => {
                           key={`opponent-slot-${_slotIdx}`}
                           duelId={id}
                           currentUserId={currentUser.id}
+                          tableOrientation="opponent"
                           embedded
                         />
                       ))

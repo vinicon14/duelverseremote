@@ -1032,9 +1032,9 @@ export const DuelDeckViewer = ({
               </div>
             ) : (
               <ScrollArea className="flex-1">
-                <div className="p-2 space-y-2">
+                <div className="space-y-1.5 p-1.5 sm:space-y-2 sm:p-2">
                   {/* Deck Controls */}
-                  <div className="flex items-center justify-between gap-1 flex-wrap p-2 bg-muted/30 rounded-lg">
+                  <div className="flex items-center justify-between gap-1 flex-wrap rounded-lg bg-muted/30 p-1.5 sm:p-2">
                     <div className="flex items-center gap-1 flex-wrap">
                       <Badge variant="outline" className="text-xs">
                         Deck: {fieldState.deck.length}
@@ -1137,7 +1137,7 @@ export const DuelDeckViewer = ({
 
                   {/* Hand Zone - Droppable */}
                   <div 
-                    className="border rounded-lg p-2 bg-muted/20 transition-colors"
+                    className="rounded-lg border bg-muted/20 p-1.5 transition-colors sm:p-2"
                     onDragOver={(e) => {
                       e.preventDefault();
                       e.currentTarget.classList.add('border-primary', 'bg-primary/10');
@@ -1153,16 +1153,16 @@ export const DuelDeckViewer = ({
                     <div className="flex items-center gap-1 mb-2">
                       <Hand className="h-3 w-3 text-green-500" />
                       <span className="text-xs font-medium">Mão</span>
-                      <span className="text-[9px] text-muted-foreground ml-1">(arraste cartas aqui)</span>
+                      <span className="ml-1 hidden text-[9px] text-muted-foreground sm:inline">(arraste cartas aqui)</span>
                       <Badge variant="secondary" className="text-[10px] h-4 px-1 ml-auto">
                         {fieldState.hand.length}
                       </Badge>
                     </div>
-                    <div className="flex flex-wrap gap-1 min-h-[60px]">
+                    <div className="flex min-h-[54px] gap-1 overflow-x-auto pb-1 sm:min-h-[72px]">
                       {fieldState.hand.map((card) => (
                         <div
                           key={card.instanceId}
-                          className="relative group cursor-grab active:cursor-grabbing"
+                          className="group relative shrink-0 cursor-grab active:cursor-grabbing"
                           draggable
                           onDragStart={(e) => {
                             e.dataTransfer.setData('application/json', JSON.stringify({ ...card, sourceZone: 'hand' }));
@@ -1176,7 +1176,7 @@ export const DuelDeckViewer = ({
                           <img
                             src={card.card_images?.[0]?.image_url_small}
                             alt={card.name}
-                            className="h-16 sm:h-20 w-auto rounded-sm shadow-sm hover:shadow-lg transition-all hover:scale-105"
+                            className="h-14 w-auto rounded-sm shadow-sm transition-all hover:scale-105 hover:shadow-lg sm:h-20"
                             title={card.name}
                           />
                         </div>

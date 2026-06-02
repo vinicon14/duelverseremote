@@ -123,7 +123,7 @@ const ZoneSlot = ({
     <div
       className={cn(
         "relative border-2 border-dashed border-muted-foreground/30 rounded-md flex items-center justify-center cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all",
-        "w-[44px] h-[64px] sm:w-[52px] sm:h-[76px] md:w-[60px] md:h-[88px]",
+        "h-[56px] w-[38px] sm:h-[76px] sm:w-[52px] md:h-[88px] md:w-[60px]",
         hasCard && "border-solid border-primary/20 bg-transparent",
         className
       )}
@@ -226,7 +226,7 @@ const PileZone = ({
     <div
       className={cn(
         "relative border-2 border-dashed border-muted-foreground/30 rounded-md flex flex-col items-center justify-center cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all",
-        "w-[44px] h-[64px] sm:w-[52px] sm:h-[76px] md:w-[60px] md:h-[88px]",
+        "h-[56px] w-[38px] sm:h-[76px] sm:w-[52px] md:h-[88px] md:w-[60px]",
         cards.length > 0 && "border-solid border-primary/20"
       )}
       onClick={onClick}
@@ -304,7 +304,7 @@ export const DuelFieldBoard = ({
   return (
     <div 
       className={cn(
-        "relative w-full rounded-lg p-2 sm:p-3 border border-border/50 overflow-hidden",
+        "relative w-full overflow-hidden rounded-lg border border-border/50 p-1.5 sm:p-3",
         !playmatUrl && "bg-gradient-to-b from-cyan-900/40 via-blue-900/30 to-cyan-900/40",
         isFullscreen && "scale-100 origin-top-left"
       )}
@@ -322,40 +322,26 @@ export const DuelFieldBoard = ({
         <div className="absolute inset-0 bg-black/40 rounded-lg pointer-events-none z-0" />
       )}
       {/* Field Layout */}
-      <div className="relative z-10 flex flex-col gap-2 sm:gap-3">
+      <div className="relative z-10 flex flex-col gap-1.5 sm:gap-3">
         
-        {/* Extra Monster Zones Row */}
-        <div className="flex justify-center gap-1 sm:gap-2">
-          <div className="flex items-center gap-8 sm:gap-16">
-            <ZoneSlot
-              zone="extraMonster1"
-              card={fieldState.extraMonster1}
-              label="Extra Monster"
-              onClick={() => onZoneClick('extraMonster1')}
-              onCardClick={(card) => handleCardClickLocal(card, 'extraMonster1')}
-              onDragOver={handleDragOver}
-              onDrop={handleDrop('extraMonster1')}
-              className="border-purple-500/30"
-              isHorizontal
-              sleeveUrl={sleeveUrl}
-            />
-            <ZoneSlot
-              zone="extraMonster2"
-              card={fieldState.extraMonster2}
-              label="Extra Monster"
-              onClick={() => onZoneClick('extraMonster2')}
-              onCardClick={(card) => handleCardClickLocal(card, 'extraMonster2')}
-              onDragOver={handleDragOver}
-              onDrop={handleDrop('extraMonster2')}
-              className="border-purple-500/30"
-              isHorizontal
-              sleeveUrl={sleeveUrl}
-            />
-          </div>
+        {/* Extra Monster Zone Row */}
+        <div className="flex justify-center">
+          <ZoneSlot
+            zone="extraMonster1"
+            card={fieldState.extraMonster1}
+            label="Extra"
+            onClick={() => onZoneClick('extraMonster1')}
+            onCardClick={(card) => handleCardClickLocal(card, 'extraMonster1')}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop('extraMonster1')}
+            className="border-purple-500/30"
+            isHorizontal
+            sleeveUrl={sleeveUrl}
+          />
         </div>
 
         {/* Main Field Row */}
-        <div className="flex justify-center items-center gap-1 sm:gap-2">
+        <div className="flex items-center justify-center gap-0.5 sm:gap-2">
           {/* Field Spell Zone (Left) */}
           <ZoneSlot
             zone="fieldSpell"
@@ -370,7 +356,7 @@ export const DuelFieldBoard = ({
           />
 
           {/* Monster Zones */}
-          <div className="flex gap-1 sm:gap-1.5">
+          <div className="flex gap-0.5 sm:gap-1.5">
             {(['monster1', 'monster2', 'monster3', 'monster4', 'monster5'] as const).map((zone, idx) => (
               <ZoneSlot
                 key={zone}
@@ -402,7 +388,7 @@ export const DuelFieldBoard = ({
         </div>
 
         {/* Spell/Trap Row */}
-        <div className="flex justify-center items-center gap-1 sm:gap-2">
+        <div className="flex items-center justify-center gap-0.5 sm:gap-2">
           {/* Extra Deck (Left) */}
           <PileZone
             zone="extraDeck"
@@ -416,7 +402,7 @@ export const DuelFieldBoard = ({
           />
 
           {/* Spell/Trap Zones */}
-          <div className="flex gap-1 sm:gap-1.5">
+          <div className="flex gap-0.5 sm:gap-1.5">
             {(['spell1', 'spell2', 'spell3', 'spell4', 'spell5'] as const).map((zone, idx) => (
               <ZoneSlot
                 key={zone}
