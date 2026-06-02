@@ -1,5 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { startBgm, stopBgm } from "@/utils/bgm";
+import { supabase } from "@/integrations/supabase/client";
 import type { DuelEvent } from "@/hooks/useDuelEvents";
 import type { ImmersiveSettings } from "./ImmersiveModeProvider";
 
@@ -62,18 +63,69 @@ const shouldNarrate = (event: DuelEvent, settings: ImmersiveSettings) => {
   return ["mode_started", "lp_change", "lp_set", "summon", "duel_finished"].includes(event.event_type);
 };
 
+const isYouTubeUrl = (url: string) =>
+  /(?:youtube\.com|youtu\.be)/i.test(url);
+
 export const useImmersiveAudio = (active: boolean, settings: ImmersiveSettings, lastEvent?: DuelEvent | null) => {
   const lastEventIdRef = useRef<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [trackUrl, setTrackUrl] = useState<string | null>(null);
 
   useEffect(() => {
+    const loadTrackUrl = async () => {
+      try {
+        const { data } = await supabase
+          .from("system_settings")
+          .select("value")
+          .eq("key", "bgm_video_url")
+          .maybeSingle();
+        const url = (data?.value || "").trim();
+        setTrackUrl(url && !isYouTubeUrl(url) ? url : null);
+      } catch {
+        setTrackUrl(null);
+      }
+    };
+
+    loadTrackUrl();
+    window.addEventListener("duelverse:bgm-url-updated", loadTrackUrl);
+    return () => window.removeEventListener("duelverse:bgm-url-updated", loadTrackUrl);
+  }, []);
+
+  useEffect(() => {
+    const volume = (settings.musicVolume / 100) * 0.32;
+
     if (!active || settings.musicVolume <= 0) {
       stopBgm();
+      audioRef.current?.pause();
       return;
     }
 
-    startBgm((settings.musicVolume / 100) * 0.32);
+    if (trackUrl) {
+      stopBgm();
+      let audio = audioRef.current;
+      if (!audio) {
+        audio = new Audio();
+        audio.loop = true;
+        audio.preload = "auto";
+        audio.crossOrigin = "anonymous";
+        audioRef.current = audio;
+      }
+      if (audio.src !== trackUrl) {
+        audio.src = trackUrl;
+      }
+      audio.volume = volume;
+      audio.play().catch(() => startBgm(volume));
+
+      return () => {
+        audio.pause();
+        stopBgm();
+      };
+    }
+
+    audioRef.current?.pause();
+    startBgm(volume);
     return () => stopBgm();
-  }, [active, settings.musicVolume]);
+  }, [active, settings.musicVolume, trackUrl]);
 
   useEffect(() => {
     if (!active || !lastEvent || lastEventIdRef.current === lastEvent.id) return;
@@ -92,12 +144,20 @@ export const useImmersiveAudio = (active: boolean, settings: ImmersiveSettings, 
 
     const restoreVolume = () => {
       if (active && settings.musicVolume > 0) {
-        startBgm((settings.musicVolume / 100) * 0.32);
+        if (trackUrl && audioRef.current) {
+          audioRef.current.volume = (settings.musicVolume / 100) * 0.32;
+        } else {
+          startBgm((settings.musicVolume / 100) * 0.32);
+        }
       }
     };
 
     if (settings.musicVolume > 0) {
-      startBgm((settings.musicVolume / 100) * 0.08);
+      if (trackUrl && audioRef.current) {
+        audioRef.current.volume = (settings.musicVolume / 100) * 0.08;
+      } else {
+        startBgm((settings.musicVolume / 100) * 0.08);
+      }
     }
     utterance.onend = restoreVolume;
     utterance.onerror = restoreVolume;
@@ -114,5 +174,6 @@ export const useImmersiveAudio = (active: boolean, settings: ImmersiveSettings, 
     settings.narrationVolume,
     settings.musicVolume,
     settings,
+    trackUrl,
   ]);
 };

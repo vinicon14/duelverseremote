@@ -687,6 +687,11 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     }
   }
 
+  const hasDuelOverlay =
+    (localDeckOpen && !!localDeckContent) ||
+    (remoteDeckOpen && !!remoteDeckContent && !remoteDeckOpenSlots);
+  const isDuelTableMode = !is4Player && isSideBySide && hasDuelOverlay;
+
   const localVideoCallbackRef = useCallback((el: HTMLVideoElement | null) => {
     (localVideoRef as React.MutableRefObject<HTMLVideoElement | null>).current = el;
     if (el && localStreamRef.current && el.srcObject !== localStreamRef.current) {
@@ -857,17 +862,30 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
           </div>
         </div>
       ) : isSideBySide ? (
-        /* ===== SIDE-BY-SIDE (desktop) / STACKED (mobile) ===== */
+        /* ===== DUEL TABLE / SIDE-BY-SIDE ===== */
         <div 
-          className={`flex flex-col sm:flex-row w-full h-full transition-transform duration-200 origin-center ${zoomLevel < 1 ? 'rounded-2xl border-2 border-purple-500 overflow-hidden' : ''}`}
+          className={`flex ${isDuelTableMode ? 'flex-col' : 'flex-col sm:flex-row'} w-full h-full transition-transform duration-200 origin-center ${zoomLevel < 1 ? 'rounded-2xl border-2 border-purple-500 overflow-hidden' : ''}`}
           style={zoomLevel < 1 ? { transform: `scale(${zoomLevel})` } : undefined}
         >
-          <div className="relative flex-1 min-h-0">
-            {renderLocalPanel()}
-          </div>
-          <div className="relative flex-1 min-h-0">
-            {renderRemotePanel(remoteSlots[0], 0)}
-          </div>
+          {isDuelTableMode ? (
+            <>
+              <div className="relative flex-[0.94] min-h-0 border-b border-primary/20">
+                {renderRemotePanel(remoteSlots[0], 0)}
+              </div>
+              <div className="relative flex-1 min-h-0">
+                {renderLocalPanel()}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="relative flex-1 min-h-0">
+                {renderLocalPanel()}
+              </div>
+              <div className="relative flex-1 min-h-0">
+                {renderRemotePanel(remoteSlots[0], 0)}
+              </div>
+            </>
+          )}
         </div>
       ) : (
         /* ===== PIP LAYOUT (2 players) — click small to swap ===== */

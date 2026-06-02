@@ -116,6 +116,7 @@ interface FloatingOpponentViewerProps {
   currentUserId: string;
   opponentUsername?: string;
   embedded?: boolean;
+  tableOrientation?: 'normal' | 'opponent';
   /** For 4-player mode: show only the opponent with this userId */
   filterOpponentId?: string;
   /** Map of peerId -> username for 4-player labeling */
@@ -155,6 +156,7 @@ export const FloatingOpponentViewer = ({
   currentUserId, 
   opponentUsername = 'Oponente',
   embedded = false,
+  tableOrientation = 'normal',
   filterOpponentId,
   opponentUsernames,
 }: FloatingOpponentViewerProps) => {
@@ -360,6 +362,7 @@ export const FloatingOpponentViewer = ({
   }
 
   const cardBack = getCardBack(opponentState?.tcgType, opponentState?.sleeveUrl);
+  const fieldFacesOpponent = embedded && tableOrientation === 'opponent';
   const ygoFieldGridStyle = {
     gridTemplateColumns: 'minmax(32px, 44px) repeat(5, minmax(32px, 44px)) minmax(32px, 44px)',
   };
@@ -870,7 +873,10 @@ export const FloatingOpponentViewer = ({
                     {opponentState.playmatUrl && (
                       <div className="absolute inset-0 bg-black/40 rounded-lg pointer-events-none z-0" />
                     )}
-                    <div className="relative z-10 mx-auto flex w-full max-w-md flex-col gap-1.5">
+                    <div className={cn(
+                      "relative z-10 mx-auto flex w-full max-w-md flex-col gap-1.5 transition-transform",
+                      fieldFacesOpponent && "rotate-180"
+                    )}>
                       <div className="grid gap-1" style={ygoFieldGridStyle}>
                         <div style={{ gridColumn: '4 / span 1' }}>
                           <ZoneSlotDisplay card={opponentExtraMonsterCard} label="Extra Monster Zone" />
