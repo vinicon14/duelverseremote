@@ -940,7 +940,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       )}
 
       {/* Controls bar — hidden for pure receive-only spectators */}
-      {(!isSpectator || audioBroadcastOnly) && !mobileArenaMode && (
+      {(!isSpectator || audioBroadcastOnly) && (
         <div className="absolute bottom-1.5 sm:bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 sm:gap-2 z-20">
           <Button
             variant="outline"

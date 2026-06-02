@@ -5,8 +5,6 @@ import { DuelRoomAudioControls } from "@/components/duel/DuelRoomAudioControls";
 
 interface Props {
   active: boolean;
-  onToggleMyDeck: (open: boolean) => void;
-  onToggleOpponentDeck: (open: boolean) => void;
   onRequestSplitVideo?: () => void;
   myLp?: number;
   opponentLp?: number;
@@ -16,8 +14,6 @@ interface Props {
 
 export const MobileArenaLayout = ({
   active,
-  onToggleMyDeck,
-  onToggleOpponentDeck,
   onRequestSplitVideo,
   myLp,
   opponentLp,
@@ -27,15 +23,13 @@ export const MobileArenaLayout = ({
   useEffect(() => {
     if (!active) return;
 
-    onToggleMyDeck(true);
-    onToggleOpponentDeck(true);
     onRequestSplitVideo?.();
     document.body.classList.add("mobile-arena-active");
 
     return () => {
       document.body.classList.remove("mobile-arena-active");
     };
-  }, [active, onToggleMyDeck, onToggleOpponentDeck, onRequestSplitVideo]);
+  }, [active, onRequestSplitVideo]);
 
   if (!active) return null;
 

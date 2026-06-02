@@ -1002,9 +1002,10 @@ const DuelRoom = () => {
     !!isParticipant &&
     !isJudge &&
     isYgoStyleTcg(duel?.tcg_type);
+  const mobileDigitalArenaOpen = mobileArenaActive && showDeckViewer;
 
   // Broadcast deck-open state to opponent & listen for opponent's deck state
-  const myDeckIsOpen = showDeckViewer || showMagicViewer || showPokemonViewer || mobileArenaActive;
+  const myDeckIsOpen = showDeckViewer || showMagicViewer || showPokemonViewer;
   const myDeckIsOpenRef = useRef(myDeckIsOpen);
   myDeckIsOpenRef.current = myDeckIsOpen;
   
@@ -1096,14 +1097,14 @@ const DuelRoom = () => {
   }, [myDeckIsOpen]);
 
   return (
-    <div className={mobileArenaActive ? "h-[100dvh] overflow-hidden bg-transparent" : "min-h-screen bg-transparent"}>
+    <div className="min-h-screen bg-transparent">
       <NoMonetagAds />
-      {!hideControls && !mobileArenaActive && <Navbar />}
+      {!hideControls && <Navbar />}
       
-      <main className={mobileArenaActive ? "p-0 h-full" : "px-2 sm:px-4 pt-16 sm:pt-20 pb-2 sm:pb-4"}>
-        <div className={mobileArenaActive ? "h-full relative" : "h-[calc(100vh-80px)] sm:h-[calc(100vh-100px)] relative"}>
+      <main className="px-2 sm:px-4 pt-16 sm:pt-20 pb-2 sm:pb-4">
+        <div className="h-[calc(100vh-80px)] sm:h-[calc(100vh-100px)] relative">
           {/* Video Call - WebRTC nativo com deck overlays integrados */}
-          <div className={mobileArenaActive ? "h-full w-full overflow-hidden bg-card relative" : "h-full w-full rounded-lg overflow-hidden bg-card shadow-2xl border border-primary/20 relative"}>
+          <div className="h-full w-full rounded-lg overflow-hidden bg-card shadow-2xl border border-primary/20 relative">
             {videoReady && currentUser && id ? (
               <WebRTCVideoCall
                 ref={webrtcRef}
@@ -1117,7 +1118,7 @@ const DuelRoom = () => {
                 audioBroadcastOnly={!!isJudge}
                 creatorId={duel?.creator_id}
                 onLayoutChange={setVideoLayout}
-                mobileArenaMode={mobileArenaActive}
+                mobileArenaMode={mobileDigitalArenaOpen}
                 spectatorLpOverlay={isSpectator ? {
                   localLabel: duel.creator?.username || 'Player 1',
                   localLp: player1LP,
@@ -1135,7 +1136,7 @@ const DuelRoom = () => {
                 remoteDeckOpen={
                   isSpectator && !isJudge
                     ? opponentPlayerDeckOpen
-                    : (mobileArenaActive || opponentDeckOpen) && isParticipant && !isJudge
+                    : opponentDeckOpen && isParticipant && !isJudge
                 }
                 localDeckContent={
                   isSpectator && !isJudge && currentUser && id && duel && ((duel as any)?.max_players || 2) <= 2 ? (
@@ -1145,11 +1146,11 @@ const DuelRoom = () => {
                       opponentUsername={duel.creator?.username || 'Jogador 1'}
                       filterOpponentId={duel.creator_id || undefined}
                       embedded
-                      mobileArenaMode={mobileArenaActive}
+                      mobileArenaMode={mobileDigitalArenaOpen}
                     />
                   ) : myDeckIsOpen && isParticipant && !isJudge ? (
                     <>
-                      {isYgoStyleTcg(duel?.tcg_type) && (showDeckViewer || mobileArenaActive) && (
+                      {isYgoStyleTcg(duel?.tcg_type) && showDeckViewer && (
                         <>
                           <input
                             ref={fileInputRef}
@@ -1178,7 +1179,7 @@ const DuelRoom = () => {
                             }
                             embedded
                             tcgType={duel?.tcg_type}
-                            mobileArenaMode={mobileArenaActive}
+                            mobileArenaMode={mobileDigitalArenaOpen}
                           />
                         </>
                       )}
@@ -1215,7 +1216,7 @@ const DuelRoom = () => {
                       }
                       filterOpponentId={isSpectator ? (duel.opponent_id || undefined) : undefined}
                       embedded
-                      mobileArenaMode={mobileArenaActive}
+                      mobileArenaMode={mobileDigitalArenaOpen}
                     />
                   ) : undefined
                 }
@@ -1252,7 +1253,7 @@ const DuelRoom = () => {
           </div>
 
           {/* Botão de Sair e Timer - Fixo no canto superior direito */}
-          <div className={mobileArenaActive ? "hidden" : "absolute top-2 sm:top-4 right-2 sm:right-4 z-50 flex flex-col sm:flex-row gap-2 items-end sm:items-center"}>
+          <div className="absolute top-2 sm:top-4 right-2 sm:right-4 z-50 flex flex-col sm:flex-row gap-2 items-end sm:items-center">
             {!hideControls && (
               <>
                 {/* Badge de juiz + Timer */}
@@ -1431,7 +1432,7 @@ const DuelRoom = () => {
       </main>
 
       {/* Calculadora Flutuante - Apenas participantes e juízes, não espectadores */}
-      {duel && currentUser && !isSpectator && !mobileArenaActive && (
+      {duel && currentUser && !isSpectator && (
         <FloatingCalculator
           player1Name={duel.creator?.username || 'Player 1'}
           player2Name={duel.opponent?.username || 'Player 2'}
@@ -1454,23 +1455,21 @@ const DuelRoom = () => {
       )}
 
       {/* Roster do Discord (se a sala foi criada/sincronizada via call de voz) */}
-      {duel?.id && !mobileArenaActive && <DiscordVoiceRoster duelId={duel.id} />}
+      {duel?.id && <DiscordVoiceRoster duelId={duel.id} />}
 
       {/* Audio controls — sempre disponíveis na sala de duelo (música global). */}
-      {!hideControls && !mobileArenaActive && (
+      {!hideControls && (
         <div className="fixed top-2 left-2 z-[60] sm:hidden">
           <DuelRoomAudioControls compact />
         </div>
       )}
-      <div className={mobileArenaActive ? "hidden" : "hidden sm:block fixed bottom-4 left-4 z-[60]"}>
+      <div className="hidden sm:block fixed bottom-4 left-4 z-[60]">
         <DuelRoomAudioControls compact />
       </div>
 
       {/* Mobile Arena (Pass 1) — portrait phone: vertical layout, focus no campo. */}
       <MobileArenaLayout
-        active={mobileArenaActive}
-        onToggleMyDeck={(open) => setShowDeckViewer(open)}
-        onToggleOpponentDeck={(open) => setOpponentDeckOpen(open)}
+        active={mobileDigitalArenaOpen}
         onRequestSplitVideo={() => setVideoLayout("side-by-side")}
         myLp={currentUser?.id === duel?.creator_id ? player1LP : player2LP}
         opponentLp={currentUser?.id === duel?.creator_id ? player2LP : player1LP}
