@@ -1446,8 +1446,56 @@ const DuelRoom = () => {
       {/* Roster do Discord (se a sala foi criada/sincronizada via call de voz) */}
       {duel?.id && <DiscordVoiceRoster duelId={duel.id} />}
 
+      {/* Audio controls — sempre disponíveis na sala de duelo (música global). */}
+      {!hideControls && (
+        <div className="fixed top-2 left-2 z-[60] sm:hidden">
+          <DuelRoomAudioControls compact />
+        </div>
+      )}
+      <div className="hidden sm:block fixed bottom-4 left-4 z-[60]">
+        <DuelRoomAudioControls compact />
+      </div>
+
+      {/* Mobile Arena (Pass 1) — portrait phone: vertical layout, focus no campo. */}
+      <MobileArenaLayout
+        active={
+          useIsMobileArena() &&
+          !!isParticipant &&
+          !isJudge &&
+          isYgoStyleTcg(duel?.tcg_type)
+        }
+        onToggleMyDeck={(open) => setShowDeckViewer(open)}
+        onToggleOpponentDeck={(open) => setOpponentDeckOpen(open)}
+        onRequestPipVideo={() => setVideoLayout("pip")}
+        onOpenHand={() => setShowDeckViewer(true)}
+        onDrawCard={() => setShowDeckViewer(true)}
+        onOpenGraveyard={() => setShowDeckViewer(true)}
+        onOpenBanished={() => setShowDeckViewer(true)}
+        myLp={currentUser?.id === duel?.creator_id ? player1LP : player2LP}
+        opponentLp={currentUser?.id === duel?.creator_id ? player2LP : player1LP}
+        focusMode={hideControls}
+        onToggleFocusMode={(v) => setHideControls(v)}
+      />
+
     </div>
   );
+};
+
+// Small helper hook: true only when mobile AND portrait orientation.
+const useIsMobileArena = () => {
+  const isMobile = useIsMobile();
+  const [portrait, setPortrait] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia("(orientation: portrait)").matches;
+  });
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mql = window.matchMedia("(orientation: portrait)");
+    const onChange = () => setPortrait(mql.matches);
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, []);
+  return isMobile && portrait;
 };
 
 export default DuelRoom;
