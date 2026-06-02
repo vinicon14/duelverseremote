@@ -244,21 +244,58 @@ const scheduleLoop = () => {
   }, Math.max(50, (totalDur - 0.15) * 1000));
 };
 
-export const startBgm = (volume = 0.32) => {
+const BGM_VOLUME_KEY = "duelverse_bgm_volume";
+const DEFAULT_VOLUME = 0.32;
+
+export const getBgmVolume = (): number => {
+  try {
+    const raw = localStorage.getItem(BGM_VOLUME_KEY);
+    if (raw === null) return DEFAULT_VOLUME;
+    const v = parseFloat(raw);
+    if (!Number.isFinite(v)) return DEFAULT_VOLUME;
+    return Math.max(0, Math.min(1, v));
+  } catch {
+    return DEFAULT_VOLUME;
+  }
+};
+
+export const setBgmVolume = (volume: number) => {
+  const v = Math.max(0, Math.min(1, volume));
+  try {
+    localStorage.setItem(BGM_VOLUME_KEY, String(v));
+  } catch {}
+  if (masterGain && ctx) {
+    try {
+      masterGain.gain.cancelScheduledValues(ctx.currentTime);
+      masterGain.gain.setValueAtTime(masterGain.gain.value, ctx.currentTime);
+      masterGain.gain.linearRampToValueAtTime(v, ctx.currentTime + 0.1);
+    } catch {
+      masterGain.gain.value = v;
+    }
+  }
+  try {
+    window.dispatchEvent(
+      new CustomEvent("duelverse:bgm-volume", { detail: { volume: v } })
+    );
+  } catch {}
+};
+
+export const startBgm = (volume?: number) => {
   const c = getCtx();
   if (!c) return;
+  const vol = volume ?? getBgmVolume();
   if (playing) {
-    if (masterGain) masterGain.gain.value = volume;
+    if (masterGain) masterGain.gain.value = vol;
     return;
   }
 
   // Cadeia: dry + wet(reverb) -> master -> destination
   if (!masterGain) {
     masterGain = c.createGain();
-    masterGain.gain.value = volume;
+    masterGain.gain.value = vol;
     masterGain.connect(c.destination);
   } else {
-    masterGain.gain.value = volume;
+    masterGain.gain.value = vol;
   }
 
   if (!convolver) {
