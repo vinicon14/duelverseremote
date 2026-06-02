@@ -24,7 +24,7 @@ import { supabase } from "@/integrations/supabase/client";
 const STORAGE_KEY = "duelverse_bgm_muted";
 
 const isBlockedRoute = (pathname: string) => {
-  if (pathname.startsWith("/duel/")) return true;
+  // Duel rooms keep BGM (controllable via DuelRoomAudioControls).
   if (pathname.startsWith("/pro")) return true;
   if (pathname.startsWith("/discord-activity")) return true;
   if (pathname.startsWith("/share/")) return true;
