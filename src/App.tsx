@@ -21,6 +21,7 @@ import { NotificationPrompt } from "@/components/NotificationPrompt";
 import { DynamicTheme } from "@/components/DynamicTheme";
 import { ProAdCleaner } from "@/components/ProAdCleaner";
 import { NativePermissionPrompt } from "@/components/NativePermissionPrompt";
+import { OnboardingTutorial } from "@/components/OnboardingTutorial";
 import { AnimatedBackground } from "@/components/AnimatedBackground";
 import { PageNavigationArrows } from "@/components/PageNavigationArrows";
 import { UnifiedPageLoader } from "@/components/UnifiedPageLoader";
@@ -235,6 +236,7 @@ const MainAppContent = () => {
       <DuelCallNotification currentUserId={user?.id} />
       <NotificationPrompt />
       <NativePermissionPrompt userId={user?.id} />
+      <OnboardingTutorial userId={user?.id} />
       <AnimatedBackground />
       <PageNavigationArrows />
       <UnifiedPageLoader />
