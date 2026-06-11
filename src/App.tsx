@@ -235,6 +235,7 @@ const MainAppContent = () => {
       <DuelCallNotification currentUserId={user?.id} />
       <NotificationPrompt />
       <NativePermissionPrompt userId={user?.id} />
+      <OnboardingTutorial userId={user?.id} />
       <AnimatedBackground />
       <PageNavigationArrows />
       <UnifiedPageLoader />
