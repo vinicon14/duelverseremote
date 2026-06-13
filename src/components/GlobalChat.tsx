@@ -60,6 +60,8 @@ export const GlobalChat = () => {
           filter: `tcg_type=eq.${activeTcg}`,
         },
         async (payload) => {
+          // Isola o chat por idioma/região: cada usuário só vê mensagens do seu idioma.
+          if (payload.new.language_code && payload.new.language_code !== userLanguage) return;
           const isDiscordMessage = payload.new.source_type === "discord";
           const { data: userData } = payload.new.user_id
             ? await supabase
