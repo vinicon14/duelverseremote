@@ -2626,6 +2626,14 @@ export type Database = {
         Returns: Json
       }
       sync_storage_recordings: { Args: never; Returns: undefined }
+      tournament_pay_winner: {
+        Args: { p_amount: number; p_tournament_id: string; p_winner_id: string }
+        Returns: Json
+      }
+      tournament_refund_participant: {
+        Args: { p_participant_id: string; p_tournament_id: string }
+        Returns: Json
+      }
       transfer_duelcoins: {
         Args: { p_amount: number; p_receiver_id: string }
         Returns: Json

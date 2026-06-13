@@ -40,34 +40,30 @@ export const TournamentWinnerSelector = ({
     setLoading(true);
 
     try {
-      // Buscar perfil do vencedor
+      // Pagamento atômico via RPC SECURITY DEFINER: valida que o caller é o
+      // criador do torneio, credita o vencedor e registra a transação.
+      const { data: rpcData, error: payError } = await (supabase.rpc as any)(
+        'tournament_pay_winner',
+        {
+          p_tournament_id: tournamentId,
+          p_winner_id: selectedWinnerId,
+          p_amount: prizePool,
+        }
+      );
+
+      if (payError) throw payError;
+      const payResult = rpcData as { success?: boolean; message?: string } | null;
+      if (!payResult?.success) {
+        throw new Error(payResult?.message || 'Falha ao pagar prêmio');
+      }
+
+      // Buscar nome do vencedor apenas para feedback no toast.
       const { data: winnerProfile } = await supabase
         .from('profiles')
-        .select('username, duelcoins_balance')
+        .select('username')
         .eq('user_id', selectedWinnerId)
         .single();
-
-      // Atualizar saldo do vencedor
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ duelcoins_balance: (winnerProfile?.duelcoins_balance || 0) + prizePool })
-        .eq('user_id', selectedWinnerId);
-
-      if (updateError) throw updateError;
-
-      // Registrar transação - usar tournament como origem (não null, para lógica funcionar)
-      const { error: transactionError } = await supabase
-        .from('duelcoins_transactions')
-        .insert({
-          sender_id: tournamentId, // Usar tournament como "remetente"
-          receiver_id: selectedWinnerId,
-          amount: prizePool,
-          transaction_type: 'tournament_prize',
-          tournament_id: tournamentId,
-          description: `Prêmio do torneo`
-        });
-
-      if (transactionError) console.log('Transaction error (pode já existir):', transactionError);
+      const transactionError = null;
 
       // Marcar participante como vencedor
       await supabase
