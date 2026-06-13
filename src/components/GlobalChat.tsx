@@ -216,6 +216,7 @@ export const GlobalChat = () => {
         .from("global_chat_messages")
         .select("*")
         .eq("tcg_type", activeTcg)
+        .eq("language_code", userLanguage)
         .order("created_at", { ascending: false })
         .limit(30);
 
