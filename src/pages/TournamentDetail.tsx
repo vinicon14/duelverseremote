@@ -458,12 +458,14 @@ const TournamentDetail = () => {
 
         if (deleteError) throw new Error("Erro ao remover participante: " + deleteError.message);
 
-        // Refund entry fee if applicable
+        // Reembolso atômico via RPC SECURITY DEFINER (valida criador, credita o
+        // participante e registra a transação no servidor).
         if (tournament.entry_fee > 0) {
-          await supabase
-            .from('profiles')
-            .update({ duelcoins_balance: (supabase as any).raw('duelcoins_balance + ' + tournament.entry_fee) })
-            .eq('user_id', participantId);
+          const { error: refundError } = await (supabase.rpc as any)(
+            'tournament_refund_participant',
+            { p_tournament_id: id, p_participant_id: participantId }
+          );
+          if (refundError) console.warn('Reembolso falhou:', refundError);
         }
       }
 
