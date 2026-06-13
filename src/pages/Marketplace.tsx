@@ -327,113 +327,54 @@ export default function Marketplace() {
     try {
       const total = cart.reduce((sum, item) => sum + item.product.price_duelcoins * item.quantity, 0);
 
-      // Check balance first
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('duelcoins_balance')
-        .eq('user_id', user.id)
-        .single();
+      // Compra atômica via RPC SECURITY DEFINER — uma única chamada cobre
+      // todos os itens, valida saldo/estoque, debita, credita vendedores
+      // terceiros, registra transações e adiciona ao inventário.
+      const { data, error } = await (supabase.rpc as any)('purchase_marketplace_items', {
+        p_items: cart.map((item) => ({
+          product_id: item.product.id,
+          quantity: item.quantity,
+        })),
+      });
 
-      if (!profile || profile.duelcoins_balance < total) {
-        toast({ title: "Saldo insuficiente", description: "Você não tem DuelCoins suficientes", variant: "destructive" });
-        setPurchasing(false);
-        return;
+      if (error) throw new Error(error.message);
+      const result = data as { success?: boolean; message?: string } | null;
+      if (!result?.success) {
+        throw new Error(result?.message || 'Falha ao processar compra');
       }
 
-      // Deduct balance
-      await supabase
-        .from('profiles')
-        .update({ duelcoins_balance: profile.duelcoins_balance - total })
-        .eq('user_id', user.id);
+      // Notificações de admin (não-crítico).
+      try {
+        const buyerItems = cart.map((item) => item.product.name).join(', ');
+        const { data: buyerData } = await supabase
+          .from('profiles')
+          .select('username')
+          .eq('user_id', user.id)
+          .single();
 
-      // Reduce stock for each item
-      for (const item of cart) {
-        if (item.product.stock !== null) {
-          await supabase
-            .from('marketplace_products')
-            .update({ stock: item.product.stock - item.quantity })
-            .eq('id', item.product.id);
+        const { data: admins } = await supabase
+          .from('user_roles')
+          .select('user_id')
+          .eq('role', 'admin');
+
+        if (admins && admins.length > 0) {
+          const notifications = admins.map((admin) => ({
+            user_id: admin.user_id,
+            type: 'marketplace_purchase',
+            title: 'Nova Compra no Carrinho! 💰',
+            message: `${buyerData?.username || 'Um usuário'} comprou ${cart.length} itens (${buyerItems}) por ${total} DuelCoins`,
+            read: false,
+          }));
+          await supabase.from('notifications').insert(notifications);
         }
+      } catch (notifyErr) {
+        console.warn('Notificação de admins falhou:', notifyErr);
       }
 
-      // Record transaction
-      await supabase
-        .from('duelcoins_transactions')
-        .insert({
-          sender_id: user.id,
-          amount: total,
-          transaction_type: 'marketplace_purchase',
-          description: `Compra no carrinho: ${cart.length} itens`
-        });
-
-      // Process each item
-      for (const item of cart) {
-        // Add to inventory
-        const { error: inventoryError } = await supabase
-          .from('user_inventory' as any)
-          .insert({
-            user_id: user.id,
-            product_id: item.product.id,
-            quantity: item.quantity,
-            is_used: false
-          });
-
-        if (inventoryError) {
-          console.error('Inventory error:', inventoryError);
-          throw new Error(`Erro ao adicionar ${item.product.name} ao inventário: ${inventoryError.message}`);
-        }
-
-        // Record purchase
-        const { error: purchaseError } = await supabase
-          .from('marketplace_purchases')
-          .insert({
-            user_id: user.id,
-            product_id: item.product.id,
-            quantity: item.quantity,
-            total_price: item.product.price_duelcoins * item.quantity,
-            status: 'completed'
-          });
-
-        if (purchaseError) {
-          console.error('Purchase error:', purchaseError);
-          throw new Error(`Erro ao registrar compra de ${item.product.name}: ${purchaseError.message}`);
-        }
-      }
-
-      // Notify about the purchase
-      const buyerItems = cart.map(item => item.product.name).join(', ');
-      
-      // Get buyer username
-      const { data: buyerData } = await supabase
-        .from('profiles')
-        .select('username')
-        .eq('user_id', user.id)
-        .single();
-
-      // Notify all admins about the purchase
-      const { data: admins } = await supabase
-        .from('user_roles')
-        .select('user_id')
-        .eq('role', 'admin');
-
-      if (admins && admins.length > 0) {
-        const notifications = admins.map((admin) => ({
-          user_id: admin.user_id,
-          type: 'marketplace_purchase',
-          title: 'Nova Compra no Carrinho! 💰',
-          message: `${buyerData?.username || 'Um usuário'} comprou ${cart.length} itens (${buyerItems}) por ${total} DuelCoins`,
-          read: false
-        }));
-
-        await supabase
-          .from('notifications')
-          .insert(notifications);
-      }
-
-      toast({ 
-        title: "Compra realizada! ✅", 
+      toast({
+        title: "Compra realizada! ✅",
         description: `Total: ${total} DuelCoins! Verifique em Meus Itens.`,
-        duration: 5000
+        duration: 5000,
       });
       setCart([]);
       setPurchaseSuccess(true);
