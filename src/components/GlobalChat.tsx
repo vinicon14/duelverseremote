@@ -50,7 +50,7 @@ export const GlobalChat = () => {
     fetchMessages();
 
     const channel = supabase
-      .channel(`global-chat-${activeTcg}`)
+      .channel(`global-chat-${activeTcg}-${userLanguage}`)
       .on(
         "postgres_changes",
         {
@@ -60,6 +60,8 @@ export const GlobalChat = () => {
           filter: `tcg_type=eq.${activeTcg}`,
         },
         async (payload) => {
+          // Isola o chat por idioma/região: cada usuário só vê mensagens do seu idioma.
+          if (payload.new.language_code && payload.new.language_code !== userLanguage) return;
           const isDiscordMessage = payload.new.source_type === "discord";
           const { data: userData } = payload.new.user_id
             ? await supabase
@@ -214,6 +216,7 @@ export const GlobalChat = () => {
         .from("global_chat_messages")
         .select("*")
         .eq("tcg_type", activeTcg)
+        .eq("language_code", userLanguage)
         .order("created_at", { ascending: false })
         .limit(30);
 

@@ -99,11 +99,16 @@ export default function Matchmaking() {
         .delete()
         .lt('expires_at', new Date().toISOString());
 
+      // Isola a fila por região/idioma do usuário (servidor BR vê BR, EUA vê EUA, etc.)
+      const userLanguage =
+        (typeof window !== 'undefined' ? localStorage.getItem('userLanguage') : null) || 'en';
+
       const { count } = await supabase
         .from('matchmaking_queue')
         .select('*', { count: 'exact', head: true })
         .eq('status', 'waiting')
         .eq('tcg_type', activeTcg)
+        .eq('language_code', userLanguage)
         .gt('expires_at', new Date().toISOString());
       setPlayersInQueue(count || 0);
     } catch (error) {
