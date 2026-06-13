@@ -64,23 +64,21 @@ i18n
   .init({
     resources,
     fallbackLng: "en",
-    lng: localStorage.getItem("userLanguage") || "en",
     supportedLngs: SUPPORTED,
     nonExplicitSupportedLngs: true,
     interpolation: { escapeValue: false },
     detection: {
-      // Inglês é o padrão. Só usamos navigator/htmlTag se o usuário já tiver
-      // salvo uma preferência explícita; caso contrário ficamos em "en".
-      order: ["localStorage"],
+      // 1) preferência explícita do usuário, 2) idioma do navegador,
+      // 3) tag <html lang>. O geo (ipapi) é resolvido depois via setLanguageFromGeo.
+      order: ["localStorage", "navigator", "htmlTag"],
       lookupLocalStorage: "userLanguage",
       caches: ["localStorage"],
     },
   });
 
-// Normalize apenas se o usuário JÁ tinha uma preferência salva.
-// Para novos usuários (sem localStorage), mantemos "en" como padrão.
+// Normaliza o idioma detectado para um dos suportados (ex.: en-GB -> en, pt -> pt-PT).
 const stored = typeof localStorage !== "undefined" ? localStorage.getItem("userLanguage") : null;
-const initial = stored ? normalizeBrowserLanguage(i18n.language) : "en";
+const initial = normalizeBrowserLanguage(stored || i18n.language);
 if (initial !== i18n.language) {
   i18n.changeLanguage(initial);
 }
@@ -89,11 +87,25 @@ applyDirection(initial);
 i18n.on("languageChanged", (lng) => applyDirection(lng));
 
 /**
- * Geo detection DESATIVADA: o padrão é sempre inglês.
- * Mantemos a função exportada como no-op para preservar o contrato com main.tsx.
+ * Best-effort geo detection via ipapi.co. Só aplica se o usuário ainda não
+ * tem preferência salva — assim respeitamos a escolha manual em Perfil.
  */
 export const setLanguageFromGeo = async (): Promise<void> => {
-  /* intencionalmente vazio — inglês é o padrão global */
+  try {
+    if (typeof localStorage === "undefined") return;
+    if (localStorage.getItem("userLanguage")) return; // já tem preferência
+    const res = await fetch("https://ipapi.co/json/", { cache: "no-store" });
+    if (!res.ok) return;
+    const data = await res.json();
+    const country: string | undefined = data?.country_code || data?.country;
+    if (!country) return;
+    const lng = getLanguageForCountry(country) as LanguageCode;
+    localStorage.setItem("userCountry", country);
+    localStorage.setItem("userLanguage", lng);
+    await i18n.changeLanguage(lng);
+  } catch {
+    /* offline ou bloqueado — ignora silenciosamente */
+  }
 };
 
 export const setAppLanguage = async (lng: LanguageCode): Promise<void> => {
