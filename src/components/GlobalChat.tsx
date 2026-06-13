@@ -50,7 +50,7 @@ export const GlobalChat = () => {
     fetchMessages();
 
     const channel = supabase
-      .channel(`global-chat-${activeTcg}`)
+      .channel(`global-chat-${activeTcg}-${userLanguage}`)
       .on(
         "postgres_changes",
         {
