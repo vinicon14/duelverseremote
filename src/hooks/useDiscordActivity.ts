@@ -33,14 +33,14 @@ const isInsideDiscord = () => {
 };
 
 const getDiscordActivityTokenEndpoint = () => {
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const supabaseUrl = import.meta.env.NEXT_PUBLIC_SUPABASE_URL;
   if (!supabaseUrl) return null;
   return `${supabaseUrl.replace(/\/$/, "")}/functions/v1/discord-activity-token`;
 };
 
 const patchDiscordMappingsIfConfigured = (patchUrlMappings: PatchUrlMappings) => {
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-  const supabasePrefix = import.meta.env.VITE_DISCORD_SUPABASE_MAPPING_PREFIX;
+  const supabaseUrl = import.meta.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabasePrefix = import.meta.env.NEXT_PUBLIC_DISCORD_SUPABASE_MAPPING_PREFIX;
 
   if (!supabaseUrl || !supabasePrefix || typeof patchUrlMappings !== "function") return;
 

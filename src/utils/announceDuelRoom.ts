@@ -63,7 +63,7 @@ export async function announceDuelRoom({
     // 2. Discord — mensagem persistente, capturando IDs para cleanup posterior
     try {
       const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/discord-bridge`,
+        `${import.meta.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/discord-bridge`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -105,7 +105,7 @@ export async function announceDuelRoom({
 export async function cleanupDuelDiscordMessages(duelId: string): Promise<void> {
   try {
     await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/discord-bridge`,
+      `${import.meta.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/discord-bridge`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },

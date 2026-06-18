@@ -90,11 +90,11 @@ export const Navbar = () => {
         const { data: sess } = await supabase.auth.getSession();
         const token = sess.session?.access_token;
         if (token) {
-          await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/discord-presence`, {
+          await fetch(`${import.meta.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/discord-presence`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+              apikey: import.meta.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
               Authorization: `Bearer ${token}`,
             },
             body: JSON.stringify({ playing: false }),
