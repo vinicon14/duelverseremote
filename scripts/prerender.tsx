@@ -13,15 +13,8 @@ import { Window } from "happy-dom";
 import { resources } from "../src/i18n/resources";
 import { SUPPORTED_LANGUAGES } from "../src/i18n/countries";
 
-import Landing from "../src/pages/Landing";
-import LandingSEO from "../src/pages/LandingSEO";
-import HowToPlayYugiohOnline from "../src/pages/HowToPlayYugiohOnline";
-import DeckBuilderYugioh from "../src/pages/DeckBuilderYugioh";
-import YugiohTournaments from "../src/pages/YugiohTournaments";
-import YugiohRemoteDuel from "../src/pages/YugiohRemoteDuel";
-import DuelverseDiscord from "../src/pages/DuelverseDiscord";
-
-// Provide minimal browser globals for i18n and any other browser-only code
+// Provide minimal browser globals BEFORE any page-component imports so that
+// code evaluated at module scope (i18n detection, supabase init) can run safely.
 const win = new Window({ url: "https://duelverse.site" });
 
 function setGlobal(name: string, value: unknown) {
@@ -53,14 +46,14 @@ interface PublicPage {
   component: React.ComponentType;
 }
 
-const PUBLIC_PAGES: PublicPage[] = [
-  { route: "/", component: Landing },
-  { route: "/duelverse-yugioh-duelos-online", component: LandingSEO },
-  { route: "/como-jogar-yugioh-online", component: HowToPlayYugiohOnline },
-  { route: "/deck-builder-yugioh", component: DeckBuilderYugioh },
-  { route: "/torneios-yugioh-online", component: YugiohTournaments },
-  { route: "/yugioh-remote-duel", component: YugiohRemoteDuel },
-  { route: "/duelverse-discord", component: DuelverseDiscord },
+const PUBLIC_ROUTES: string[] = [
+  "/",
+  "/duelverse-yugioh-duelos-online",
+  "/como-jogar-yugioh-online",
+  "/deck-builder-yugioh",
+  "/torneios-yugioh-online",
+  "/yugioh-remote-duel",
+  "/duelverse-discord",
 ];
 
 const LANGUAGES = SUPPORTED_LANGUAGES.map((l) => l.code);
@@ -134,7 +127,7 @@ async function renderPage(
 
 function buildSitemap(): string {
   const urls: string[] = [];
-  for (const { route } of PUBLIC_PAGES) {
+  for (const route of PUBLIC_ROUTES) {
     for (const lang of LANGUAGES) {
       const prefix = lang === DEFAULT_LANG ? "" : `/${lang}`;
       const cleanRoute = route === "/" ? "" : route;
@@ -152,6 +145,29 @@ function buildSitemap(): string {
 }
 
 async function main() {
+  // Dynamically import page modules AFTER happy-dom globals are set,
+  // so any module-level browser-API access in app code runs safely.
+  const [Landing, LandingSEO, HowToPlayYugiohOnline, DeckBuilderYugioh, YugiohTournaments, YugiohRemoteDuel, DuelverseDiscord] =
+    await Promise.all([
+      import("../src/pages/Landing").then(m => m.default),
+      import("../src/pages/LandingSEO").then(m => m.default),
+      import("../src/pages/HowToPlayYugiohOnline").then(m => m.default),
+      import("../src/pages/DeckBuilderYugioh").then(m => m.default),
+      import("../src/pages/YugiohTournaments").then(m => m.default),
+      import("../src/pages/YugiohRemoteDuel").then(m => m.default),
+      import("../src/pages/DuelverseDiscord").then(m => m.default),
+    ]) as React.ComponentType[];
+
+  const pages: PublicPage[] = [
+    { route: "/", component: Landing },
+    { route: "/duelverse-yugioh-duelos-online", component: LandingSEO },
+    { route: "/como-jogar-yugioh-online", component: HowToPlayYugiohOnline },
+    { route: "/deck-builder-yugioh", component: DeckBuilderYugioh },
+    { route: "/torneios-yugioh-online", component: YugiohTournaments },
+    { route: "/yugioh-remote-duel", component: YugiohRemoteDuel },
+    { route: "/duelverse-discord", component: DuelverseDiscord },
+  ];
+
   const templatePath = path.join(DIST_DIR, "index.html");
   if (!fs.existsSync(templatePath)) {
     console.error("dist/index.html not found. Run 'vite build' first.");
@@ -163,7 +179,7 @@ async function main() {
   const baseTemplate = fs.readFileSync(templatePath, "utf8");
 
   console.log("Prerendering public pages...");
-  for (const { route, component } of PUBLIC_PAGES) {
+  for (const { route, component } of pages) {
     for (const lang of LANGUAGES) {
       process.stdout.write(`  ${route} [${lang}] ... `);
       try {
@@ -179,7 +195,7 @@ async function main() {
 
   const sitemap = buildSitemap();
   fs.writeFileSync(path.join(DIST_DIR, "sitemap.xml"), sitemap);
-  console.log(`Wrote sitemap.xml with ${LANGUAGES.length * PUBLIC_PAGES.length} URLs`);
+  console.log(`Wrote sitemap.xml with ${LANGUAGES.length * PUBLIC_ROUTES.length} URLs`);
 }
 
 main();
