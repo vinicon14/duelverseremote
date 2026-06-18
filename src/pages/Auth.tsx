@@ -256,25 +256,19 @@ const Auth = () => {
   const handleGoogleSignIn = async () => {
     try {
       setLoading(true);
-      const redirectTo = `${window.location.origin}/`;
-      console.log('[AUTH] Google sign-in redirectTo:', redirectTo);
-      console.log('[AUTH] Supabase URL:', import.meta.env.VITE_SUPABASE_URL);
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo,
+          redirectTo: `${window.location.origin}/`,
           queryParams: {
             access_type: 'offline',
-            prompt: 'consent',
-          }
-        }
+            prompt: 'select_account',
+          },
+        },
       });
 
-      console.log('[AUTH] Google signInWithOAuth response:', { data, error });
       if (error) throw error;
-      if (!data?.url) {
-        throw new Error('No OAuth URL returned from Supabase');
-      }
+      if (!data?.url) throw new Error('Google login indisponível no momento.');
     } catch (error: any) {
       console.error('❌ [AUTH] Erro no login com Google:', error);
       toast({
