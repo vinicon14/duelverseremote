@@ -8,7 +8,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
-    "build": "vite build && (tsx --tsconfig tsconfig.app.json scripts/prerender.tsx || true)",
+    "build": "vite build",
+    "build:prerender": "tsx --tsconfig tsconfig.app.json scripts/prerender.tsx",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
