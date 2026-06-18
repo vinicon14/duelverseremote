@@ -143,7 +143,7 @@ function buildSitemap(): string {
 
   const urlEntries = urls
     .map(
-      (url) => `  <url>\n    <loc>${url}</loc>\n    <changefreq>weekly</changefreq>\n    <priority>${url === BASE_URL + "/" ? "1.0" : "0.8"}</priority>\n  </url>`
+      (url) => `  <url>\n    <loc>${url}</loc>\n    <changefreq>weekly</changefreq>\n    <priority>${url === BASE_URL || url === `${BASE_URL}/` ? "1.0" : "0.8"}</priority>\n  </url>`
     )
     .join("\n");
 
