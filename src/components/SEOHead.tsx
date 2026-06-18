@@ -77,14 +77,20 @@ export const SEOHead = ({
       <link rel="canonical" href={canonical} />
 
       {/* hreflang alternates so Google serves the right language per region */}
-      {SUPPORTED_LANGUAGES.map((l) => (
-        <link
-          key={l.code}
-          rel="alternate"
-          hrefLang={l.code.toLowerCase()}
-          href={`${BASE_URL}${path}?lang=${l.code}`}
-        />
-      ))}
+      {SUPPORTED_LANGUAGES.map((l) => {
+        const isDefault = l.code === "pt-BR";
+        const href = isDefault
+          ? `${BASE_URL}${path}`
+          : `${BASE_URL}/${l.code}${path}`;
+        return (
+          <link
+            key={l.code}
+            rel="alternate"
+            hrefLang={l.code.toLowerCase()}
+            href={href}
+          />
+        );
+      })}
       <link rel="alternate" hrefLang="x-default" href={`${BASE_URL}${path}`} />
 
       {/* Open Graph */}
