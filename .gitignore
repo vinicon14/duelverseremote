@@ -25,3 +25,4 @@ release-builds2/
 *.njsproj
 *.sln
 *.sw?
+.vercel
