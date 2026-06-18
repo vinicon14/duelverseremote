@@ -10,12 +10,10 @@
 import i18n from "i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
 import { initReactI18next } from "react-i18next";
-
 import { resources } from "./resources";
+import { RTL_LANGUAGES, normalizeBrowserLanguage, getLanguageForCountry, type LanguageCode } from "./countries";
 
 export { resources } from "./resources";
-
-import { RTL_LANGUAGES, normalizeBrowserLanguage, getLanguageForCountry, type LanguageCode } from "./countries";
 
 const SUPPORTED = Object.keys(resources);
 
