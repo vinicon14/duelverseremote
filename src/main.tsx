@@ -15,8 +15,20 @@ installGoogleTranslateCompat();
 // Kick off best-effort geo detection (no-op if user already has a saved language)
 setLanguageFromGeo();
 
-createRoot(document.getElementById("root")!).render(
-  <HelmetProvider>
-    <App />
-  </HelmetProvider>
-);
+console.log('Duelverse: initializing React root...');
+const rootEl = document.getElementById("root");
+if (!rootEl) {
+  console.error('Duelverse: #root element not found');
+} else {
+  try {
+    createRoot(rootEl).render(
+      <HelmetProvider>
+        <App />
+      </HelmetProvider>
+    );
+    console.log('Duelverse: React root rendered');
+  } catch (err) {
+    console.error('Duelverse: failed to render React root', err);
+    rootEl.innerHTML = '<div style="padding:20px;color:#fff;background:#000;min-height:100vh;font-family:sans-serif;"><h1>Erro crítico</h1><pre>' + (err && err.message ? err.message : String(err)) + '</pre></div>';
+  }
+}

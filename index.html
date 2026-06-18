@@ -213,6 +213,37 @@
 
   <body>
     <div id="root"></div>
+    <script>
+      // Force clear stale service workers/caches that may serve broken bundles
+      (function() {
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(function(regs) {
+            regs.forEach(function(r) {
+              console.log('Duelverse: unregistering stale service worker', r.scope);
+              r.unregister();
+            });
+          });
+        }
+        if ('caches' in window) {
+          caches.keys().then(function(names) {
+            names.forEach(function(name) {
+              console.log('Duelverse: deleting stale cache', name);
+              caches.delete(name);
+            });
+          });
+        }
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Global error handler to help diagnose white screen issues
+      window.addEventListener('error', function(e) {
+        console.error('Duelverse runtime error:', e.error);
+        var root = document.getElementById('root');
+        if (root && root.children.length === 0) {
+          root.innerHTML = '<div style="padding: 20px; font-family: sans-serif; color: #fff; background: #000; min-height: 100vh;"><h1>Erro ao carregar o Duelverse</h1><p>Detalhes técnicos:</p><pre style="background: #111; padding: 10px; overflow: auto;">' + (e.message || e.error && e.error.message || 'Erro desconhecido') + '</pre><p>Tente: <button onclick="location.reload(true)" style="padding: 10px 20px; margin-right: 10px;">Recarregar</button> <button onclick="localStorage.clear(); sessionStorage.clear(); caches.keys().then(function(names){return Promise.all(names.map(function(name){return caches.delete(name);}));}).then(function(){location.reload(true);});" style="padding: 10px 20px;">Limpar cache e recarregar</button></p></div>';
+        }
+      });
+    </script>
   </body>
 </html>
