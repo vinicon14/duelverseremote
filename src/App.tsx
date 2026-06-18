@@ -63,6 +63,7 @@ const HowToPlayYugiohOnline = lazy(() => import("./pages/HowToPlayYugiohOnline")
 const DeckBuilderYugioh = lazy(() => import("./pages/DeckBuilderYugioh"));
 const YugiohTournaments = lazy(() => import("./pages/YugiohTournaments"));
 const YugiohRemoteDuel = lazy(() => import("./pages/YugiohRemoteDuel"));
+const DuelverseDiscord = lazy(() => import("./pages/DuelverseDiscord"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const DeckBuilder = lazy(() => import("./pages/DeckBuilder"));
@@ -114,6 +115,7 @@ const RouterContent = ({ user }: { user: User | null }) => {
         <Route path="/deck-builder-yugioh" element={<DeckBuilderYugioh />} />
         <Route path="/torneios-yugioh-online" element={<YugiohTournaments />} />
         <Route path="/yugioh-remote-duel" element={<YugiohRemoteDuel />} />
+        <Route path="/duelverse-discord" element={<DuelverseDiscord />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="/auth" element={<Auth />} />
         <Route path="/duels" element={<Duels />} />

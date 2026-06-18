@@ -11,6 +11,7 @@ const SEO_LINKS = [
   { href: "/deck-builder-yugioh", label: "Deck Builder Yu-Gi-Oh" },
   { href: "/torneios-yugioh-online", label: "Torneios Yu-Gi-Oh Online" },
   { href: "/yugioh-remote-duel", label: "Yu-Gi-Oh Remote Duel" },
+  { href: "/duelverse-discord", label: "Discord Duelverse" },
   { href: "/duels", label: "Duelos ao Vivo" },
   { href: "/matchmaking", label: "Matchmaking" },
   { href: "/tournaments", label: "Torneios" },
