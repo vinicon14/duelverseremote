@@ -6,7 +6,8 @@
  * to pull the right translated title/description/keywords from the
  * `seo` namespace in each locale.
  */
-import { Helmet } from "react-helmet-async";
+import * as HelmetAsync from "react-helmet-async";
+const Helmet = HelmetAsync.Helmet;
 import { useTranslation } from "react-i18next";
 import { SUPPORTED_LANGUAGES } from "@/i18n/countries";
 
