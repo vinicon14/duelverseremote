@@ -89,12 +89,12 @@ export const DiscordLinkCard = ({ embedded = false }: DiscordLinkCardProps) => {
         return;
       }
 
-      const resp = await fetch(`${import.meta.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/discord-oauth-start`, {
+      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/discord-oauth-start`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${session.session.access_token}`,
-          apikey: import.meta.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
         },
         body: JSON.stringify({
           origin: window.location.origin,

@@ -256,8 +256,8 @@ const Friends = () => {
 
       // Enviar push notification para oponente offline
       try {
-        const supabaseUrl = import.meta.env.NEXT_PUBLIC_SUPABASE_URL;
-        const anonKey = import.meta.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
         // Buscar username do desafiante
         const { data: myProfile } = await supabase

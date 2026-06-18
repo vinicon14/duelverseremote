@@ -131,11 +131,11 @@ export const GlobalChat = () => {
 
   const fetchDiscordServers = async () => {
     try {
-      const response = await fetch(`${import.meta.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/discord-bridge`, {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/discord-bridge`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
         body: JSON.stringify({ type: "get_config" }),
       });
@@ -305,7 +305,7 @@ export const GlobalChat = () => {
 
       if (bridgeEnabled) {
         try {
-          const bridgeResponse = await fetch(`${import.meta.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/discord-bridge`, {
+          const bridgeResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/discord-bridge`, {
             method: "POST",
             body: JSON.stringify({
               type: "chat_to_discord",
