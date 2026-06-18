@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTranslation } from "react-i18next";
 
 import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable/index";
 import { useToast } from "@/hooks/use-toast";
 import { Swords, Sparkles, Zap } from "lucide-react";
 import { detectPlatform } from "@/utils/platformDetection";
@@ -256,25 +257,16 @@ const Auth = () => {
   const handleGoogleSignIn = async () => {
     try {
       setLoading(true);
-      const redirectTo = `${window.location.origin}/`;
-      console.log('[AUTH] Google sign-in redirectTo:', redirectTo);
-      console.log('[AUTH] Supabase URL:', import.meta.env.VITE_SUPABASE_URL);
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          }
-        }
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: window.location.origin,
+        extraParams: {
+          access_type: "offline",
+          prompt: "select_account",
+        },
       });
 
-      console.log('[AUTH] Google signInWithOAuth response:', { data, error });
-      if (error) throw error;
-      if (!data?.url) {
-        throw new Error('No OAuth URL returned from Supabase');
-      }
+      if (result.error) throw result.error;
+      if (result.redirected) return;
     } catch (error: any) {
       console.error('❌ [AUTH] Erro no login com Google:', error);
       toast({
