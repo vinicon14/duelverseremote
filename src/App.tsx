@@ -36,6 +36,7 @@ import { isRunningInsideDiscord } from "@/hooks/useDiscordActivity";
 import { TcgProvider, normalizeTcgType, useTcg } from "./contexts/TcgContext";
 const Home = lazy(() => import("./pages/Home"));
 const Landing = lazy(() => import("./pages/Landing"));
+const LandingSEO = lazy(() => import("./pages/LandingSEO"));
 const Admin = lazy(() => import("./pages/Admin"));
 const Auth = lazy(() => import("./pages/Auth"));
 const Duels = lazy(() => import("./pages/Duels"));
@@ -104,6 +105,7 @@ const RouterContent = ({ user }: { user: User | null }) => {
       <Routes>
         <Route path="/" element={<HomePage user={user} />} />
         <Route path="/landing" element={<Landing />} />
+        <Route path="/duelverse-yugioh-duelos-online" element={<LandingSEO />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="/auth" element={<Auth />} />
         <Route path="/duels" element={<Duels />} />

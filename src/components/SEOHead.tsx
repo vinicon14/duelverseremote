@@ -41,6 +41,10 @@ interface SEOHeadProps {
   /** Current path (defaults to "/"). */
   path?: string;
   image?: string;
+  /** Enable Yu-Gi-Oh! VideoGame schema markup */
+  gameSchema?: boolean;
+  /** Optional breadcrumb schema */
+  breadcrumbs?: { name: string; path: string }[];
 }
 
 export const SEOHead = ({
@@ -50,6 +54,8 @@ export const SEOHead = ({
   keywords,
   path = "/",
   image,
+  gameSchema = false,
+  breadcrumbs,
 }: SEOHeadProps) => {
   const { t, i18n } = useTranslation();
   const lng = i18n.language;
@@ -105,6 +111,47 @@ export const SEOHead = ({
         inLanguage: lng,
         description: finalDescription,
       })}</script>
+
+      {gameSchema && (
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "VideoGame",
+          name: "Duelverse - Yu-Gi-Oh! Duels Online",
+          description: finalDescription,
+          url: canonical,
+          image: ogImage,
+          genre: ["Card Game", "Strategy", "Yu-Gi-Oh!"],
+          gamePlatform: ["Web Browser", "Windows", "Android", "iOS"],
+          applicationCategory: "GameApplication",
+          operatingSystem: ["Windows", "Android", "iOS", "Linux", "macOS"],
+          author: {
+            "@type": "Organization",
+            name: "Duelverse",
+            url: BASE_URL,
+          },
+          publisher: {
+            "@type": "Organization",
+            name: "Duelverse",
+          },
+          isPartOf: {
+            "@type": "Game",
+            name: "Yu-Gi-Oh! Trading Card Game",
+          },
+        })}</script>
+      )}
+
+      {breadcrumbs && breadcrumbs.length > 0 && (
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          itemListElement: breadcrumbs.map((crumb, index) => ({
+            "@type": "ListItem",
+            position: index + 1,
+            name: crumb.name,
+            item: `${BASE_URL}${crumb.path}`,
+          })),
+        })}</script>
+      )}
     </Helmet>
   );
 };
