@@ -23,6 +23,11 @@ Sitemap: https://duelverse.site/sitemap.xml
 
 # Important Pages
 # Homepage: https://duelverse.site/
+# SEO Landing: https://duelverse.site/duelverse-yugioh-duelos-online
+# How to Play: https://duelverse.site/como-jogar-yugioh-online
+# Deck Builder: https://duelverse.site/deck-builder-yugioh
+# Tournaments: https://duelverse.site/torneios-yugioh-online
+# Remote Duel: https://duelverse.site/yugioh-remote-duel
 # Duels: https://duelverse.site/duels
 # Tournaments: https://duelverse.site/tournaments
 # Ranking: https://duelverse.site/ranking
