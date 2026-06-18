@@ -17,18 +17,24 @@ Allow: /
 
 User-agent: *
 Allow: /
+Disallow: /duels
+Disallow: /matchmaking
+Disallow: /tournaments
+Disallow: /ranking
+Disallow: /deck-builder
+Disallow: /news
+Disallow: /auth
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /settings
 
 # Sitemap
 Sitemap: https://duelverse.site/sitemap.xml
 
-# Important Pages
-# Homepage: https://duelverse.site/
-# SEO Landing: https://duelverse.site/duelverse-yugioh-duelos-online
-# How to Play: https://duelverse.site/como-jogar-yugioh-online
-# Deck Builder: https://duelverse.site/deck-builder-yugioh
-# Tournaments: https://duelverse.site/torneios-yugioh-online
-# Remote Duel: https://duelverse.site/yugioh-remote-duel
-# Duels: https://duelverse.site/duels
-# Tournaments: https://duelverse.site/tournaments
-# Ranking: https://duelverse.site/ranking
-# Matchmaking: https://duelverse.site/matchmaking
+# Public pages (indexable)
+# /duelverse-yugioh-duelos-online
+# /como-jogar-yugioh-online
+# /deck-builder-yugioh
+# /torneios-yugioh-online
+# /yugioh-remote-duel
+# /duelverse-discord
