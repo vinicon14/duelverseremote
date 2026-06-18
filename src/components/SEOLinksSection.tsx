@@ -12,12 +12,6 @@ const SEO_LINKS = [
   { href: "/torneios-yugioh-online", label: "Torneios Yu-Gi-Oh Online" },
   { href: "/yugioh-remote-duel", label: "Yu-Gi-Oh Remote Duel" },
   { href: "/duelverse-discord", label: "Discord Duelverse" },
-  { href: "/duels", label: "Duelos ao Vivo" },
-  { href: "/matchmaking", label: "Matchmaking" },
-  { href: "/tournaments", label: "Torneios" },
-  { href: "/ranking", label: "Ranking Global" },
-  { href: "/deck-builder", label: "Construtor de Decks" },
-  { href: "/news", label: "Notícias Yu-Gi-Oh" },
 ];
 
 export const SEOLinksSection = () => {
