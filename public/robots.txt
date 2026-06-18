@@ -1,9 +1,15 @@
-# Duelverse - Plataforma de Duelos Yu-Gi-Oh Remote Duel
+# Duelverse - Global Yu-Gi-Oh Remote Duel Platform
 # https://duelverse.site
 
 User-agent: Googlebot
 Allow: /
 Crawl-delay: 1
+
+User-agent: Googlebot-Image
+Allow: /
+
+user-agent: Googlebot-News
+Allow: /news
 
 User-agent: Bingbot
 Allow: /
@@ -15,26 +21,56 @@ Allow: /
 User-agent: facebookexternalhit
 Allow: /
 
+User-agent: LinkedInBot
+Allow: /
+
+User-agent: DuckDuckBot
+Allow: /
+
+User-agent: YandexBot
+Allow: /
+
+User-agent: Applebot
+Allow: /
+
+# AI crawlers (allowed so the brand surfaces in AI Overviews / ChatGPT / Perplexity)
+User-agent: GPTBot
+Allow: /
+User-agent: ChatGPT-User
+Allow: /
+User-agent: OAI-SearchBot
+Allow: /
+User-agent: PerplexityBot
+Allow: /
+User-agent: Google-Extended
+Allow: /
+User-agent: ClaudeBot
+Allow: /
+User-agent: Claude-Web
+Allow: /
+
 User-agent: *
 Allow: /
-Disallow: /duels
-Disallow: /matchmaking
-Disallow: /tournaments
-Disallow: /ranking
-Disallow: /deck-builder
-Disallow: /news
-Disallow: /auth
-Disallow: /dashboard
+# Block only user-private / session-based routes
 Disallow: /admin
+Disallow: /auth
+Disallow: /profile
+Disallow: /profile-select
+Disallow: /judge-panel
+Disallow: /my-tournaments
+Disallow: /my-items
+Disallow: /tournament-manager
+Disallow: /transfer-history
+Disallow: /create-tournament
+Disallow: /create-weekly-tournament
+Disallow: /duelcoins
+Disallow: /buy-duelcoins
+Disallow: /chat/
+Disallow: /duel/
+Disallow: /join/
+Disallow: /m/
+Disallow: /pro/
+Disallow: /discord-activity
 Disallow: /settings
 
-# Sitemap
 Sitemap: https://duelverse.site/sitemap.xml
-
-# Public pages (indexable)
-# /duelverse-yugioh-duelos-online
-# /como-jogar-yugioh-online
-# /deck-builder-yugioh
-# /torneios-yugioh-online
-# /yugioh-remote-duel
-# /duelverse-discord
