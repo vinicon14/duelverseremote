@@ -15,17 +15,11 @@ const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-// Defensive: avoid crashing the whole app if env vars are missing in production.
-// The app can still render static/SEO pages and show a friendly error later.
-let safeUrl = SUPABASE_URL;
-let safeKey = SUPABASE_PUBLISHABLE_KEY;
-if (!safeUrl || !safeKey) {
-  console.error('Duelverse: Supabase env vars are missing. Some features will be unavailable.');
-  safeUrl = safeUrl || 'https://placeholder.supabase.co';
-  safeKey = safeKey || 'placeholder';
+if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
+  console.error('Duelverse: VITE_SUPABASE_URL or VITE_SUPABASE_PUBLISHABLE_KEY is missing.');
 }
 
-export const supabase = createClient<Database>(safeUrl, safeKey, {
+export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     storage: localStorage,
     persistSession: true,
