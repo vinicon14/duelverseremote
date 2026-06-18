@@ -6,6 +6,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { SEOHead } from "@/components/SEOHead";
 import { Swords, ChevronDown, Crown } from "lucide-react";
+import { SEOLinksSection } from "@/components/SEOLinksSection";
 
 const HowToPlayYugiohOnline = () => {
   return (
@@ -152,6 +153,8 @@ const HowToPlayYugiohOnline = () => {
           </div>
         </div>
       </section>
+
+      <SEOLinksSection />
 
       <footer className="border-t border-border py-10 px-4 relative z-10 mt-16">
         <div className="container mx-auto text-center">

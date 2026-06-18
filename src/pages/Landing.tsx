@@ -17,6 +17,7 @@ import {
   Download, Monitor, Smartphone, Bell } from
 "lucide-react";
 import { SEOHead } from "@/components/SEOHead";
+import { SEOLinksSection } from "@/components/SEOLinksSection";
 
 const Landing = () => {
   const { t } = useTranslation();
@@ -271,6 +272,8 @@ const Landing = () => {
           </Link>
         </div>
       </section>
+
+      <SEOLinksSection />
 
       {/* Footer */}
       <footer className="border-t border-white/10 py-10 px-4 bg-black/40 backdrop-blur-md">

@@ -11,6 +11,7 @@ import {
   Star, TrendingUp, Gamepad2, Crown, ChevronDown,
   Globe, MessageCircle, Monitor, Smartphone
 } from "lucide-react";
+import { SEOLinksSection } from "@/components/SEOLinksSection";
 
 const LandingSEO = () => {
   return (
@@ -431,6 +432,8 @@ const LandingSEO = () => {
 
         </div>
       </section>
+
+      <SEOLinksSection />
 
       {/* Footer */}
       <footer className="border-t border-border py-10 px-4 relative z-10 mt-16">
