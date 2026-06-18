@@ -59,7 +59,6 @@ const VideoShare = lazy(() => import("./pages/VideoShare"));
 const News = lazy(() => import("./pages/News"));
 const InstallApp = lazy(() => import("./pages/InstallApp"));
 const DiscordActivity = lazy(() => import("./pages/DiscordActivity"));
-const LandingSEO = lazy(() => import("./pages/LandingSEO"));
 const HowToPlayYugiohOnline = lazy(() => import("./pages/HowToPlayYugiohOnline"));
 const DeckBuilderYugioh = lazy(() => import("./pages/DeckBuilderYugioh"));
 const YugiohTournaments = lazy(() => import("./pages/YugiohTournaments"));
