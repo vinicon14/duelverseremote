@@ -238,6 +238,124 @@ const LandingSEO = () => {
             </p>
 
             <h2 className="text-3xl md:text-4xl font-bold mb-6 mt-12">
+              A evolução dos duelos de Yu-Gi-Oh: do físico ao online
+            </h2>
+            <p className="text-lg text-muted-foreground leading-relaxed mb-6">
+              Desde o lançamento do mangá por Kazuki Takahashi em 1996, <strong>Yu-Gi-Oh</strong> se tornou um 
+              fenômeno global. O card game físico vendeu bilhões de cartas e criou uma comunidade apaixonada de 
+              colecionadores e competidores. Com a digitalização, surgiram plataformas como <strong>Dueling Book</strong>, 
+              <strong> Yu-Gi-Oh Omega</strong> e o próprio <strong>Yu-Gi-Oh Remote Duel</strong> oficial da Konami.
+            </p>
+            <p className="text-lg text-muted-foreground leading-relaxed mb-6">
+              O <strong>Duelverse</strong> representa a próxima geração dessa evolução. Nossa plataforma mantém a 
+              essência social do jogo físico — ver o oponente, conversar durante a partida, celebrar vitórias — 
+              enquanto oferece a conveniência dos duelos digitais. É a ponte entre o mundo físico e o online, 
+              perfeita para quem quer jogar <strong>yugioh ao vivo</strong> sem sair de casa.
+            </p>
+
+            <h2 className="text-3xl md:text-4xl font-bold mb-6 mt-12">
+              Como montar um deck competitivo de Yu-Gi-Oh
+            </h2>
+            <p className="text-lg text-muted-foreground leading-relaxed mb-6">
+              Construir um deck vencedor é uma das partes mais gratificantes de <strong>Yu-Gi-Oh</strong>. 
+              No formato <strong>YGO Advanced</strong>, um deck competitivo geralmente contém entre 40 e 60 cartas 
+              e segue uma estrutura equilibrada:
+            </p>
+            <ul className="list-disc pl-6 space-y-3 text-lg text-muted-foreground mb-6">
+              <li><strong>Monstros:</strong> o núcleo ofensivo do seu deck, incluindo Normal, Effect, Ritual, Fusion, Synchro, Xyz, Pendulum e Link monsters</li>
+              <li><strong>Magias:</strong> cartas que amplificam sua estratégia, como busca de recursos, remoção de backrow e aceleração de combo</li>
+              <li><strong>Armadilhas:</strong> defesa e controle do campo, essenciais para responder às jogadas do oponente</li>
+              <li><strong>Extra Deck:</strong> monstruos poderosos acessíveis durante o duelo, como Xyz e Link monsters</li>
+              <li><strong>Side Deck:</strong> 15 cartas para adaptar seu deck entre as partidas de um match</li>
+            </ul>
+            <p className="text-lg text-muted-foreground leading-relaxed mb-6">
+              No <Link to="/deck-builder" className="text-primary hover:underline">deck builder do Duelverse</Link>, 
+              você pode montar, salvar e compartilhar seus decks de <strong>YGO Advanced</strong>, Rush Duel e Genesis. 
+              Nossa ferramenta é intuitiva e permite testar diferentes estratégias antes de levar seu deck para o 
+              <Link to="/matchmaking" className="text-primary hover:underline"> matchmaking</Link>.
+            </p>
+
+            <h2 className="text-3xl md:text-4xl font-bold mb-6 mt-12">
+              Estratégias avançadas para vencer em Yu-Gi-Oh Online
+            </h2>
+            <p className="text-lg text-muted-foreground leading-relaxed mb-6">
+              Vencer em <strong>Yu-Gi-Oh online</strong> exige mais do que sorte. Os melhores duelistas dominam 
+              conceitos como controle de recursos, leitura de mão, timing de ativação e gestão de vida. Aqui estão 
+              algumas estratégias essenciais:
+            </p>
+            <h3 className="text-2xl font-semibold mb-4 mt-8">Conheça o meta atual</h3>
+            <p className="text-lg text-muted-foreground leading-relaxed mb-6">
+              O meta de <strong>Yu-Gi-Oh</strong> é definido pelos decks mais populares e vencedores dos torneios. 
+              Acompanhar o meta permite que você prepare seu deck com counters específicos e antecipe as estratégias 
+              dos adversários. No Duelverse, a aba de <Link to="/news" className="text-primary hover:underline">notícias</Link> 
+              traz análises regulares do meta competitivo.
+            </p>
+            <h3 className="text-2xl font-semibold mb-4 mt-8">Pratique com regularidade</h3>
+            <p className="text-lg text-muted-foreground leading-relaxed mb-6">
+              A prática leva à perfeição. Use a fila de <strong>yugioh remote</strong> do Duelverse para duelar 
+              diariamente contra jogadores de diferentes níveis. Quanto mais você joga, mais rápido reconhece 
+              padrões e desenvolve reflexos para respostas ótimas.
+            </p>
+            <h3 className="text-2xl font-semibold mb-4 mt-8">Estude replays e torneios</h3>
+            <p className="text-lg text-muted-foreground leading-relaxed mb-6">
+              Assista a partidas de <strong>yugioh ao vivo</strong> no Duelverse e em canais de conteúdo. Observar 
+              jogadores experientes é uma das formas mais rápidas de aprender novas combinações e linhas de jogo 
+              que você pode incorporar ao seu próprio deck.
+            </p>
+
+            <h2 className="text-3xl md:text-4xl font-bold mb-6 mt-12">
+              Ferramentas completas do Duelverse para duelistas
+            </h2>
+            <p className="text-lg text-muted-foreground leading-relaxed mb-6">
+              O <strong>Duelverse</strong> não é apenas uma plataforma de duelos. É um ecossistema completo para 
+              fãs de <strong>Yu-Gi-Oh online</strong>:
+            </p>
+            <ul className="list-disc pl-6 space-y-3 text-lg text-muted-foreground mb-6">
+              <li><strong>Deck Builder:</strong> crie e organize decks por formato com busca e filtros avançados</li>
+              <li><strong>Matchmaking:</strong> encontre oponentes na fila rápida em segundos</li>
+              <li><strong>Torneios:</strong> campeonatos estruturados com bracket e premiação</li>
+              <li><strong>Ranking:</strong> sistema de pontos e ligas para medir sua evolução</li>
+              <li><strong>Loja e Marketplace:</strong> itens cosméticos, planos PRO e negociação entre jogadores</li>
+              <li><strong>Galeria de Partidas:</strong> grave e compartilhe seus melhores duelos</li>
+              <li><strong>Chat e Amigos:</strong> rede social integrada para conectar duelistas</li>
+            </ul>
+            <p className="text-lg text-muted-foreground leading-relaxed mb-6">
+              Essas ferramentas fazem do <strong>Duelverse</strong> uma alternativa completa ao <strong>Dueling Book</strong> 
+              e ao <strong>Yu-Gi-Oh Omega</strong>, especialmente para quem valoriza interação social e experiências ao vivo.
+            </p>
+
+            <h2 className="text-3xl md:text-4xl font-bold mb-6 mt-12">
+              Torneios de Yu-Gi-Oh Online: do casual ao competitivo
+            </h2>
+            <p className="text-lg text-muted-foreground leading-relaxed mb-6">
+              Os <strong>torneios de Yu-Gi-Oh</strong> são a alma do jogo competitivo. No <strong>Duelverse</strong>, 
+              você encontra eventos para todos os perfis: desde campeonatos casuais para iniciantes até torneios 
+              pagos com premiação em dinheiro e itens raros. Nossa estrutura de bracket é justa, transparente e 
+              acompanha cada fase do torneio em tempo real.
+            </p>
+            <p className="text-lg text-muted-foreground leading-relaxed mb-6">
+              Além dos <strong>torneios semanais</strong>, realizamos eventos especiais, celebrações de novas 
+              expansões e campeonatos regionais. Para quem busca <strong>yugioh ao vivo</strong>, nossas finais são 
+              transmitidas com narração e comentários da comunidade, criando uma experiência similar aos grandes 
+              eventos presenciais como YCS e WCQ.
+            </p>
+
+            <h2 className="text-3xl md:text-4xl font-bold mb-6 mt-12">
+              Comunidade Discord e redes sociais do Duelverse
+            </h2>
+            <p className="text-lg text-muted-foreground leading-relaxed mb-6">
+              O <strong>yugioh discord</strong> oficial do Duelverse reúne jogadores de todos os cantos do mundo. 
+              Lá você pode encontrar parceiros de treino, formar equipes para torneios, discutir o meta, compartilhar 
+              decks e receber suporte da equipe. A comunidade é ativa 24 horas por dia, com canais organizados por 
+              idioma, formato e nível de experiência.
+            </p>
+            <p className="text-lg text-muted-foreground leading-relaxed mb-6">
+              Além do Discord, estamos presentes no YouTube, TikTok, Instagram e Twitter/X. Nosso conteúdo inclui 
+              highlights de <strong>yugioh ao vivo</strong>, tutoriais de deck, análises de meta e entrevistas com 
+              os melhores duelistas da plataforma. Siga-nos e faça parte do crescimento do <strong>Duelverse</strong>.
+            </p>
+
+            <h2 className="text-3xl md:text-4xl font-bold mb-6 mt-12">
               Domine o meta de Yu-Gi-Oh com o Duelverse
             </h2>
             <p className="text-lg text-muted-foreground leading-relaxed mb-6">
@@ -251,6 +369,28 @@ const LandingSEO = () => {
               o <strong>Duelverse</strong> foi feito para todos os duelistas. Junte-se a nós e transforme sua 
               experiência de <strong>Yu-Gi-Oh online</strong>.
             </p>
+
+            <h2 className="text-3xl md:text-4xl font-bold mb-6 mt-12">
+              Leia mais sobre Yu-Gi-Oh online
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 not-prose">
+              <Link to="/como-jogar-yugioh-online" className="p-4 rounded-lg bg-card border border-border hover:border-primary/40 transition-all">
+                <h3 className="text-xl font-semibold mb-2 text-primary">Como Jogar Yu-Gi-Oh Online</h3>
+                <p className="text-muted-foreground">Guia completo para iniciantes que querem começar a duelar pela internet.</p>
+              </Link>
+              <Link to="/deck-builder-yugioh" className="p-4 rounded-lg bg-card border border-border hover:border-primary/40 transition-all">
+                <h3 className="text-xl font-semibold mb-2 text-primary">Deck Builder Yu-Gi-Oh</h3>
+                <p className="text-muted-foreground">Aprenda a montar decks competitivos para Advanced, Rush Duel e Genesis.</p>
+              </Link>
+              <Link to="/torneios-yugioh-online" className="p-4 rounded-lg bg-card border border-border hover:border-primary/40 transition-all">
+                <h3 className="text-xl font-semibold mb-2 text-primary">Torneios de Yu-Gi-Oh Online</h3>
+                <p className="text-muted-foreground">Descubra como participar de campeonatos e subir no ranking global.</p>
+              </Link>
+              <Link to="/yugioh-remote-duel" className="p-4 rounded-lg bg-card border border-border hover:border-primary/40 transition-all">
+                <h3 className="text-xl font-semibold mb-2 text-primary">Yu-Gi-Oh Remote Duel</h3>
+                <p className="text-muted-foreground">Tudo sobre duelos remotos ao vivo com videochamada no Duelverse.</p>
+              </Link>
+            </div>
 
           </article>
 

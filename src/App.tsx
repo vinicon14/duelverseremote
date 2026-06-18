@@ -59,6 +59,11 @@ const VideoShare = lazy(() => import("./pages/VideoShare"));
 const News = lazy(() => import("./pages/News"));
 const InstallApp = lazy(() => import("./pages/InstallApp"));
 const DiscordActivity = lazy(() => import("./pages/DiscordActivity"));
+const LandingSEO = lazy(() => import("./pages/LandingSEO"));
+const HowToPlayYugiohOnline = lazy(() => import("./pages/HowToPlayYugiohOnline"));
+const DeckBuilderYugioh = lazy(() => import("./pages/DeckBuilderYugioh"));
+const YugiohTournaments = lazy(() => import("./pages/YugiohTournaments"));
+const YugiohRemoteDuel = lazy(() => import("./pages/YugiohRemoteDuel"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const DeckBuilder = lazy(() => import("./pages/DeckBuilder"));
@@ -106,6 +111,10 @@ const RouterContent = ({ user }: { user: User | null }) => {
         <Route path="/" element={<HomePage user={user} />} />
         <Route path="/landing" element={<Landing />} />
         <Route path="/duelverse-yugioh-duelos-online" element={<LandingSEO />} />
+        <Route path="/como-jogar-yugioh-online" element={<HowToPlayYugiohOnline />} />
+        <Route path="/deck-builder-yugioh" element={<DeckBuilderYugioh />} />
+        <Route path="/torneios-yugioh-online" element={<YugiohTournaments />} />
+        <Route path="/yugioh-remote-duel" element={<YugiohRemoteDuel />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="/auth" element={<Auth />} />
         <Route path="/duels" element={<Duels />} />
