@@ -122,12 +122,12 @@ import { useTranslation } from "react-i18next";
 import { SUPPORTED_LANGUAGES } from "@/i18n/countries";
 
 interface LocalizedRouteProps {
-  element: React.ComponentType;
+  component: React.ComponentType;
 }
 
-const supported = new Set(SUPPORTED_LANGUAGES.map((l) => l.code));
+const supported = new Set<LanguageCode>(SUPPORTED_LANGUAGES.map((l) => l.code));
 
-export const LocalizedRoute = ({ element: Element }: LocalizedRouteProps) => {
+export const LocalizedRoute = ({ component: Component }: LocalizedRouteProps) => {
   const { lang } = useParams<{ lang: string }>();
   const { i18n } = useTranslation();
 
@@ -137,7 +137,7 @@ export const LocalizedRoute = ({ element: Element }: LocalizedRouteProps) => {
     }
   }, [lang, i18n]);
 
-  return <Element />;
+  return <Component />;
 };
 
 export default LocalizedRoute;
@@ -171,12 +171,12 @@ Inside `<Routes>`, after the existing public routes, add:
 
 ```tsx
 {/* Localized public SEO routes */}
-<Route path="/:lang/duelverse-yugioh-duelos-online" element={<LocalizedRoute element={LandingSEO} />} />
-<Route path="/:lang/como-jogar-yugioh-online" element={<LocalizedRoute element={HowToPlayYugiohOnline} />} />
-<Route path="/:lang/deck-builder-yugioh" element={<LocalizedRoute element={DeckBuilderYugioh} />} />
-<Route path="/:lang/torneios-yugioh-online" element={<LocalizedRoute element={YugiohTournaments} />} />
-<Route path="/:lang/yugioh-remote-duel" element={<LocalizedRoute element={YugiohRemoteDuel} />} />
-<Route path="/:lang/duelverse-discord" element={<LocalizedRoute element={DuelverseDiscord} />} />
+<Route path="/:lang/duelverse-yugioh-duelos-online" element={<LocalizedRoute component={LandingSEO} />} />
+<Route path="/:lang/como-jogar-yugioh-online" element={<LocalizedRoute component={HowToPlayYugiohOnline} />} />
+<Route path="/:lang/deck-builder-yugioh" element={<LocalizedRoute component={DeckBuilderYugioh} />} />
+<Route path="/:lang/torneios-yugioh-online" element={<LocalizedRoute component={YugiohTournaments} />} />
+<Route path="/:lang/yugioh-remote-duel" element={<LocalizedRoute component={YugiohRemoteDuel} />} />
+<Route path="/:lang/duelverse-discord" element={<LocalizedRoute component={DuelverseDiscord} />} />
 ```
 
 Keep the existing non-localized routes (they remain the default, usually pt-BR).
