@@ -82,6 +82,7 @@ const ProHome = lazy(() => import("./pages/pro/ProHome"));
 const ProDuels = lazy(() => import("./pages/pro/ProDuels"));
 const ProTournaments = lazy(() => import("./pages/pro/ProTournaments"));
 import { ProRouteGuard } from "./components/ProRouteGuard";
+import { LocalizedRoute } from "./components/LocalizedRoute";
 
 const queryClient = new QueryClient();
 
@@ -116,6 +117,15 @@ const RouterContent = ({ user }: { user: User | null }) => {
         <Route path="/torneios-yugioh-online" element={<YugiohTournaments />} />
         <Route path="/yugioh-remote-duel" element={<YugiohRemoteDuel />} />
         <Route path="/duelverse-discord" element={<DuelverseDiscord />} />
+
+        {/* Localized public SEO routes */}
+        <Route path="/:lang/duelverse-yugioh-duelos-online" element={<LocalizedRoute component={LandingSEO} />} />
+        <Route path="/:lang/como-jogar-yugioh-online" element={<LocalizedRoute component={HowToPlayYugiohOnline} />} />
+        <Route path="/:lang/deck-builder-yugioh" element={<LocalizedRoute component={DeckBuilderYugioh} />} />
+        <Route path="/:lang/torneios-yugioh-online" element={<LocalizedRoute component={YugiohTournaments} />} />
+        <Route path="/:lang/yugioh-remote-duel" element={<LocalizedRoute component={YugiohRemoteDuel} />} />
+        <Route path="/:lang/duelverse-discord" element={<LocalizedRoute component={DuelverseDiscord} />} />
+
         <Route path="/admin" element={<Admin />} />
         <Route path="/auth" element={<Auth />} />
         <Route path="/duels" element={<Duels />} />
