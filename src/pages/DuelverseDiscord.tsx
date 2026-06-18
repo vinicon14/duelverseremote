@@ -9,7 +9,7 @@ import { SEOHead } from "@/components/SEOHead";
 import { SEOLinksSection } from "@/components/SEOLinksSection";
 import { MessageCircle, Users, Video, Swords, Crown, Globe } from "lucide-react";
 
-const DISCORD_INVITE_URL = "https://discord.gg/A7GqCGNGNn";
+const DISCORD_INVITE_URL = "https://discord.gg/36dEAWAAR";
 
 const DuelverseDiscord = () => {
   return (
@@ -25,19 +25,7 @@ const DuelverseDiscord = () => {
         ]}
       />
 
-      <style>{`
-        @keyframes tcg-color-cycle {
-          0%, 100% { background: linear-gradient(135deg, hsl(270 80% 55% / 0.12) 0%, hsl(315 85% 60% / 0.08) 50%, transparent 100%); }
-          33% { background: linear-gradient(135deg, hsl(45 95% 60% / 0.12) 0%, hsl(15 90% 50% / 0.08) 50%, transparent 100%); }
-          66% { background: linear-gradient(135deg, hsl(50 100% 50% / 0.12) 0%, hsl(210 90% 50% / 0.08) 50%, transparent 100%); }
-        }
-      `}</style>
-      <div className="fixed inset-0 pointer-events-none z-0" style={{ 
-        background: 'radial-gradient(ellipse at center, hsl(222 47% 11% / 0.97) 0%, hsl(222 47% 8% / 0.99) 50%, hsl(240 40% 5% / 1) 100%)',
-        animation: 'tcg-color-cycle 9s ease-in-out infinite'
-      }} />
-
-      <section className="relative pt-24 pb-16 sm:pt-32 sm:pb-24 px-4 overflow-hidden">
+      <section className="relative pt-24 pb-16 sm:pt-32 sm:pb-24 px-4 overflow-hidden bg-transparent">
         <div className="container mx-auto relative z-10 text-center max-w-4xl">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary/40 mb-6">
             <MessageCircle className="w-4 h-4 text-primary" />

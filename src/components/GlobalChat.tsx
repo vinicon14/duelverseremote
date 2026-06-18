@@ -37,7 +37,7 @@ export const GlobalChat = () => {
   const [mentionSuggestions, setMentionSuggestions] = useState<{ username: string; user_id: string }[]>([]);
   const [showMentions, setShowMentions] = useState(false);
   const [bridgeEnabled, setBridgeEnabled] = useState(false);
-  const [inviteLink, setInviteLink] = useState("https://discord.gg/A7GqCGNGNn");
+  const [inviteLink, setInviteLink] = useState("https://discord.gg/36dEAWAAR");
   const [discordDialogOpen, setDiscordDialogOpen] = useState(false);
   const [partnerServersOpen, setPartnerServersOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -437,7 +437,7 @@ export const GlobalChat = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-52">
-                <DropdownMenuItem onSelect={() => window.open(inviteLink || "https://discord.gg/A7GqCGNGNn", "_blank", "noopener,noreferrer")}>
+                <DropdownMenuItem onSelect={() => window.open(inviteLink || "https://discord.gg/36dEAWAAR", "_blank", "noopener,noreferrer")}>
                   <ExternalLink className="mr-2 h-4 w-4" />
                   Adicionar servidor
                 </DropdownMenuItem>

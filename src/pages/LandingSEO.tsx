@@ -26,25 +26,7 @@ const LandingSEO = () => {
         ]}
       />
 
-      <style>{`
-        @keyframes tcg-color-cycle {
-          0%, 100% { background: linear-gradient(135deg, hsl(270 80% 55% / 0.12) 0%, hsl(315 85% 60% / 0.08) 50%, transparent 100%); }
-          33% { background: linear-gradient(135deg, hsl(45 95% 60% / 0.12) 0%, hsl(15 90% 50% / 0.08) 50%, transparent 100%); }
-          66% { background: linear-gradient(135deg, hsl(50 100% 50% / 0.12) 0%, hsl(210 90% 50% / 0.08) 50%, transparent 100%); }
-        }
-        @keyframes tcg-text-cycle {
-          0%, 100% { color: hsl(270 80% 65%); text-shadow: 0 0 20px hsl(270 80% 55% / 0.5); }
-          33% { color: hsl(35 90% 55%); text-shadow: 0 0 20px hsl(35 90% 50% / 0.5); }
-          66% { color: hsl(45 100% 55%); text-shadow: 0 0 20px hsl(45 100% 50% / 0.5); }
-        }
-        .tcg-text-animate { animation: tcg-text-cycle 9s ease-in-out infinite; }
-      `}</style>
-      <div className="fixed inset-0 pointer-events-none z-0" style={{ 
-        background: 'radial-gradient(ellipse at center, hsl(222 47% 11% / 0.97) 0%, hsl(222 47% 8% / 0.99) 50%, hsl(240 40% 5% / 1) 100%)',
-        animation: 'tcg-color-cycle 9s ease-in-out infinite'
-      }} />
-
-      {/* Hero Section */}
+      {/* Hero Section -- uses default bg-background like the rest of the platform */}
       <section className="relative pt-24 pb-16 sm:pt-32 sm:pb-24 px-4 overflow-hidden">
         <div className="container mx-auto relative z-10">
           <div className="max-w-4xl mx-auto text-center space-y-6 sm:space-y-8">
@@ -54,7 +36,7 @@ const LandingSEO = () => {
             </div>
             
             <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold leading-tight animate-fade-in-up delay-100">
-              <span className="tcg-text-animate">Duelverse</span> — A Melhor Plataforma de{" "}
+              <span className="text-primary">Duelverse</span> — A Melhor Plataforma de{" "}
               <span className="text-foreground">Yu-Gi-Oh Online</span> para Duelos ao Vivo
             </h1>
             
@@ -95,7 +77,7 @@ const LandingSEO = () => {
           <article className="prose prose-invert max-w-none">
             
             <h2 id="o-que-e-duelverse" className="text-3xl md:text-4xl font-bold mb-6">
-              O que é o <span className="tcg-text-animate">Duelverse</span>?
+              O que é o <span className="text-primary">Duelverse</span>?
             </h2>
             <p className="text-lg text-muted-foreground leading-relaxed mb-6">
               O <strong>Duelverse</strong> é uma plataforma completa de <strong>Yu-Gi-Oh online</strong> 
