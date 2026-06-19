@@ -97,7 +97,7 @@ const Ranking = () => {
         ) : rankings.length === 0 ? (
           <Card className="card-mystic text-center py-12">
             <TrendingUp className="w-16 h-16 mx-auto text-primary/50 mb-4" />
-            <h3 className="text-xl font-semibold mb-2">{t('ranking.empty')}</h3>
+            <h2 className="text-xl font-semibold mb-2">{t('ranking.empty')}</h2>
             <p className="text-muted-foreground">
               {t('ranking.emptyDesc')}
             </p>

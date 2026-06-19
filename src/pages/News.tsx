@@ -64,9 +64,35 @@ export default function News() {
     }
   };
 
+  // CollectionPage + ItemList JSON-LD for News (helps Google understand the feed)
+  const newsSchema = news.length > 0 ? {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "name": "Notícias Duelverse — Yu-Gi-Oh, atualizações de meta e torneios",
+    "url": "https://duelverse.site/news",
+    "mainEntity": {
+      "@type": "ItemList",
+      "itemListElement": news.slice(0, 20).map((item, i) => ({
+        "@type": "ListItem",
+        "position": i + 1,
+        "item": {
+          "@type": "NewsArticle",
+          "headline": item.title,
+          "datePublished": item.created_at,
+          "image": item.image_url || undefined,
+          "author": { "@type": "Person", "name": item.author?.username || "Duelverse" },
+          "publisher": { "@type": "Organization", "name": "Duelverse", "logo": { "@type": "ImageObject", "url": "https://duelverse.site/icons/icon-512x512.png" } },
+        },
+      })),
+    },
+  } : null;
+
   return (
     <div className="min-h-screen bg-transparent">
       <SEOHead tKey="news" path="/news" />
+      {newsSchema && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(newsSchema) }} />
+      )}
       <Navbar />
       
       <main className="container mx-auto px-4 pt-20 sm:pt-24 pb-8">
@@ -111,9 +137,9 @@ export default function News() {
                   </div>
                 )}
                 <CardContent className="p-4">
-                  <h3 className="font-semibold text-lg line-clamp-2 mb-2 group-hover:text-primary transition-colors">
+                  <h2 className="font-semibold text-lg line-clamp-2 mb-2 group-hover:text-primary transition-colors">
                     {item.title}
-                  </h3>
+                  </h2>
                   <p className="text-sm text-muted-foreground mb-3">
                     {new Date(item.created_at).toLocaleDateString(i18n.language, {
                       day: '2-digit',
@@ -133,7 +159,7 @@ export default function News() {
         ) : (
           <div className="text-center py-16">
             <Newspaper className="w-16 h-16 mx-auto mb-4 opacity-50 text-muted-foreground" />
-            <h3 className="text-xl font-semibold mb-2">{t('news.noNews')}</h3>
+            <h2 className="text-xl font-semibold mb-2">{t('news.noNews')}</h2>
             <p className="text-muted-foreground">
               {t('news.noNewsDesc')}
             </p>

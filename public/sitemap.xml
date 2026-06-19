@@ -6,22 +6,22 @@
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://duelverse.site/"/>
-    <xhtml:link rel="alternate" hreflang="en" href="https://duelverse.site/?lang=en"/>
-    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://duelverse.site/?lang=pt-BR"/>
-    <xhtml:link rel="alternate" hreflang="pt-PT" href="https://duelverse.site/?lang=pt-PT"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://duelverse.site/?lang=es"/>
-    <xhtml:link rel="alternate" hreflang="fr" href="https://duelverse.site/?lang=fr"/>
-    <xhtml:link rel="alternate" hreflang="de" href="https://duelverse.site/?lang=de"/>
-    <xhtml:link rel="alternate" hreflang="it" href="https://duelverse.site/?lang=it"/>
-    <xhtml:link rel="alternate" hreflang="ja" href="https://duelverse.site/?lang=ja"/>
-    <xhtml:link rel="alternate" hreflang="ko" href="https://duelverse.site/?lang=ko"/>
-    <xhtml:link rel="alternate" hreflang="zh" href="https://duelverse.site/?lang=zh"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://duelverse.site/?lang=ru"/>
-    <xhtml:link rel="alternate" hreflang="nl" href="https://duelverse.site/?lang=nl"/>
-    <xhtml:link rel="alternate" hreflang="pl" href="https://duelverse.site/?lang=pl"/>
-    <xhtml:link rel="alternate" hreflang="tr" href="https://duelverse.site/?lang=tr"/>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://duelverse.site/?lang=ar"/>
-    <xhtml:link rel="alternate" hreflang="id" href="https://duelverse.site/?lang=id"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://duelverse.site/en/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://duelverse.site/"/>
+    <xhtml:link rel="alternate" hreflang="pt-PT" href="https://duelverse.site/pt-PT/"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://duelverse.site/es/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://duelverse.site/fr/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://duelverse.site/de/"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://duelverse.site/it/"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://duelverse.site/ja/"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://duelverse.site/ko/"/>
+    <xhtml:link rel="alternate" hreflang="zh" href="https://duelverse.site/zh/"/>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://duelverse.site/ru/"/>
+    <xhtml:link rel="alternate" hreflang="nl" href="https://duelverse.site/nl/"/>
+    <xhtml:link rel="alternate" hreflang="pl" href="https://duelverse.site/pl/"/>
+    <xhtml:link rel="alternate" hreflang="tr" href="https://duelverse.site/tr/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://duelverse.site/ar/"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://duelverse.site/id/"/>
   </url>
   <url>
     <loc>https://duelverse.site/advanced</loc>
@@ -35,22 +35,22 @@
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://duelverse.site/como-jogar-yugioh-online"/>
-    <xhtml:link rel="alternate" hreflang="en" href="https://duelverse.site/como-jogar-yugioh-online?lang=en"/>
-    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://duelverse.site/como-jogar-yugioh-online?lang=pt-BR"/>
-    <xhtml:link rel="alternate" hreflang="pt-PT" href="https://duelverse.site/como-jogar-yugioh-online?lang=pt-PT"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://duelverse.site/como-jogar-yugioh-online?lang=es"/>
-    <xhtml:link rel="alternate" hreflang="fr" href="https://duelverse.site/como-jogar-yugioh-online?lang=fr"/>
-    <xhtml:link rel="alternate" hreflang="de" href="https://duelverse.site/como-jogar-yugioh-online?lang=de"/>
-    <xhtml:link rel="alternate" hreflang="it" href="https://duelverse.site/como-jogar-yugioh-online?lang=it"/>
-    <xhtml:link rel="alternate" hreflang="ja" href="https://duelverse.site/como-jogar-yugioh-online?lang=ja"/>
-    <xhtml:link rel="alternate" hreflang="ko" href="https://duelverse.site/como-jogar-yugioh-online?lang=ko"/>
-    <xhtml:link rel="alternate" hreflang="zh" href="https://duelverse.site/como-jogar-yugioh-online?lang=zh"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://duelverse.site/como-jogar-yugioh-online?lang=ru"/>
-    <xhtml:link rel="alternate" hreflang="nl" href="https://duelverse.site/como-jogar-yugioh-online?lang=nl"/>
-    <xhtml:link rel="alternate" hreflang="pl" href="https://duelverse.site/como-jogar-yugioh-online?lang=pl"/>
-    <xhtml:link rel="alternate" hreflang="tr" href="https://duelverse.site/como-jogar-yugioh-online?lang=tr"/>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://duelverse.site/como-jogar-yugioh-online?lang=ar"/>
-    <xhtml:link rel="alternate" hreflang="id" href="https://duelverse.site/como-jogar-yugioh-online?lang=id"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://duelverse.site/en/como-jogar-yugioh-online"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://duelverse.site/como-jogar-yugioh-online"/>
+    <xhtml:link rel="alternate" hreflang="pt-PT" href="https://duelverse.site/pt-PT/como-jogar-yugioh-online"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://duelverse.site/es/como-jogar-yugioh-online"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://duelverse.site/fr/como-jogar-yugioh-online"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://duelverse.site/de/como-jogar-yugioh-online"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://duelverse.site/it/como-jogar-yugioh-online"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://duelverse.site/ja/como-jogar-yugioh-online"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://duelverse.site/ko/como-jogar-yugioh-online"/>
+    <xhtml:link rel="alternate" hreflang="zh" href="https://duelverse.site/zh/como-jogar-yugioh-online"/>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://duelverse.site/ru/como-jogar-yugioh-online"/>
+    <xhtml:link rel="alternate" hreflang="nl" href="https://duelverse.site/nl/como-jogar-yugioh-online"/>
+    <xhtml:link rel="alternate" hreflang="pl" href="https://duelverse.site/pl/como-jogar-yugioh-online"/>
+    <xhtml:link rel="alternate" hreflang="tr" href="https://duelverse.site/tr/como-jogar-yugioh-online"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://duelverse.site/ar/como-jogar-yugioh-online"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://duelverse.site/id/como-jogar-yugioh-online"/>
   </url>
   <url>
     <loc>https://duelverse.site/deck-builder</loc>
@@ -64,22 +64,45 @@
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://duelverse.site/deck-builder-yugioh"/>
-    <xhtml:link rel="alternate" hreflang="en" href="https://duelverse.site/deck-builder-yugioh?lang=en"/>
-    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://duelverse.site/deck-builder-yugioh?lang=pt-BR"/>
-    <xhtml:link rel="alternate" hreflang="pt-PT" href="https://duelverse.site/deck-builder-yugioh?lang=pt-PT"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://duelverse.site/deck-builder-yugioh?lang=es"/>
-    <xhtml:link rel="alternate" hreflang="fr" href="https://duelverse.site/deck-builder-yugioh?lang=fr"/>
-    <xhtml:link rel="alternate" hreflang="de" href="https://duelverse.site/deck-builder-yugioh?lang=de"/>
-    <xhtml:link rel="alternate" hreflang="it" href="https://duelverse.site/deck-builder-yugioh?lang=it"/>
-    <xhtml:link rel="alternate" hreflang="ja" href="https://duelverse.site/deck-builder-yugioh?lang=ja"/>
-    <xhtml:link rel="alternate" hreflang="ko" href="https://duelverse.site/deck-builder-yugioh?lang=ko"/>
-    <xhtml:link rel="alternate" hreflang="zh" href="https://duelverse.site/deck-builder-yugioh?lang=zh"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://duelverse.site/deck-builder-yugioh?lang=ru"/>
-    <xhtml:link rel="alternate" hreflang="nl" href="https://duelverse.site/deck-builder-yugioh?lang=nl"/>
-    <xhtml:link rel="alternate" hreflang="pl" href="https://duelverse.site/deck-builder-yugioh?lang=pl"/>
-    <xhtml:link rel="alternate" hreflang="tr" href="https://duelverse.site/deck-builder-yugioh?lang=tr"/>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://duelverse.site/deck-builder-yugioh?lang=ar"/>
-    <xhtml:link rel="alternate" hreflang="id" href="https://duelverse.site/deck-builder-yugioh?lang=id"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://duelverse.site/en/deck-builder-yugioh"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://duelverse.site/deck-builder-yugioh"/>
+    <xhtml:link rel="alternate" hreflang="pt-PT" href="https://duelverse.site/pt-PT/deck-builder-yugioh"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://duelverse.site/es/deck-builder-yugioh"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://duelverse.site/fr/deck-builder-yugioh"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://duelverse.site/de/deck-builder-yugioh"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://duelverse.site/it/deck-builder-yugioh"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://duelverse.site/ja/deck-builder-yugioh"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://duelverse.site/ko/deck-builder-yugioh"/>
+    <xhtml:link rel="alternate" hreflang="zh" href="https://duelverse.site/zh/deck-builder-yugioh"/>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://duelverse.site/ru/deck-builder-yugioh"/>
+    <xhtml:link rel="alternate" hreflang="nl" href="https://duelverse.site/nl/deck-builder-yugioh"/>
+    <xhtml:link rel="alternate" hreflang="pl" href="https://duelverse.site/pl/deck-builder-yugioh"/>
+    <xhtml:link rel="alternate" hreflang="tr" href="https://duelverse.site/tr/deck-builder-yugioh"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://duelverse.site/ar/deck-builder-yugioh"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://duelverse.site/id/deck-builder-yugioh"/>
+  </url>
+  <url>
+    <loc>https://duelverse.site/dueling-book-alternativa</loc>
+    <lastmod>2026-06-19</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://duelverse.site/dueling-book-alternativa"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://duelverse.site/en/dueling-book-alternativa"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://duelverse.site/dueling-book-alternativa"/>
+    <xhtml:link rel="alternate" hreflang="pt-PT" href="https://duelverse.site/pt-PT/dueling-book-alternativa"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://duelverse.site/es/dueling-book-alternativa"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://duelverse.site/fr/dueling-book-alternativa"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://duelverse.site/de/dueling-book-alternativa"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://duelverse.site/it/dueling-book-alternativa"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://duelverse.site/ja/dueling-book-alternativa"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://duelverse.site/ko/dueling-book-alternativa"/>
+    <xhtml:link rel="alternate" hreflang="zh" href="https://duelverse.site/zh/dueling-book-alternativa"/>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://duelverse.site/ru/dueling-book-alternativa"/>
+    <xhtml:link rel="alternate" hreflang="nl" href="https://duelverse.site/nl/dueling-book-alternativa"/>
+    <xhtml:link rel="alternate" hreflang="pl" href="https://duelverse.site/pl/dueling-book-alternativa"/>
+    <xhtml:link rel="alternate" hreflang="tr" href="https://duelverse.site/tr/dueling-book-alternativa"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://duelverse.site/ar/dueling-book-alternativa"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://duelverse.site/id/dueling-book-alternativa"/>
   </url>
   <url>
     <loc>https://duelverse.site/duels</loc>
@@ -93,22 +116,22 @@
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://duelverse.site/duelverse-discord"/>
-    <xhtml:link rel="alternate" hreflang="en" href="https://duelverse.site/duelverse-discord?lang=en"/>
-    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://duelverse.site/duelverse-discord?lang=pt-BR"/>
-    <xhtml:link rel="alternate" hreflang="pt-PT" href="https://duelverse.site/duelverse-discord?lang=pt-PT"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://duelverse.site/duelverse-discord?lang=es"/>
-    <xhtml:link rel="alternate" hreflang="fr" href="https://duelverse.site/duelverse-discord?lang=fr"/>
-    <xhtml:link rel="alternate" hreflang="de" href="https://duelverse.site/duelverse-discord?lang=de"/>
-    <xhtml:link rel="alternate" hreflang="it" href="https://duelverse.site/duelverse-discord?lang=it"/>
-    <xhtml:link rel="alternate" hreflang="ja" href="https://duelverse.site/duelverse-discord?lang=ja"/>
-    <xhtml:link rel="alternate" hreflang="ko" href="https://duelverse.site/duelverse-discord?lang=ko"/>
-    <xhtml:link rel="alternate" hreflang="zh" href="https://duelverse.site/duelverse-discord?lang=zh"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://duelverse.site/duelverse-discord?lang=ru"/>
-    <xhtml:link rel="alternate" hreflang="nl" href="https://duelverse.site/duelverse-discord?lang=nl"/>
-    <xhtml:link rel="alternate" hreflang="pl" href="https://duelverse.site/duelverse-discord?lang=pl"/>
-    <xhtml:link rel="alternate" hreflang="tr" href="https://duelverse.site/duelverse-discord?lang=tr"/>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://duelverse.site/duelverse-discord?lang=ar"/>
-    <xhtml:link rel="alternate" hreflang="id" href="https://duelverse.site/duelverse-discord?lang=id"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://duelverse.site/en/duelverse-discord"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://duelverse.site/duelverse-discord"/>
+    <xhtml:link rel="alternate" hreflang="pt-PT" href="https://duelverse.site/pt-PT/duelverse-discord"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://duelverse.site/es/duelverse-discord"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://duelverse.site/fr/duelverse-discord"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://duelverse.site/de/duelverse-discord"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://duelverse.site/it/duelverse-discord"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://duelverse.site/ja/duelverse-discord"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://duelverse.site/ko/duelverse-discord"/>
+    <xhtml:link rel="alternate" hreflang="zh" href="https://duelverse.site/zh/duelverse-discord"/>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://duelverse.site/ru/duelverse-discord"/>
+    <xhtml:link rel="alternate" hreflang="nl" href="https://duelverse.site/nl/duelverse-discord"/>
+    <xhtml:link rel="alternate" hreflang="pl" href="https://duelverse.site/pl/duelverse-discord"/>
+    <xhtml:link rel="alternate" hreflang="tr" href="https://duelverse.site/tr/duelverse-discord"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://duelverse.site/ar/duelverse-discord"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://duelverse.site/id/duelverse-discord"/>
   </url>
   <url>
     <loc>https://duelverse.site/duelverse-yugioh-duelos-online</loc>
@@ -116,22 +139,22 @@
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://duelverse.site/duelverse-yugioh-duelos-online"/>
-    <xhtml:link rel="alternate" hreflang="en" href="https://duelverse.site/duelverse-yugioh-duelos-online?lang=en"/>
-    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://duelverse.site/duelverse-yugioh-duelos-online?lang=pt-BR"/>
-    <xhtml:link rel="alternate" hreflang="pt-PT" href="https://duelverse.site/duelverse-yugioh-duelos-online?lang=pt-PT"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://duelverse.site/duelverse-yugioh-duelos-online?lang=es"/>
-    <xhtml:link rel="alternate" hreflang="fr" href="https://duelverse.site/duelverse-yugioh-duelos-online?lang=fr"/>
-    <xhtml:link rel="alternate" hreflang="de" href="https://duelverse.site/duelverse-yugioh-duelos-online?lang=de"/>
-    <xhtml:link rel="alternate" hreflang="it" href="https://duelverse.site/duelverse-yugioh-duelos-online?lang=it"/>
-    <xhtml:link rel="alternate" hreflang="ja" href="https://duelverse.site/duelverse-yugioh-duelos-online?lang=ja"/>
-    <xhtml:link rel="alternate" hreflang="ko" href="https://duelverse.site/duelverse-yugioh-duelos-online?lang=ko"/>
-    <xhtml:link rel="alternate" hreflang="zh" href="https://duelverse.site/duelverse-yugioh-duelos-online?lang=zh"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://duelverse.site/duelverse-yugioh-duelos-online?lang=ru"/>
-    <xhtml:link rel="alternate" hreflang="nl" href="https://duelverse.site/duelverse-yugioh-duelos-online?lang=nl"/>
-    <xhtml:link rel="alternate" hreflang="pl" href="https://duelverse.site/duelverse-yugioh-duelos-online?lang=pl"/>
-    <xhtml:link rel="alternate" hreflang="tr" href="https://duelverse.site/duelverse-yugioh-duelos-online?lang=tr"/>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://duelverse.site/duelverse-yugioh-duelos-online?lang=ar"/>
-    <xhtml:link rel="alternate" hreflang="id" href="https://duelverse.site/duelverse-yugioh-duelos-online?lang=id"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://duelverse.site/en/duelverse-yugioh-duelos-online"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://duelverse.site/duelverse-yugioh-duelos-online"/>
+    <xhtml:link rel="alternate" hreflang="pt-PT" href="https://duelverse.site/pt-PT/duelverse-yugioh-duelos-online"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://duelverse.site/es/duelverse-yugioh-duelos-online"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://duelverse.site/fr/duelverse-yugioh-duelos-online"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://duelverse.site/de/duelverse-yugioh-duelos-online"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://duelverse.site/it/duelverse-yugioh-duelos-online"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://duelverse.site/ja/duelverse-yugioh-duelos-online"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://duelverse.site/ko/duelverse-yugioh-duelos-online"/>
+    <xhtml:link rel="alternate" hreflang="zh" href="https://duelverse.site/zh/duelverse-yugioh-duelos-online"/>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://duelverse.site/ru/duelverse-yugioh-duelos-online"/>
+    <xhtml:link rel="alternate" hreflang="nl" href="https://duelverse.site/nl/duelverse-yugioh-duelos-online"/>
+    <xhtml:link rel="alternate" hreflang="pl" href="https://duelverse.site/pl/duelverse-yugioh-duelos-online"/>
+    <xhtml:link rel="alternate" hreflang="tr" href="https://duelverse.site/tr/duelverse-yugioh-duelos-online"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://duelverse.site/ar/duelverse-yugioh-duelos-online"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://duelverse.site/id/duelverse-yugioh-duelos-online"/>
   </url>
   <url>
     <loc>https://duelverse.site/gallery</loc>
@@ -199,22 +222,22 @@
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://duelverse.site/torneios-yugioh-online"/>
-    <xhtml:link rel="alternate" hreflang="en" href="https://duelverse.site/torneios-yugioh-online?lang=en"/>
-    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://duelverse.site/torneios-yugioh-online?lang=pt-BR"/>
-    <xhtml:link rel="alternate" hreflang="pt-PT" href="https://duelverse.site/torneios-yugioh-online?lang=pt-PT"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://duelverse.site/torneios-yugioh-online?lang=es"/>
-    <xhtml:link rel="alternate" hreflang="fr" href="https://duelverse.site/torneios-yugioh-online?lang=fr"/>
-    <xhtml:link rel="alternate" hreflang="de" href="https://duelverse.site/torneios-yugioh-online?lang=de"/>
-    <xhtml:link rel="alternate" hreflang="it" href="https://duelverse.site/torneios-yugioh-online?lang=it"/>
-    <xhtml:link rel="alternate" hreflang="ja" href="https://duelverse.site/torneios-yugioh-online?lang=ja"/>
-    <xhtml:link rel="alternate" hreflang="ko" href="https://duelverse.site/torneios-yugioh-online?lang=ko"/>
-    <xhtml:link rel="alternate" hreflang="zh" href="https://duelverse.site/torneios-yugioh-online?lang=zh"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://duelverse.site/torneios-yugioh-online?lang=ru"/>
-    <xhtml:link rel="alternate" hreflang="nl" href="https://duelverse.site/torneios-yugioh-online?lang=nl"/>
-    <xhtml:link rel="alternate" hreflang="pl" href="https://duelverse.site/torneios-yugioh-online?lang=pl"/>
-    <xhtml:link rel="alternate" hreflang="tr" href="https://duelverse.site/torneios-yugioh-online?lang=tr"/>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://duelverse.site/torneios-yugioh-online?lang=ar"/>
-    <xhtml:link rel="alternate" hreflang="id" href="https://duelverse.site/torneios-yugioh-online?lang=id"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://duelverse.site/en/torneios-yugioh-online"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://duelverse.site/torneios-yugioh-online"/>
+    <xhtml:link rel="alternate" hreflang="pt-PT" href="https://duelverse.site/pt-PT/torneios-yugioh-online"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://duelverse.site/es/torneios-yugioh-online"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://duelverse.site/fr/torneios-yugioh-online"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://duelverse.site/de/torneios-yugioh-online"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://duelverse.site/it/torneios-yugioh-online"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://duelverse.site/ja/torneios-yugioh-online"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://duelverse.site/ko/torneios-yugioh-online"/>
+    <xhtml:link rel="alternate" hreflang="zh" href="https://duelverse.site/zh/torneios-yugioh-online"/>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://duelverse.site/ru/torneios-yugioh-online"/>
+    <xhtml:link rel="alternate" hreflang="nl" href="https://duelverse.site/nl/torneios-yugioh-online"/>
+    <xhtml:link rel="alternate" hreflang="pl" href="https://duelverse.site/pl/torneios-yugioh-online"/>
+    <xhtml:link rel="alternate" hreflang="tr" href="https://duelverse.site/tr/torneios-yugioh-online"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://duelverse.site/ar/torneios-yugioh-online"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://duelverse.site/id/torneios-yugioh-online"/>
   </url>
   <url>
     <loc>https://duelverse.site/tournaments</loc>
@@ -229,26 +252,49 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://duelverse.site/yugioh-omega-alternativa</loc>
+    <lastmod>2026-06-19</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://duelverse.site/yugioh-omega-alternativa"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://duelverse.site/en/yugioh-omega-alternativa"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://duelverse.site/yugioh-omega-alternativa"/>
+    <xhtml:link rel="alternate" hreflang="pt-PT" href="https://duelverse.site/pt-PT/yugioh-omega-alternativa"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://duelverse.site/es/yugioh-omega-alternativa"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://duelverse.site/fr/yugioh-omega-alternativa"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://duelverse.site/de/yugioh-omega-alternativa"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://duelverse.site/it/yugioh-omega-alternativa"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://duelverse.site/ja/yugioh-omega-alternativa"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://duelverse.site/ko/yugioh-omega-alternativa"/>
+    <xhtml:link rel="alternate" hreflang="zh" href="https://duelverse.site/zh/yugioh-omega-alternativa"/>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://duelverse.site/ru/yugioh-omega-alternativa"/>
+    <xhtml:link rel="alternate" hreflang="nl" href="https://duelverse.site/nl/yugioh-omega-alternativa"/>
+    <xhtml:link rel="alternate" hreflang="pl" href="https://duelverse.site/pl/yugioh-omega-alternativa"/>
+    <xhtml:link rel="alternate" hreflang="tr" href="https://duelverse.site/tr/yugioh-omega-alternativa"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://duelverse.site/ar/yugioh-omega-alternativa"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://duelverse.site/id/yugioh-omega-alternativa"/>
+  </url>
+  <url>
     <loc>https://duelverse.site/yugioh-remote-duel</loc>
     <lastmod>2026-06-19</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://duelverse.site/yugioh-remote-duel"/>
-    <xhtml:link rel="alternate" hreflang="en" href="https://duelverse.site/yugioh-remote-duel?lang=en"/>
-    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://duelverse.site/yugioh-remote-duel?lang=pt-BR"/>
-    <xhtml:link rel="alternate" hreflang="pt-PT" href="https://duelverse.site/yugioh-remote-duel?lang=pt-PT"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://duelverse.site/yugioh-remote-duel?lang=es"/>
-    <xhtml:link rel="alternate" hreflang="fr" href="https://duelverse.site/yugioh-remote-duel?lang=fr"/>
-    <xhtml:link rel="alternate" hreflang="de" href="https://duelverse.site/yugioh-remote-duel?lang=de"/>
-    <xhtml:link rel="alternate" hreflang="it" href="https://duelverse.site/yugioh-remote-duel?lang=it"/>
-    <xhtml:link rel="alternate" hreflang="ja" href="https://duelverse.site/yugioh-remote-duel?lang=ja"/>
-    <xhtml:link rel="alternate" hreflang="ko" href="https://duelverse.site/yugioh-remote-duel?lang=ko"/>
-    <xhtml:link rel="alternate" hreflang="zh" href="https://duelverse.site/yugioh-remote-duel?lang=zh"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://duelverse.site/yugioh-remote-duel?lang=ru"/>
-    <xhtml:link rel="alternate" hreflang="nl" href="https://duelverse.site/yugioh-remote-duel?lang=nl"/>
-    <xhtml:link rel="alternate" hreflang="pl" href="https://duelverse.site/yugioh-remote-duel?lang=pl"/>
-    <xhtml:link rel="alternate" hreflang="tr" href="https://duelverse.site/yugioh-remote-duel?lang=tr"/>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://duelverse.site/yugioh-remote-duel?lang=ar"/>
-    <xhtml:link rel="alternate" hreflang="id" href="https://duelverse.site/yugioh-remote-duel?lang=id"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://duelverse.site/en/yugioh-remote-duel"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://duelverse.site/yugioh-remote-duel"/>
+    <xhtml:link rel="alternate" hreflang="pt-PT" href="https://duelverse.site/pt-PT/yugioh-remote-duel"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://duelverse.site/es/yugioh-remote-duel"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://duelverse.site/fr/yugioh-remote-duel"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://duelverse.site/de/yugioh-remote-duel"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://duelverse.site/it/yugioh-remote-duel"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://duelverse.site/ja/yugioh-remote-duel"/>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://duelverse.site/ko/yugioh-remote-duel"/>
+    <xhtml:link rel="alternate" hreflang="zh" href="https://duelverse.site/zh/yugioh-remote-duel"/>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://duelverse.site/ru/yugioh-remote-duel"/>
+    <xhtml:link rel="alternate" hreflang="nl" href="https://duelverse.site/nl/yugioh-remote-duel"/>
+    <xhtml:link rel="alternate" hreflang="pl" href="https://duelverse.site/pl/yugioh-remote-duel"/>
+    <xhtml:link rel="alternate" hreflang="tr" href="https://duelverse.site/tr/yugioh-remote-duel"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://duelverse.site/ar/yugioh-remote-duel"/>
+    <xhtml:link rel="alternate" hreflang="id" href="https://duelverse.site/id/yugioh-remote-duel"/>
   </url>
 </urlset>

@@ -114,7 +114,8 @@ const Landing = () => {
             </div>
 
             <div className="pt-6 sm:pt-8">
-              <a href="#features">
+              <a href="#features" aria-label="Ver recursos do Duelverse">
+                <span className="sr-only">Ver recursos do Duelverse</span>
                 <ChevronDown className="w-7 h-7 sm:w-8 sm:h-8 text-muted-foreground mx-auto animate-bounce" />
               </a>
             </div>
