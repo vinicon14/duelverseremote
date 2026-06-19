@@ -284,7 +284,7 @@ const Tournaments = () => {
             ) : upcomingTournaments.length === 0 ? (
               <Card className="card-mystic text-center py-12">
                 <Trophy className="w-16 h-16 mx-auto text-primary/50 mb-4" />
-                <h3 className="text-xl font-semibold mb-2">{t('tournaments.noUpcoming')}</h3>
+                <h2 className="text-xl font-semibold mb-2">{t('tournaments.noUpcoming')}</h2>
                 <p className="text-muted-foreground">
                   {t('tournaments.noUpcomingDesc')}
                 </p>
@@ -306,7 +306,7 @@ const Tournaments = () => {
             {activeTournaments.length === 0 ? (
               <Card className="card-mystic text-center py-12">
                 <Trophy className="w-16 h-16 mx-auto text-primary/50 mb-4" />
-                <h3 className="text-xl font-semibold mb-2">{t('tournaments.noActive')}</h3>
+                <h2 className="text-xl font-semibold mb-2">{t('tournaments.noActive')}</h2>
                 <p className="text-muted-foreground">
                   {t('tournaments.noActiveDesc')}
                 </p>
@@ -324,7 +324,7 @@ const Tournaments = () => {
             {completedTournaments.length === 0 ? (
               <Card className="card-mystic text-center py-12">
                 <Trophy className="w-16 h-16 mx-auto text-primary/50 mb-4" />
-                <h3 className="text-xl font-semibold mb-2">{t('tournaments.noCompleted')}</h3>
+                <h2 className="text-xl font-semibold mb-2">{t('tournaments.noCompleted')}</h2>
                 <p className="text-muted-foreground">
                   {t('tournaments.noCompletedDesc')}
                 </p>
