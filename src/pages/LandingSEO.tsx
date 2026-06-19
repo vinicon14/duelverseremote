@@ -54,9 +54,9 @@ const LandingSEO = () => {
                   Começar a Duelar Grátis
                 </Button>
               </Link>
-              <a href="#o-que-e-duelverse" className="w-full sm:w-auto">
+              <a href="#o-que-e-duelverse" className="w-full sm:w-auto" aria-label="Saiba mais sobre o Duelverse">
                 <Button size="lg" variant="outline" className="text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 rounded-xl w-full sm:w-auto border-primary/40">
-                  Saiba Mais
+                  Conhecer o Duelverse
                 </Button>
               </a>
             </div>
