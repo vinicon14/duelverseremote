@@ -30,7 +30,11 @@ const LOCALIZED_PUBLIC = new Set<string>([
   "/torneios-yugioh-online",
   "/yugioh-remote-duel",
   "/duelverse-discord",
+  "/dueling-book-alternativa",
+  "/yugioh-omega-alternativa",
 ]);
+
+const DEFAULT_LANG = "pt-BR";
 
 interface Entry { path: string; changefreq: string; priority: string; localized?: boolean }
 
@@ -48,10 +52,17 @@ function extractRoutes(): Entry[] {
   }
   return Array.from(found).sort().map((path) => ({
     path,
-    changefreq: path === "/" ? "daily" : LOCALIZED_PUBLIC.has(path) ? "weekly" : "weekly",
+    changefreq: path === "/" ? "daily" : "weekly",
     priority: path === "/" ? "1.0" : LOCALIZED_PUBLIC.has(path) ? "0.9" : "0.7",
     localized: path === "/" || LOCALIZED_PUBLIC.has(path),
   }));
+}
+
+function localizedHref(path: string, lang: string): string {
+  // Default lang lives at root; other langs live under /{lang}/...
+  const prefix = lang === DEFAULT_LANG ? "" : `/${lang}`;
+  const cleanPath = path === "/" ? "" : path;
+  return `${BASE_URL}${prefix}${cleanPath || "/"}`.replace(/\/$/, path === "/" ? "/" : "");
 }
 
 function urlXml(e: Entry, today: string): string {
@@ -66,8 +77,7 @@ function urlXml(e: Entry, today: string): string {
   if (e.localized) {
     lines.push(`    <xhtml:link rel="alternate" hreflang="x-default" href="${loc}"/>`);
     for (const l of LOCALES) {
-      const href = e.path === "/" ? `${BASE_URL}/?lang=${l}` : `${loc}?lang=${l}`;
-      lines.push(`    <xhtml:link rel="alternate" hreflang="${l}" href="${href}"/>`);
+      lines.push(`    <xhtml:link rel="alternate" hreflang="${l}" href="${localizedHref(e.path, l)}"/>`);
     }
   }
   lines.push(`  </url>`);

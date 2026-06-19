@@ -64,6 +64,8 @@ const DeckBuilderYugioh = lazy(() => import("./pages/DeckBuilderYugioh"));
 const YugiohTournaments = lazy(() => import("./pages/YugiohTournaments"));
 const YugiohRemoteDuel = lazy(() => import("./pages/YugiohRemoteDuel"));
 const DuelverseDiscord = lazy(() => import("./pages/DuelverseDiscord"));
+const DuelingBookAlternativa = lazy(() => import("./pages/DuelingBookAlternativa"));
+const YugiohOmegaAlternativa = lazy(() => import("./pages/YugiohOmegaAlternativa"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const DeckBuilder = lazy(() => import("./pages/DeckBuilder"));
@@ -117,6 +119,8 @@ const RouterContent = ({ user }: { user: User | null }) => {
         <Route path="/torneios-yugioh-online" element={<YugiohTournaments />} />
         <Route path="/yugioh-remote-duel" element={<YugiohRemoteDuel />} />
         <Route path="/duelverse-discord" element={<DuelverseDiscord />} />
+        <Route path="/dueling-book-alternativa" element={<DuelingBookAlternativa />} />
+        <Route path="/yugioh-omega-alternativa" element={<YugiohOmegaAlternativa />} />
 
         {/* Localized public SEO routes */}
         <Route path="/:lang/duelverse-yugioh-duelos-online" element={<LocalizedRoute component={LandingSEO} />} />
@@ -125,6 +129,8 @@ const RouterContent = ({ user }: { user: User | null }) => {
         <Route path="/:lang/torneios-yugioh-online" element={<LocalizedRoute component={YugiohTournaments} />} />
         <Route path="/:lang/yugioh-remote-duel" element={<LocalizedRoute component={YugiohRemoteDuel} />} />
         <Route path="/:lang/duelverse-discord" element={<LocalizedRoute component={DuelverseDiscord} />} />
+        <Route path="/:lang/dueling-book-alternativa" element={<LocalizedRoute component={DuelingBookAlternativa} />} />
+        <Route path="/:lang/yugioh-omega-alternativa" element={<LocalizedRoute component={YugiohOmegaAlternativa} />} />
 
         <Route path="/admin" element={<Admin />} />
         <Route path="/auth" element={<Auth />} />
