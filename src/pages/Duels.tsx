@@ -425,8 +425,69 @@ const Duels = () => {
     }
   };
 
+  if (authChecked && !currentUser) {
+    return (
+      <div className="min-h-screen bg-transparent">
+        <SEOHead
+          title="Duelos Yu-Gi-Oh Online ao Vivo | Duelverse"
+          description="Entre no Duelverse para jogar duelos Yu-Gi-Oh online com salas ao vivo, vídeo, ranking, matchmaking e formatos YGO Advanced, Rush Duel e Genesis."
+          keywords="duelos yugioh online, yugioh online, ygo remote duel, duelverse, duelo online ao vivo"
+          path="/duels"
+          gameSchema
+          breadcrumbs={[
+            { name: "Início", path: "/" },
+            { name: "Duelos Online", path: "/duels" },
+          ]}
+        />
+        <Navbar />
+        <main className="container mx-auto px-4 pt-24 pb-12">
+          <section className="mx-auto max-w-4xl text-center py-12">
+            <h1 className="text-3xl sm:text-5xl font-extrabold mb-6 text-gradient-mystic">
+              Duelos Yu-Gi-Oh Online ao Vivo
+            </h1>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
+              Crie salas de duelo, encontre oponentes e jogue Yu-Gi-Oh online com vídeo em tempo real no Duelverse.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Link to="/auth">
+                <Button size="lg" className="btn-mystic text-primary-foreground w-full sm:w-auto">
+                  <Swords className="mr-2 h-5 w-5" /> Entrar para Duelar
+                </Button>
+              </Link>
+              <Link to="/como-jogar-yugioh-online">
+                <Button size="lg" variant="outline" className="w-full sm:w-auto">
+                  Como funciona
+                </Button>
+              </Link>
+            </div>
+          </section>
+          <section className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-5xl mx-auto">
+            {[
+              ["Salas ao vivo", "Duelos remotos com vídeo e chat para partidas casuais ou ranqueadas."],
+              ["Matchmaking", "Encontre duelistas ativos e acompanhe partidas em andamento."],
+              ["Formatos", "Suporte para YGO Advanced, Rush Duel e Genesis em uma só plataforma."],
+            ].map(([title, desc]) => (
+              <Card key={title} className="card-mystic p-6">
+                <h2 className="text-xl font-bold mb-2">{title}</h2>
+                <p className="text-muted-foreground">{desc}</p>
+              </Card>
+            ))}
+          </section>
+        </main>
+        <SEOLinksSection />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-transparent">
+      <SEOHead
+        title="Duelos Yu-Gi-Oh Online ao Vivo | Duelverse"
+        description="Entre no Duelverse para jogar duelos Yu-Gi-Oh online com salas ao vivo, vídeo, ranking, matchmaking e formatos YGO Advanced, Rush Duel e Genesis."
+        keywords="duelos yugioh online, yugioh online, ygo remote duel, duelverse, duelo online ao vivo"
+        path="/duels"
+        gameSchema
+      />
       <Navbar />
       
       <main className="container mx-auto px-4 pt-20 sm:pt-24 pb-12">
