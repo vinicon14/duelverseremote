@@ -198,6 +198,57 @@ const Tournaments = () => {
   const activeTournaments = tournaments.filter(t => t.status === 'active');
   const completedTournaments = tournaments.filter(t => t.status === 'completed');
 
+  if (authChecked && !currentUser) {
+    return (
+      <div className="min-h-screen bg-transparent">
+        <SEOHead
+          tKey="tournaments"
+          path="/tournaments"
+          breadcrumbs={[
+            { name: "Início", path: "/" },
+            { name: "Torneios", path: "/tournaments" },
+          ]}
+        />
+        <Navbar />
+        <main className="container mx-auto px-4 pt-24 pb-12">
+          <section className="mx-auto max-w-4xl text-center py-12">
+            <h1 className="text-3xl sm:text-5xl font-extrabold mb-6 text-gradient-mystic">
+              Torneios Yu-Gi-Oh Online no Duelverse
+            </h1>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
+              Participe de eventos online, acompanhe campeonatos ativos e dispute premiações em uma comunidade competitiva de duelistas.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Link to="/auth">
+                <Button size="lg" className="btn-mystic text-primary-foreground w-full sm:w-auto">
+                  <Trophy className="mr-2 h-5 w-5" /> Entrar nos Torneios
+                </Button>
+              </Link>
+              <Link to="/torneios-yugioh-online">
+                <Button size="lg" variant="outline" className="w-full sm:w-auto">
+                  Guia de torneios
+                </Button>
+              </Link>
+            </div>
+          </section>
+          <section className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-5xl mx-auto">
+            {[
+              ["Eventos online", "Torneios organizados para YGO Advanced, Rush Duel e Genesis."],
+              ["Ranking competitivo", "Resultados conectados à evolução dos duelistas na plataforma."],
+              ["Comunidade ativa", "Entre, jogue e acompanhe partidas ao vivo com outros jogadores."],
+            ].map(([title, desc]) => (
+              <Card key={title} className="card-mystic p-6">
+                <h2 className="text-xl font-bold mb-2">{title}</h2>
+                <p className="text-muted-foreground">{desc}</p>
+              </Card>
+            ))}
+          </section>
+        </main>
+        <SEOLinksSection />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-transparent">
       <SEOHead tKey="tournaments" path="/tournaments" />
