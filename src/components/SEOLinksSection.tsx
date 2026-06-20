@@ -6,6 +6,8 @@
  */
 const SEO_LINKS = [
   { href: "/", label: "Duelverse — Início" },
+  { href: "/duels", label: "Duelos Yu-Gi-Oh Online" },
+  { href: "/tournaments", label: "Torneios no Duelverse" },
   { href: "/duelverse-yugioh-duelos-online", label: "Yu-Gi-Oh Online no Duelverse" },
   { href: "/como-jogar-yugioh-online", label: "Como Jogar Yu-Gi-Oh Online" },
   { href: "/deck-builder-yugioh", label: "Deck Builder Yu-Gi-Oh" },

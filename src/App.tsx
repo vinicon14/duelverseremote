@@ -11,7 +11,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ConditionalMonetagLoader } from "@/components/ConditionalMonetagLoader";
 import { UniversalNewTabBlocker } from "@/components/UniversalNewTabBlocker";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState, lazy, Suspense } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { User } from '@supabase/supabase-js';
@@ -85,8 +85,32 @@ const ProDuels = lazy(() => import("./pages/pro/ProDuels"));
 const ProTournaments = lazy(() => import("./pages/pro/ProTournaments"));
 import { ProRouteGuard } from "./components/ProRouteGuard";
 import { LocalizedRoute } from "./components/LocalizedRoute";
+import { SUPPORTED_LANGUAGES } from "./i18n/countries";
 
 const queryClient = new QueryClient();
+
+const supportedLanguageCodes = new Set(SUPPORTED_LANGUAGES.map((language) => language.code));
+
+const LegacyLanguageRedirect = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const legacyLang = params.get("lang");
+    if (!legacyLang || !supportedLanguageCodes.has(legacyLang as any)) return;
+
+    params.delete("lang");
+    const normalizedPath = location.pathname === "/" ? "/" : location.pathname.replace(/\/$/, "");
+    const prefix = legacyLang === "pt-BR" ? "" : `/${legacyLang}`;
+    const nextPath = normalizedPath === "/" ? `${prefix || "/"}` : `${prefix}${normalizedPath}`;
+    const nextSearch = params.toString();
+
+    navigate(`${nextPath}${nextSearch ? `?${nextSearch}` : ""}${location.hash}`, { replace: true });
+  }, [location, navigate]);
+
+  return null;
+};
 
 // Componente que redireciona baseado no estado de autenticação
 const HomePage = ({ user }: { user: User | null }) => {
@@ -123,6 +147,7 @@ const RouterContent = ({ user }: { user: User | null }) => {
         <Route path="/yugioh-omega-alternativa" element={<YugiohOmegaAlternativa />} />
 
         {/* Localized public SEO routes */}
+        <Route path="/:lang" element={<LocalizedRoute component={Landing} />} />
         <Route path="/:lang/duelverse-yugioh-duelos-online" element={<LocalizedRoute component={LandingSEO} />} />
         <Route path="/:lang/como-jogar-yugioh-online" element={<LocalizedRoute component={HowToPlayYugiohOnline} />} />
         <Route path="/:lang/deck-builder-yugioh" element={<LocalizedRoute component={DeckBuilderYugioh} />} />
@@ -263,6 +288,7 @@ const MainAppContent = () => {
       <ProAdCleaner />
       <DuelCallNotification currentUserId={user?.id} />
       <NotificationPrompt />
+      <LegacyLanguageRedirect />
       <NativePermissionPrompt userId={user?.id} />
       <OnboardingTutorial userId={user?.id} />
       <AnimatedBackground />

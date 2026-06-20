@@ -9,6 +9,7 @@
 import * as HelmetAsync from "react-helmet-async";
 const Helmet = HelmetAsync.Helmet;
 import { useTranslation } from "react-i18next";
+import { useLocation } from "react-router-dom";
 import { SUPPORTED_LANGUAGES } from "@/i18n/countries";
 
 const BASE_URL = "https://duelverse.site";
@@ -44,6 +45,8 @@ interface SEOHeadProps {
   image?: string;
   /** Enable Yu-Gi-Oh! VideoGame schema markup */
   gameSchema?: boolean;
+  /** Prevent indexing of utility/authenticated app routes. */
+  noindex?: boolean;
   /** Optional breadcrumb schema */
   breadcrumbs?: { name: string; path: string }[];
 }
@@ -56,16 +59,24 @@ export const SEOHead = ({
   path = "/",
   image,
   gameSchema = false,
+  noindex = false,
   breadcrumbs,
 }: SEOHeadProps) => {
   const { t, i18n } = useTranslation();
+  const location = useLocation();
   const lng = i18n.language;
   const ogLocale = OG_LOCALE_MAP[lng] ?? "en_US";
 
   const finalTitle = title ?? t(`seo.${tKey}Title`);
   const finalDescription = description ?? t(`seo.${tKey}Description`);
   const finalKeywords = keywords ?? t(`seo.${tKey}Keywords`, { defaultValue: "" });
-  const canonical = `${BASE_URL}${path}`;
+  const localizedPrefix = SUPPORTED_LANGUAGES
+    .filter((l) => l.code !== "pt-BR")
+    .find((l) => location.pathname === `/${l.code}` || location.pathname.startsWith(`/${l.code}/`))?.code;
+  const canonicalPath = localizedPrefix
+    ? location.pathname.replace(/\/$/, "") || "/"
+    : path;
+  const canonical = `${BASE_URL}${canonicalPath}`;
   const ogImage = image ?? "https://duelverse.site/og-image.png";
 
   return (
@@ -75,6 +86,14 @@ export const SEOHead = ({
       <meta name="title" content={finalTitle} />
       <meta name="description" content={finalDescription} />
       {finalKeywords && <meta name="keywords" content={finalKeywords} />}
+      <meta
+        name="robots"
+        content={noindex ? "noindex, follow" : "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"}
+      />
+      <meta
+        name="googlebot"
+        content={noindex ? "noindex, follow" : "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"}
+      />
       <link rel="canonical" href={canonical} />
 
       {/* hreflang alternates so Google serves the right language per region */}
