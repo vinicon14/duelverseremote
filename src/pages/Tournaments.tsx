@@ -40,23 +40,35 @@ const Tournaments = () => {
   const [tournaments, setTournaments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [authChecked, setAuthChecked] = useState(false);
   const [decklistTournamentId, setDecklistTournamentId] = useState<string | null>(null);
   const [pendingJoinTournamentId, setPendingJoinTournamentId] = useState<string | null>(null);
   
   const canCreateTournament = isAdmin || isPro;
 
   useEffect(() => {
-    checkAuth();
-    fetchTournaments();
+    const initialize = async () => {
+      const isAuthenticated = await checkAuth();
+      if (!isAuthenticated) {
+        setLoading(false);
+        return;
+      }
+      fetchTournaments();
+    };
+
+    initialize();
   }, [activeTcg]);
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
-      navigate('/auth');
-      return;
+      setCurrentUser(null);
+      setAuthChecked(true);
+      return false;
     }
     setCurrentUser(session.user);
+    setAuthChecked(true);
+    return true;
   };
 
   const fetchTournaments = async () => {
