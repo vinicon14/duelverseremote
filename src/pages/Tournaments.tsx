@@ -6,7 +6,7 @@
  * Usuários podem criar, participar e gerenciar torneios.
  */
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/Navbar";
@@ -28,6 +28,7 @@ import { useTcg } from "@/contexts/TcgContext";
 import { DecklistUploadModal } from "@/components/tournament/DecklistUploadModal";
 import { SEOHead } from "@/components/SEOHead";
 import { useTranslation } from "react-i18next";
+import { SEOLinksSection } from "@/components/SEOLinksSection";
 
 const Tournaments = () => {
   useBanCheck();
