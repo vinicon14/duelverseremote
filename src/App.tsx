@@ -123,6 +123,7 @@ const RouterContent = ({ user }: { user: User | null }) => {
         <Route path="/yugioh-omega-alternativa" element={<YugiohOmegaAlternativa />} />
 
         {/* Localized public SEO routes */}
+        <Route path="/:lang" element={<LocalizedRoute component={Landing} />} />
         <Route path="/:lang/duelverse-yugioh-duelos-online" element={<LocalizedRoute component={LandingSEO} />} />
         <Route path="/:lang/como-jogar-yugioh-online" element={<LocalizedRoute component={HowToPlayYugiohOnline} />} />
         <Route path="/:lang/deck-builder-yugioh" element={<LocalizedRoute component={DeckBuilderYugioh} />} />
