@@ -472,7 +472,7 @@ const Auth = () => {
   if (mfaFactorId) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
-        <SEOHead tKey="auth" path="/auth" />
+        <SEOHead tKey="auth" path="/auth" noindex />
         <TwoFactorChallenge
           factorId={mfaFactorId}
           onSuccess={() => {
@@ -488,7 +488,7 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative transition-all duration-700">
-      <SEOHead tKey="auth" path="/auth" />
+      <SEOHead tKey="auth" path="/auth" noindex />
       <style>{`
         .auth-btn-animate {
           background: linear-gradient(135deg, hsl(${currentColors.primary}), hsl(${currentColors.accent}));
