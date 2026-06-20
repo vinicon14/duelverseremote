@@ -53,7 +53,6 @@ User-agent: *
 Allow: /
 # Block only user-private / session-based routes
 Disallow: /admin
-Disallow: /auth
 Disallow: /profile
 Disallow: /profile-select
 Disallow: /judge-panel
