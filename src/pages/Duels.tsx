@@ -26,6 +26,8 @@ import { announceDuelRoom, cleanupDuelDiscordMessages } from "@/utils/announceDu
 import { getDefaultLifePoints, isLegacyMagicTcg } from "@/utils/tcgRules";
 import { RANKED_XP_DIFFICULTIES, getRankedDifficulty, getRankedDifficultyStorageKey, type RankedXpDifficultyKey } from "@/utils/xpRewards";
 import { useTranslation } from "react-i18next";
+import { SEOHead } from "@/components/SEOHead";
+import { SEOLinksSection } from "@/components/SEOLinksSection";
 
 const Duels = () => {
   useBanCheck();
@@ -36,6 +38,8 @@ const Duels = () => {
   const { toast } = useToast();
   const [duels, setDuels] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [roomName, setRoomName] = useState("");
   const [isRanked, setIsRanked] = useState(true);
   const [maxPlayers, setMaxPlayers] = useState(2);
@@ -66,46 +70,58 @@ const Duels = () => {
   }, [activeTcg, searchParams]);
 
   useEffect(() => {
-    checkAuth();
-    fetchDuels();
-    
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    let mounted = true;
 
+    const initialize = async () => {
+      const isAuthenticated = await checkAuth();
+      if (!mounted || !isAuthenticated) {
+        setLoading(false);
+        return;
+      }
 
-    const cleanupEmptyRooms = async () => {
+      fetchDuels();
+
       try {
         await cleanupAllEmptyDuels();
       } catch (error) {
         console.error('Erro ao executar limpeza:', error);
       }
-    };
-    
-    cleanupEmptyRooms();
 
-    const channel = supabase
-      .channel('live_duels_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'live_duels'
-        },
-        () => {
-          fetchDuels();
-        }
-      )
-      .subscribe();
+      channel = supabase
+        .channel('live_duels_changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'live_duels'
+          },
+          () => {
+            fetchDuels();
+          }
+        )
+        .subscribe();
+    };
+
+    initialize();
 
     return () => {
-      supabase.removeChannel(channel);
+      mounted = false;
+      if (channel) supabase.removeChannel(channel);
     };
   }, [activeTcg]);
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
-      navigate('/auth');
+      setCurrentUser(null);
+      setAuthChecked(true);
+      return false;
     }
+    setCurrentUser(session.user);
+    setAuthChecked(true);
+    return true;
   };
 
   const fetchDuels = async () => {
