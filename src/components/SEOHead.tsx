@@ -106,7 +106,7 @@ export const SEOHead = ({
           <link
             key={l.code}
             rel="alternate"
-            hrefLang={l.code.toLowerCase()}
+            hrefLang={l.code}
             href={href}
           />
         );
