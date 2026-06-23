@@ -12,7 +12,6 @@ import { Window } from "happy-dom";
 
 import { resources } from "../src/i18n/resources";
 import { SUPPORTED_LANGUAGES } from "../src/i18n/countries";
-import { TcgProvider } from "../src/contexts/TcgContext";
 
 // Provide minimal browser globals BEFORE any page-component imports so that
 // code evaluated at module scope (i18n detection, supabase init) can run safely.
@@ -42,6 +41,7 @@ const BASE_URL = "https://duelverse.site";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DIST_DIR = path.resolve(__dirname, "../dist");
 const DEFAULT_LANG = "pt-BR";
+let TcgProviderForRender: React.ComponentType<{ children: React.ReactNode }> = ({ children }) => <>{children}</>;
 
 interface PublicPage {
   route: string;
@@ -105,9 +105,9 @@ async function renderPage(
     <I18nextProvider i18n={instance}>
       <HelmetProvider context={helmetContext}>
         <StaticRouter location={localizedRoute(route, lang, localized)}>
-          <TcgProvider>
+          <TcgProviderForRender>
             <Component />
-          </TcgProvider>
+          </TcgProviderForRender>
         </StaticRouter>
       </HelmetProvider>
     </I18nextProvider>
@@ -178,8 +178,9 @@ function buildSitemap(pages: PublicPage[]): string {
 async function main() {
   // Dynamically import page modules AFTER happy-dom globals are set,
   // so any module-level browser-API access in app code runs safely.
-  const [Landing, Duels, Tournaments, LandingSEO, HowToPlayYugiohOnline, DeckBuilderYugioh, YugiohTournaments, YugiohRemoteDuel, DuelingBookAlternativa, YugiohOmegaAlternativa, DuelverseDiscord] =
+  const [TcgContextModule, Landing, Duels, Tournaments, LandingSEO, HowToPlayYugiohOnline, DeckBuilderYugioh, YugiohTournaments, YugiohRemoteDuel, DuelingBookAlternativa, YugiohOmegaAlternativa, DuelverseDiscord] =
     await Promise.all([
+      import("../src/contexts/TcgContext"),
       import("../src/pages/Landing").then(m => m.default),
       import("../src/pages/Duels").then(m => m.default),
       import("../src/pages/Tournaments").then(m => m.default),
@@ -191,20 +192,21 @@ async function main() {
       import("../src/pages/DuelingBookAlternativa").then(m => m.default),
       import("../src/pages/YugiohOmegaAlternativa").then(m => m.default),
       import("../src/pages/DuelverseDiscord").then(m => m.default),
-    ]) as React.ComponentType[];
+    ]);
+  TcgProviderForRender = (TcgContextModule as typeof import("../src/contexts/TcgContext")).TcgProvider;
 
   const pages: PublicPage[] = [
-    { ...PUBLIC_ROUTE_CONFIG[0], component: Landing },
-    { ...PUBLIC_ROUTE_CONFIG[1], component: Duels },
-    { ...PUBLIC_ROUTE_CONFIG[2], component: Tournaments },
-    { ...PUBLIC_ROUTE_CONFIG[3], component: LandingSEO },
-    { ...PUBLIC_ROUTE_CONFIG[4], component: HowToPlayYugiohOnline },
-    { ...PUBLIC_ROUTE_CONFIG[5], component: DeckBuilderYugioh },
-    { ...PUBLIC_ROUTE_CONFIG[6], component: YugiohTournaments },
-    { ...PUBLIC_ROUTE_CONFIG[7], component: YugiohRemoteDuel },
-    { ...PUBLIC_ROUTE_CONFIG[8], component: DuelingBookAlternativa },
-    { ...PUBLIC_ROUTE_CONFIG[9], component: YugiohOmegaAlternativa },
-    { ...PUBLIC_ROUTE_CONFIG[10], component: DuelverseDiscord },
+    { ...PUBLIC_ROUTE_CONFIG[0], component: Landing as React.ComponentType },
+    { ...PUBLIC_ROUTE_CONFIG[1], component: Duels as React.ComponentType },
+    { ...PUBLIC_ROUTE_CONFIG[2], component: Tournaments as React.ComponentType },
+    { ...PUBLIC_ROUTE_CONFIG[3], component: LandingSEO as React.ComponentType },
+    { ...PUBLIC_ROUTE_CONFIG[4], component: HowToPlayYugiohOnline as React.ComponentType },
+    { ...PUBLIC_ROUTE_CONFIG[5], component: DeckBuilderYugioh as React.ComponentType },
+    { ...PUBLIC_ROUTE_CONFIG[6], component: YugiohTournaments as React.ComponentType },
+    { ...PUBLIC_ROUTE_CONFIG[7], component: YugiohRemoteDuel as React.ComponentType },
+    { ...PUBLIC_ROUTE_CONFIG[8], component: DuelingBookAlternativa as React.ComponentType },
+    { ...PUBLIC_ROUTE_CONFIG[9], component: YugiohOmegaAlternativa as React.ComponentType },
+    { ...PUBLIC_ROUTE_CONFIG[10], component: DuelverseDiscord as React.ComponentType },
   ];
 
   const templatePath = path.join(DIST_DIR, "index.html");
