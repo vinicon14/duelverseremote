@@ -74,7 +74,7 @@ export const SEOHead = ({
     .filter((l) => l.code !== "pt-BR")
     .find((l) => location.pathname === `/${l.code}` || location.pathname.startsWith(`/${l.code}/`))?.code;
   const canonicalPath = localizedPrefix
-    ? location.pathname.replace(/\/$/, "") || "/"
+    ? (location.pathname === `/${localizedPrefix}` ? `/${localizedPrefix}/` : location.pathname.replace(/\/$/, ""))
     : path;
   const canonical = `${BASE_URL}${canonicalPath}`;
   const ogImage = image ?? "https://duelverse.site/og-image.png";
@@ -106,7 +106,7 @@ export const SEOHead = ({
           <link
             key={l.code}
             rel="alternate"
-            hrefLang={l.code.toLowerCase()}
+            hrefLang={l.code}
             href={href}
           />
         );
