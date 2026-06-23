@@ -56,6 +56,7 @@ const Duels = () => {
   const platform = detectPlatform();
   const isWebBrowser = !platform.isStandalone && !(window as any).electronAPI?.isElectron && !platform.isNativeApp;
   const selectedRankedDifficulty = getRankedDifficulty(rankedDifficulty);
+  const isStaticPrerender = typeof window !== "undefined" && (window as any).__DUELVERSE_PRERENDER__ === true;
 
   useEffect(() => {
     const stored = localStorage.getItem(getRankedDifficultyStorageKey(activeTcg));
@@ -425,7 +426,7 @@ const Duels = () => {
     }
   };
 
-  if (authChecked && !currentUser) {
+  if (isStaticPrerender || (authChecked && !currentUser)) {
     return (
       <div className="min-h-screen bg-transparent">
         <SEOHead

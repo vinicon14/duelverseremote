@@ -1,9 +1,9 @@
 /**
- * Auto-generates public/sitemap.xml from src/App.tsx routes,
- * pings IndexNow (Bing/Yandex) and submits to Google via sitemap ping.
+ * Auto-generates public/sitemap.xml from the crawlable "Navegue pelo Duelverse"
+ * routes, pings IndexNow (Bing/Yandex) and submits the sitemap ping signal.
  * Runs before `vite dev` and `vite build` via the predev/prebuild hooks.
  */
-import { readFileSync, writeFileSync } from "fs";
+import { writeFileSync } from "fs";
 import { resolve } from "path";
 
 const BASE_URL = "https://duelverse.site";
@@ -14,49 +14,26 @@ const LOCALES = [
   "zh", "ru", "nl", "pl", "tr", "ar", "id",
 ];
 
-// Routes that should NEVER be indexed (private/dynamic/auth-only).
-const EXCLUDE = new Set<string>([
-  "/admin", "/auth", "/profile", "/profile-select", "/judge-panel",
-  "/create-tournament", "/create-weekly-tournament", "/my-tournaments",
-  "/tournament-manager", "/transfer-history", "/my-items",
-  "/discord-activity", "/friends", "/duelcoins", "/buy-duelcoins",
-]);
-
-// Localized SEO landing pages: emit hreflang alternates for each.
-const LOCALIZED_PUBLIC = new Set<string>([
-  "/duelverse-yugioh-duelos-online",
-  "/como-jogar-yugioh-online",
-  "/deck-builder-yugioh",
-  "/torneios-yugioh-online",
-  "/yugioh-remote-duel",
-  "/duelverse-discord",
-  "/dueling-book-alternativa",
-  "/yugioh-omega-alternativa",
-]);
-
 const DEFAULT_LANG = "pt-BR";
 
 interface Entry { path: string; changefreq: string; priority: string; localized?: boolean }
 
-function extractRoutes(): Entry[] {
-  const src = readFileSync(resolve("src/App.tsx"), "utf-8");
-  const re = /<Route\s+path="([^"]+)"/g;
-  const found = new Set<string>();
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(src)) !== null) {
-    const p = m[1];
-    // Skip dynamic, catchall, pro, lang-prefixed, etc.
-    if (p === "*" || p.includes(":") || p.startsWith("/pro/")) continue;
-    if (EXCLUDE.has(p)) continue;
-    found.add(p);
-  }
-  return Array.from(found).sort().map((path) => ({
-    path,
-    changefreq: path === "/" ? "daily" : "weekly",
-    priority: path === "/" ? "1.0" : LOCALIZED_PUBLIC.has(path) ? "0.9" : "0.7",
-    localized: path === "/" || LOCALIZED_PUBLIC.has(path),
-  }));
-}
+// Keep this list aligned with src/components/SEOLinksSection.tsx.
+// Private app routes stay out of the sitemap so Google does not waste crawl
+// budget on login-only pages or report them as "Descoberta/Rastreada, não indexada".
+const ENTRIES: Entry[] = [
+  { path: "/", changefreq: "daily", priority: "1.0", localized: true },
+  { path: "/duels", changefreq: "daily", priority: "0.9" },
+  { path: "/tournaments", changefreq: "daily", priority: "0.9" },
+  { path: "/duelverse-yugioh-duelos-online", changefreq: "weekly", priority: "0.9", localized: true },
+  { path: "/como-jogar-yugioh-online", changefreq: "weekly", priority: "0.9", localized: true },
+  { path: "/deck-builder-yugioh", changefreq: "weekly", priority: "0.9", localized: true },
+  { path: "/torneios-yugioh-online", changefreq: "weekly", priority: "0.9", localized: true },
+  { path: "/yugioh-remote-duel", changefreq: "weekly", priority: "0.9", localized: true },
+  { path: "/dueling-book-alternativa", changefreq: "weekly", priority: "0.9", localized: true },
+  { path: "/yugioh-omega-alternativa", changefreq: "weekly", priority: "0.9", localized: true },
+  { path: "/duelverse-discord", changefreq: "weekly", priority: "0.9", localized: true },
+];
 
 function localizedHref(path: string, lang: string): string {
   // Default lang lives at root; other langs live under /{lang}/...
@@ -109,7 +86,7 @@ async function ping(urls: string[]) {
 }
 
 function main() {
-  const entries = extractRoutes();
+  const entries = ENTRIES;
   const today = new Date().toISOString().slice(0, 10);
   const xml = [
     `<?xml version="1.0" encoding="UTF-8"?>`,

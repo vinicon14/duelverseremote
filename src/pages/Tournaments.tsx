@@ -44,6 +44,7 @@ const Tournaments = () => {
   const [authChecked, setAuthChecked] = useState(false);
   const [decklistTournamentId, setDecklistTournamentId] = useState<string | null>(null);
   const [pendingJoinTournamentId, setPendingJoinTournamentId] = useState<string | null>(null);
+  const isStaticPrerender = typeof window !== "undefined" && (window as any).__DUELVERSE_PRERENDER__ === true;
   
   const canCreateTournament = isAdmin || isPro;
 
@@ -198,7 +199,7 @@ const Tournaments = () => {
   const activeTournaments = tournaments.filter(t => t.status === 'active');
   const completedTournaments = tournaments.filter(t => t.status === 'completed');
 
-  if (authChecked && !currentUser) {
+  if (isStaticPrerender || (authChecked && !currentUser)) {
     return (
       <div className="min-h-screen bg-transparent">
         <SEOHead

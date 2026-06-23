@@ -12,6 +12,7 @@ import { Window } from "happy-dom";
 
 import { resources } from "../src/i18n/resources";
 import { SUPPORTED_LANGUAGES } from "../src/i18n/countries";
+import { TcgProvider } from "../src/contexts/TcgContext";
 
 // Provide minimal browser globals BEFORE any page-component imports so that
 // code evaluated at module scope (i18n detection, supabase init) can run safely.
@@ -35,6 +36,7 @@ setGlobal("document", win.document);
 setGlobal("navigator", win.navigator);
 setGlobal("localStorage", win.localStorage);
 setGlobal("sessionStorage", win.sessionStorage);
+(win as any).__DUELVERSE_PRERENDER__ = true;
 
 const BASE_URL = "https://duelverse.site";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -44,16 +46,23 @@ const DEFAULT_LANG = "pt-BR";
 interface PublicPage {
   route: string;
   component: React.ComponentType;
+  localized: boolean;
+  changefreq: string;
+  priority: string;
 }
 
-const PUBLIC_ROUTES: string[] = [
-  "/",
-  "/duelverse-yugioh-duelos-online",
-  "/como-jogar-yugioh-online",
-  "/deck-builder-yugioh",
-  "/torneios-yugioh-online",
-  "/yugioh-remote-duel",
-  "/duelverse-discord",
+const PUBLIC_ROUTE_CONFIG: Omit<PublicPage, "component">[] = [
+  { route: "/", localized: true, changefreq: "daily", priority: "1.0" },
+  { route: "/duels", localized: false, changefreq: "daily", priority: "0.9" },
+  { route: "/tournaments", localized: false, changefreq: "daily", priority: "0.9" },
+  { route: "/duelverse-yugioh-duelos-online", localized: true, changefreq: "weekly", priority: "0.9" },
+  { route: "/como-jogar-yugioh-online", localized: true, changefreq: "weekly", priority: "0.9" },
+  { route: "/deck-builder-yugioh", localized: true, changefreq: "weekly", priority: "0.9" },
+  { route: "/torneios-yugioh-online", localized: true, changefreq: "weekly", priority: "0.9" },
+  { route: "/yugioh-remote-duel", localized: true, changefreq: "weekly", priority: "0.9" },
+  { route: "/dueling-book-alternativa", localized: true, changefreq: "weekly", priority: "0.9" },
+  { route: "/yugioh-omega-alternativa", localized: true, changefreq: "weekly", priority: "0.9" },
+  { route: "/duelverse-discord", localized: true, changefreq: "weekly", priority: "0.9" },
 ];
 
 const LANGUAGES = SUPPORTED_LANGUAGES.map((l) => l.code);
@@ -76,10 +85,17 @@ function outputPathFor(route: string, lang: string): string {
   return path.join(DIST_DIR, prefix, cleanRoute, "index.html");
 }
 
+function localizedRoute(route: string, lang: string, localized: boolean): string {
+  if (!localized || lang === DEFAULT_LANG) return route;
+  const cleanRoute = route === "/" ? "" : route;
+  return `/${lang}${cleanRoute}`;
+}
+
 async function renderPage(
   route: string,
   Component: React.ComponentType,
   lang: string,
+  localized: boolean,
   baseTemplate: string
 ) {
   const instance = await createI18nInstance(lang);
@@ -88,8 +104,10 @@ async function renderPage(
   const appHtml = renderToString(
     <I18nextProvider i18n={instance}>
       <HelmetProvider context={helmetContext}>
-        <StaticRouter location={route}>
-          <Component />
+        <StaticRouter location={localizedRoute(route, lang, localized)}>
+          <TcgProvider>
+            <Component />
+          </TcgProvider>
         </StaticRouter>
       </HelmetProvider>
     </I18nextProvider>
@@ -125,47 +143,68 @@ async function renderPage(
   fs.writeFileSync(outputPath, template);
 }
 
-function buildSitemap(): string {
-  const urls: string[] = [];
-  for (const route of PUBLIC_ROUTES) {
-    for (const lang of LANGUAGES) {
-      const prefix = lang === DEFAULT_LANG ? "" : `/${lang}`;
-      const cleanRoute = route === "/" ? "" : route;
-      urls.push(`${BASE_URL}${prefix}${cleanRoute}`);
-    }
-  }
+function localizedHref(route: string, lang: string): string {
+  const prefix = lang === DEFAULT_LANG ? "" : `/${lang}`;
+  const cleanRoute = route === "/" ? "" : route;
+  return `${BASE_URL}${prefix}${cleanRoute || "/"}`.replace(/\/$/, route === "/" ? "/" : "");
+}
 
-  const urlEntries = urls
-    .map(
-      (url) => `  <url>\n    <loc>${url}</loc>\n    <changefreq>weekly</changefreq>\n    <priority>${url === BASE_URL || url === `${BASE_URL}/` ? "1.0" : "0.8"}</priority>\n  </url>`
-    )
+function buildSitemap(pages: PublicPage[]): string {
+  const today = new Date().toISOString().slice(0, 10);
+  const urlEntries = pages
+    .map((page) => {
+      const loc = `${BASE_URL}${page.route === "/" ? "/" : page.route}`;
+      const lines = [
+        `  <url>`,
+        `    <loc>${loc}</loc>`,
+        `    <lastmod>${today}</lastmod>`,
+        `    <changefreq>${page.changefreq}</changefreq>`,
+        `    <priority>${page.priority}</priority>`,
+      ];
+      if (page.localized) {
+        lines.push(`    <xhtml:link rel="alternate" hreflang="x-default" href="${loc}"/>`);
+        for (const lang of LANGUAGES) {
+          lines.push(`    <xhtml:link rel="alternate" hreflang="${lang}" href="${localizedHref(page.route, lang)}"/>`);
+        }
+      }
+      lines.push(`  </url>`);
+      return lines.join("\n");
+    })
     .join("\n");
 
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urlEntries}\n</urlset>\n`;
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n${urlEntries}\n</urlset>\n`;
 }
 
 async function main() {
   // Dynamically import page modules AFTER happy-dom globals are set,
   // so any module-level browser-API access in app code runs safely.
-  const [Landing, LandingSEO, HowToPlayYugiohOnline, DeckBuilderYugioh, YugiohTournaments, YugiohRemoteDuel, DuelverseDiscord] =
+  const [Landing, Duels, Tournaments, LandingSEO, HowToPlayYugiohOnline, DeckBuilderYugioh, YugiohTournaments, YugiohRemoteDuel, DuelingBookAlternativa, YugiohOmegaAlternativa, DuelverseDiscord] =
     await Promise.all([
       import("../src/pages/Landing").then(m => m.default),
+      import("../src/pages/Duels").then(m => m.default),
+      import("../src/pages/Tournaments").then(m => m.default),
       import("../src/pages/LandingSEO").then(m => m.default),
       import("../src/pages/HowToPlayYugiohOnline").then(m => m.default),
       import("../src/pages/DeckBuilderYugioh").then(m => m.default),
       import("../src/pages/YugiohTournaments").then(m => m.default),
       import("../src/pages/YugiohRemoteDuel").then(m => m.default),
+      import("../src/pages/DuelingBookAlternativa").then(m => m.default),
+      import("../src/pages/YugiohOmegaAlternativa").then(m => m.default),
       import("../src/pages/DuelverseDiscord").then(m => m.default),
     ]) as React.ComponentType[];
 
   const pages: PublicPage[] = [
-    { route: "/", component: Landing },
-    { route: "/duelverse-yugioh-duelos-online", component: LandingSEO },
-    { route: "/como-jogar-yugioh-online", component: HowToPlayYugiohOnline },
-    { route: "/deck-builder-yugioh", component: DeckBuilderYugioh },
-    { route: "/torneios-yugioh-online", component: YugiohTournaments },
-    { route: "/yugioh-remote-duel", component: YugiohRemoteDuel },
-    { route: "/duelverse-discord", component: DuelverseDiscord },
+    { ...PUBLIC_ROUTE_CONFIG[0], component: Landing },
+    { ...PUBLIC_ROUTE_CONFIG[1], component: Duels },
+    { ...PUBLIC_ROUTE_CONFIG[2], component: Tournaments },
+    { ...PUBLIC_ROUTE_CONFIG[3], component: LandingSEO },
+    { ...PUBLIC_ROUTE_CONFIG[4], component: HowToPlayYugiohOnline },
+    { ...PUBLIC_ROUTE_CONFIG[5], component: DeckBuilderYugioh },
+    { ...PUBLIC_ROUTE_CONFIG[6], component: YugiohTournaments },
+    { ...PUBLIC_ROUTE_CONFIG[7], component: YugiohRemoteDuel },
+    { ...PUBLIC_ROUTE_CONFIG[8], component: DuelingBookAlternativa },
+    { ...PUBLIC_ROUTE_CONFIG[9], component: YugiohOmegaAlternativa },
+    { ...PUBLIC_ROUTE_CONFIG[10], component: DuelverseDiscord },
   ];
 
   const templatePath = path.join(DIST_DIR, "index.html");
@@ -179,11 +218,14 @@ async function main() {
   const baseTemplate = fs.readFileSync(templatePath, "utf8");
 
   console.log("Prerendering public pages...");
-  for (const { route, component } of pages) {
-    for (const lang of LANGUAGES) {
+  let renderedCount = 0;
+  for (const { route, component, localized } of pages) {
+    const routeLanguages = localized ? LANGUAGES : [DEFAULT_LANG];
+    for (const lang of routeLanguages) {
       process.stdout.write(`  ${route} [${lang}] ... `);
       try {
-        await renderPage(route, component, lang, baseTemplate);
+        await renderPage(route, component, lang, localized, baseTemplate);
+        renderedCount += 1;
         console.log("OK");
       } catch (err) {
         console.log("FAIL");
@@ -193,9 +235,9 @@ async function main() {
     }
   }
 
-  const sitemap = buildSitemap();
+  const sitemap = buildSitemap(pages);
   fs.writeFileSync(path.join(DIST_DIR, "sitemap.xml"), sitemap);
-  console.log(`Wrote sitemap.xml with ${LANGUAGES.length * PUBLIC_ROUTES.length} URLs`);
+  console.log(`Wrote sitemap.xml and prerendered ${renderedCount} indexable pages`);
 }
 
 main();
