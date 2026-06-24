@@ -10,7 +10,7 @@
     "predev": "tsx scripts/generate-sitemap.ts",
     "prebuild": "tsx scripts/generate-sitemap.ts --ping",
     "dev": "vite --host 127.0.0.1",
-    "build": "vite build && tsx --tsconfig tsconfig.app.json scripts/prerender.tsx",
+    "build": "vite build",
     "build:prerender": "tsx --tsconfig tsconfig.app.json scripts/prerender.tsx",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
