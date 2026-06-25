@@ -15,6 +15,16 @@ const LOCALES = [
 ];
 
 const DEFAULT_LANG = "pt-BR";
+const EXTRA_PUBLIC_LOCALES = ["pt", "en", "es", "fr", "de", "it", "nl", "pl", "tr", "ar", "id"];
+const EXTRA_PUBLIC_PAGES = [
+  "/sobre-nos",
+  "/termos-de-uso",
+  "/politica-de-privacidade",
+  "/faq",
+  "/contato",
+  "/blog",
+  "/embaixadores",
+];
 
 interface Entry { path: string; changefreq: string; priority: string; localized?: boolean }
 
@@ -61,6 +71,19 @@ function urlXml(e: Entry, today: string): string {
   return lines.join("\n");
 }
 
+function extraPublicUrlXml(locale: string, path: string, today: string): string {
+  const cleanPath = path.startsWith("/") ? path.slice(1) : path;
+  const loc = `${BASE_URL}/${locale}/${cleanPath}`;
+  return [
+    `  <url>`,
+    `    <loc>${loc}</loc>`,
+    `    <lastmod>${today}</lastmod>`,
+    `    <changefreq>weekly</changefreq>`,
+    `    <priority>0.7</priority>`,
+    `  </url>`,
+  ].join("\n");
+}
+
 async function ping(urls: string[]) {
   // Google sitemap ping (still supported via re-crawl signal)
   const sitemapUrl = `${BASE_URL}/sitemap.xml`;
@@ -88,18 +111,28 @@ async function ping(urls: string[]) {
 function main() {
   const entries = ENTRIES;
   const today = new Date().toISOString().slice(0, 10);
+  const extraPages = EXTRA_PUBLIC_LOCALES.flatMap((locale) => [
+    `  <url>\n    <loc>${BASE_URL}/${locale}/</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>0.8</priority>\n  </url>`,
+    ...EXTRA_PUBLIC_PAGES.map((path) => extraPublicUrlXml(locale, path, today)),
+  ]);
+
   const xml = [
     `<?xml version="1.0" encoding="UTF-8"?>`,
     `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">`,
     ...entries.map((e) => urlXml(e, today)),
+    ...extraPages,
     `</urlset>`,
   ].join("\n");
   writeFileSync(resolve("public/sitemap.xml"), xml);
-  console.log(`✓ sitemap.xml written — ${entries.length} routes`);
+  console.log(`✓ sitemap.xml written — ${entries.length + extraPages.length} routes`);
 
   // Only ping on production build (avoid dev spam).
   if (process.env.NODE_ENV === "production" || process.argv.includes("--ping")) {
-    const urls = entries.map((e) => `${BASE_URL}${e.path}`);
+    const urls = [
+      ...entries.map((e) => `${BASE_URL}${e.path}`),
+      ...EXTRA_PUBLIC_LOCALES.map((locale) => `${BASE_URL}/${locale}/`),
+      ...EXTRA_PUBLIC_LOCALES.flatMap((locale) => EXTRA_PUBLIC_PAGES.map((path) => `${BASE_URL}/${locale}${path}`)),
+    ];
     ping(urls).then(() => console.log(`✓ Pinged Google, Bing, IndexNow (${urls.length} urls)`));
   }
 }
