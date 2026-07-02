@@ -303,20 +303,13 @@ const MainAppContent = () => {
   );
 };
 
-const DiscordActivityShell = () => (
-  <Suspense fallback={
-    <div className="flex min-h-screen w-full items-center justify-center bg-background">
-      <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-    </div>
-  }>
-    <DiscordActivity />
-  </Suspense>
-);
-
 const AppContent = () => {
-  if (isRunningInsideDiscord()) return <DiscordActivityShell />;
+  // Full DuelVerse runs inside Discord Embedded App (Activity) as well.
+  // Previously we short-circuited to a minimal shell — now users get the
+  // complete app experience directly inside Discord.
   return <MainAppContent />;
 };
+
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
