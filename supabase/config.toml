@@ -29,6 +29,10 @@ project_id = "xxttwzewtqxvpgefggah"
     verify_jwt = false
   [functions.discord-interactions]
     verify_jwt = false
+  [functions.discord-oauth-start]
+    verify_jwt = false
+  [functions.discord-oauth-callback]
+    verify_jwt = false
   [functions.discord-voice-events]
     verify_jwt = false
   [functions.discord-presence]

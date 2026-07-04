@@ -58,25 +58,30 @@ const Auth = () => {
     try {
       setLoading(true);
       console.log('[AUTH] Starting Discord sign-in...');
-      
-      const DISCORD_CLIENT_ID = '1495723127357833256';
+
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
       if (!supabaseUrl) throw new Error('Backend URL not configured');
 
-      // Direct Discord OAuth URL (works in Discord Embedded App)
-      const redirectUri = `${supabaseUrl}/functions/v1/discord-oauth-callback`;
-      const scopes = 'identify email';
-      const oauthUrl = `https://discord.com/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scopes)}&state=${encodeURIComponent(JSON.stringify({ mode: 'login', origin: window.location.origin, return_path: '/duels' }))}&prompt=consent`;
+      const resp = await fetch(`${supabaseUrl.replace(/\/$/, '')}/functions/v1/discord-oauth-start`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: JSON.stringify({
+          mode: 'login',
+          origin: window.location.origin,
+          returnPath: '/auth?redirect=duels',
+        }),
+      });
 
-      
-      console.log('[AUTH] Redirecting to Discord OAuth...');
-      
-      // Try window.location first, fallback to open
-      try {
-        window.location.href = oauthUrl;
-      } catch (e) {
-        window.open(oauthUrl, '_blank');
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok || !data?.url) {
+        throw new Error(data?.error || 'Não foi possível iniciar o login com Discord.');
       }
+
+      console.log('[AUTH] Redirecting to Discord OAuth...');
+      window.location.href = data.url;
       
     } catch (err: any) {
       console.error('[AUTH] Error:', err);
