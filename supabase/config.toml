@@ -37,3 +37,5 @@ project_id = "xxttwzewtqxvpgefggah"
     verify_jwt = false
   [functions.discord-activity-token]
     verify_jwt = false
+  [functions.discord-event-webhook]
+    verify_jwt = false
