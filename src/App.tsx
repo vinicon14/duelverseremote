@@ -115,6 +115,7 @@ const LegacyLanguageRedirect = () => {
 // Componente que redireciona baseado no estado de autenticação
 const HomePage = ({ user }: { user: User | null }) => {
   if (user) return <Home />;
+  if (isRunningInsideDiscord()) return <Auth />;
   return <Landing />;
 };
 

@@ -14,10 +14,14 @@ export default function DiscordActivity() {
   useDiscordActivity(true);
 
   useEffect(() => {
-    // Preserve any Discord query params so downstream code can still detect
-    // the embed context; just swap the pathname to "/".
+    // Preserve any Discord query params so the auth page can still detect
+    // the embed context and start the Discord login flow.
   }, []);
 
-  const search = typeof window !== "undefined" ? window.location.search : "";
-  return <Navigate to={`/${search}`} replace />;
+  const params = typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search)
+    : new URLSearchParams();
+  if (!params.has("redirect")) params.set("redirect", "duels");
+
+  return <Navigate to={`/auth?${params.toString()}`} replace />;
 }
