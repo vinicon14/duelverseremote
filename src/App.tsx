@@ -67,6 +67,10 @@ const DuelverseDiscord = lazy(() => import("./pages/DuelverseDiscord"));
 const DuelingBookAlternativa = lazy(() => import("./pages/DuelingBookAlternativa"));
 const YugiohOmegaAlternativa = lazy(() => import("./pages/YugiohOmegaAlternativa"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const PhoneConnect = lazy(() => import("./pages/PhoneConnect"));
+const PhoneCameraMode = lazy(() => import("./pages/PhoneCameraMode"));
+import { RequireDesktop } from "./components/RequireDesktop";
+import { PhonePairFab } from "./components/desktop/PhonePairFab";
 
 const DeckBuilder = lazy(() => import("./pages/DeckBuilder"));
 const GenesisDeckBuilder = lazy(() => import("./pages/GenesisDeckBuilder"));
@@ -142,10 +146,14 @@ const RouterContent = ({ user }: { user: User | null }) => {
         <Route path="/como-jogar-yugioh-online" element={<HowToPlayYugiohOnline />} />
         <Route path="/deck-builder-yugioh" element={<DeckBuilderYugioh />} />
         <Route path="/torneios-yugioh-online" element={<YugiohTournaments />} />
-        <Route path="/yugioh-remote-duel" element={<YugiohRemoteDuel />} />
+        <Route path="/yugioh-remote-duel" element={<RequireDesktop featureName="O Remote Duel"><YugiohRemoteDuel /></RequireDesktop>} />
         <Route path="/duelverse-discord" element={<DuelverseDiscord />} />
-        <Route path="/dueling-book-alternativa" element={<DuelingBookAlternativa />} />
-        <Route path="/yugioh-omega-alternativa" element={<YugiohOmegaAlternativa />} />
+        <Route path="/dueling-book-alternativa" element={<RequireDesktop featureName="A Arena Digital"><DuelingBookAlternativa /></RequireDesktop>} />
+        <Route path="/yugioh-omega-alternativa" element={<RequireDesktop featureName="A Arena Digital"><YugiohOmegaAlternativa /></RequireDesktop>} />
+
+        {/* Mobile-only: phone as auxiliary camera */}
+        <Route path="/phone-connect" element={<PhoneConnect />} />
+        <Route path="/phone-camera" element={<PhoneCameraMode />} />
 
         {/* Localized public SEO routes */}
         <Route path="/:lang" element={<LocalizedRoute component={Landing} />} />
@@ -160,10 +168,10 @@ const RouterContent = ({ user }: { user: User | null }) => {
 
         <Route path="/admin" element={<Admin />} />
         <Route path="/auth" element={<Auth />} />
-        <Route path="/duels" element={<Duels />} />
-        <Route path="/duel/:id" element={<DuelRoom />} />
-        <Route path="/join/:duelId" element={<JoinDuel />} />
-        <Route path="/m/:inviteId" element={<MatchInvite />} />
+        <Route path="/duels" element={<RequireDesktop featureName="A criação/entrada em partidas"><Duels /></RequireDesktop>} />
+        <Route path="/duel/:id" element={<RequireDesktop featureName="A sala de duelo"><DuelRoom /></RequireDesktop>} />
+        <Route path="/join/:duelId" element={<RequireDesktop featureName="Entrar em partidas"><JoinDuel /></RequireDesktop>} />
+        <Route path="/m/:inviteId" element={<RequireDesktop featureName="Convites de partida"><MatchInvite /></RequireDesktop>} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/profile/:userId" element={<Profile />} />
         <Route path="/ranking" element={<Ranking />} />
@@ -172,7 +180,7 @@ const RouterContent = ({ user }: { user: User | null }) => {
         <Route path="/tournaments" element={<Tournaments />} />
         <Route path="/create-tournament" element={<CreateTournament />} />
         <Route path="/tournaments/:id" element={<TournamentDetail />} />
-        <Route path="/matchmaking" element={<Matchmaking />} />
+        <Route path="/matchmaking" element={<RequireDesktop featureName="O matchmaking"><Matchmaking /></RequireDesktop>} />
         <Route path="/duelcoins" element={<DuelCoins />} />
         <Route path="/judge-panel" element={<JudgePanel />} />
         <Route path="/store" element={<Store />} />
@@ -180,10 +188,10 @@ const RouterContent = ({ user }: { user: User | null }) => {
         <Route path="/gallery" element={<MatchGallery />} />
         <Route path="/video/:id" element={<VideoShare />} />
         
-        <Route path="/deck-builder" element={<ActiveDeckBuilderRoute />} />
-        <Route path="/genesis" element={<GenesisDeckBuilder />} />
-        <Route path="/rush-duel" element={<RushDuelDeckBuilder />} />
-        <Route path="/advanced" element={<DeckBuilder />} />
+        <Route path="/deck-builder" element={<RequireDesktop featureName="O Deck Builder"><ActiveDeckBuilderRoute /></RequireDesktop>} />
+        <Route path="/genesis" element={<RequireDesktop featureName="O Deck Builder"><GenesisDeckBuilder /></RequireDesktop>} />
+        <Route path="/rush-duel" element={<RequireDesktop featureName="O Deck Builder"><RushDuelDeckBuilder /></RequireDesktop>} />
+        <Route path="/advanced" element={<RequireDesktop featureName="O Deck Builder"><DeckBuilder /></RequireDesktop>} />
         <Route path="/profile-select" element={<ProfileSelect />} />
         <Route path="/weekly-tournaments" element={<WeeklyTournaments />} />
         <Route path="/create-weekly-tournament" element={<CreateWeeklyTournament />} />
