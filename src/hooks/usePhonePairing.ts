@@ -294,7 +294,7 @@ export function usePhoneClientPairing(params: {
       }
     });
 
-    let claimTimer: ReturnType<typeof window.setInterval> | null = null;
+    let claimTimer: number | null = null;
 
     channel.subscribe((s) => {
       if (s === "SUBSCRIBED") {
