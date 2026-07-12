@@ -214,18 +214,29 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   // When a phone is paired, its video (and audio if provided) takes priority over
   // the PC camera. On disconnect we restore the original getUserMedia tracks.
   const { phoneStream } = usePhoneStream();
+  const phoneStreamRef = useRef<MediaStream | null>(null);
+  const isMutedRef = useRef(isMuted);
+  const isVideoOffRef = useRef(isVideoOff);
+
+  useEffect(() => {
+    phoneStreamRef.current = phoneStream;
+    isMutedRef.current = isMuted;
+    isVideoOffRef.current = isVideoOff;
+  }, [phoneStream, isMuted, isVideoOff]);
+
   const getActiveOutboundStream = useCallback(() => {
     const original = localStreamRef.current;
-    const activeVideo = phoneStream?.getVideoTracks()[0] ?? original?.getVideoTracks()[0] ?? null;
-    const activeAudio = phoneStream?.getAudioTracks()[0] ?? original?.getAudioTracks()[0] ?? null;
-    if (activeVideo) activeVideo.enabled = !isVideoOff;
-    if (activeAudio) activeAudio.enabled = !isMuted;
+    const activePhoneStream = phoneStreamRef.current;
+    const activeVideo = activePhoneStream?.getVideoTracks()[0] ?? original?.getVideoTracks()[0] ?? null;
+    const activeAudio = activePhoneStream?.getAudioTracks()[0] ?? original?.getAudioTracks()[0] ?? null;
+    if (activeVideo) activeVideo.enabled = !isVideoOffRef.current;
+    if (activeAudio) activeAudio.enabled = !isMutedRef.current;
 
     const stream = new MediaStream();
     if (activeVideo) stream.addTrack(activeVideo);
     if (activeAudio) stream.addTrack(activeAudio);
     return stream.getTracks().length > 0 ? stream : null;
-  }, [phoneStream, isMuted, isVideoOff]);
+  }, []);
 
   useEffect(() => {
     if (isSpectator) return;
