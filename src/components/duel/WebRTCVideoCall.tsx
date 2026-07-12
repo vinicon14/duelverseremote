@@ -2,8 +2,9 @@ import { useEffect, useRef, useState, useCallback, useImperativeHandle, forwardR
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Mic, MicOff, Video, VideoOff, Loader2, LayoutGrid, PictureInPicture2, ZoomIn, ZoomOut, Settings } from "lucide-react";
+import { Mic, MicOff, Video, VideoOff, Loader2, LayoutGrid, PictureInPicture2, ZoomIn, ZoomOut, Settings, Smartphone } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { usePhoneStream } from "@/contexts/PhoneStreamContext";
 
 export type VideoLayout = "side-by-side" | "pip";
 
@@ -208,6 +209,49 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     },
     isVideoOff,
   }), [isVideoOff]);
+
+  // ==== Phone camera override ====
+  // When a phone is paired, its video (and audio if provided) takes priority over
+  // the PC camera. On disconnect we restore the original getUserMedia tracks.
+  const { phoneStream } = usePhoneStream();
+  useEffect(() => {
+    if (isSpectator) return;
+    const original = localStreamRef.current;
+    const originalVideo = original?.getVideoTracks()[0] ?? null;
+    const originalAudio = original?.getAudioTracks()[0] ?? null;
+
+    const phoneVideo = phoneStream?.getVideoTracks()[0] ?? null;
+    const phoneAudio = phoneStream?.getAudioTracks()[0] ?? null;
+
+    const activeVideo = phoneVideo ?? originalVideo;
+    const activeAudio = phoneAudio ?? originalAudio;
+
+    if (activeVideo) activeVideo.enabled = !isVideoOff;
+    if (activeAudio) activeAudio.enabled = !isMuted;
+
+    // Replace tracks on all peer senders
+    peersRef.current.forEach(({ pc }) => {
+      const senders = pc.getSenders();
+      if (activeVideo) {
+        const vs = senders.find((s) => s.track?.kind === "video");
+        vs?.replaceTrack(activeVideo).catch(() => {});
+      }
+      if (activeAudio) {
+        const as = senders.find((s) => s.track?.kind === "audio");
+        as?.replaceTrack(activeAudio).catch(() => {});
+      }
+    });
+
+    // Update local preview
+    if (localVideoRef.current) {
+      const preview = new MediaStream();
+      if (activeVideo) preview.addTrack(activeVideo);
+      if (activeAudio) preview.addTrack(activeAudio);
+      localVideoRef.current.srcObject = preview;
+      localVideoRef.current.play?.().catch(() => {});
+    }
+  }, [phoneStream, isSpectator, isMuted, isVideoOff]);
+
 
   // Remove a disconnected peer from state so UI reverts to "Aguardando jogador"
   const removePeer = useCallback((peerId: string) => {

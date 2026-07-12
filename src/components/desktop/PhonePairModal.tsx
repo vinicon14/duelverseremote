@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Loader2, Smartphone, CheckCircle2, X } from "lucide-react";
 import { useHostPairing } from "@/hooks/usePhonePairing";
+import { usePhoneStream } from "@/contexts/PhoneStreamContext";
 
 interface Props {
   open: boolean;
@@ -19,6 +20,7 @@ export const PhonePairModal = ({ open, onOpenChange, onStream }: Props) => {
 
 const PhonePairModalInner = ({ open, onOpenChange, onStream }: Props) => {
   const { sessionId, token, status, remoteStream, disconnect } = useHostPairing();
+  const { setPhoneStream } = usePhoneStream();
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -30,7 +32,9 @@ const PhonePairModalInner = ({ open, onOpenChange, onStream }: Props) => {
 
   useEffect(() => {
     onStream?.(remoteStream);
-  }, [remoteStream, onStream]);
+    // Publish to global context so the duel WebRTC replaces PC camera with phone
+    setPhoneStream(remoteStream);
+  }, [remoteStream, onStream, setPhoneStream]);
 
   useEffect(() => {
     if (videoRef.current && remoteStream) {
@@ -39,6 +43,7 @@ const PhonePairModalInner = ({ open, onOpenChange, onStream }: Props) => {
   }, [remoteStream]);
 
   const handleClose = () => {
+    setPhoneStream(null);
     disconnect();
     onOpenChange(false);
   };
