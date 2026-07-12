@@ -214,43 +214,60 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   // When a phone is paired, its video (and audio if provided) takes priority over
   // the PC camera. On disconnect we restore the original getUserMedia tracks.
   const { phoneStream } = usePhoneStream();
+  const phoneStreamRef = useRef<MediaStream | null>(null);
+  const isMutedRef = useRef(isMuted);
+  const isVideoOffRef = useRef(isVideoOff);
+
+  useEffect(() => {
+    phoneStreamRef.current = phoneStream;
+    isMutedRef.current = isMuted;
+    isVideoOffRef.current = isVideoOff;
+  }, [phoneStream, isMuted, isVideoOff]);
+
+  const getActiveOutboundStream = useCallback(() => {
+    const original = localStreamRef.current;
+    const activePhoneStream = phoneStreamRef.current;
+    const activeVideo = activePhoneStream?.getVideoTracks()[0] ?? original?.getVideoTracks()[0] ?? null;
+    const activeAudio = activePhoneStream?.getAudioTracks()[0] ?? original?.getAudioTracks()[0] ?? null;
+    if (activeVideo) activeVideo.enabled = !isVideoOffRef.current;
+    if (activeAudio) activeAudio.enabled = !isMutedRef.current;
+
+    const stream = new MediaStream();
+    if (activeVideo) stream.addTrack(activeVideo);
+    if (activeAudio) stream.addTrack(activeAudio);
+    return stream.getTracks().length > 0 ? stream : null;
+  }, []);
+
   useEffect(() => {
     if (isSpectator) return;
-    const original = localStreamRef.current;
-    const originalVideo = original?.getVideoTracks()[0] ?? null;
-    const originalAudio = original?.getAudioTracks()[0] ?? null;
-
-    const phoneVideo = phoneStream?.getVideoTracks()[0] ?? null;
-    const phoneAudio = phoneStream?.getAudioTracks()[0] ?? null;
-
-    const activeVideo = phoneVideo ?? originalVideo;
-    const activeAudio = phoneAudio ?? originalAudio;
-
-    if (activeVideo) activeVideo.enabled = !isVideoOff;
-    if (activeAudio) activeAudio.enabled = !isMuted;
+    const outboundStream = getActiveOutboundStream();
+    const activeVideo = outboundStream?.getVideoTracks()[0] ?? null;
+    const activeAudio = outboundStream?.getAudioTracks()[0] ?? null;
 
     // Replace tracks on all peer senders
     peersRef.current.forEach(({ pc }) => {
       const senders = pc.getSenders();
-      if (activeVideo) {
-        const vs = senders.find((s) => s.track?.kind === "video");
-        vs?.replaceTrack(activeVideo).catch(() => {});
+      const vs = senders.find((s) => s.track?.kind === "video");
+      if (vs) {
+        vs.replaceTrack(activeVideo).catch(() => {});
+      } else if (activeVideo && outboundStream) {
+        pc.addTrack(activeVideo, outboundStream);
       }
-      if (activeAudio) {
-        const as = senders.find((s) => s.track?.kind === "audio");
-        as?.replaceTrack(activeAudio).catch(() => {});
+
+      const as = senders.find((s) => s.track?.kind === "audio");
+      if (as) {
+        as.replaceTrack(activeAudio).catch(() => {});
+      } else if (activeAudio && outboundStream) {
+        pc.addTrack(activeAudio, outboundStream);
       }
     });
 
     // Update local preview
     if (localVideoRef.current) {
-      const preview = new MediaStream();
-      if (activeVideo) preview.addTrack(activeVideo);
-      if (activeAudio) preview.addTrack(activeAudio);
-      localVideoRef.current.srcObject = preview;
+      localVideoRef.current.srcObject = outboundStream;
       localVideoRef.current.play?.().catch(() => {});
     }
-  }, [phoneStream, isSpectator, isMuted, isVideoOff]);
+  }, [phoneStream, isSpectator, getActiveOutboundStream]);
 
 
   // Remove a disconnected peer from state so UI reverts to "Aguardando jogador"
@@ -286,7 +303,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     peersRef.current.set(remotePeerId, peerState);
 
     // Add local tracks (or recvonly transceivers for spectators)
-    const localStream = localStreamRef.current;
+    const localStream = getActiveOutboundStream();
     if (localStream) {
       localStream.getTracks().forEach((track) => {
         pc.addTrack(track, localStream);
@@ -384,7 +401,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     };
 
     return pc;
-  }, [userId, isSpectator, audioBroadcastOnly]);
+  }, [userId, isSpectator, audioBroadcastOnly, getActiveOutboundStream]);
 
   const handleSignal = useCallback(
     async (payload: any) => {
@@ -576,8 +593,9 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
           const senders = peerState.pc.getSenders();
           if (senders.length === 0) {
             console.log("[WebRTC] Adding late tracks to peer:", peerId);
-            stream.getTracks().forEach((track) => {
-              peerState.pc.addTrack(track, stream);
+            const outboundStream = getActiveOutboundStream() ?? stream;
+            outboundStream.getTracks().forEach((track) => {
+              peerState.pc.addTrack(track, outboundStream);
             });
           }
         });
@@ -620,7 +638,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         channelRef.current = null;
       }
     };
-  }, [duelId, userId, handleSignal, isSpectator, audioBroadcastOnly]);
+  }, [duelId, userId, handleSignal, isSpectator, audioBroadcastOnly, getActiveOutboundStream]);
 
   // Attach remote streams to video elements
   useEffect(() => {
@@ -633,7 +651,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   }, [remoteStreams, remotePeerIds]);
 
   const toggleMute = () => {
-    const stream = localStreamRef.current;
+    const stream = phoneStream || localStreamRef.current;
     if (!stream) return;
     const audioTrack = stream.getAudioTracks()[0];
     if (audioTrack) {
@@ -643,7 +661,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   };
 
   const toggleVideo = () => {
-    const stream = localStreamRef.current;
+    const stream = phoneStream || localStreamRef.current;
     if (!stream) return;
     const videoTrack = stream.getVideoTracks()[0];
     if (videoTrack) {
@@ -731,10 +749,11 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
 
   const localVideoCallbackRef = useCallback((el: HTMLVideoElement | null) => {
     (localVideoRef as React.MutableRefObject<HTMLVideoElement | null>).current = el;
-    if (el && localStreamRef.current && el.srcObject !== localStreamRef.current) {
-      el.srcObject = localStreamRef.current;
+    const outboundStream = getActiveOutboundStream();
+    if (el && outboundStream && el.srcObject !== outboundStream) {
+      el.srcObject = outboundStream;
     }
-  }, []);
+  }, [getActiveOutboundStream]);
 
   const renderLocalPanel = () => {
     // For spectators: show the first remote stream as "Player 1" panel instead of local camera
