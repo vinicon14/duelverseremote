@@ -206,14 +206,14 @@ const RouterContent = ({ user }: { user: User | null }) => {
 
         {/* PRO routes - guarded; reuse standard pages so they always work */}
         <Route path="/pro/home" element={<ProRouteGuard><ProHome /></ProRouteGuard>} />
-        <Route path="/pro/matchmaking" element={<ProRouteGuard><Matchmaking /></ProRouteGuard>} />
-        <Route path="/pro/duels" element={<ProRouteGuard><ProDuels /></ProRouteGuard>} />
+        <Route path="/pro/matchmaking" element={<ProRouteGuard><RequireDesktop featureName="O matchmaking"><Matchmaking /></RequireDesktop></ProRouteGuard>} />
+        <Route path="/pro/duels" element={<ProRouteGuard><RequireDesktop featureName="As partidas PRO"><ProDuels /></RequireDesktop></ProRouteGuard>} />
         <Route path="/pro/tournaments" element={<ProRouteGuard><ProTournaments /></ProRouteGuard>} />
         <Route path="/pro/friends" element={<ProRouteGuard><Friends /></ProRouteGuard>} />
         <Route path="/pro/ranking" element={<ProRouteGuard><Ranking /></ProRouteGuard>} />
         <Route path="/pro/news" element={<ProRouteGuard><News /></ProRouteGuard>} />
         <Route path="/pro/gallery" element={<ProRouteGuard><MatchGallery /></ProRouteGuard>} />
-        <Route path="/pro/deck-builder" element={<ProRouteGuard><ActiveDeckBuilderRoute /></ProRouteGuard>} />
+        <Route path="/pro/deck-builder" element={<ProRouteGuard><RequireDesktop featureName="O Deck Builder"><ActiveDeckBuilderRoute /></RequireDesktop></ProRouteGuard>} />
         <Route path="/pro/duelcoins" element={<ProRouteGuard><DuelCoins /></ProRouteGuard>} />
         <Route path="/pro/store" element={<ProRouteGuard><Store /></ProRouteGuard>} />
 
@@ -305,6 +305,8 @@ const MainAppContent = () => {
       <UnifiedPageLoader />
       <BackgroundMusic />
       <SoundEffectsProvider />
+      <PhonePairFab />
+      <MobileConnectFab />
       <div className="router-view-animate">
         <RouterContent user={user} />
       </div>
