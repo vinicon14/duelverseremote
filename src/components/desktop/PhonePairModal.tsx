@@ -20,6 +20,7 @@ export const PhonePairModal = ({ open, onOpenChange, onStream }: Props) => {
 
 const PhonePairModalInner = ({ open, onOpenChange, onStream }: Props) => {
   const { sessionId, token, status, remoteStream, disconnect } = useHostPairing();
+  const { setPhoneStream } = usePhoneStream();
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -31,7 +32,9 @@ const PhonePairModalInner = ({ open, onOpenChange, onStream }: Props) => {
 
   useEffect(() => {
     onStream?.(remoteStream);
-  }, [remoteStream, onStream]);
+    // Publish to global context so the duel WebRTC replaces PC camera with phone
+    setPhoneStream(remoteStream);
+  }, [remoteStream, onStream, setPhoneStream]);
 
   useEffect(() => {
     if (videoRef.current && remoteStream) {
@@ -40,6 +43,7 @@ const PhonePairModalInner = ({ open, onOpenChange, onStream }: Props) => {
   }, [remoteStream]);
 
   const handleClose = () => {
+    setPhoneStream(null);
     disconnect();
     onOpenChange(false);
   };
