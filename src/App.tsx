@@ -325,14 +325,18 @@ const AppContent = () => {
 };
 
 
+import { PhoneStreamProvider } from "./contexts/PhoneStreamContext";
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TcgProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <AppContent />
-      </TooltipProvider>
+      <PhoneStreamProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <AppContent />
+        </TooltipProvider>
+      </PhoneStreamProvider>
     </TcgProvider>
   </QueryClientProvider>
 );
