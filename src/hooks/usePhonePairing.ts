@@ -105,7 +105,7 @@ export function useHostPairing() {
       if (msg.type === "claim") {
         if (msg.token !== token) return;
         setStatus("connecting");
-        setupPC();
+        if (!pcRef.current) setupPC();
         send({ type: "ready" });
       } else if (msg.type === "offer" && pcRef.current && msg.sdp) {
         await pcRef.current.setRemoteDescription(msg.sdp);
@@ -149,8 +149,9 @@ export function usePhoneClientPairing(params: {
   facingMode: "user" | "environment";
   cameraOn: boolean;
   micOn: boolean;
+  initialStream?: MediaStream | null;
 }) {
-  const { sessionId, token, facingMode, cameraOn, micOn } = params;
+  const { sessionId, token, facingMode, cameraOn, micOn, initialStream = null } = params;
   const [status, setStatus] = useState<PairStatus>("idle");
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -159,6 +160,8 @@ export function usePhoneClientPairing(params: {
   const videoSenderRef = useRef<RTCRtpSender | null>(null);
   const audioSenderRef = useRef<RTCRtpSender | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const initialStreamRef = useRef<MediaStream | null>(null);
+  const appliedConstraintsRef = useRef<string | null>(null);
 
   const send = useCallback((signal: Omit<Signal, "from">) => {
     channelRef.current?.send({
@@ -168,12 +171,45 @@ export function usePhoneClientPairing(params: {
     });
   }, []);
 
-  // Acquire media and replace tracks when constraints change
+  const applyStream = useCallback(async (stream: MediaStream | null) => {
+    streamRef.current = stream;
+    setLocalStream(stream);
+
+    const videoTrack = stream?.getVideoTracks()[0] ?? null;
+    const audioTrack = stream?.getAudioTracks()[0] ?? null;
+    if (videoTrack) videoTrack.enabled = cameraOn;
+    if (audioTrack) audioTrack.enabled = micOn;
+
+    if (videoSenderRef.current) await videoSenderRef.current.replaceTrack(videoTrack);
+    if (audioSenderRef.current) await audioSenderRef.current.replaceTrack(audioTrack);
+  }, [cameraOn, micOn]);
+
+  const constraintsKey = `${facingMode}:${cameraOn}:${micOn}`;
+
+  // Use the stream captured directly from the user's tap before starting WebRTC.
   useEffect(() => {
-    if (!sessionId) return;
+    if (!sessionId || !initialStream || initialStreamRef.current === initialStream) return;
+    initialStreamRef.current = initialStream;
+    appliedConstraintsRef.current = constraintsKey;
+    applyStream(initialStream).catch(() => {});
+  }, [sessionId, initialStream, constraintsKey, applyStream]);
+
+  // Re-acquire media and replace tracks when controls change after permission is granted.
+  useEffect(() => {
+    if (!sessionId || !initialStream) return;
+    if (appliedConstraintsRef.current === constraintsKey) return;
+
     let cancelled = false;
     (async () => {
       try {
+        if (!cameraOn && !micOn) {
+          const emptyStream = new MediaStream();
+          streamRef.current?.getTracks().forEach((t) => t.stop());
+          await applyStream(emptyStream);
+          appliedConstraintsRef.current = constraintsKey;
+          return;
+        }
+
         const stream = await navigator.mediaDevices.getUserMedia({
           video: cameraOn ? { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } } : false,
           audio: micOn ? { echoCancellation: true, noiseSuppression: true } : false,
@@ -184,13 +220,9 @@ export function usePhoneClientPairing(params: {
         }
         // Stop previous
         streamRef.current?.getTracks().forEach((t) => t.stop());
-        streamRef.current = stream;
-        setLocalStream(stream);
-
-        const videoTrack = stream.getVideoTracks()[0] ?? null;
-        const audioTrack = stream.getAudioTracks()[0] ?? null;
-        if (videoSenderRef.current) await videoSenderRef.current.replaceTrack(videoTrack);
-        if (audioSenderRef.current) await audioSenderRef.current.replaceTrack(audioTrack);
+        await applyStream(stream);
+        appliedConstraintsRef.current = constraintsKey;
+        setError(null);
       } catch (e: any) {
         setError(e?.message ?? "Falha ao acessar câmera/microfone");
       }
@@ -198,7 +230,7 @@ export function usePhoneClientPairing(params: {
     return () => {
       cancelled = true;
     };
-  }, [sessionId, facingMode, cameraOn, micOn]);
+  }, [sessionId, initialStream, constraintsKey, facingMode, cameraOn, micOn, applyStream]);
 
   useEffect(() => {
     if (!sessionId || !token) return;
@@ -213,6 +245,7 @@ export function usePhoneClientPairing(params: {
       if (msg.from !== "host") return;
 
       if (msg.type === "ready") {
+        if (pcRef.current) return;
         setStatus("connecting");
         const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
         pcRef.current = pc;
@@ -234,10 +267,16 @@ export function usePhoneClientPairing(params: {
         const stream = streamRef.current;
         const videoTrack = stream?.getVideoTracks()[0];
         const audioTrack = stream?.getAudioTracks()[0];
-        if (videoTrack) videoSenderRef.current = pc.addTrack(videoTrack, stream!);
-        if (audioTrack) audioSenderRef.current = pc.addTrack(audioTrack, stream!);
-        if (!videoTrack) pc.addTransceiver("video", { direction: "sendonly" });
-        if (!audioTrack) pc.addTransceiver("audio", { direction: "sendonly" });
+        if (videoTrack) {
+          videoSenderRef.current = pc.addTrack(videoTrack, stream!);
+        } else {
+          videoSenderRef.current = pc.addTransceiver("video", { direction: "sendonly" }).sender;
+        }
+        if (audioTrack) {
+          audioSenderRef.current = pc.addTrack(audioTrack, stream!);
+        } else {
+          audioSenderRef.current = pc.addTransceiver("audio", { direction: "sendonly" }).sender;
+        }
 
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
@@ -255,10 +294,15 @@ export function usePhoneClientPairing(params: {
       }
     });
 
+    let claimTimer: ReturnType<typeof window.setInterval> | null = null;
+
     channel.subscribe((s) => {
       if (s === "SUBSCRIBED") {
         setStatus("waiting");
         send({ type: "claim", token });
+        claimTimer = window.setInterval(() => {
+          if (!pcRef.current) send({ type: "claim", token });
+        }, 1200);
       }
     });
 
@@ -266,6 +310,7 @@ export function usePhoneClientPairing(params: {
       try {
         channel.send({ type: "broadcast", event: "sig", payload: { from: "phone", type: "bye" } });
       } catch {}
+      if (claimTimer) window.clearInterval(claimTimer);
       pcRef.current?.close();
       pcRef.current = null;
       supabase.removeChannel(channel);
