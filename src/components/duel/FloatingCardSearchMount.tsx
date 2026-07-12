@@ -9,18 +9,8 @@ export const FloatingCardSearchMount = () => {
   const isMobile = useIsMobile();
   const location = useLocation();
   if (isMobile) return null;
-  const showOn = [
-    "/duel/",
-    "/duels",
-    "/matchmaking",
-    "/join/",
-    "/m/",
-    "/dueling-book-alternativa",
-    "/yugioh-omega-alternativa",
-    "/yugioh-remote-duel",
-    "/pro/duels",
-    "/pro/matchmaking",
-  ];
+  // Only during an actual match (duel room)
+  const showOn = ["/duel/"];
   const isVisible = showOn.some((p) => location.pathname.startsWith(p));
   if (!isVisible) return null;
   return <FloatingCardSearch />;
