@@ -24,6 +24,17 @@ const PhoneCameraMode = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const wakeLockRef = useRef<any>(null);
 
+  useEffect(() => {
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+    };
+  }, []);
+
   const { status, localStream, error } = usePhoneClientPairing({
     sessionId: initialStream ? sessionId : null,
     token: initialStream ? token : null,
@@ -106,7 +117,7 @@ const PhoneCameraMode = () => {
 
   if (!sessionId || !token) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 text-center">
+      <div className="h-[100dvh] overflow-hidden flex items-center justify-center p-6 text-center">
         <div>
           <p className="mb-4">Sessão de pareamento inválida.</p>
           <Button onClick={() => navigate("/phone-connect")}>Escanear novamente</Button>
@@ -123,9 +134,9 @@ const PhoneCameraMode = () => {
         : "bg-rose-500";
 
   return (
-    <div className="fixed inset-0 bg-black text-white flex flex-col z-[100]">
+    <div className="fixed inset-0 h-[100dvh] max-h-[100dvh] overflow-hidden bg-black text-white flex flex-col z-[9999] overscroll-none touch-none">
       {/* Top status bar */}
-      <div className="flex items-center justify-between px-3 py-2 bg-black/60 backdrop-blur-sm">
+      <div className="shrink-0 flex items-center justify-between px-3 py-1.5 bg-black/60 backdrop-blur-sm">
         <div className="flex items-center gap-2 text-xs">
           <span className={`h-2.5 w-2.5 rounded-full ${statusColor}`} />
           <span className="capitalize">
@@ -158,12 +169,12 @@ const PhoneCameraMode = () => {
       </div>
 
       {/* Video preview */}
-      <div className="flex-1 relative bg-black flex items-center justify-center">
+      <div className="min-h-0 flex-1 relative bg-black flex items-center justify-center overflow-hidden">
         {!initialStream ? (
-          <div className="px-6 text-center flex flex-col items-center gap-4">
-            <Camera className="h-16 w-16 text-white/70" />
-            <div className="space-y-2">
-              <h1 className="text-xl font-bold">Celular pronto para conectar</h1>
+          <div className="px-5 text-center flex flex-col items-center gap-3 max-h-full max-w-sm">
+            <Camera className="h-12 w-12 shrink-0 text-white/70" />
+            <div className="space-y-1">
+              <h1 className="text-lg font-bold">Celular pronto para conectar</h1>
               <p className="text-sm text-white/70">
                 Toque no botão abaixo para liberar câmera e microfone e iniciar a transmissão para o PC.
               </p>
@@ -172,7 +183,7 @@ const PhoneCameraMode = () => {
               {starting ? "Iniciando..." : "Iniciar transmissão"}
             </Button>
             {startError && (
-              <div className="flex items-start gap-2 rounded bg-rose-600/90 p-3 text-left text-sm text-white">
+              <div className="flex items-start gap-2 rounded bg-rose-600/90 p-2 text-left text-xs text-white">
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                 <span>{startError}</span>
               </div>
@@ -200,11 +211,11 @@ const PhoneCameraMode = () => {
       </div>
 
       {/* Bottom controls */}
-      <div className="px-4 py-4 bg-black/70 backdrop-blur-sm flex items-center justify-around">
+      <div className="shrink-0 px-4 py-3 bg-black/70 backdrop-blur-sm flex items-center justify-around">
         <Button
           variant={cameraOn ? "default" : "secondary"}
           size="lg"
-          className="rounded-full h-14 w-14 p-0"
+          className="rounded-full h-12 w-12 p-0"
           onClick={() => setCameraOn((v) => !v)}
           disabled={!initialStream}
           title="Ligar/desligar câmera"
@@ -214,7 +225,7 @@ const PhoneCameraMode = () => {
         <Button
           variant="secondary"
           size="lg"
-          className="rounded-full h-14 w-14 p-0"
+          className="rounded-full h-12 w-12 p-0"
           onClick={() => setFacingMode((f) => (f === "user" ? "environment" : "user"))}
           disabled={!initialStream || !cameraOn}
           title="Alternar câmera"
@@ -224,7 +235,7 @@ const PhoneCameraMode = () => {
         <Button
           variant={micOn ? "default" : "secondary"}
           size="lg"
-          className="rounded-full h-14 w-14 p-0"
+          className="rounded-full h-12 w-12 p-0"
           onClick={() => setMicOn((v) => !v)}
           disabled={!initialStream}
           title="Ligar/desligar microfone"
