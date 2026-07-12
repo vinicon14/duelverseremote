@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Loader2, Smartphone, CheckCircle2, X } from "lucide-react";
 import { useHostPairing } from "@/hooks/usePhonePairing";
+import { usePhoneStream } from "@/contexts/PhoneStreamContext";
 
 interface Props {
   open: boolean;
