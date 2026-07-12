@@ -65,21 +65,20 @@ const PhoneConnect = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center p-4">
-      <div className="w-full max-w-md space-y-4 pt-4">
-        <div className="text-center space-y-2">
+    <div className="h-[100dvh] overflow-hidden bg-background flex flex-col items-center p-3 overscroll-none">
+      <div className="w-full max-w-md h-full min-h-0 flex flex-col gap-3">
+        <div className="shrink-0 text-center space-y-1">
           <div className="flex justify-center">
-            <Smartphone className="h-14 w-14 text-primary" />
+            <Smartphone className="h-10 w-10 text-primary" />
           </div>
-          <h1 className="text-2xl font-bold">Conectar ao Computador</h1>
+          <h1 className="text-xl font-bold">Conectar ao Computador</h1>
           <p className="text-sm text-muted-foreground">
-            No PC, abra <b>Conectar celular</b>. Depois escaneie o QR Code aqui para transformar
-            seu celular em uma câmera auxiliar.
+            No PC, abra <b>Conectar celular</b> e escaneie o QR Code.
           </p>
         </div>
 
         {!scanning && (
-          <Button onClick={startScan} size="lg" className="w-full">
+          <Button onClick={startScan} size="lg" className="w-full shrink-0">
             <Camera className="h-5 w-5 mr-2" />
             Iniciar leitor de QR
           </Button>
@@ -87,19 +86,18 @@ const PhoneConnect = () => {
 
         <div
           id="qr-reader"
-          className="w-full aspect-square rounded-lg overflow-hidden bg-black border"
+          className="w-full min-h-0 flex-1 max-h-[min(68dvh,420px)] rounded-lg overflow-hidden bg-black border"
         />
 
         {error && (
-          <div className="flex items-start gap-2 text-sm text-destructive p-3 border border-destructive/30 rounded-md bg-destructive/5">
+          <div className="shrink-0 flex items-start gap-2 text-xs text-destructive p-2 border border-destructive/30 rounded-md bg-destructive/5">
             <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
-        <div className="text-xs text-muted-foreground text-center space-y-1">
+        <div className="shrink-0 text-xs text-muted-foreground text-center">
           <p>Requer permissão de câmera para leitura do QR.</p>
-          <p>A conexão é feita via WebRTC (baixa latência).</p>
         </div>
       </div>
     </div>
