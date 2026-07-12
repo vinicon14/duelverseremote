@@ -13,8 +13,6 @@ interface Props {
 }
 
 export const PhonePairModal = ({ open, onOpenChange, onStream }: Props) => {
-  // Only initialize pairing when modal is open
-  if (!open) return null;
   return <PhonePairModalInner open={open} onOpenChange={onOpenChange} onStream={onStream} />;
 };
 
@@ -37,16 +35,25 @@ const PhonePairModalInner = ({ open, onOpenChange, onStream }: Props) => {
   }, [remoteStream, onStream, setPhoneStream]);
 
   useEffect(() => {
+    return () => {
+      setPhoneStream(null);
+      onStream?.(null);
+    };
+  }, [onStream, setPhoneStream]);
+
+  useEffect(() => {
     if (videoRef.current && remoteStream) {
       videoRef.current.srcObject = remoteStream;
     }
   }, [remoteStream]);
 
-  const handleClose = () => {
+  const handleDisconnect = () => {
     setPhoneStream(null);
     disconnect();
     onOpenChange(false);
   };
+
+  const handleClose = () => onOpenChange(false);
 
   return (
     <Dialog open={open} onOpenChange={(v) => (!v ? handleClose() : onOpenChange(v))}>
@@ -104,9 +111,15 @@ const PhonePairModalInner = ({ open, onOpenChange, onStream }: Props) => {
         </div>
 
         <div className="flex justify-end gap-2">
+          {status === "connected" && (
+            <Button variant="destructive" onClick={handleDisconnect}>
+              <X className="h-4 w-4 mr-1" />
+              Desconectar
+            </Button>
+          )}
           <Button variant="outline" onClick={handleClose}>
             <X className="h-4 w-4 mr-1" />
-            {status === "connected" ? "Desconectar" : "Fechar"}
+            Fechar janela
           </Button>
         </div>
       </DialogContent>
