@@ -16,7 +16,8 @@ export const PhonePairFab = () => {
 
   if (isMobile) return null;
 
-  const showOn = ["/duel/", "/duels", "/matchmaking", "/join/", "/m/"];
+  // Only during an actual match (duel room)
+  const showOn = ["/duel/"];
   const isVisible = showOn.some((p) => location.pathname.startsWith(p));
   if (!isVisible) return null;
 
