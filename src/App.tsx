@@ -71,6 +71,7 @@ const PhoneConnect = lazy(() => import("./pages/PhoneConnect"));
 const PhoneCameraMode = lazy(() => import("./pages/PhoneCameraMode"));
 import { RequireDesktop } from "./components/RequireDesktop";
 import { PhonePairFab } from "./components/desktop/PhonePairFab";
+import { MobileConnectFab } from "./components/MobileConnectFab";
 
 const DeckBuilder = lazy(() => import("./pages/DeckBuilder"));
 const GenesisDeckBuilder = lazy(() => import("./pages/GenesisDeckBuilder"));
