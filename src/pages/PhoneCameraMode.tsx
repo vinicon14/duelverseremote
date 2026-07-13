@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Camera, CameraOff, Mic, MicOff, SwitchCamera, X, Wifi, WifiOff, Battery, AlertCircle } from "lucide-react";
+import { Camera, CameraOff, Mic, MicOff, SwitchCamera, X, Wifi, WifiOff, Battery, AlertCircle, MessageCircle } from "lucide-react";
 import { usePhoneClientPairing } from "@/hooks/usePhonePairing";
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { GlobalChat } from "@/components/GlobalChat";
 
 /**
  * Fullscreen "phone as webcam" mode.
@@ -242,6 +244,26 @@ const PhoneCameraMode = () => {
         >
           {micOn ? <Mic className="h-6 w-6" /> : <MicOff className="h-6 w-6" />}
         </Button>
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button
+              variant="secondary"
+              size="lg"
+              className="rounded-full h-12 w-12 p-0"
+              title="Chat global"
+            >
+              <MessageCircle className="h-6 w-6" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="bottom" className="h-[85dvh] p-0 flex flex-col">
+            <SheetHeader className="px-4 py-3 border-b">
+              <SheetTitle>Chat Global</SheetTitle>
+            </SheetHeader>
+            <div className="flex-1 min-h-0 overflow-hidden p-3">
+              <GlobalChat />
+            </div>
+          </SheetContent>
+        </Sheet>
       </div>
     </div>
   );
