@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Camera, CameraOff, Mic, MicOff, SwitchCamera, X, Wifi, WifiOff, Battery, AlertCircle } from "lucide-react";
+import { Camera, CameraOff, Mic, MicOff, SwitchCamera, X, Wifi, WifiOff, Battery, AlertCircle, MessageCircle } from "lucide-react";
 import { usePhoneClientPairing } from "@/hooks/usePhonePairing";
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { GlobalChat } from "@/components/GlobalChat";
 
 /**
  * Fullscreen "phone as webcam" mode.
