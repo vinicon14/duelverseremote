@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";
 import { MessageCircle } from "lucide-react";
@@ -39,8 +39,8 @@ export const WhatsAppButton = () => {
   const location = useLocation();
   const isMobile = useIsMobile();
   const btnRef = useRef<HTMLAnchorElement>(null);
-  const dragRef = useRef({
-    isDragging: false,
+  const dragState = useRef({
+    active: false,
     startX: 0,
     startY: 0,
     startLeft: 0,
@@ -68,73 +68,63 @@ export const WhatsAppButton = () => {
     [dismiss]
   );
 
-  const handlePointerDown = useCallback(
-    (e: React.PointerEvent) => {
-      const el = btnRef.current;
-      if (!el || e.button !== 0) return;
-      el.setPointerCapture(e.pointerId);
-      const rect = el.getBoundingClientRect();
-      dragRef.current = {
-        isDragging: true,
-        startX: e.clientX,
-        startY: e.clientY,
-        startLeft: rect.left,
-        startTop: rect.top,
-        didMove: false,
-      };
-    },
-    []
-  );
-
-  const handlePointerMove = useCallback(
-    (e: React.PointerEvent) => {
-      const d = dragRef.current;
-      if (!d.isDragging) return;
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      const d = dragState.current;
+      if (!d.active) return;
       const dx = e.clientX - d.startX;
       const dy = e.clientY - d.startY;
       if (Math.abs(dx) + Math.abs(dy) > 5) d.didMove = true;
       if (!d.didMove) return;
+      const el = btnRef.current;
+      if (!el) return;
       const vw = window.innerWidth;
       const vh = window.innerHeight;
       const newLeft = Math.max(0, Math.min(d.startLeft + dx, vw - 48));
       const newTop = Math.max(0, Math.min(d.startTop + dy, vh - 48));
-      const el = btnRef.current;
-      if (el) {
-        el.style.left = `${newLeft}px`;
-        el.style.top = `${newTop}px`;
-        el.style.right = "auto";
-        el.style.bottom = "auto";
-      }
-    },
-    []
-  );
+      el.style.left = `${newLeft}px`;
+      el.style.top = `${newTop}px`;
+      el.style.right = "auto";
+      el.style.bottom = "auto";
+    };
 
-  const handlePointerUp = useCallback(
-    (_e: React.PointerEvent) => {
-      const d = dragRef.current;
-      d.isDragging = false;
-      const el = btnRef.current;
-      if (!el) return;
+    const onUp = () => {
+      const d = dragState.current;
+      if (!d.active) return;
+      d.active = false;
       if (d.didMove) {
-        const rect = el.getBoundingClientRect();
-        const x = Math.round(rect.left);
-        const y = Math.round(rect.top);
-        setPos({ x, y });
-        savePosition(x, y);
+        const el = btnRef.current;
+        if (el) {
+          const x = Math.round(el.getBoundingClientRect().left);
+          const y = Math.round(el.getBoundingClientRect().top);
+          setPos({ x, y });
+          savePosition(x, y);
+        }
       }
-    },
-    []
-  );
+    };
 
-  const handleClick = useCallback(
-    (e: React.MouseEvent) => {
-      if (dragRef.current.didMove) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    },
-    []
-  );
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+    return () => {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+    };
+  }, []);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    const el = btnRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    dragState.current = {
+      active: true,
+      startX: e.clientX,
+      startY: e.clientY,
+      startLeft: rect.left,
+      startTop: rect.top,
+      didMove: false,
+    };
+  }, []);
 
   if (isHidden || dismissed) return null;
 
@@ -153,12 +143,15 @@ export const WhatsAppButton = () => {
       aria-label={t("whatsappGroup.label")}
       title={t("whatsappGroup.dismissHint")}
       style={style}
-      className="fixed z-[60] flex h-11 w-11 items-center justify-center rounded-full border border-green-500/50 bg-background/80 backdrop-blur-md text-green-500 shadow-lg transition-colors hover:bg-green-500/10 hover:border-green-500 hover:shadow-green-500/20 select-none touch-none"
+      className="fixed z-[60] flex h-11 w-11 items-center justify-center rounded-full border border-green-500/50 bg-background/80 backdrop-blur-md text-green-500 shadow-lg transition-colors hover:bg-green-500/10 hover:border-green-500 hover:shadow-green-500/20 select-none"
       onContextMenu={handleContextMenu}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
-      onClick={handleClick}
+      onMouseDown={handleMouseDown}
+      onClick={(e) => {
+        if (dragState.current.didMove) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }}
     >
       <MessageCircle className="h-5 w-5" />
     </a>
