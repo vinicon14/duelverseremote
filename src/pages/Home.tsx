@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { DuelCoinsBalance } from "@/components/DuelCoinsBalance";
-import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { useTranslation } from "react-i18next";
 
 export default function Home() {
@@ -74,7 +73,6 @@ export default function Home() {
         </div>
 
       </main>
-      <WhatsAppButton />
     </div>
     </SidebarProvider>
   );

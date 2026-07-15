@@ -891,5 +891,9 @@
     "sentToastDesc": "Verifique se apareceu uma notificação do navegador",
     "errorToast": "Erro ao criar notificação",
     "unknownError": "Erro desconhecido"
+  },
+  "whatsappGroup": {
+    "label": "Grupo WhatsApp",
+    "dismissHint": "Clique com o botão direito para ocultar"
   }
 }

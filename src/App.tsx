@@ -72,6 +72,7 @@ const PhoneCameraMode = lazy(() => import("./pages/PhoneCameraMode"));
 import { RequireDesktop } from "./components/RequireDesktop";
 import { PhonePairFab } from "./components/desktop/PhonePairFab";
 import { MobileConnectFab } from "./components/MobileConnectFab";
+import { WhatsAppButton } from "./components/WhatsAppButton";
 import { FloatingCardSearchMount } from "./components/duel/FloatingCardSearchMount";
 
 const DeckBuilder = lazy(() => import("./pages/DeckBuilder"));
@@ -309,6 +310,7 @@ const MainAppContent = () => {
       <SoundEffectsProvider />
       <PhonePairFab />
       <MobileConnectFab />
+      <WhatsAppButton />
       <FloatingCardSearchMount />
       <div className="router-view-animate">
         <RouterContent user={user} />
