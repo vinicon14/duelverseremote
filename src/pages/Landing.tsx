@@ -18,6 +18,7 @@ import {
 "lucide-react";
 import { SEOHead } from "@/components/SEOHead";
 import { SEOLinksSection } from "@/components/SEOLinksSection";
+import { WhatsAppButton } from "@/components/WhatsAppButton";
 
 const Landing = () => {
   const { t } = useTranslation();
@@ -273,6 +274,8 @@ const Landing = () => {
           </Link>
         </div>
       </section>
+
+      <WhatsAppButton />
 
       <SEOLinksSection />
 
