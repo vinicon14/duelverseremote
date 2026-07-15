@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";
 import { MessageCircle } from "lucide-react";
@@ -72,7 +72,6 @@ export const WhatsAppButton = () => {
     (e: React.PointerEvent) => {
       const el = btnRef.current;
       if (!el || e.button !== 0) return;
-      e.preventDefault();
       el.setPointerCapture(e.pointerId);
       const rect = el.getBoundingClientRect();
       dragRef.current = {
@@ -111,13 +110,12 @@ export const WhatsAppButton = () => {
   );
 
   const handlePointerUp = useCallback(
-    (e: React.PointerEvent) => {
+    (_e: React.PointerEvent) => {
       const d = dragRef.current;
       d.isDragging = false;
       const el = btnRef.current;
       if (!el) return;
       if (d.didMove) {
-        e.preventDefault();
         const rect = el.getBoundingClientRect();
         const x = Math.round(rect.left);
         const y = Math.round(rect.top);
