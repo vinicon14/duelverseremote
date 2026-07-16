@@ -228,7 +228,13 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     const original = localStreamRef.current;
     const activePhoneStream = phoneStreamRef.current;
     const activeVideo = activePhoneStream?.getVideoTracks()[0] ?? original?.getVideoTracks()[0] ?? null;
-    const activeAudio = activePhoneStream?.getAudioTracks()[0] ?? original?.getAudioTracks()[0] ?? null;
+
+    // Audio fallback: if phone mic is off, ended, muted, or missing, use PC mic
+    const phoneAudio = activePhoneStream?.getAudioTracks()[0];
+    const pcAudio = original?.getAudioTracks()[0];
+    const phoneAudioUsable = phoneAudio && phoneAudio.readyState === "live" && phoneAudio.enabled;
+    const activeAudio = phoneAudioUsable ? phoneAudio : pcAudio ?? null;
+
     if (activeVideo) activeVideo.enabled = !isVideoOffRef.current;
     if (activeAudio) activeAudio.enabled = !isMutedRef.current;
 
