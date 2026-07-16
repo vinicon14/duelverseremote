@@ -2,8 +2,10 @@ import { YugiohCard } from '@/hooks/useYugiohCards';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Trash2, Download, Upload, Plus, Minus, Sparkles } from 'lucide-react';
+import { Trash2, Download, Upload, Plus, Minus, Sparkles, ChevronDown } from 'lucide-react';
 import { Language } from '@/hooks/useYugiohCards';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DeckFormat, FORMAT_LABELS, exportDeck } from '@/utils/deckExport';
 
 export interface DeckCard extends YugiohCard {
   quantity: number;
@@ -22,6 +24,7 @@ interface DeckPanelProps {
   onExportDeck: () => void;
   onImportDeck: () => void;
   onCardClick: (card: YugiohCard) => void;
+  deckName?: string;
 }
 
 const labels = {
@@ -60,8 +63,13 @@ export const DeckPanel = ({
   onExportDeck,
   onImportDeck,
   onCardClick,
+  deckName,
 }: DeckPanelProps) => {
   const t = labels[language];
+
+  const handleExportFormat = (format: DeckFormat) => {
+    exportDeck({ main: mainDeck, extra: extraDeck, side: sideDeck }, format, deckName);
+  };
   
   const mainCount = mainDeck.reduce((acc, c) => acc + c.quantity, 0);
   const extraCount = extraDeck.reduce((acc, c) => acc + c.quantity, 0);
@@ -155,10 +163,22 @@ export const DeckPanel = ({
       {/* Toolbar */}
       <div className="p-3 border-b border-border flex items-center justify-between gap-2 flex-wrap">
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={onExportDeck} className="gap-1">
-            <Download className="h-3 w-3" />
-            {t.export}
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-1">
+                <Download className="h-3 w-3" />
+                {t.export}
+                <ChevronDown className="h-3 w-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              {(Object.keys(FORMAT_LABELS) as DeckFormat[]).map((fmt) => (
+                <DropdownMenuItem key={fmt} onClick={() => handleExportFormat(fmt)}>
+                  {FORMAT_LABELS[fmt][language === 'pt' ? 'pt' : 'en']}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button variant="outline" size="sm" onClick={onImportDeck} className="gap-1">
             <Upload className="h-3 w-3" />
             {t.import}
