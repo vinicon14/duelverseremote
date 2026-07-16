@@ -419,53 +419,31 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         const peer = peersRef.current.get(remotePeerId);
         if (!peer) return;
 
-        // Spectator handshake: if we are spectator and this is a new player peer,
-        // reply with our own targeted "ready" so the player knows to create an offer.
-        if (isSpectator && isNewPeer && payload.isSpectator !== true) {
+        // Handshake symmetry: whenever we receive a broadcast "ready" (no targetId),
+        // we reply with a targeted "ready" back so the other side ALSO creates its
+        // PeerConnection. Without this, whichever peer subscribed first misses the
+        // other peer's initial broadcast ready and never negotiates, so audio/video
+        // never arrive. Targeted replies do NOT trigger further replies (guarded by
+        // payload.targetId below), avoiding an infinite ping-pong loop.
+        if (!payload.targetId) {
           channelRef.current?.send({
             type: "broadcast",
             event: "webrtc-signal",
-            payload: { type: "ready", senderId: userId, targetId: remotePeerId, isSpectator: true },
+            payload: {
+              type: "ready",
+              senderId: userId,
+              targetId: remotePeerId,
+              isSpectator,
+            },
           });
         }
 
-        // Decide who creates the offer:
-        // - Spectator never creates the offer.
-        // - If remote is spectator, we (player) always create it.
-        // - Otherwise, glare-avoidance via id comparison.
-        const remoteIsSpectator = payload.isSpectator === true;
-        let shouldCreateOffer: boolean;
-        if (isSpectator) {
-          shouldCreateOffer = false;
-        } else if (remoteIsSpectator) {
-          shouldCreateOffer = true;
-        } else {
-          shouldCreateOffer = userId > remotePeerId;
-        }
-
-        if (shouldCreateOffer) {
-          try {
-            peer.makingOffer = true;
-            const offer = await peer.pc.createOffer();
-            await peer.pc.setLocalDescription(offer);
-            channelRef.current?.send({
-              type: "broadcast",
-              event: "webrtc-signal",
-              payload: {
-                type: "offer",
-                sdp: peer.pc.localDescription,
-                senderId: userId,
-                targetId: remotePeerId,
-              },
-            });
-          } catch (err) {
-            console.error("[WebRTC] offer creation error:", err);
-          } finally {
-            peer.makingOffer = false;
-          }
-        }
+        // Offer creation is handled exclusively by onnegotiationneeded (fired
+        // automatically after addTrack). Creating a manual offer here in parallel
+        // caused glare that broke the SDP exchange, resulting in no remote media.
         return;
       }
+
 
       // Ensure peer connection exists
       if (!peersRef.current.has(remotePeerId)) {
