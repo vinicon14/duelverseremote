@@ -347,21 +347,49 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
 
     // Monitor ICE connection and auto-recover or remove disconnected peer
     pc.oniceconnectionstatechange = () => {
-      console.log(`[WebRTC] ICE state ${remotePeerId}: ${pc.iceConnectionState}`);
-      if (pc.iceConnectionState === 'failed') {
+      const state = pc.iceConnectionState;
+      console.log(`[WebRTC] ICE state ${remotePeerId}: ${state}`);
+
+      if (state === 'failed') {
         console.warn("[WebRTC] ICE failed for:", remotePeerId);
-        // Remove peer so UI shows "Aguardando jogador" again
         removePeer(remotePeerId);
-      } else if (pc.iceConnectionState === 'disconnected') {
+      } else if (state === 'disconnected') {
+        // Try ICE restart first, then wait longer before giving up
+        console.log("[WebRTC] ICE disconnected, attempting restart for:", remotePeerId);
+        try {
+          pc.restartIce();
+          // Force a new offer to trigger ICE restart
+          if (pc.signalingState === "stable") {
+            pc.createOffer({ iceRestart: true }).then((offer) => pc.setLocalDescription(offer)).then(() => {
+              channelRef.current?.send({
+                type: "broadcast",
+                event: "webrtc-signal",
+                payload: {
+                  type: "offer",
+                  sdp: pc.localDescription,
+                  senderId: userId,
+                  targetId: remotePeerId,
+                },
+              });
+            }).catch((err) => console.warn("[WebRTC] ICE restart offer failed:", err));
+          }
+        } catch (err) {
+          console.warn("[WebRTC] restartIce failed:", err);
+        }
+        // Give 10s for recovery before removing
         setTimeout(() => {
           if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed') {
-            console.warn("[WebRTC] Peer disconnected permanently:", remotePeerId);
+            console.warn("[WebRTC] Peer lost after restart attempt:", remotePeerId);
             removePeer(remotePeerId);
           }
-        }, 5000);
-      } else if (pc.iceConnectionState === 'closed') {
+        }, 10000);
+      } else if (state === 'closed') {
         removePeer(remotePeerId);
       }
+    };
+
+    pc.onconnectionstatechange = () => {
+      console.log(`[WebRTC] Connection state ${remotePeerId}: ${pc.connectionState}`);
     };
 
     pc.ontrack = (event) => {
@@ -375,6 +403,19 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         setRemotePeerIds(prev => {
           if (!prev.includes(remotePeerId)) return [...prev, remotePeerId];
           return prev;
+        });
+
+        // Detect remote track ended/mute/unmute for A/V sync awareness
+        event.streams[0].getTracks().forEach((track) => {
+          track.onended = () => {
+            console.warn(`[WebRTC] Remote ${track.kind} track ended from ${remotePeerId}`);
+          };
+          track.onmute = () => {
+            console.log(`[WebRTC] Remote ${track.kind} muted by ${remotePeerId}`);
+          };
+          track.onunmute = () => {
+            console.log(`[WebRTC] Remote ${track.kind} unmuted by ${remotePeerId}`);
+          };
         });
       }
     };
@@ -563,6 +604,19 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         const vTrack = stream.getVideoTracks()[0];
         if (aTrack) setSelectedAudioId(aTrack.getSettings().deviceId || "");
         if (vTrack) setSelectedVideoId(vTrack.getSettings().deviceId || "");
+
+        // Detect when local tracks end (camera unplugged, mic disconnected, etc.)
+        stream.getTracks().forEach((track) => {
+          track.onended = () => {
+            console.warn(`[WebRTC] Local ${track.kind} track ended:`, track.label);
+            if (track.kind === 'video') {
+              setIsVideoOff(true);
+            } else if (track.kind === 'audio') {
+              setIsMuted(true);
+            }
+          };
+        });
+
         // Re-enumerate to get labels
         enumerateDevices();
         // If peer connections were already created before media was ready,
