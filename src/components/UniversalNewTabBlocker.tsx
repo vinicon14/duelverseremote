@@ -85,7 +85,7 @@ export const UniversalNewTabBlocker = () => {
       
       // Allow legitimate popups
       console.log('✅ UNIVERSAL BLOCK - Legitimate popup allowed:', urlString);
-      return window._originalWindowOpen?.apply(window, args);
+      return window._originalWindowOpen?.(...args);
     };
 
     // Apply additional blocking measures ONLY for intrusive behaviors

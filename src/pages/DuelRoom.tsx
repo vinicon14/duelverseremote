@@ -454,7 +454,7 @@ const DuelRoom = () => {
 
   const fetchDuel = async (userId: string) => {
     try {
-      let { data, error } = await supabase
+      const { data, error } = await supabase
         .from('live_duels')
         .select(`
           *,
