@@ -638,7 +638,7 @@ export const DuelDeckViewer = ({
     // Handle dropped card from drag and drop
     setFieldState(prev => {
       const sourceZone = card.sourceZone;
-      let newState = { ...prev };
+      const newState = { ...prev };
 
       // Remove from source zone
       if (sourceZone) {
@@ -719,7 +719,7 @@ export const DuelDeckViewer = ({
       
       setFieldState(prev => {
         const sourceZone = card.sourceZone;
-        let newState = { ...prev };
+        const newState = { ...prev };
 
         // Remove from source zone
         if (sourceZone) {

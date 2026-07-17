@@ -365,7 +365,7 @@ const Duels = () => {
 
       // Determine which slot to fill
       const maxPlayers = d.max_players || 2;
-      let updatePayload: any = {};
+      const updatePayload: any = {};
 
       if (!d.opponent_id) {
         updatePayload.opponent_id = user.id;

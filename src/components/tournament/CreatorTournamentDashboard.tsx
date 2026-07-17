@@ -63,7 +63,7 @@ export const CreatorTournamentDashboard = ({
 
       // Fetch reports for each match
       const matchIds = matchesData?.map(m => m.id) || [];
-      let reportsByMatch: Record<string, any[]> = {};
+      const reportsByMatch: Record<string, any[]> = {};
 
       if (matchIds.length > 0) {
         const { data: reportsData } = await (supabase as any)
