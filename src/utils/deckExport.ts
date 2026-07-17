@@ -85,14 +85,27 @@ export function generateTXT(deck: DeckExport): string {
   return lines.join("\n");
 }
 
-function loadImage(src: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => resolve(img);
-    img.onerror = reject;
-    img.src = src;
-  });
+async function loadImage(src: string): Promise<HTMLImageElement | null> {
+  try {
+    const res = await fetch(src);
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    return new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        resolve(img);
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error("image load failed"));
+      };
+      img.src = url;
+    });
+  } catch {
+    return null;
+  }
 }
 
 async function drawDeckImage(deck: DeckExport, deckName?: string): Promise<Blob | null> {
@@ -155,11 +168,7 @@ async function drawDeckImage(deck: DeckExport, deckName?: string): Promise<Blob 
 
         const src = card.card_images[0]?.image_url_small || card.card_images[0]?.image_url;
         if (src) {
-          try {
-            last.img = await loadImage(src);
-          } catch {
-            last.img = null;
-          }
+          last.img = await loadImage(src);
         }
 
         col++;
