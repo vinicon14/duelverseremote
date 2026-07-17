@@ -660,7 +660,7 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
           <DialogHeader>
             <DialogTitle>Configurar gravação</DialogTitle>
             <DialogDescription>
-              {!!(window as any).electronAPI?.isElectron
+              {(window as any).electronAPI?.isElectron
                 ? 'Escolha a tela ou janela que deseja gravar e a fonte de áudio.'
                 : 'Escolha o áudio que será gravado. (Dica: para “som do jogo”, compartilhe uma aba e ative “compartilhar áudio”.)'}
             </DialogDescription>
@@ -700,9 +700,9 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
             <div className="flex items-start gap-3 rounded-lg border p-3">
               <RadioGroupItem id="audio-system" value="system" className="mt-1" />
               <div className="grid gap-1">
-                <Label htmlFor="audio-system">Som do jogo {!!(window as any).electronAPI?.isElectron ? '(sistema)' : '(aba)'}</Label>
+                <Label htmlFor="audio-system">Som do jogo {(window as any).electronAPI?.isElectron ? '(sistema)' : '(aba)'}</Label>
                 <p className="text-xs text-muted-foreground">
-                  {!!(window as any).electronAPI?.isElectron
+                  {(window as any).electronAPI?.isElectron
                     ? 'Grava o áudio do sistema (loopback, quando suportado).'
                     : 'Grava apenas o áudio do compartilhamento (quando disponível).'}
                 </p>
