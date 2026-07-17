@@ -85,13 +85,18 @@ export function generateTXT(deck: DeckExport): string {
   return lines.join("\n");
 }
 
+function corsProxy(url: string): string {
+  return `https://images.weserv.nl/?url=${encodeURIComponent(url)}`;
+}
+
 async function loadImage(src: string): Promise<HTMLImageElement | null> {
   try {
-    const res = await fetch(src);
+    const proxied = corsProxy(src);
+    const res = await fetch(proxied);
     if (!res.ok) return null;
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
-    return new Promise<HTMLImageElement>((resolve, reject) => {
+    return new Promise<HTMLImageElement>((resolve) => {
       const img = new Image();
       img.onload = () => {
         URL.revokeObjectURL(url);
@@ -99,7 +104,7 @@ async function loadImage(src: string): Promise<HTMLImageElement | null> {
       };
       img.onerror = () => {
         URL.revokeObjectURL(url);
-        reject(new Error("image load failed"));
+        resolve(null);
       };
       img.src = url;
     });
