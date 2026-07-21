@@ -2372,34 +2372,20 @@ export type Database = {
       }
       compute_xp_level: { Args: { _total: number }; Returns: number }
       consume_coupon: { Args: { p_code: string }; Returns: boolean }
-      create_normal_tournament:
-        | {
-            Args: {
-              p_description: string
-              p_end_date: string
-              p_entry_fee: number
-              p_max_participants: number
-              p_name: string
-              p_prize_pool: number
-              p_start_date: string
-              p_tournament_type?: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_description: string
-              p_end_date: string
-              p_entry_fee: number
-              p_max_participants: number
-              p_name: string
-              p_prize_pool: number
-              p_requires_decklist?: boolean
-              p_start_date: string
-              p_tournament_type?: string
-            }
-            Returns: Json
-          }
+      create_normal_tournament: {
+        Args: {
+          p_description: string
+          p_end_date: string
+          p_entry_fee: number
+          p_max_participants: number
+          p_name: string
+          p_prize_pool: number
+          p_requires_decklist?: boolean
+          p_start_date: string
+          p_tournament_type?: string
+        }
+        Returns: Json
+      }
       create_notification: {
         Args: {
           p_data?: Json
