@@ -345,7 +345,7 @@ const DeckBuilder = () => {
   };
 
   const importYDK = async (content: string) => {
-    const lines = content.split('\n');
+    const lines = content.split(/\r?\n/);
     let currentSection = '';
     const mainIds: number[] = [];
     const extraIds: number[] = [];
@@ -353,15 +353,15 @@ const DeckBuilder = () => {
 
     for (const line of lines) {
       const trimmed = line.trim();
-      if (trimmed === '#main') {
+      if (trimmed.startsWith('#main')) {
         currentSection = 'main';
-      } else if (trimmed === '#extra') {
+      } else if (trimmed.startsWith('#extra')) {
         currentSection = 'extra';
-      } else if (trimmed === '!side') {
+      } else if (trimmed.startsWith('!side')) {
         currentSection = 'side';
-      } else if (trimmed && !trimmed.startsWith('#')) {
-        const id = parseInt(trimmed);
-        if (!isNaN(id)) {
+      } else if (trimmed && !trimmed.startsWith('#') && !trimmed.startsWith('!')) {
+        const id = parseInt(trimmed, 10);
+        if (!isNaN(id) && id > 0) {
           if (currentSection === 'main') mainIds.push(id);
           else if (currentSection === 'extra') extraIds.push(id);
           else if (currentSection === 'side') sideIds.push(id);
@@ -369,47 +369,86 @@ const DeckBuilder = () => {
       }
     }
 
-    // Fetch card data for all IDs
     const allIds = [...new Set([...mainIds, ...extraIds, ...sideIds])];
-    
+
     if (allIds.length === 0) {
       toast.error(t.invalidDeck);
       return;
     }
 
     try {
-      const response = await fetch(
-        `https://db.ygoprodeck.com/api/v7/cardinfo.php?id=${allIds.join(',')}&language=${language}`
-      );
-      const data = await response.json();
       const cardsMap = new Map<number, YugiohCard>();
-      
-      data.data?.forEach((card: YugiohCard) => {
-        cardsMap.set(card.id, card);
-      });
+      // Chunk requests to avoid URL length limits and language=en (API 400s on en)
+      const chunkSize = 50;
+      const langParam = language === 'pt' ? '&language=pt' : '';
+      for (let i = 0; i < allIds.length; i += chunkSize) {
+        const chunk = allIds.slice(i, i + chunkSize);
+        try {
+          const res = await fetch(
+            `https://db.ygoprodeck.com/api/v7/cardinfo.php?id=${chunk.join(',')}${langParam}`
+          );
+          if (!res.ok) continue;
+          const data = await res.json();
+          data.data?.forEach((card: YugiohCard) => cardsMap.set(card.id, card));
+        } catch (err) {
+          console.warn('Chunk fetch failed', err);
+        }
+      }
+
+      // Fallback: for any missing IDs, try English
+      const missing = allIds.filter((id) => !cardsMap.has(id));
+      if (missing.length > 0 && langParam) {
+        for (let i = 0; i < missing.length; i += chunkSize) {
+          const chunk = missing.slice(i, i + chunkSize);
+          try {
+            const res = await fetch(
+              `https://db.ygoprodeck.com/api/v7/cardinfo.php?id=${chunk.join(',')}`
+            );
+            if (!res.ok) continue;
+            const data = await res.json();
+            data.data?.forEach((card: YugiohCard) => cardsMap.set(card.id, card));
+          } catch (err) {
+            console.warn('Fallback chunk failed', err);
+          }
+        }
+      }
+
+      if (cardsMap.size === 0) {
+        toast.error(t.invalidDeck);
+        return;
+      }
 
       const buildDeck = (ids: number[]): DeckCard[] => {
         const countMap = new Map<number, number>();
         ids.forEach((id) => countMap.set(id, (countMap.get(id) || 0) + 1));
-        
+
         return Array.from(countMap.entries())
           .map(([id, quantity]) => {
             const card = cardsMap.get(id);
             if (!card) return null;
             const max = getMaxCopiesAdvanced(card);
-            if (max <= 0) return null;
-            return { ...card, quantity: Math.min(quantity, max) };
+            const cap = max > 0 ? max : 3;
+            return { ...card, quantity: Math.min(quantity, cap) };
           })
           .filter(Boolean) as DeckCard[];
       };
 
+      const newMain = buildDeck(mainIds);
+      const newExtra = buildDeck(extraIds);
+      const newSide = buildDeck(sideIds);
 
-      setMainDeck(buildDeck(mainIds));
-      setExtraDeck(buildDeck(extraIds));
-      setSideDeck(buildDeck(sideIds));
+      setMainDeck(newMain);
+      setExtraDeck(newExtra);
+      setSideDeck(newSide);
+      setTokensDeck([]);
       setCurrentDeckId(null);
-      toast.success(t.deckImported);
-    } catch {
+
+      const total = newMain.reduce((a, c) => a + c.quantity, 0)
+        + newExtra.reduce((a, c) => a + c.quantity, 0)
+        + newSide.reduce((a, c) => a + c.quantity, 0);
+      toast.success(`${t.deckImported} (${total})`);
+    } catch (err) {
+      console.error('Import YDK error:', err);
       toast.error(t.invalidDeck);
     }
   };
