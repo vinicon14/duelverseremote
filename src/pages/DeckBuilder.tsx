@@ -333,12 +333,42 @@ const DeckBuilder = () => {
   const handleImportDeck = () => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.ydk';
+    // Aceita YDK (DuelingBook/YGOPro/Omega), TXT e JSON (DuelingBook export)
+    input.accept = '.ydk,.txt,.json,text/plain,application/json';
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
 
       const text = await file.text();
+      const name = file.name.toLowerCase();
+
+      // DuelingBook JSON export: { main: [{serial_number}], side: [...], ... }
+      if (name.endsWith('.json') || text.trim().startsWith('{') || text.trim().startsWith('[')) {
+        try {
+          const json = JSON.parse(text);
+          const toIds = (arr: any[]): number[] =>
+            (arr || [])
+              .map((c) => {
+                if (typeof c === 'number') return c;
+                if (typeof c === 'string') return parseInt(c, 10);
+                return parseInt(c?.serial_number ?? c?.passcode ?? c?.id ?? c?.konami_id ?? '0', 10);
+              })
+              .filter((n) => !isNaN(n) && n > 0);
+
+          const main = toIds(json.main ?? json.mainDeck ?? json.deck ?? []);
+          const extra = toIds(json.extra ?? json.extraDeck ?? []);
+          const side = toIds(json.side ?? json.sideDeck ?? []);
+
+          if (main.length + extra.length + side.length > 0) {
+            let ydk = '#main\n' + main.join('\n') + '\n#extra\n' + extra.join('\n') + '\n!side\n' + side.join('\n');
+            await importYDK(ydk);
+            return;
+          }
+        } catch {
+          // fall through to YDK parser
+        }
+      }
+
       await importYDK(text);
     };
     input.click();
