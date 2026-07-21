@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public.create_normal_tournament(text, text, text, text, integer, integer, integer, text);
