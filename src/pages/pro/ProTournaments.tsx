@@ -102,7 +102,7 @@ const ProTournaments = () => {
             {canCreateTournament && (
               <Button
                 className="btn-mystic text-white"
-                onClick={() => navigate("/pro/create-tournament")}
+                onClick={() => navigate("/create-tournament")}
               >
                 <Plus className="mr-2 h-4 w-4" />
                 Criar Torneio
