@@ -695,6 +695,45 @@ const DuelRoom = () => {
 
   // Old setLP removed - replaced by the one above that supports 4 players
 
+  // ==== Novo fluxo de finalização por votação ====
+  const finalizeVotes = ((duel?.finalize_votes ?? {}) as Record<string, string | null>);
+  const isParticipant = !!currentUser && (currentUser.id === duel?.creator_id || currentUser.id === duel?.opponent_id);
+  const bothPlayersPresent = !!duel?.creator_id && !!duel?.opponent_id;
+  const anyoneRequested = bothPlayersPresent && (
+    (duel?.creator_id && duel.creator_id in finalizeVotes) ||
+    (duel?.opponent_id && duel.opponent_id in finalizeVotes)
+  );
+  const showVoteModal = isParticipant && bothPlayersPresent && anyoneRequested && duel?.status !== 'finished';
+  const myVote = currentUser ? finalizeVotes[currentUser.id] : undefined;
+  const resolvingRef = useRef(false);
+
+  const requestFinalize = async () => {
+    if (!id || !currentUser || !duel) return;
+    if (!duel.opponent_id) {
+      toast({ title: 'Aguardando oponente', description: 'A partida ainda não tem oponente.', variant: 'destructive' });
+      return;
+    }
+    const opponentId = currentUser.id === duel.creator_id ? duel.opponent_id : duel.creator_id;
+    const votes = { ...finalizeVotes };
+    if (!(currentUser.id in votes)) votes[currentUser.id] = null;
+    const { error } = await supabase.from('live_duels').update({ finalize_votes: votes } as any).eq('id', id);
+    if (error) {
+      toast({ title: 'Erro', description: error.message, variant: 'destructive' });
+      return;
+    }
+    if (!(opponentId in votes)) {
+      toast({ title: 'Aguardando o oponente', description: 'Peça ao oponente para clicar em Finalizar também.' });
+    }
+  };
+
+  const castVote = async (winnerId: string) => {
+    if (!id || !currentUser) return;
+    const votes = { ...finalizeVotes, [currentUser.id]: winnerId };
+    await supabase.from('live_duels').update({ finalize_votes: votes } as any).eq('id', id);
+  };
+
+
+
   const endDuel = async (winnerId?: string) => {
     try {
       // Determinar vencedor baseado nos Life Points se não foi especificado
@@ -1430,7 +1469,7 @@ const DuelRoom = () => {
                             {isTimerPaused ? '▶️' : '⏸️'}
                           </Button>
                           <Button
-                            onClick={() => endDuel()}
+                            onClick={requestFinalize}
                             variant="outline"
                             size="sm"
                             className="bg-green-600/95 hover:bg-green-700 text-white backdrop-blur-sm text-xs sm:text-sm"
