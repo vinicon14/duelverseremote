@@ -291,11 +291,21 @@ const DuelRoom = () => {
             const newP2LP = payload.new.player2_lp ?? defaultLP;
             const newP3LP = (payload.new as any).player3_lp ?? defaultLP;
             const newP4LP = (payload.new as any).player4_lp ?? defaultLP;
-            
+
             setPlayer1LP(newP1LP);
             setPlayer2LP(newP2LP);
             setPlayer3LP(newP3LP);
             setPlayer4LP(newP4LP);
+
+            // Sincroniza votação de finalização e status
+            setDuel((prev: any) => prev ? {
+              ...prev,
+              finalize_votes: (payload.new as any).finalize_votes ?? prev.finalize_votes ?? {},
+              finalize_conflict_count: (payload.new as any).finalize_conflict_count ?? prev.finalize_conflict_count ?? 0,
+              status: payload.new.status ?? prev.status,
+              winner_id: payload.new.winner_id ?? prev.winner_id,
+            } : prev);
+
             
             // Sync custom counters
             if ((payload.new as any).custom_counters) {
