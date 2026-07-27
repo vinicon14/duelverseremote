@@ -697,13 +697,13 @@ const DuelRoom = () => {
 
   // ==== Novo fluxo de finalização por votação ====
   const finalizeVotes = ((duel?.finalize_votes ?? {}) as Record<string, string | null>);
-  const isParticipant = !!currentUser && (currentUser.id === duel?.creator_id || currentUser.id === duel?.opponent_id);
+  const isFinalizeParticipant = !!currentUser && (currentUser.id === duel?.creator_id || currentUser.id === duel?.opponent_id);
   const bothPlayersPresent = !!duel?.creator_id && !!duel?.opponent_id;
   const anyoneRequested = bothPlayersPresent && (
     (duel?.creator_id && duel.creator_id in finalizeVotes) ||
     (duel?.opponent_id && duel.opponent_id in finalizeVotes)
   );
-  const showVoteModal = isParticipant && bothPlayersPresent && anyoneRequested && duel?.status !== 'finished';
+  const showVoteModal = isFinalizeParticipant && bothPlayersPresent && anyoneRequested && duel?.status !== 'finished';
   const myVote = currentUser ? finalizeVotes[currentUser.id] : undefined;
   const resolvingRef = useRef(false);
 
