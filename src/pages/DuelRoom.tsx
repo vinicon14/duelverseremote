@@ -1571,7 +1571,60 @@ const DuelRoom = () => {
         onQuickDraw={isYgoStyleTcg(duel?.tcg_type) ? () => setQuickDrawSignal((value) => value + 1) : undefined}
       />
 
+      {/* Modal de votação do vencedor da partida */}
+      <Dialog open={!!showVoteModal} onOpenChange={() => { /* modal permanece até resolução */ }}>
+        <DialogContent className="max-w-md" onInteractOutside={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Trophy className="h-5 w-5 text-primary" />
+              Quem venceu a partida?
+            </DialogTitle>
+            <DialogDescription>
+              Os dois jogadores precisam concordar com o vencedor. Se os votos divergirem, vocês votam novamente.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid grid-cols-2 gap-3 py-2">
+            {[
+              { id: duel?.creator_id, name: duel?.creator?.username || 'Jogador 1', avatar: duel?.creator?.avatar_url },
+              { id: duel?.opponent_id, name: duel?.opponent?.username || 'Jogador 2', avatar: duel?.opponent?.avatar_url },
+            ].map((p) => p.id ? (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => castVote(p.id!)}
+                className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors ${
+                  myVote === p.id ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/50'
+                }`}
+              >
+                <Avatar className="h-16 w-16">
+                  <AvatarImage src={p.avatar || undefined} />
+                  <AvatarFallback>{p.name.charAt(0).toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <span className="text-sm font-semibold text-center break-all">{p.name}</span>
+                {myVote === p.id && <span className="text-[10px] text-primary font-bold">SEU VOTO</span>}
+              </button>
+            ) : null)}
+          </div>
+
+          <div className="text-xs text-muted-foreground text-center">
+            {myVote
+              ? (finalizeVotes[duel?.creator_id === currentUser?.id ? (duel?.opponent_id || '') : (duel?.creator_id || '')]
+                  ? 'Processando resultado...'
+                  : 'Aguardando o voto do oponente.')
+              : 'Selecione o vencedor acima.'}
+          </div>
+
+          {(duel as any)?.finalize_conflict_count > 0 && (
+            <div className="text-[11px] text-destructive text-center">
+              Divergências até agora: {(duel as any).finalize_conflict_count}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
     </div>
+
   );
 };
 
