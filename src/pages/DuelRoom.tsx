@@ -870,6 +870,32 @@ const DuelRoom = () => {
     }
   };
 
+  // Auto-resolve: once both players voted, the creator processes the outcome
+  useEffect(() => {
+    if (!id || !duel?.creator_id || !duel?.opponent_id) return;
+    if (duel.status === 'finished') return;
+    if (currentUser?.id !== duel.creator_id) return; // only creator resolves to avoid races
+    if (resolvingRef.current) return;
+    const v1 = finalizeVotes[duel.creator_id];
+    const v2 = finalizeVotes[duel.opponent_id];
+    if (!v1 || !v2) return;
+    resolvingRef.current = true;
+    (async () => {
+      if (v1 === v2) {
+        await endDuel(v1);
+        await supabase.from('live_duels').update({ finalize_votes: {} } as any).eq('id', id);
+      } else {
+        const newCount = ((duel as any).finalize_conflict_count ?? 0) + 1;
+        await supabase.from('live_duels').update({ finalize_votes: {}, finalize_conflict_count: newCount } as any).eq('id', id);
+        toast({ title: 'Votos divergentes', description: 'Vocês escolheram vencedores diferentes. Votem novamente.', variant: 'destructive' });
+      }
+      setTimeout(() => { resolvingRef.current = false; }, 800);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [finalizeVotes, duel?.status, duel?.creator_id, duel?.opponent_id, currentUser?.id, id]);
+
+
+
   const handleLeave = async () => {
     if (!id || !currentUser) {
       navigate('/duels');
