@@ -729,6 +729,15 @@ const TournamentDetail = () => {
               </CardContent>
             </Card>
 
+            {/* Decklists — visíveis apenas para o criador e admins */}
+            {tournament.requires_decklist && (tournament.created_by === currentUser?.id || isAdmin) && (
+              <div className="mt-4">
+                <TournamentDecklistViewer tournamentId={id!} />
+              </div>
+            )}
+
+
+
             {/* Matches Bracket - Pro tournament style */}
             {matches.length > 0 && (() => {
               const allRounds = Array.from(new Set(matches.map(m => m.round))).sort((a, b) => a - b);
