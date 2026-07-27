@@ -19,6 +19,8 @@ import { Separator } from "@/components/ui/separator";
 import { TournamentWinnerSelector } from "@/components/TournamentWinnerSelector";
 import { TournamentChat } from "@/components/TournamentChat";
 import { PlayerMatchReportModal } from "@/components/tournament/PlayerMatchReportModal";
+import { TournamentDecklistViewer } from "@/components/tournament/TournamentDecklistViewer";
+import { useAdmin } from "@/hooks/useAdmin";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const TournamentDetail = () => {
