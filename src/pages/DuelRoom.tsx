@@ -9,9 +9,11 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { PhoneOff, Loader2, Scale, Layers, Sparkles, Zap, Clock, Coins, Plus } from "lucide-react";
+import { PhoneOff, Loader2, Scale, Layers, Sparkles, Zap, Clock, Coins, Plus, Trophy } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Navbar } from "@/components/Navbar";
 import { DuelChat } from "@/components/DuelChat";
@@ -289,11 +291,21 @@ const DuelRoom = () => {
             const newP2LP = payload.new.player2_lp ?? defaultLP;
             const newP3LP = (payload.new as any).player3_lp ?? defaultLP;
             const newP4LP = (payload.new as any).player4_lp ?? defaultLP;
-            
+
             setPlayer1LP(newP1LP);
             setPlayer2LP(newP2LP);
             setPlayer3LP(newP3LP);
             setPlayer4LP(newP4LP);
+
+            // Sincroniza votação de finalização e status
+            setDuel((prev: any) => prev ? {
+              ...prev,
+              finalize_votes: (payload.new as any).finalize_votes ?? prev.finalize_votes ?? {},
+              finalize_conflict_count: (payload.new as any).finalize_conflict_count ?? prev.finalize_conflict_count ?? 0,
+              status: payload.new.status ?? prev.status,
+              winner_id: payload.new.winner_id ?? prev.winner_id,
+            } : prev);
+
             
             // Sync custom counters
             if ((payload.new as any).custom_counters) {
@@ -683,6 +695,45 @@ const DuelRoom = () => {
 
   // Old setLP removed - replaced by the one above that supports 4 players
 
+  // ==== Novo fluxo de finalização por votação ====
+  const finalizeVotes = ((duel?.finalize_votes ?? {}) as Record<string, string | null>);
+  const isFinalizeParticipant = !!currentUser && (currentUser.id === duel?.creator_id || currentUser.id === duel?.opponent_id);
+  const bothPlayersPresent = !!duel?.creator_id && !!duel?.opponent_id;
+  const anyoneRequested = bothPlayersPresent && (
+    (duel?.creator_id && duel.creator_id in finalizeVotes) ||
+    (duel?.opponent_id && duel.opponent_id in finalizeVotes)
+  );
+  const showVoteModal = isFinalizeParticipant && bothPlayersPresent && anyoneRequested && duel?.status !== 'finished';
+  const myVote = currentUser ? finalizeVotes[currentUser.id] : undefined;
+  const resolvingRef = useRef(false);
+
+  const requestFinalize = async () => {
+    if (!id || !currentUser || !duel) return;
+    if (!duel.opponent_id) {
+      toast({ title: 'Aguardando oponente', description: 'A partida ainda não tem oponente.', variant: 'destructive' });
+      return;
+    }
+    const opponentId = currentUser.id === duel.creator_id ? duel.opponent_id : duel.creator_id;
+    const votes = { ...finalizeVotes };
+    if (!(currentUser.id in votes)) votes[currentUser.id] = null;
+    const { error } = await supabase.from('live_duels').update({ finalize_votes: votes } as any).eq('id', id);
+    if (error) {
+      toast({ title: 'Erro', description: error.message, variant: 'destructive' });
+      return;
+    }
+    if (!(opponentId in votes)) {
+      toast({ title: 'Aguardando o oponente', description: 'Peça ao oponente para clicar em Finalizar também.' });
+    }
+  };
+
+  const castVote = async (winnerId: string) => {
+    if (!id || !currentUser) return;
+    const votes = { ...finalizeVotes, [currentUser.id]: winnerId };
+    await supabase.from('live_duels').update({ finalize_votes: votes } as any).eq('id', id);
+  };
+
+
+
   const endDuel = async (winnerId?: string) => {
     try {
       // Determinar vencedor baseado nos Life Points se não foi especificado
@@ -818,6 +869,32 @@ const DuelRoom = () => {
       });
     }
   };
+
+  // Auto-resolve: once both players voted, the creator processes the outcome
+  useEffect(() => {
+    if (!id || !duel?.creator_id || !duel?.opponent_id) return;
+    if (duel.status === 'finished') return;
+    if (currentUser?.id !== duel.creator_id) return; // only creator resolves to avoid races
+    if (resolvingRef.current) return;
+    const v1 = finalizeVotes[duel.creator_id];
+    const v2 = finalizeVotes[duel.opponent_id];
+    if (!v1 || !v2) return;
+    resolvingRef.current = true;
+    (async () => {
+      if (v1 === v2) {
+        await endDuel(v1);
+        await supabase.from('live_duels').update({ finalize_votes: {} } as any).eq('id', id);
+      } else {
+        const newCount = ((duel as any).finalize_conflict_count ?? 0) + 1;
+        await supabase.from('live_duels').update({ finalize_votes: {}, finalize_conflict_count: newCount } as any).eq('id', id);
+        toast({ title: 'Votos divergentes', description: 'Vocês escolheram vencedores diferentes. Votem novamente.', variant: 'destructive' });
+      }
+      setTimeout(() => { resolvingRef.current = false; }, 800);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [finalizeVotes, duel?.status, duel?.creator_id, duel?.opponent_id, currentUser?.id, id]);
+
+
 
   const handleLeave = async () => {
     if (!id || !currentUser) {
@@ -1418,7 +1495,7 @@ const DuelRoom = () => {
                             {isTimerPaused ? '▶️' : '⏸️'}
                           </Button>
                           <Button
-                            onClick={() => endDuel()}
+                            onClick={requestFinalize}
                             variant="outline"
                             size="sm"
                             className="bg-green-600/95 hover:bg-green-700 text-white backdrop-blur-sm text-xs sm:text-sm"
@@ -1494,7 +1571,60 @@ const DuelRoom = () => {
         onQuickDraw={isYgoStyleTcg(duel?.tcg_type) ? () => setQuickDrawSignal((value) => value + 1) : undefined}
       />
 
+      {/* Modal de votação do vencedor da partida */}
+      <Dialog open={!!showVoteModal} onOpenChange={() => { /* modal permanece até resolução */ }}>
+        <DialogContent className="max-w-md" onInteractOutside={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Trophy className="h-5 w-5 text-primary" />
+              Quem venceu a partida?
+            </DialogTitle>
+            <DialogDescription>
+              Os dois jogadores precisam concordar com o vencedor. Se os votos divergirem, vocês votam novamente.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid grid-cols-2 gap-3 py-2">
+            {[
+              { id: duel?.creator_id, name: duel?.creator?.username || 'Jogador 1', avatar: duel?.creator?.avatar_url },
+              { id: duel?.opponent_id, name: duel?.opponent?.username || 'Jogador 2', avatar: duel?.opponent?.avatar_url },
+            ].map((p) => p.id ? (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => castVote(p.id!)}
+                className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors ${
+                  myVote === p.id ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/50'
+                }`}
+              >
+                <Avatar className="h-16 w-16">
+                  <AvatarImage src={p.avatar || undefined} />
+                  <AvatarFallback>{p.name.charAt(0).toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <span className="text-sm font-semibold text-center break-all">{p.name}</span>
+                {myVote === p.id && <span className="text-[10px] text-primary font-bold">SEU VOTO</span>}
+              </button>
+            ) : null)}
+          </div>
+
+          <div className="text-xs text-muted-foreground text-center">
+            {myVote
+              ? (finalizeVotes[duel?.creator_id === currentUser?.id ? (duel?.opponent_id || '') : (duel?.creator_id || '')]
+                  ? 'Processando resultado...'
+                  : 'Aguardando o voto do oponente.')
+              : 'Selecione o vencedor acima.'}
+          </div>
+
+          {(duel as any)?.finalize_conflict_count > 0 && (
+            <div className="text-[11px] text-destructive text-center">
+              Divergências até agora: {(duel as any).finalize_conflict_count}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
     </div>
+
   );
 };
 

@@ -19,6 +19,8 @@ import { Separator } from "@/components/ui/separator";
 import { TournamentWinnerSelector } from "@/components/TournamentWinnerSelector";
 import { TournamentChat } from "@/components/TournamentChat";
 import { PlayerMatchReportModal } from "@/components/tournament/PlayerMatchReportModal";
+import { TournamentDecklistViewer } from "@/components/tournament/TournamentDecklistViewer";
+import { useAdmin } from "@/hooks/useAdmin";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const TournamentDetail = () => {
@@ -31,6 +33,7 @@ const TournamentDetail = () => {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const isMobile = useIsMobile();
+  const { isAdmin } = useAdmin();
   const [isGeneratingBracket, setIsGeneratingBracket] = useState(false);
   const [reportModalOpen, setReportModalOpen] = useState(false);
   const [selectedReportMatch, setSelectedReportMatch] = useState<any>(null);
@@ -725,6 +728,15 @@ const TournamentDetail = () => {
                 )}
               </CardContent>
             </Card>
+
+            {/* Decklists — visíveis apenas para o criador e admins */}
+            {tournament.requires_decklist && (tournament.created_by === currentUser?.id || isAdmin) && (
+              <div className="mt-4">
+                <TournamentDecklistViewer tournamentId={id!} />
+              </div>
+            )}
+
+
 
             {/* Matches Bracket - Pro tournament style */}
             {matches.length > 0 && (() => {

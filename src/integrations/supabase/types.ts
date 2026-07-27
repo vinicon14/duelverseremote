@@ -812,6 +812,8 @@ export type Database = {
           custom_counters: Json
           discord_messages: Json
           duration_minutes: number
+          finalize_conflict_count: number
+          finalize_votes: Json
           finished_at: string | null
           id: string
           is_private: boolean
@@ -840,6 +842,8 @@ export type Database = {
           custom_counters?: Json
           discord_messages?: Json
           duration_minutes?: number
+          finalize_conflict_count?: number
+          finalize_votes?: Json
           finished_at?: string | null
           id?: string
           is_private?: boolean
@@ -868,6 +872,8 @@ export type Database = {
           custom_counters?: Json
           discord_messages?: Json
           duration_minutes?: number
+          finalize_conflict_count?: number
+          finalize_votes?: Json
           finished_at?: string | null
           id?: string
           is_private?: boolean

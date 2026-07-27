@@ -191,10 +191,10 @@ const RouterContent = ({ user }: { user: User | null }) => {
         <Route path="/gallery" element={<MatchGallery />} />
         <Route path="/video/:id" element={<VideoShare />} />
         
-        <Route path="/deck-builder" element={<RequireDesktop featureName="O Deck Builder"><ActiveDeckBuilderRoute /></RequireDesktop>} />
-        <Route path="/genesis" element={<RequireDesktop featureName="O Deck Builder"><GenesisDeckBuilder /></RequireDesktop>} />
-        <Route path="/rush-duel" element={<RequireDesktop featureName="O Deck Builder"><RushDuelDeckBuilder /></RequireDesktop>} />
-        <Route path="/advanced" element={<RequireDesktop featureName="O Deck Builder"><DeckBuilder /></RequireDesktop>} />
+        <Route path="/deck-builder" element={<ActiveDeckBuilderRoute />} />
+        <Route path="/genesis" element={<GenesisDeckBuilder />} />
+        <Route path="/rush-duel" element={<RushDuelDeckBuilder />} />
+        <Route path="/advanced" element={<DeckBuilder />} />
         <Route path="/profile-select" element={<ProfileSelect />} />
         <Route path="/weekly-tournaments" element={<WeeklyTournaments />} />
         <Route path="/create-weekly-tournament" element={<CreateWeeklyTournament />} />
@@ -216,7 +216,7 @@ const RouterContent = ({ user }: { user: User | null }) => {
         <Route path="/pro/ranking" element={<ProRouteGuard><Ranking /></ProRouteGuard>} />
         <Route path="/pro/news" element={<ProRouteGuard><News /></ProRouteGuard>} />
         <Route path="/pro/gallery" element={<ProRouteGuard><MatchGallery /></ProRouteGuard>} />
-        <Route path="/pro/deck-builder" element={<ProRouteGuard><RequireDesktop featureName="O Deck Builder"><ActiveDeckBuilderRoute /></RequireDesktop></ProRouteGuard>} />
+        <Route path="/pro/deck-builder" element={<ProRouteGuard><ActiveDeckBuilderRoute /></ProRouteGuard>} />
         <Route path="/pro/duelcoins" element={<ProRouteGuard><DuelCoins /></ProRouteGuard>} />
         <Route path="/pro/store" element={<ProRouteGuard><Store /></ProRouteGuard>} />
 
