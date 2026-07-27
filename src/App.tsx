@@ -216,7 +216,7 @@ const RouterContent = ({ user }: { user: User | null }) => {
         <Route path="/pro/ranking" element={<ProRouteGuard><Ranking /></ProRouteGuard>} />
         <Route path="/pro/news" element={<ProRouteGuard><News /></ProRouteGuard>} />
         <Route path="/pro/gallery" element={<ProRouteGuard><MatchGallery /></ProRouteGuard>} />
-        <Route path="/pro/deck-builder" element={<ProRouteGuard><RequireDesktop featureName="O Deck Builder"><ActiveDeckBuilderRoute /></RequireDesktop></ProRouteGuard>} />
+        <Route path="/pro/deck-builder" element={<ProRouteGuard><ActiveDeckBuilderRoute /></ProRouteGuard>} />
         <Route path="/pro/duelcoins" element={<ProRouteGuard><DuelCoins /></ProRouteGuard>} />
         <Route path="/pro/store" element={<ProRouteGuard><Store /></ProRouteGuard>} />
 
