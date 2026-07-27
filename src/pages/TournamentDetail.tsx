@@ -33,6 +33,7 @@ const TournamentDetail = () => {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const isMobile = useIsMobile();
+  const { isAdmin } = useAdmin();
   const [isGeneratingBracket, setIsGeneratingBracket] = useState(false);
   const [reportModalOpen, setReportModalOpen] = useState(false);
   const [selectedReportMatch, setSelectedReportMatch] = useState<any>(null);
