@@ -779,11 +779,14 @@ const Duels = () => {
                           return count < mp;
                         })() && (
                           <Button
-                            onClick={() => handleJoinDuel(duel.id)}
+                            onClick={() => isMobile ? navigate(`/duel/${duel.id}?role=spectate`) : handleJoinDuel(duel.id)}
                             className="w-full btn-mystic text-white"
                           >
-                            <Swords className="mr-2 h-4 w-4" />
-                            {t('duels.enterDuel')}
+                            {isMobile ? (
+                              <><Users className="mr-2 h-4 w-4" />Assistir</>
+                            ) : (
+                              <><Swords className="mr-2 h-4 w-4" />{t('duels.enterDuel')}</>
+                            )}
                           </Button>
                         )}
 
@@ -796,11 +799,11 @@ const Duels = () => {
                           return count < mp;
                         })() && (
                           <Button
-                            onClick={() => handleJoinDuel(duel.id)}
+                            onClick={() => isMobile ? navigate(`/duel/${duel.id}?role=spectate`) : handleJoinDuel(duel.id)}
                             className="w-full btn-mystic text-white"
                           >
                             <Users className="mr-2 h-4 w-4" />
-                            {t('duels.enterRoom')}
+                            {isMobile ? 'Assistir' : t('duels.enterRoom')}
                           </Button>
                         )}
 
