@@ -54,6 +54,7 @@ const Duels = () => {
   const [passwordPrompt, setPasswordPrompt] = useState<{ duelId: string; expected: string } | null>(null);
   const [enteredPassword, setEnteredPassword] = useState("");
 
+  const isMobile = useIsMobile();
   const platform = detectPlatform();
   const isWebBrowser = !platform.isStandalone && !(window as any).electronAPI?.isElectron && !platform.isNativeApp;
   const selectedRankedDifficulty = getRankedDifficulty(rankedDifficulty);
