@@ -9,6 +9,8 @@ interface Props {
   children: ReactNode;
   featureName?: string;
   mobileGlobalChat?: boolean;
+  /** If true, render children on mobile too (page handles its own mobile adaptation). */
+  allowMobile?: boolean;
 }
 
 /**
@@ -16,9 +18,9 @@ interface Props {
  * Full duel/deck features live exclusively on Desktop.
  * On mobile shows a friendly explanation + link to the pairing flow.
  */
-export const RequireDesktop = ({ children, featureName = "Esta funcionalidade", mobileGlobalChat = false }: Props) => {
+export const RequireDesktop = ({ children, featureName = "Esta funcionalidade", mobileGlobalChat = false, allowMobile = false }: Props) => {
   const isMobile = useIsMobile();
-  if (!isMobile) return <>{children}</>;
+  if (!isMobile || allowMobile) return <>{children}</>;
 
   return (
     <div className={`min-h-screen flex ${mobileGlobalChat ? "items-start justify-center" : "items-center justify-center"} p-4 bg-background`}>
