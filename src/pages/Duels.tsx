@@ -524,6 +524,7 @@ const Duels = () => {
                 )}
                 {!isMobile && (
                 <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+                <DialogTrigger asChild>
                   <Button className="btn-mystic text-white w-full sm:w-auto">
                     <Plus className="mr-2 h-4 w-4" />
                     {t('duels.createDuel')}
