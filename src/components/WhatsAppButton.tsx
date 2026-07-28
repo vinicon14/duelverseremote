@@ -150,7 +150,10 @@ export const WhatsAppButton = () => {
         if (dragState.current.didMove) {
           e.preventDefault();
           e.stopPropagation();
+          return;
         }
+        // Auto-dismiss after user opens the group link
+        setTimeout(() => dismiss(), 100);
       }}
     >
       <MessageCircle className="h-5 w-5" />

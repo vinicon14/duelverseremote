@@ -171,8 +171,8 @@ const RouterContent = ({ user }: { user: User | null }) => {
 
         <Route path="/admin" element={<Admin />} />
         <Route path="/auth" element={<Auth />} />
-        <Route path="/duels" element={<RequireDesktop featureName="A criação/entrada em partidas" mobileGlobalChat><Duels /></RequireDesktop>} />
-        <Route path="/duel/:id" element={<RequireDesktop featureName="A sala de duelo"><DuelRoom /></RequireDesktop>} />
+        <Route path="/duels" element={<Duels />} />
+        <Route path="/duel/:id" element={<RequireDesktop featureName="A sala de duelo" allowMobile><DuelRoom /></RequireDesktop>} />
         <Route path="/join/:duelId" element={<RequireDesktop featureName="Entrar em partidas"><JoinDuel /></RequireDesktop>} />
         <Route path="/m/:inviteId" element={<RequireDesktop featureName="Convites de partida"><MatchInvite /></RequireDesktop>} />
         <Route path="/profile" element={<Profile />} />
