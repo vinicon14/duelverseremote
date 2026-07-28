@@ -669,6 +669,7 @@ const Duels = () => {
                   </div>
                 </DialogContent>
               </Dialog>
+                )}
               </div>
             </div>
 
