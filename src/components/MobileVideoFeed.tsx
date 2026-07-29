@@ -45,7 +45,7 @@ export const MobileVideoFeed = ({ recordings }: Props) => {
             const key = `viewed-${recordings[idx]?.id}`;
             if (!sessionStorage.getItem(key)) {
               sessionStorage.setItem(key, "1");
-              supabase.rpc("increment_video_views", { video_id: recordings[idx].id }).catch(() => {});
+              Promise.resolve(supabase.rpc("increment_video_views", { video_id: recordings[idx].id })).catch(() => {});
             }
           } else {
             video.pause();
