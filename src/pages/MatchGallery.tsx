@@ -51,6 +51,7 @@ interface Recording {
 
 export default function MatchGallery() {
   useBanCheck();
+  const isMobile = useIsMobile();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [recordings, setRecordings] = useState<Recording[]>([]);
