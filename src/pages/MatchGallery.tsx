@@ -18,6 +18,8 @@ import { Switch } from "@/components/ui/switch";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useBanCheck } from "@/hooks/useBanCheck";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { MobileVideoFeed } from "@/components/MobileVideoFeed";
 import {
   AlertDialog,
   AlertDialogAction,
