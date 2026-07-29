@@ -239,6 +239,12 @@ export default function MatchGallery() {
     );
   }
 
+  // Mobile: TikTok-style vertical feed
+  if (isMobile) {
+    return <MobileVideoFeed recordings={recordings as any} />;
+  }
+
+
   return (
     <div className="min-h-screen bg-transparent">
       <Navbar />
