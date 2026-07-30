@@ -398,32 +398,46 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     };
 
     pc.ontrack = (event) => {
-      if (event.streams[0]) {
-        peerState.stream = event.streams[0];
-        setRemoteStreams(prev => {
-          const next = new Map(prev);
-          next.set(remotePeerId, event.streams[0]);
-          return next;
-        });
-        setRemotePeerIds(prev => {
-          if (!prev.includes(remotePeerId)) return [...prev, remotePeerId];
-          return prev;
-        });
-
-        // Detect remote track ended/mute/unmute for A/V sync awareness
-        event.streams[0].getTracks().forEach((track) => {
-          track.onended = () => {
-            console.warn(`[WebRTC] Remote ${track.kind} track ended from ${remotePeerId}`);
-          };
-          track.onmute = () => {
-            console.log(`[WebRTC] Remote ${track.kind} muted by ${remotePeerId}`);
-          };
-          track.onunmute = () => {
-            console.log(`[WebRTC] Remote ${track.kind} unmuted by ${remotePeerId}`);
-          };
-        });
+      // Some senders (or track replacement after phone pairing) deliver a track
+      // without an associated stream. Keep a per-peer stream and accumulate tracks
+      // so the opponent's camera always ends up in the same MediaStream.
+      const incoming = event.streams[0];
+      let stream = peerState.stream;
+      if (incoming) {
+        stream = incoming;
+      } else {
+        if (!stream) stream = new MediaStream();
+        // Drop a previous track of the same kind (replaced track)
+        stream.getTracks()
+          .filter((t) => t.kind === event.track.kind && t.id !== event.track.id)
+          .forEach((t) => stream!.removeTrack(t));
+        stream.addTrack(event.track);
       }
+      peerState.stream = stream;
+
+      const nextStream = stream;
+      setRemoteStreams((prev) => {
+        const next = new Map(prev);
+        next.set(remotePeerId, nextStream);
+        return next;
+      });
+      setRemotePeerIds((prev) => (prev.includes(remotePeerId) ? prev : [...prev, remotePeerId]));
+
+      // Detect remote track ended/mute/unmute for A/V sync awareness
+      event.track.onended = () => {
+        console.warn(`[WebRTC] Remote ${event.track.kind} track ended from ${remotePeerId}`);
+      };
+      event.track.onmute = () => {
+        console.log(`[WebRTC] Remote ${event.track.kind} muted by ${remotePeerId}`);
+      };
+      event.track.onunmute = () => {
+        console.log(`[WebRTC] Remote ${event.track.kind} unmuted by ${remotePeerId}`);
+        // Force a re-attach/play when frames start flowing again
+        const el = remoteVideoRefs.current.get(remotePeerId);
+        el?.play?.().catch(() => {});
+      };
     };
+
 
     pc.onnegotiationneeded = async () => {
       try {
