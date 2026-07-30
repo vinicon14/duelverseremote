@@ -639,17 +639,31 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         // Re-enumerate to get labels
         enumerateDevices();
         // If peer connections were already created before media was ready,
-        // add tracks to all existing peers now
+        // attach tracks to all existing peers now. Peers created without media
+        // already have recvonly transceivers (senders with a null track), so we
+        // must replaceTrack on them instead of only checking for zero senders.
         peersRef.current.forEach((peerState, peerId) => {
-          const senders = peerState.pc.getSenders();
-          if (senders.length === 0) {
-            console.log("[WebRTC] Adding late tracks to peer:", peerId);
-            const outboundStream = getActiveOutboundStream() ?? stream;
-            outboundStream.getTracks().forEach((track) => {
+          const outboundStream = getActiveOutboundStream() ?? stream;
+          outboundStream.getTracks().forEach((track) => {
+            const sender = peerState.pc
+              .getSenders()
+              .find((s) => s.track === null || s.track?.kind === track.kind);
+            if (sender) {
+              console.log("[WebRTC] Replacing late track on peer:", peerId, track.kind);
+              sender.replaceTrack(track).catch(() => {});
+              const transceiver = peerState.pc
+                .getTransceivers()
+                .find((t) => t.sender === sender);
+              if (transceiver && transceiver.direction === "recvonly") {
+                transceiver.direction = "sendrecv";
+              }
+            } else {
+              console.log("[WebRTC] Adding late track to peer:", peerId, track.kind);
               peerState.pc.addTrack(track, outboundStream);
-            });
-          }
+            }
+          });
         });
+
       } else if (!isSpectator) {
         console.error("[WebRTC] Could not acquire any media stream");
       }
