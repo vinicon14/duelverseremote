@@ -241,10 +241,14 @@ export const useBrowserNotifications = () => {
         await registration.showNotification(title, {
           icon: '/favicon.png',
           badge: '/favicon.png',
+          vibrate: [200, 100, 200],
+          renotify: true,
+          tag: 'duelverse',
           ...options,
-        });
+        } as NotificationOptions);
         return;
       }
+
       
       new Notification(title, {
         icon: '/favicon.png',
