@@ -1082,6 +1082,12 @@ const DuelRoom = () => {
     isYgoStyleTcg(duel?.tcg_type);
   const mobileDigitalArenaOpen = mobileArenaActive && showDeckViewer;
 
+  // Player-slot-ordered peer IDs for 4-player video layout
+  const slotPeerIds = !isSpectator && ((duel as any)?.max_players || 2) >= 4
+    ? [duel?.creator_id, duel?.opponent_id, (duel as any)?.player3_id, (duel as any)?.player4_id]
+        .filter((id): id is string => !!id && id !== currentUser?.id)
+    : undefined;
+
   // Broadcast deck-open state to opponent & listen for opponent's deck state
   const myDeckIsOpen = showDeckViewer || showMagicViewer || showPokemonViewer;
   const myDeckIsOpenRef = useRef(myDeckIsOpen);
@@ -1199,6 +1205,7 @@ const DuelRoom = () => {
                 creatorId={duel?.creator_id}
                 onLayoutChange={setVideoLayout}
                 mobileArenaMode={mobileDigitalArenaOpen}
+                slotPeerIds={slotPeerIds}
                 spectatorLpOverlay={isSpectator ? {
                   localLabel: duel.creator?.username || 'Player 1',
                   localLp: player1LP,
