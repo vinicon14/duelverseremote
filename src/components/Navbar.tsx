@@ -119,14 +119,12 @@ export const Navbar = () => {
             {t('nav.duels')}
           </Button>
         </Link>
-        {!mobile && (
-          <Link to="/matchmaking">
-            <Button variant="ghost" className={btnClass}>
-              <Zap className="mr-2 h-4 w-4" />
-              {t('nav.matchmaking')}
-            </Button>
-          </Link>
-        )}
+        <Link to="/matchmaking">
+          <Button variant="ghost" className={btnClass}>
+            <Zap className="mr-2 h-4 w-4" />
+            {t('nav.matchmaking')}
+          </Button>
+        </Link>
         <Link to="/tournaments">
           <Button variant="ghost" className={btnClass}>
             <Trophy className="mr-2 h-4 w-4" />

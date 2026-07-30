@@ -6,7 +6,6 @@
  * Inclui chat global e criação/entrada de salas.
  */
 import { useState, useEffect } from "react";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -54,7 +53,6 @@ const Duels = () => {
   const [passwordPrompt, setPasswordPrompt] = useState<{ duelId: string; expected: string } | null>(null);
   const [enteredPassword, setEnteredPassword] = useState("");
 
-  const isMobile = useIsMobile();
   const platform = detectPlatform();
   const isWebBrowser = !platform.isStandalone && !(window as any).electronAPI?.isElectron && !platform.isNativeApp;
   const selectedRankedDifficulty = getRankedDifficulty(rankedDifficulty);
@@ -522,7 +520,6 @@ const Duels = () => {
                     </Button>
                   </Link>
                 )}
-                {!isMobile && (
                 <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
                 <DialogTrigger asChild>
                   <Button className="btn-mystic text-white w-full sm:w-auto">
@@ -669,7 +666,6 @@ const Duels = () => {
                   </div>
                 </DialogContent>
               </Dialog>
-                )}
               </div>
             </div>
 
@@ -779,14 +775,11 @@ const Duels = () => {
                           return count < mp;
                         })() && (
                           <Button
-                            onClick={() => isMobile ? navigate(`/duel/${duel.id}?role=spectate`) : handleJoinDuel(duel.id)}
+                            onClick={() => handleJoinDuel(duel.id)}
                             className="w-full btn-mystic text-white"
                           >
-                            {isMobile ? (
-                              <><Users className="mr-2 h-4 w-4" />Assistir</>
-                            ) : (
-                              <><Swords className="mr-2 h-4 w-4" />{t('duels.enterDuel')}</>
-                            )}
+                            <Swords className="mr-2 h-4 w-4" />
+                            {t('duels.enterDuel')}
                           </Button>
                         )}
 
@@ -799,11 +792,11 @@ const Duels = () => {
                           return count < mp;
                         })() && (
                           <Button
-                            onClick={() => isMobile ? navigate(`/duel/${duel.id}?role=spectate`) : handleJoinDuel(duel.id)}
+                            onClick={() => handleJoinDuel(duel.id)}
                             className="w-full btn-mystic text-white"
                           >
                             <Users className="mr-2 h-4 w-4" />
-                            {isMobile ? 'Assistir' : t('duels.enterRoom')}
+                            {t('duels.enterRoom')}
                           </Button>
                         )}
 

@@ -18,8 +18,6 @@ import { Switch } from "@/components/ui/switch";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useBanCheck } from "@/hooks/useBanCheck";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { MobileVideoFeed } from "@/components/MobileVideoFeed";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -51,7 +49,6 @@ interface Recording {
 
 export default function MatchGallery() {
   useBanCheck();
-  const isMobile = useIsMobile();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [recordings, setRecordings] = useState<Recording[]>([]);
@@ -238,12 +235,6 @@ export default function MatchGallery() {
       </div>
     );
   }
-
-  // Mobile: TikTok-style vertical feed
-  if (isMobile) {
-    return <MobileVideoFeed recordings={recordings as any} />;
-  }
-
 
   return (
     <div className="min-h-screen bg-transparent">
