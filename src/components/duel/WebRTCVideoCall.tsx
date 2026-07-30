@@ -334,11 +334,6 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         console.error("[WebRTC] Failed to add recvonly transceivers:", err);
       }
     }
-    if (false) {
-
-    } else {
-      console.warn("[WebRTC] No local stream yet for peer:", remotePeerId);
-    }
 
     pc.onicecandidate = (event) => {
       if (event.candidate && channelRef.current) {
