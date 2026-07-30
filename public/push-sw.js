@@ -179,3 +179,14 @@ self.addEventListener('notificationclick', (event) => {
       })
   );
 });
+
+// Browser rotated / expired the push subscription: ask any open client to
+// create a fresh one (the page holds the VAPID key + user session).
+self.addEventListener('pushsubscriptionchange', (event) => {
+  console.log('♻️ pushsubscriptionchange');
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      clients.forEach((client) => client.postMessage({ type: 'RESUBSCRIBE_PUSH' }));
+    })
+  );
+});
