@@ -44,9 +44,6 @@ interface WebRTCVideoCallProps {
   creatorId?: string;
   /** Compact mobile arena: opponent field above, own field below, no internal scrollbars. */
   mobileArenaMode?: boolean;
-  /** Player-slot-ordered peer IDs for correct remote slot assignment (4+ players).
-   *  Only the peer IDs of players OTHER than the current user, in slot order 2,3,4. */
-  slotPeerIds?: string[];
 }
 
 const ICE_SERVERS: RTCIceServer[] = [
@@ -97,13 +94,11 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   audioBroadcastOnly = false,
   creatorId,
   mobileArenaMode = false,
-  slotPeerIds,
 }, ref) => {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
   const peersRef = useRef<Map<string, PeerState>>(new Map());
   const localStreamRef = useRef<MediaStream | null>(null);
-  const pendingVideoEnabledRef = useRef<boolean | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   const [isMuted, setIsMuted] = useState(false);
@@ -205,11 +200,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   useImperativeHandle(ref, () => ({
     setVideoEnabled: (enabled: boolean) => {
       const stream = localStreamRef.current;
-      if (!stream) {
-        pendingVideoEnabledRef.current = enabled;
-        return;
-      }
-      pendingVideoEnabledRef.current = null;
+      if (!stream) return;
       const videoTrack = stream.getVideoTracks()[0];
       if (videoTrack) {
         videoTrack.enabled = enabled;
@@ -236,20 +227,13 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   const getActiveOutboundStream = useCallback(() => {
     const original = localStreamRef.current;
     const activePhoneStream = phoneStreamRef.current;
+    const activeVideo = activePhoneStream?.getVideoTracks()[0] ?? original?.getVideoTracks()[0] ?? null;
 
-    // Video: prefer phone, fall back to PC (only if live)
-    const phoneVideo = activePhoneStream?.getVideoTracks()[0];
-    const pcVideo = original?.getVideoTracks()[0];
-    const phoneVideoLive = phoneVideo && phoneVideo.readyState === "live" && phoneVideo.enabled;
-    const pcVideoLive = pcVideo && pcVideo.readyState === "live";
-    const activeVideo = phoneVideoLive ? phoneVideo : pcVideoLive ? pcVideo : null;
-
-    // Audio: prefer phone if live and enabled, fall back to PC (if live)
+    // Audio fallback: if phone mic is off, ended, muted, or missing, use PC mic
     const phoneAudio = activePhoneStream?.getAudioTracks()[0];
     const pcAudio = original?.getAudioTracks()[0];
     const phoneAudioUsable = phoneAudio && phoneAudio.readyState === "live" && phoneAudio.enabled;
-    const pcAudioLive = pcAudio && pcAudio.readyState === "live";
-    const activeAudio = phoneAudioUsable ? phoneAudio : pcAudioLive ? pcAudio : null;
+    const activeAudio = phoneAudioUsable ? phoneAudio : pcAudio ?? null;
 
     if (activeVideo) activeVideo.enabled = !isVideoOffRef.current;
     if (activeAudio) activeAudio.enabled = !isMutedRef.current;
@@ -631,15 +615,6 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       }
       if (stream) {
         localStreamRef.current = stream;
-        if (pendingVideoEnabledRef.current !== null) {
-          const pending = pendingVideoEnabledRef.current;
-          const vTrack = stream.getVideoTracks()[0];
-          if (vTrack) {
-            vTrack.enabled = pending;
-            setIsVideoOff(!pending);
-          }
-          pendingVideoEnabledRef.current = null;
-        }
         if (localVideoRef.current) {
           localVideoRef.current.srcObject = stream;
         }
@@ -706,14 +681,6 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
               event: "webrtc-signal",
               payload: { type: "ready", senderId: userId, isSpectator },
             });
-            // Re-announce after a delay to catch peers who subscribed just after our first broadcast
-            setTimeout(() => {
-              channel.send({
-                type: "broadcast",
-                event: "webrtc-signal",
-                payload: { type: "ready", senderId: userId, isSpectator },
-              });
-            }, 2000);
           }
         });
 
@@ -753,21 +720,23 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
 
 
   const toggleMute = () => {
-    setIsMuted(prev => {
-      const newMuted = !prev;
-      localStreamRef.current?.getAudioTracks().forEach(t => { t.enabled = !newMuted; });
-      phoneStreamRef.current?.getAudioTracks().forEach(t => { t.enabled = !newMuted; });
-      return newMuted;
-    });
+    const stream = phoneStream || localStreamRef.current;
+    if (!stream) return;
+    const audioTrack = stream.getAudioTracks()[0];
+    if (audioTrack) {
+      audioTrack.enabled = !audioTrack.enabled;
+      setIsMuted(!audioTrack.enabled);
+    }
   };
 
   const toggleVideo = () => {
-    setIsVideoOff(prev => {
-      const newOff = !prev;
-      localStreamRef.current?.getVideoTracks().forEach(t => { t.enabled = !newOff; });
-      phoneStreamRef.current?.getVideoTracks().forEach(t => { t.enabled = !newOff; });
-      return newOff;
-    });
+    const stream = phoneStream || localStreamRef.current;
+    if (!stream) return;
+    const videoTrack = stream.getVideoTracks()[0];
+    if (videoTrack) {
+      videoTrack.enabled = !videoTrack.enabled;
+      setIsVideoOff(!videoTrack.enabled);
+    }
   };
 
   const zoomIn = () => setZoomLevel(prev => Math.min(prev + ZOOM_STEP, MAX_ZOOM));
@@ -847,12 +816,6 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     // Non-creator peers fill the remote slots, regardless of how many slots exist.
     for (let i = 0; i < totalSlots - 1; i++) {
       remoteSlots.push(nonCreatorPeerIds[i] || null);
-    }
-  } else if (slotPeerIds && slotPeerIds.length > 0 && is4Player) {
-    // Use player-slot-ordered peer IDs so slot 0 = player 2, slot 1 = player 3, etc.
-    for (let i = 0; i < totalSlots - 1; i++) {
-      const pid = slotPeerIds[i];
-      remoteSlots.push(pid && remotePeerIds.includes(pid) ? pid : null);
     }
   } else {
     for (let i = 0; i < totalSlots - 1; i++) {
@@ -978,8 +941,8 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
 
     return (
       <div key={peerId || `waiting-${index}`} className="relative w-full h-full overflow-hidden bg-black flex items-center justify-center">
-        {/* Only render video once the stream is available */}
-        {peerId && remoteStreams.has(peerId) && (
+        {/* Always keep video mounted so stream persists */}
+        {peerId && (
           <video
             ref={(el) => setRemoteVideoRef(peerId, el)}
             autoPlay
@@ -991,7 +954,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
           <div className={mobileArenaMode ? "w-full h-full overflow-hidden bg-background touch-none" : "w-full h-full overflow-auto bg-background touch-pan-y"}>
             {deckContentForSlot}
           </div>
-        ) : !peerId || !remoteStreams.has(peerId) ? (
+        ) : !peerId ? (
           <div className="absolute inset-0 flex items-center justify-center bg-black/80">
             <div className="text-center space-y-2">
               <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 mx-auto text-primary animate-spin" />
@@ -1076,7 +1039,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
           >
             {pipSwapped ? (
               /* Show remote in small — just video, no deck overlay */
-              remoteSlots[0] && remoteStreams.has(remoteSlots[0]) ? (
+              remoteSlots[0] ? (
                 <video
                   ref={(el) => setRemoteVideoRef(remoteSlots[0]!, el)}
                   autoPlay
