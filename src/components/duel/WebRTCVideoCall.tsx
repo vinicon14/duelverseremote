@@ -695,11 +695,18 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   useEffect(() => {
     remoteStreams.forEach((stream, peerId) => {
       const el = remoteVideoRefs.current.get(peerId);
-      if (el && el.srcObject !== stream) {
+      if (!el) return;
+      if (el.srcObject !== stream) {
         el.srcObject = stream;
       }
+      // Autoplay of unmuted remote media can be blocked; retry muted as fallback
+      el.play?.().catch(() => {
+        el.muted = true;
+        el.play?.().catch(() => {});
+      });
     });
   }, [remoteStreams, remotePeerIds]);
+
 
   const toggleMute = () => {
     const stream = phoneStream || localStreamRef.current;
