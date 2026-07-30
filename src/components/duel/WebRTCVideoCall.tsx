@@ -645,24 +645,21 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         peersRef.current.forEach((peerState, peerId) => {
           const outboundStream = getActiveOutboundStream() ?? stream;
           outboundStream.getTracks().forEach((track) => {
-            const sender = peerState.pc
-              .getSenders()
-              .find((s) => s.track === null || s.track?.kind === track.kind);
-            if (sender) {
+            const transceiver = peerState.pc.getTransceivers().find((t) => {
+              const kind = t.receiver?.track?.kind ?? t.sender?.track?.kind;
+              return kind === track.kind && !t.sender.track;
+            });
+            if (transceiver) {
               console.log("[WebRTC] Replacing late track on peer:", peerId, track.kind);
-              sender.replaceTrack(track).catch(() => {});
-              const transceiver = peerState.pc
-                .getTransceivers()
-                .find((t) => t.sender === sender);
-              if (transceiver && transceiver.direction === "recvonly") {
-                transceiver.direction = "sendrecv";
-              }
-            } else {
+              transceiver.sender.replaceTrack(track).catch(() => {});
+              if (transceiver.direction === "recvonly") transceiver.direction = "sendrecv";
+            } else if (!peerState.pc.getSenders().some((s) => s.track?.kind === track.kind)) {
               console.log("[WebRTC] Adding late track to peer:", peerId, track.kind);
               peerState.pc.addTrack(track, outboundStream);
             }
           });
         });
+
 
       } else if (!isSpectator) {
         console.error("[WebRTC] Could not acquire any media stream");
