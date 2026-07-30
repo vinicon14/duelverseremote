@@ -764,10 +764,17 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       if (stream && el.srcObject !== stream) {
         el.srcObject = stream;
       }
+      if (stream) {
+        el.play?.().catch(() => {
+          el.muted = true;
+          el.play?.().catch(() => {});
+        });
+      }
     } else {
       remoteVideoRefs.current.delete(peerId);
     }
   }, [remoteStreams]);
+
 
   const hasRemotePeers = remotePeerIds.length > 0;
   const totalSlots = maxPlayers;
