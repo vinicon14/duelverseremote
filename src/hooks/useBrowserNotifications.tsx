@@ -102,21 +102,13 @@ export const useBrowserNotifications = () => {
       const p256dh = subJson.keys!.p256dh!;
       const auth = subJson.keys!.auth!;
 
-      // Remove stale subscriptions from this same device (endpoint rotation)
-      await supabase
-        .from('push_subscriptions')
-        .delete()
-        .eq('user_id', session.user.id)
-        .eq('user_agent', navigator.userAgent)
-        .neq('endpoint', endpoint);
-
-      // Remove the current endpoint row (if any) before re-inserting it fresh
+      // Try to save subscription - delete old ones first, then insert
       await supabase
         .from('push_subscriptions')
         .delete()
         .eq('user_id', session.user.id)
         .eq('endpoint', endpoint);
-
+      
       const { error } = await supabase
         .from('push_subscriptions')
         .insert({
@@ -136,31 +128,6 @@ export const useBrowserNotifications = () => {
       console.error('❌ Error in subscribeToPush:', error);
     }
   }, []);
-
-  // Re-subscribe when the browser rotates/expires the subscription, and
-  // re-validate whenever the app comes back to the foreground.
-  useEffect(() => {
-    if (!('serviceWorker' in navigator)) return;
-
-    const onMessage = (event: MessageEvent) => {
-      if (event.data?.type === 'RESUBSCRIBE_PUSH') {
-        console.log('♻️ Re-subscribing to push after subscription change');
-        subscribeToPush();
-      }
-    };
-    navigator.serviceWorker.addEventListener('message', onMessage);
-
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') subscribeToPush();
-    };
-    document.addEventListener('visibilitychange', onVisible);
-
-    return () => {
-      navigator.serviceWorker.removeEventListener('message', onMessage);
-      document.removeEventListener('visibilitychange', onVisible);
-    };
-  }, [subscribeToPush]);
-
 
   const requestPermission = async () => {
     if (!isSupported) {
@@ -241,14 +208,10 @@ export const useBrowserNotifications = () => {
         await registration.showNotification(title, {
           icon: '/favicon.png',
           badge: '/favicon.png',
-          vibrate: [200, 100, 200],
-          renotify: true,
-          tag: 'duelverse',
           ...options,
-        } as NotificationOptions);
+        });
         return;
       }
-
       
       new Notification(title, {
         icon: '/favicon.png',

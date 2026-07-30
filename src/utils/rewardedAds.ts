@@ -6,7 +6,7 @@ declare global {
   }
 }
 
-type RewardedAdProvider = "easyplatform" | "google_ad_manager" | "easyplatform_dev" | "adsense_internal" | "adsterra" | "adsterra_dev" | "propellerads" | "propellerads_dev";
+type RewardedAdProvider = "easyplatform" | "google_ad_manager" | "easyplatform_dev" | "adsense_internal" | "adsterra" | "adsterra_dev";
 
 type RewardedAdResult = {
   provider: RewardedAdProvider;
@@ -98,7 +98,6 @@ const getRewardedProvider = (): RewardedAdProvider => {
   if (provider === "google_ad_manager") return "google_ad_manager";
   if (provider === "easyplatform") return "easyplatform";
   if (provider === "adsterra") return "adsterra" as RewardedAdProvider;
-  if (provider === "propellerads") return "propellerads" as RewardedAdProvider;
   return "adsense_internal";
 };
 
@@ -108,14 +107,6 @@ const getAdsterraConfig = () => ({
   iframeUrl: import.meta.env.VITE_ADSTERRA_IFRAME_URL || "",
   zoneId: import.meta.env.VITE_ADSTERRA_ZONE_ID || "",
   minSeconds: Number(import.meta.env.VITE_ADSTERRA_MIN_SECONDS || (import.meta.env.DEV ? 5 : 15)),
-});
-
-const getPropellerAdsConfig = () => ({
-  directLink: import.meta.env.VITE_PROPELLERADS_DIRECT_LINK || "",
-  scriptUrl: import.meta.env.VITE_PROPELLERADS_SCRIPT_URL || "",
-  iframeUrl: import.meta.env.VITE_PROPELLERADS_IFRAME_URL || "",
-  zoneId: import.meta.env.VITE_PROPELLERADS_ZONE_ID || "",
-  minSeconds: Number(import.meta.env.VITE_PROPELLERADS_MIN_SECONDS || (import.meta.env.DEV ? 5 : 15)),
 });
 
 const getConfiguredRewardedAdUnit = () => {
@@ -500,85 +491,6 @@ const showAdsterraRewardedAd = (timeoutMs = 60000): Promise<RewardedAdResult> =>
   });
 };
 
-const showPropellerAdsRewardedAd = (timeoutMs = 60000): Promise<RewardedAdResult> => {
-  const sessionId = createAdSessionId();
-  const config = getPropellerAdsConfig();
-
-  return new Promise((resolve, reject) => {
-    let resolved = false;
-    let provider: RewardedAdProvider = "propellerads";
-    const shell = createRewardedShell("Anuncio PropellerAds");
-    const headerLabel = shell.overlay.querySelector("span");
-    if (headerLabel) headerLabel.textContent = "PropellerAds";
-
-    let secondsLeft = Math.max(config.minSeconds, 3);
-    shell.status.textContent = `Aguarde ${secondsLeft}s para liberar a recompensa...`;
-
-    const tick = window.setInterval(() => {
-      secondsLeft -= 1;
-      if (secondsLeft > 0) {
-        shell.status.textContent = `Aguarde ${secondsLeft}s para liberar a recompensa...`;
-      } else {
-        window.clearInterval(tick);
-        shell.complete.disabled = false;
-        shell.complete.style.opacity = "1";
-        shell.status.textContent = "Pronto! Confirme para receber a recompensa.";
-      }
-    }, 1000);
-
-    const finish = (result?: RewardedAdResult, error?: Error) => {
-      if (resolved) return;
-      resolved = true;
-      window.clearInterval(tick);
-      window.clearTimeout(timeout);
-      shell.overlay.remove();
-      clearRewardedHash();
-      if (error) reject(error);
-      else if (result) resolve(result);
-    };
-
-    const timeout = window.setTimeout(() => {
-      finish(undefined, new Error("O anuncio demorou demais para concluir. Tente novamente."));
-    }, timeoutMs);
-
-    shell.close.onclick = () =>
-      finish(undefined, new Error("O anuncio foi fechado antes da conclusao."));
-    shell.complete.onclick = () => {
-      if (!shell.complete.disabled) {
-        finish({ provider, sessionId, rewarded: true, videoCompleted: true });
-      }
-    };
-
-    try {
-      if (config.iframeUrl || config.directLink) {
-        const iframe = document.createElement("iframe");
-        iframe.src = config.iframeUrl || config.directLink;
-        iframe.allow = "autoplay; fullscreen";
-        iframe.referrerPolicy = "no-referrer-when-downgrade";
-        iframe.style.cssText = "width:100%;height:280px;border:0;background:white;";
-        shell.body.replaceChildren(iframe);
-      } else if (config.scriptUrl || config.zoneId) {
-        const container = document.createElement("div");
-        container.style.cssText = "width:100%;min-height:260px;display:flex;align-items:center;justify-content:center;background:#0b1220;";
-        shell.body.replaceChildren(container);
-        const script = document.createElement("script");
-        script.src = config.scriptUrl || `//upgulpinon.com/1?z=${encodeURIComponent(config.zoneId)}`;
-        script.async = true;
-        script.setAttribute("data-cfasync", "false");
-        script.referrerPolicy = "no-referrer-when-downgrade";
-        container.appendChild(script);
-      } else if (import.meta.env.DEV) {
-        provider = "propellerads_dev";
-        shell.body.innerHTML = `<div style="text-align:center;padding:24px"><div style="font-size:42px;margin-bottom:12px">AD</div><p style="margin:0;color:#cbd5e1">Simulacao local PropellerAds</p><p style="margin:8px 0 0;color:#94a3b8;font-size:13px">Configure VITE_PROPELLERADS_ZONE_ID, VITE_PROPELLERADS_SCRIPT_URL ou VITE_PROPELLERADS_DIRECT_LINK.</p></div>`;
-      } else {
-        finish(undefined, new Error("Configure a tag da PropellerAds (VITE_PROPELLERADS_ZONE_ID ou VITE_PROPELLERADS_SCRIPT_URL)."));
-      }
-    } catch (error) {
-      finish(undefined, error instanceof Error ? error : new Error("Falha ao iniciar anuncio PropellerAds."));
-    }
-  });
-};
-
 export const hasRewardedAdUnit = () => {
   const provider = getRewardedProvider();
   if (provider === "google_ad_manager") return Boolean(getConfiguredRewardedAdUnit());
@@ -590,10 +502,6 @@ export const hasRewardedAdUnit = () => {
     const config = getAdsterraConfig();
     return Boolean(config.directLink || config.scriptUrl || config.iframeUrl || import.meta.env.DEV);
   }
-  if (provider === "propellerads") {
-    const config = getPropellerAdsConfig();
-    return Boolean(config.directLink || config.scriptUrl || config.iframeUrl || config.zoneId || import.meta.env.DEV);
-  }
   return true; // adsense_internal sempre disponível
 };
 
@@ -602,7 +510,6 @@ export const showRewardedVideoAd = (timeoutMs = 60000): Promise<RewardedAdResult
   if (provider === "google_ad_manager") return showGoogleRewardedVideoAd(timeoutMs);
   if (provider === "easyplatform") return showEasyPlatformRewardedVideoAd(timeoutMs);
   if (provider === "adsterra") return showAdsterraRewardedAd(timeoutMs);
-  if (provider === "propellerads") return showPropellerAdsRewardedAd(timeoutMs);
   return showAdSenseInternalRewardedAd();
 };
 

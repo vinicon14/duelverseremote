@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Camera, CameraOff, Mic, MicOff, SwitchCamera, X, Wifi, WifiOff, Battery, AlertCircle, MessageCircle, RotateCw } from "lucide-react";
+import { Camera, CameraOff, Mic, MicOff, SwitchCamera, X, Wifi, WifiOff, Battery, AlertCircle, MessageCircle } from "lucide-react";
 import { usePhoneClientPairing } from "@/hooks/usePhonePairing";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { GlobalChat } from "@/components/GlobalChat";
@@ -9,9 +9,6 @@ import { GlobalChat } from "@/components/GlobalChat";
 /**
  * Fullscreen "phone as webcam" mode.
  * No game UI at all — pure capture device.
- * Supports software rotation (0/90/180/270) so the PC always sees a landscape
- * feed even if the phone is held vertically. Rotation is applied at capture
- * time via canvas.captureStream() so peers receive the rotated video too.
  */
 const PhoneCameraMode = () => {
   const [params] = useSearchParams();
@@ -23,16 +20,11 @@ const PhoneCameraMode = () => {
   const [cameraOn, setCameraOn] = useState(true);
   const [micOn, setMicOn] = useState(true);
   const [battery, setBattery] = useState<number | null>(null);
-  const [rawStream, setRawStream] = useState<MediaStream | null>(null);
-  const [outboundStream, setOutboundStream] = useState<MediaStream | null>(null);
-  const [rotation, setRotation] = useState<0 | 90 | 180 | 270>(0);
+  const [initialStream, setInitialStream] = useState<MediaStream | null>(null);
   const [startError, setStartError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const wakeLockRef = useRef<any>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const rotateVideoRef = useRef<HTMLVideoElement | null>(null);
-  const rafRef = useRef<number | null>(null);
 
   useEffect(() => {
     const previousBodyOverflow = document.body.style.overflow;
@@ -45,53 +37,50 @@ const PhoneCameraMode = () => {
     };
   }, []);
 
-  // Try to lock screen orientation to landscape when rotation != 0
-  useEffect(() => {
-    const scr: any = window.screen;
-    if (rotation !== 0 && scr?.orientation?.lock) {
-      scr.orientation.lock("landscape").catch(() => {});
-    }
-    return () => {
-      scr?.orientation?.unlock?.();
-    };
-  }, [rotation]);
-
   const { status, localStream, error } = usePhoneClientPairing({
-    sessionId: outboundStream ? sessionId : null,
-    token: outboundStream ? token : null,
+    sessionId: initialStream ? sessionId : null,
+    token: initialStream ? token : null,
     facingMode,
     cameraOn,
     micOn,
-    initialStream: outboundStream,
+    initialStream,
   });
 
   useEffect(() => {
-    const stream = localStream || outboundStream;
+    const stream = localStream || initialStream;
     if (videoRef.current && stream) {
       videoRef.current.srcObject = stream;
     }
-  }, [localStream, outboundStream]);
+  }, [localStream, initialStream]);
 
   useEffect(() => {
     return () => {
-      rawStream?.getTracks().forEach((t) => t.stop());
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      initialStream?.getTracks().forEach((track) => track.stop());
     };
-  }, [rawStream]);
+  }, [initialStream]);
 
-  // Wake lock
+  // Wake lock so screen stays on
   useEffect(() => {
     const nav: any = navigator;
     if (nav?.wakeLock?.request) {
-      nav.wakeLock.request("screen").then((lock: any) => { wakeLockRef.current = lock; }).catch(() => {});
+      nav.wakeLock
+        .request("screen")
+        .then((lock: any) => {
+          wakeLockRef.current = lock;
+        })
+        .catch(() => {});
     }
-    return () => { wakeLockRef.current?.release?.().catch(() => {}); };
+    return () => {
+      wakeLockRef.current?.release?.().catch(() => {});
+    };
   }, []);
 
+  // Battery indicator
   useEffect(() => {
     const nav: any = navigator;
     if (!nav?.getBattery) return;
-    let bat: any; let handler: any;
+    let bat: any;
+    let handler: any;
     nav.getBattery().then((b: any) => {
       bat = b;
       handler = () => setBattery(Math.round(b.level * 100));
@@ -101,67 +90,6 @@ const PhoneCameraMode = () => {
     return () => bat?.removeEventListener?.("levelchange", handler);
   }, []);
 
-  // Build a rotated MediaStream from rawStream using a canvas render loop.
-  const buildRotatedStream = useCallback(async (raw: MediaStream, rot: number): Promise<MediaStream> => {
-    if (rot === 0) return raw;
-    const videoTrack = raw.getVideoTracks()[0];
-    if (!videoTrack) return raw;
-
-    // Hidden <video> playing the raw camera feed
-    const vEl = document.createElement("video");
-    vEl.autoplay = true;
-    vEl.playsInline = true;
-    vEl.muted = true;
-    vEl.srcObject = new MediaStream([videoTrack]);
-    await vEl.play().catch(() => {});
-    await new Promise<void>((resolve) => {
-      if (vEl.videoWidth > 0) return resolve();
-      vEl.onloadedmetadata = () => resolve();
-    });
-
-    const sw = vEl.videoWidth || 720;
-    const sh = vEl.videoHeight || 1280;
-    const swap = rot === 90 || rot === 270;
-    const canvas = document.createElement("canvas");
-    canvas.width = swap ? sh : sw;
-    canvas.height = swap ? sw : sh;
-    const ctx = canvas.getContext("2d")!;
-
-    const draw = () => {
-      ctx.save();
-      ctx.translate(canvas.width / 2, canvas.height / 2);
-      ctx.rotate((rot * Math.PI) / 180);
-      ctx.drawImage(vEl, -sw / 2, -sh / 2, sw, sh);
-      ctx.restore();
-      rafRef.current = requestAnimationFrame(draw);
-    };
-    draw();
-
-    rotateVideoRef.current = vEl;
-    canvasRef.current = canvas;
-
-    const rotated = (canvas as any).captureStream(30) as MediaStream;
-    // Attach audio from raw
-    raw.getAudioTracks().forEach((t) => rotated.addTrack(t));
-    return rotated;
-  }, []);
-
-  // Whenever rotation or rawStream changes, rebuild the outbound stream.
-  useEffect(() => {
-    if (!rawStream) return;
-    let cancelled = false;
-    // stop existing rotation loop
-    if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
-    rotateVideoRef.current?.pause();
-    rotateVideoRef.current = null;
-    canvasRef.current = null;
-
-    buildRotatedStream(rawStream, rotation).then((s) => {
-      if (!cancelled) setOutboundStream(s);
-    });
-    return () => { cancelled = true; };
-  }, [rawStream, rotation, buildRotatedStream]);
-
   const startTransmission = async () => {
     setStartError(null);
     setStarting(true);
@@ -170,23 +98,21 @@ const PhoneCameraMode = () => {
         video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
       });
-      setRawStream(stream);
+      setInitialStream(stream);
       setCameraOn(stream.getVideoTracks().length > 0);
       setMicOn(stream.getAudioTracks().length > 0);
     } catch (e: any) {
       const name = e?.name;
       const message =
-        name === "NotAllowedError" ? "Permita o acesso à câmera e ao microfone para conectar ao PC."
-        : name === "NotFoundError" ? "Nenhuma câmera ou microfone foi encontrado neste celular."
-        : e?.message || "Falha ao iniciar câmera/microfone.";
+        name === "NotAllowedError"
+          ? "Permita o acesso à câmera e ao microfone para conectar ao PC."
+          : name === "NotFoundError"
+            ? "Nenhuma câmera ou microfone foi encontrado neste celular."
+            : e?.message || "Falha ao iniciar câmera/microfone.";
       setStartError(message);
     } finally {
       setStarting(false);
     }
-  };
-
-  const rotateCamera = () => {
-    setRotation((r) => ((r + 90) % 360) as 0 | 90 | 180 | 270);
   };
 
   const handleExit = () => navigate("/", { replace: true });
@@ -203,12 +129,15 @@ const PhoneCameraMode = () => {
   }
 
   const statusColor =
-    status === "connected" ? "bg-emerald-500"
-    : status === "connecting" || status === "waiting" ? "bg-amber-500"
-    : "bg-rose-500";
+    status === "connected"
+      ? "bg-emerald-500"
+      : status === "connecting" || status === "waiting"
+        ? "bg-amber-500"
+        : "bg-rose-500";
 
   return (
     <div className="fixed inset-0 h-[100dvh] max-h-[100dvh] overflow-hidden bg-black text-white flex flex-col z-[9999] overscroll-none touch-none">
+      {/* Top status bar */}
       <div className="shrink-0 flex items-center justify-between px-3 py-1.5 bg-black/60 backdrop-blur-sm">
         <div className="flex items-center gap-2 text-xs">
           <span className={`h-2.5 w-2.5 rounded-full ${statusColor}`} />
@@ -221,7 +150,6 @@ const PhoneCameraMode = () => {
             {status === "error" && "Erro"}
           </span>
           {status === "connected" ? <Wifi className="h-3.5 w-3.5" /> : <WifiOff className="h-3.5 w-3.5" />}
-          {rotation !== 0 && <span className="ml-1 rounded bg-white/20 px-1 py-0.5 text-[10px]">↻ {rotation}°</span>}
         </div>
         <div className="flex items-center gap-3 text-xs">
           {battery !== null && (
@@ -230,14 +158,21 @@ const PhoneCameraMode = () => {
               {battery}%
             </span>
           )}
-          <Button size="icon" variant="ghost" className="h-8 w-8 text-white hover:bg-white/10" onClick={handleExit} title="Desconectar">
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-8 w-8 text-white hover:bg-white/10"
+            onClick={handleExit}
+            title="Desconectar"
+          >
             <X className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
+      {/* Video preview */}
       <div className="min-h-0 flex-1 relative bg-black flex items-center justify-center overflow-hidden">
-        {!outboundStream ? (
+        {!initialStream ? (
           <div className="px-5 text-center flex flex-col items-center gap-3 max-h-full max-w-sm">
             <Camera className="h-12 w-12 shrink-0 text-white/70" />
             <div className="space-y-1">
@@ -257,7 +192,13 @@ const PhoneCameraMode = () => {
             )}
           </div>
         ) : cameraOn ? (
-          <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-contain" />
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className="w-full h-full object-contain"
+          />
         ) : (
           <div className="text-white/60 flex flex-col items-center gap-2">
             <CameraOff className="h-14 w-14" />
@@ -271,22 +212,46 @@ const PhoneCameraMode = () => {
         )}
       </div>
 
+      {/* Bottom controls */}
       <div className="shrink-0 px-4 py-3 bg-black/70 backdrop-blur-sm flex items-center justify-around">
-        <Button variant={cameraOn ? "default" : "secondary"} size="lg" className="rounded-full h-12 w-12 p-0" onClick={() => setCameraOn((v) => !v)} disabled={!outboundStream} title="Ligar/desligar câmera">
+        <Button
+          variant={cameraOn ? "default" : "secondary"}
+          size="lg"
+          className="rounded-full h-12 w-12 p-0"
+          onClick={() => setCameraOn((v) => !v)}
+          disabled={!initialStream}
+          title="Ligar/desligar câmera"
+        >
           {cameraOn ? <Camera className="h-6 w-6" /> : <CameraOff className="h-6 w-6" />}
         </Button>
-        <Button variant="secondary" size="lg" className="rounded-full h-12 w-12 p-0" onClick={() => setFacingMode((f) => (f === "user" ? "environment" : "user"))} disabled={!outboundStream || !cameraOn} title="Alternar câmera">
+        <Button
+          variant="secondary"
+          size="lg"
+          className="rounded-full h-12 w-12 p-0"
+          onClick={() => setFacingMode((f) => (f === "user" ? "environment" : "user"))}
+          disabled={!initialStream || !cameraOn}
+          title="Alternar câmera"
+        >
           <SwitchCamera className="h-6 w-6" />
         </Button>
-        <Button variant="secondary" size="lg" className="rounded-full h-12 w-12 p-0" onClick={rotateCamera} disabled={!outboundStream || !cameraOn} title="Girar 90° (horizontal via software)">
-          <RotateCw className="h-6 w-6" />
-        </Button>
-        <Button variant={micOn ? "default" : "secondary"} size="lg" className="rounded-full h-12 w-12 p-0" onClick={() => setMicOn((v) => !v)} disabled={!outboundStream} title="Ligar/desligar microfone">
+        <Button
+          variant={micOn ? "default" : "secondary"}
+          size="lg"
+          className="rounded-full h-12 w-12 p-0"
+          onClick={() => setMicOn((v) => !v)}
+          disabled={!initialStream}
+          title="Ligar/desligar microfone"
+        >
           {micOn ? <Mic className="h-6 w-6" /> : <MicOff className="h-6 w-6" />}
         </Button>
         <Sheet>
           <SheetTrigger asChild>
-            <Button variant="secondary" size="lg" className="rounded-full h-12 w-12 p-0" title="Chat global">
+            <Button
+              variant="secondary"
+              size="lg"
+              className="rounded-full h-12 w-12 p-0"
+              title="Chat global"
+            >
               <MessageCircle className="h-6 w-6" />
             </Button>
           </SheetTrigger>
