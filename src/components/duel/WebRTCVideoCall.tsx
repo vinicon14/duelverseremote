@@ -323,17 +323,16 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
           console.error("[WebRTC] Failed to add recvonly video transceiver:", err);
         }
       }
-    } else if (isSpectator) {
-      // Spectators: ensure SDP includes media sections to receive audio + video
+    } else {
+      // No local media yet (spectator, or camera/mic denied/not ready).
+      // ALWAYS create recvonly m-lines so the opponent's audio+video can arrive.
       try {
         pc.addTransceiver("audio", { direction: "recvonly" });
         pc.addTransceiver("video", { direction: "recvonly" });
-        console.log("[WebRTC] Spectator recvonly transceivers added for:", remotePeerId);
+        console.log("[WebRTC] recvonly transceivers added for:", remotePeerId);
       } catch (err) {
         console.error("[WebRTC] Failed to add recvonly transceivers:", err);
       }
-    } else {
-      console.warn("[WebRTC] No local stream yet for peer:", remotePeerId);
     }
 
     pc.onicecandidate = (event) => {
@@ -399,32 +398,46 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     };
 
     pc.ontrack = (event) => {
-      if (event.streams[0]) {
-        peerState.stream = event.streams[0];
-        setRemoteStreams(prev => {
-          const next = new Map(prev);
-          next.set(remotePeerId, event.streams[0]);
-          return next;
-        });
-        setRemotePeerIds(prev => {
-          if (!prev.includes(remotePeerId)) return [...prev, remotePeerId];
-          return prev;
-        });
-
-        // Detect remote track ended/mute/unmute for A/V sync awareness
-        event.streams[0].getTracks().forEach((track) => {
-          track.onended = () => {
-            console.warn(`[WebRTC] Remote ${track.kind} track ended from ${remotePeerId}`);
-          };
-          track.onmute = () => {
-            console.log(`[WebRTC] Remote ${track.kind} muted by ${remotePeerId}`);
-          };
-          track.onunmute = () => {
-            console.log(`[WebRTC] Remote ${track.kind} unmuted by ${remotePeerId}`);
-          };
-        });
+      // Some senders (or track replacement after phone pairing) deliver a track
+      // without an associated stream. Keep a per-peer stream and accumulate tracks
+      // so the opponent's camera always ends up in the same MediaStream.
+      const incoming = event.streams[0];
+      let stream = peerState.stream;
+      if (incoming) {
+        stream = incoming;
+      } else {
+        if (!stream) stream = new MediaStream();
+        // Drop a previous track of the same kind (replaced track)
+        stream.getTracks()
+          .filter((t) => t.kind === event.track.kind && t.id !== event.track.id)
+          .forEach((t) => stream!.removeTrack(t));
+        stream.addTrack(event.track);
       }
+      peerState.stream = stream;
+
+      const nextStream = stream;
+      setRemoteStreams((prev) => {
+        const next = new Map(prev);
+        next.set(remotePeerId, nextStream);
+        return next;
+      });
+      setRemotePeerIds((prev) => (prev.includes(remotePeerId) ? prev : [...prev, remotePeerId]));
+
+      // Detect remote track ended/mute/unmute for A/V sync awareness
+      event.track.onended = () => {
+        console.warn(`[WebRTC] Remote ${event.track.kind} track ended from ${remotePeerId}`);
+      };
+      event.track.onmute = () => {
+        console.log(`[WebRTC] Remote ${event.track.kind} muted by ${remotePeerId}`);
+      };
+      event.track.onunmute = () => {
+        console.log(`[WebRTC] Remote ${event.track.kind} unmuted by ${remotePeerId}`);
+        // Force a re-attach/play when frames start flowing again
+        const el = remoteVideoRefs.current.get(remotePeerId);
+        el?.play?.().catch(() => {});
+      };
     };
+
 
     pc.onnegotiationneeded = async () => {
       try {
@@ -626,17 +639,28 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         // Re-enumerate to get labels
         enumerateDevices();
         // If peer connections were already created before media was ready,
-        // add tracks to all existing peers now
+        // attach tracks to all existing peers now. Peers created without media
+        // already have recvonly transceivers (senders with a null track), so we
+        // must replaceTrack on them instead of only checking for zero senders.
         peersRef.current.forEach((peerState, peerId) => {
-          const senders = peerState.pc.getSenders();
-          if (senders.length === 0) {
-            console.log("[WebRTC] Adding late tracks to peer:", peerId);
-            const outboundStream = getActiveOutboundStream() ?? stream;
-            outboundStream.getTracks().forEach((track) => {
-              peerState.pc.addTrack(track, outboundStream);
+          const outboundStream = getActiveOutboundStream() ?? stream;
+          outboundStream.getTracks().forEach((track) => {
+            const transceiver = peerState.pc.getTransceivers().find((t) => {
+              const kind = t.receiver?.track?.kind ?? t.sender?.track?.kind;
+              return kind === track.kind && !t.sender.track;
             });
-          }
+            if (transceiver) {
+              console.log("[WebRTC] Replacing late track on peer:", peerId, track.kind);
+              transceiver.sender.replaceTrack(track).catch(() => {});
+              if (transceiver.direction === "recvonly") transceiver.direction = "sendrecv";
+            } else if (!peerState.pc.getSenders().some((s) => s.track?.kind === track.kind)) {
+              console.log("[WebRTC] Adding late track to peer:", peerId, track.kind);
+              peerState.pc.addTrack(track, outboundStream);
+            }
+          });
         });
+
+
       } else if (!isSpectator) {
         console.error("[WebRTC] Could not acquire any media stream");
       }
@@ -682,11 +706,18 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   useEffect(() => {
     remoteStreams.forEach((stream, peerId) => {
       const el = remoteVideoRefs.current.get(peerId);
-      if (el && el.srcObject !== stream) {
+      if (!el) return;
+      if (el.srcObject !== stream) {
         el.srcObject = stream;
       }
+      // Autoplay of unmuted remote media can be blocked; retry muted as fallback
+      el.play?.().catch(() => {
+        el.muted = true;
+        el.play?.().catch(() => {});
+      });
     });
   }, [remoteStreams, remotePeerIds]);
+
 
   const toggleMute = () => {
     const stream = phoneStream || localStreamRef.current;
@@ -744,10 +775,17 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       if (stream && el.srcObject !== stream) {
         el.srcObject = stream;
       }
+      if (stream) {
+        el.play?.().catch(() => {
+          el.muted = true;
+          el.play?.().catch(() => {});
+        });
+      }
     } else {
       remoteVideoRefs.current.delete(peerId);
     }
   }, [remoteStreams]);
+
 
   const hasRemotePeers = remotePeerIds.length > 0;
   const totalSlots = maxPlayers;
