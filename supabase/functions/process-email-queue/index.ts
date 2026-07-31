@@ -96,19 +96,50 @@ function createSmtpTransport() {
   })
 }
 
+function stripHtml(html: string): string {
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 async function sendEmailViaSMTP(payload: EmailPayload): Promise<void> {
   const transporter = createSmtpTransport()
-  
-  const fromAddress = payload.from || `DuelVerse <${Deno.env.get('SMTP_USER')}>`
+
+  const smtpUser = Deno.env.get('SMTP_USER') || ''
+  const fromAddress = payload.from || `DuelVerse <${smtpUser}>`
+  const senderDomain =
+    payload.sender_domain ||
+    (smtpUser.includes('@') ? smtpUser.split('@')[1] : 'duelverse.site')
+  const messageId = `<${payload.message_id || crypto.randomUUID()}@${senderDomain}>`
+
+  // Deliverability headers: a plain-text alternative, a stable Message-ID on the
+  // sending domain, a valid Reply-To and List-Unsubscribe all reduce spam scoring.
+  const headers: Record<string, string> = {
+    'List-Unsubscribe': `<mailto:unsubscribe@${senderDomain}>`,
+    'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+    'X-Entity-Ref-ID': payload.message_id || crypto.randomUUID(),
+    'Auto-Submitted': 'auto-generated',
+  }
+  if (payload.purpose === 'transactional' || !payload.purpose) {
+    headers['X-Priority'] = '3'
+  }
 
   await transporter.sendMail({
     from: fromAddress,
+    sender: smtpUser || undefined,
+    replyTo: `suporte@${senderDomain.replace(/^notify\./, '')}`,
+    envelope: smtpUser ? { from: smtpUser, to: payload.to as string } : undefined,
     to: payload.to,
     subject: payload.subject || 'Notification',
     html: payload.html,
-    text: payload.text,
+    text: payload.text || (payload.html ? stripHtml(payload.html) : undefined),
+    messageId,
+    headers,
   })
 }
+
 
 Deno.serve(async (req) => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL')

@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { DuelCoinsBalance } from "@/components/DuelCoinsBalance";
+import { DailyXpClaim } from "@/components/DailyXpClaim";
 import { useTranslation } from "react-i18next";
 
 export default function Home() {
@@ -47,6 +48,11 @@ export default function Home() {
             <div className="animate-fade-in-up">
               <DuelCoinsBalance />
             </div>
+
+            <div className="animate-fade-in-up delay-100">
+              <DailyXpClaim />
+            </div>
+
 
             <Card className="card-mystic hover:border-primary/30 transition-all cursor-pointer animate-fade-in-up delay-200 group" onClick={() => navigate('/duels')}>
               <CardContent className="p-6 flex flex-col items-start h-full">
