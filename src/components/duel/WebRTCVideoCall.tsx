@@ -50,23 +50,38 @@ const ICE_SERVERS: RTCIceServer[] = [
   { urls: "stun:stun.l.google.com:19302" },
   { urls: "stun:stun1.l.google.com:19302" },
   { urls: "stun:stun2.l.google.com:19302" },
-  // Free TURN servers for NAT traversal between different networks
+  { urls: "stun:stun.cloudflare.com:3478" },
+  // Free TURN servers for NAT traversal between different networks.
+  // Multiple transports (UDP/TCP/TLS) so browsers with restrictive WebRTC
+  // policies (Opera/Brave/VPN) still find a working relay path.
   {
-    urls: "turn:openrelay.metered.ca:80",
+    urls: [
+      "turn:openrelay.metered.ca:80",
+      "turn:openrelay.metered.ca:80?transport=tcp",
+      "turn:openrelay.metered.ca:443",
+      "turn:openrelay.metered.ca:443?transport=tcp",
+      "turns:openrelay.metered.ca:443?transport=tcp",
+    ],
     username: "openrelayproject",
     credential: "openrelayproject",
   },
   {
-    urls: "turn:openrelay.metered.ca:443",
-    username: "openrelayproject",
-    credential: "openrelayproject",
-  },
-  {
-    urls: "turn:openrelay.metered.ca:443?transport=tcp",
-    username: "openrelayproject",
-    credential: "openrelayproject",
+    urls: [
+      "turn:relay1.expressturn.com:3478",
+      "turn:relay1.expressturn.com:3478?transport=tcp",
+    ],
+    username: "ef4XQ4ZQ8HLPXQ7NHR",
+    credential: "eZ9d3TgqAcgOwzKX",
   },
 ];
+
+const PC_CONFIG: RTCConfiguration = {
+  iceServers: ICE_SERVERS,
+  iceCandidatePoolSize: 4,
+  bundlePolicy: "max-bundle",
+  rtcpMuxPolicy: "require",
+};
+
 
 interface PeerState {
   pc: RTCPeerConnection;
