@@ -49,6 +49,11 @@ export default function Home() {
               <DuelCoinsBalance />
             </div>
 
+            <div className="animate-fade-in-up delay-100">
+              <DailyXpClaim />
+            </div>
+
+
             <Card className="card-mystic hover:border-primary/30 transition-all cursor-pointer animate-fade-in-up delay-200 group" onClick={() => navigate('/duels')}>
               <CardContent className="p-6 flex flex-col items-start h-full">
                 <Swords className="w-6 h-6 text-primary mb-4 opacity-80 group-hover:opacity-100 transition-opacity" />
