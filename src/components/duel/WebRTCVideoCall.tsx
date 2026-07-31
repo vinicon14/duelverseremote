@@ -314,7 +314,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       existing.pc.close();
     }
 
-    const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+    const pc = new RTCPeerConnection(PC_CONFIG);
     const peerState: PeerState = {
       pc,
       stream: null,
@@ -366,21 +366,13 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     };
 
     // Monitor ICE connection and auto-recover or remove disconnected peer
-    pc.oniceconnectionstatechange = () => {
-      const state = pc.iceConnectionState;
-      console.log(`[WebRTC] ICE state ${remotePeerId}: ${state}`);
-
-      if (state === 'failed') {
-        console.warn("[WebRTC] ICE failed for:", remotePeerId);
-        removePeer(remotePeerId);
-      } else if (state === 'disconnected') {
-        // Try ICE restart first, then wait longer before giving up
-        console.log("[WebRTC] ICE disconnected, attempting restart for:", remotePeerId);
-        try {
-          pc.restartIce();
-          // Force a new offer to trigger ICE restart
-          if (pc.signalingState === "stable") {
-            pc.createOffer({ iceRestart: true }).then((offer) => pc.setLocalDescription(offer)).then(() => {
+    const attemptIceRestart = () => {
+      try {
+        pc.restartIce();
+        if (pc.signalingState === "stable") {
+          pc.createOffer({ iceRestart: true })
+            .then((offer) => pc.setLocalDescription(offer))
+            .then(() => {
               channelRef.current?.send({
                 type: "broadcast",
                 event: "webrtc-signal",
@@ -391,22 +383,40 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
                   targetId: remotePeerId,
                 },
               });
-            }).catch((err) => console.warn("[WebRTC] ICE restart offer failed:", err));
-          }
-        } catch (err) {
-          console.warn("[WebRTC] restartIce failed:", err);
+            })
+            .catch((err) => console.warn("[WebRTC] ICE restart offer failed:", err));
         }
-        // Give 10s for recovery before removing
+      } catch (err) {
+        console.warn("[WebRTC] restartIce failed:", err);
+      }
+    };
+
+    pc.oniceconnectionstatechange = () => {
+      const state = pc.iceConnectionState;
+      console.log(`[WebRTC] ICE state ${remotePeerId}: ${state}`);
+
+      if (state === 'failed' || state === 'disconnected') {
+        // Opera/Brave and VPN setups often fail the first ICE pass; always try a
+        // restart (relay candidates included) before dropping the peer.
+        console.warn(`[WebRTC] ICE ${state}, attempting restart for:`, remotePeerId);
+        attemptIceRestart();
+        setTimeout(() => {
+          if (pc.iceConnectionState === 'failed') {
+            console.warn("[WebRTC] Second restart attempt for:", remotePeerId);
+            attemptIceRestart();
+          }
+        }, 5000);
         setTimeout(() => {
           if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed') {
-            console.warn("[WebRTC] Peer lost after restart attempt:", remotePeerId);
+            console.warn("[WebRTC] Peer lost after restart attempts:", remotePeerId);
             removePeer(remotePeerId);
           }
-        }, 10000);
+        }, 20000);
       } else if (state === 'closed') {
         removePeer(remotePeerId);
       }
     };
+
 
     pc.onconnectionstatechange = () => {
       console.log(`[WebRTC] Connection state ${remotePeerId}: ${pc.connectionState}`);
