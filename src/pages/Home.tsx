@@ -21,15 +21,16 @@ export default function Home() {
 
   return (
     <SidebarProvider defaultOpen>
-      <div className="min-h-screen bg-transparent flex w-full">
+      <div className="h-[100dvh] overflow-hidden bg-transparent flex w-full">
         <Navbar />
         
-        <main className="flex-1 container max-w-5xl mx-auto px-4 pt-24 pb-12">
+        <main className="flex-1 container max-w-5xl mx-auto px-4 pt-20 pb-4 h-[100dvh] overflow-y-auto md:overflow-hidden flex flex-col justify-center">
         <h1 className="sr-only">{t('home.quickMatchTitle')} - Duelverse</h1>
-        <div className="flex flex-col md:flex-row gap-6 mb-10">
+        <div className="flex flex-col md:flex-row gap-4 md:gap-6">
           {/* Quick Match - HERO SECTION */}
           <Card className="card-mystic hover:border-primary/40 transition-all cursor-pointer animate-fade-in-up delay-100 flex-1 group" onClick={() => navigate('/matchmaking')}>
-            <CardContent className="p-8 md:p-12 flex flex-col items-center justify-center text-center h-full relative">
+            <CardContent className="p-6 md:p-10 flex flex-col items-center justify-center text-center h-full relative">
+
               <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-xl"></div>
               <div className="p-4 rounded-full bg-primary/10 mb-6 group-hover:scale-110 transition-transform duration-500">
                 <Zap className="w-12 h-12 text-primary animate-breathe" />
