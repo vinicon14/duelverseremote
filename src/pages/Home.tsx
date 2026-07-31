@@ -32,11 +32,12 @@ export default function Home() {
             <CardContent className="p-6 md:p-10 flex flex-col items-center justify-center text-center h-full relative">
 
               <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-xl"></div>
-              <div className="p-4 rounded-full bg-primary/10 mb-6 group-hover:scale-110 transition-transform duration-500">
-                <Zap className="w-12 h-12 text-primary animate-breathe" />
+              <div className="p-3 rounded-full bg-primary/10 mb-4 group-hover:scale-110 transition-transform duration-500">
+                <Zap className="w-10 h-10 text-primary animate-breathe" />
               </div>
-              <h2 className="text-3xl font-black tracking-wider uppercase mb-3">{t('home.quickMatchTitle')}</h2>
-              <p className="text-muted-foreground mb-8 max-w-sm">{t('home.quickMatchDesc')}</p>
+              <h2 className="text-2xl md:text-3xl font-black tracking-wider uppercase mb-2">{t('home.quickMatchTitle')}</h2>
+              <p className="text-sm text-muted-foreground mb-5 max-w-sm">{t('home.quickMatchDesc')}</p>
+
               <Button className="w-full sm:w-auto min-w-[240px] h-12 text-lg uppercase font-bold tracking-widest shadow-[0_0_20px_-5px_hsl(var(--primary))]">
                 {t('home.quickMatchBtn')}
               </Button>
