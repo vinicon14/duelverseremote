@@ -45,7 +45,7 @@ export default function Home() {
           </Card>
 
           {/* Lateral Column */}
-          <div className="flex flex-col gap-6 md:w-[320px]">
+          <div className="flex flex-col gap-3 md:gap-4 md:w-[320px]">
             {/* Saldo de DuelCoins reestilizado lateral */}
             <div className="animate-fade-in-up">
               <DuelCoinsBalance />
@@ -57,26 +57,28 @@ export default function Home() {
 
 
             <Card className="card-mystic hover:border-primary/30 transition-all cursor-pointer animate-fade-in-up delay-200 group" onClick={() => navigate('/duels')}>
-              <CardContent className="p-6 flex flex-col items-start h-full">
-                <Swords className="w-6 h-6 text-primary mb-4 opacity-80 group-hover:opacity-100 transition-opacity" />
-                <h3 className="text-xl font-bold mb-2">{t('home.duelsTitle')}</h3>
-                <p className="text-sm text-muted-foreground mb-4 flex-1">{t('home.duelsDesc')}</p>
-                <Button variant="ghost" className="w-full justify-between hover:bg-primary/10 group-hover:text-primary">
+              <CardContent className="p-4 flex flex-col items-start h-full">
+                <Swords className="w-5 h-5 text-primary mb-2 opacity-80 group-hover:opacity-100 transition-opacity" />
+                <h3 className="text-lg font-bold mb-1">{t('home.duelsTitle')}</h3>
+                <p className="text-xs text-muted-foreground mb-2 flex-1">{t('home.duelsDesc')}</p>
+                <Button variant="ghost" size="sm" className="w-full justify-between hover:bg-primary/10 group-hover:text-primary">
                   {t('home.duelsBtn')} <Swords className="w-4 h-4 ml-2" />
                 </Button>
               </CardContent>
             </Card>
 
             <Card className="card-mystic hover:border-primary/30 transition-all cursor-pointer animate-fade-in-up delay-300 group" onClick={() => navigate('/tournaments')}>
-              <CardContent className="p-6 flex flex-col items-start h-full">
-                <Trophy className="w-6 h-6 text-primary mb-4 opacity-80 group-hover:opacity-100 transition-opacity" />
-                <h3 className="text-xl font-bold mb-2">{t('home.tournamentsTitle')}</h3>
-                <p className="text-sm text-muted-foreground mb-4 flex-1">{t('home.tournamentsDesc')}</p>
-                <Button variant="ghost" className="w-full justify-between hover:bg-primary/10 group-hover:text-primary">
+              <CardContent className="p-4 flex flex-col items-start h-full">
+                <Trophy className="w-5 h-5 text-primary mb-2 opacity-80 group-hover:opacity-100 transition-opacity" />
+                <h3 className="text-lg font-bold mb-1">{t('home.tournamentsTitle')}</h3>
+                <p className="text-xs text-muted-foreground mb-2 flex-1">{t('home.tournamentsDesc')}</p>
+                <Button variant="ghost" size="sm" className="w-full justify-between hover:bg-primary/10 group-hover:text-primary">
                   {t('home.tournamentsBtn')} <Trophy className="w-4 h-4 ml-2" />
                 </Button>
               </CardContent>
             </Card>
+          </div>
+
           </div>
         </div>
 
