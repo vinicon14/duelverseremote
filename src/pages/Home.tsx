@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { DuelCoinsBalance } from "@/components/DuelCoinsBalance";
+import { DailyXpClaim } from "@/components/DailyXpClaim";
 import { useTranslation } from "react-i18next";
 
 export default function Home() {
