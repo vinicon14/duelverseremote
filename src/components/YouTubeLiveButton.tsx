@@ -74,11 +74,30 @@ export const YouTubeLiveButton = ({ duelId }: YouTubeLiveButtonProps) => {
         });
       });
 
+      // Mixa o áudio do sistema com o áudio dos oponentes (WebRTC)
+      const mixContext = new AudioContext();
+      if (mixContext.state === 'suspended') await mixContext.resume();
+      mixContextRef.current = mixContext;
+      const destination = mixContext.createMediaStreamDestination();
+
+      const displayAudio = displayStream.getAudioTracks();
+      if (displayAudio.length > 0) {
+        mixContext.createMediaStreamSource(new MediaStream(displayAudio)).connect(destination);
+      }
+      getRemoteAudioStreams().forEach((s) => {
+        try { mixContext.createMediaStreamSource(s).connect(destination); } catch {}
+      });
+
+      const recordStream = new MediaStream([
+        ...displayStream.getVideoTracks(),
+        ...destination.stream.getAudioTracks(),
+      ]);
+
       const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')
         ? 'video/webm;codecs=vp9,opus'
         : 'video/webm;codecs=vp8,opus';
 
-      const mediaRecorder = new MediaRecorder(displayStream, {
+      const mediaRecorder = new MediaRecorder(recordStream, {
         mimeType,
         videoBitsPerSecond: 2500000,
       });
