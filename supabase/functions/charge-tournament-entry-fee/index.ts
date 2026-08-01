@@ -19,7 +19,7 @@ serve(async (req) => {
   }
 
   try {
-    const authClient = createClient(
+    const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
       {
@@ -29,7 +29,7 @@ serve(async (req) => {
       },
     );
 
-    const { data: { user }, error: userError } = await authClient.auth
+    const { data: { user }, error: userError } = await supabaseClient.auth
       .getUser();
     if (userError || !user) {
       return new Response(
@@ -41,14 +41,9 @@ serve(async (req) => {
       );
     }
 
-    const serviceClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-    );
-
     const { tournament_id } = await req.json();
 
-    const { data: profile, error: profileError } = await serviceClient
+    const { data: profile, error: profileError } = await supabaseClient
       .from("profiles")
       .select("duelcoins_balance, username")
       .eq("user_id", user.id)
@@ -64,7 +59,7 @@ serve(async (req) => {
       );
     }
 
-    const { data: tournament, error: tournamentError } = await serviceClient
+    const { data: tournament, error: tournamentError } = await supabaseClient
       .from("tournaments")
       .select("*")
       .eq("id", tournament_id)
@@ -106,27 +101,7 @@ serve(async (req) => {
       );
     }
 
-    const { data: existingParticipant } = await serviceClient
-      .from("tournament_participants")
-      .select("id")
-      .eq("tournament_id", tournament_id)
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    if (existingParticipant) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          message: "Você já está inscrito neste torneio",
-        }),
-        {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    }
-
-    const { count: participantCount } = await serviceClient
+    const { count: participantCount } = await supabaseClient
       .from("tournament_participants")
       .select("*", { count: "exact", head: true })
       .eq("tournament_id", tournament_id);
@@ -159,19 +134,19 @@ serve(async (req) => {
     }
 
     if (tournament.entry_fee > 0) {
-      await serviceClient
+      await supabaseClient
         .from("profiles")
         .update({
           duelcoins_balance: profile.duelcoins_balance - tournament.entry_fee,
         })
         .eq("user_id", user.id);
 
-      await serviceClient
+      await supabaseClient
         .from("tournaments")
         .update({ prize_pool: tournament.prize_pool + tournament.entry_fee })
         .eq("id", tournament_id);
 
-      await serviceClient
+      await supabaseClient
         .from("duelcoins_transactions")
         .insert({
           sender_id: user.id,
@@ -183,7 +158,7 @@ serve(async (req) => {
         });
     }
 
-    const { error: participantError } = await serviceClient
+    const { error: participantError } = await supabaseClient
       .from("tournament_participants")
       .insert({
         tournament_id: tournament_id,
