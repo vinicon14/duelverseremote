@@ -770,59 +770,36 @@ const Duels = () => {
                           </div>
                         </div>
 
-                        {duel.status === 'waiting' && (() => {
+                        {(() => {
                           const mp = (duel as any).max_players || 2;
                           let count = 1;
                           if (duel.opponent_id) count++;
                           if ((duel as any).player3_id) count++;
                           if ((duel as any).player4_id) count++;
-                          return count < mp;
-                        })() && (
-                          <Button
-                            onClick={() => isMobile ? navigate(`/duel/${duel.id}?role=spectate`) : handleJoinDuel(duel.id)}
-                            className="w-full btn-mystic text-white"
-                          >
-                            {isMobile ? (
-                              <><Users className="mr-2 h-4 w-4" />Assistir</>
-                            ) : (
-                              <><Swords className="mr-2 h-4 w-4" />{t('duels.enterDuel')}</>
-                            )}
-                          </Button>
-                        )}
+                          const hasSlot = count < mp;
+                          return (
+                            <div className="space-y-2">
+                              {hasSlot && !isMobile && (
+                                <Button
+                                  onClick={() => handleJoinDuel(duel.id)}
+                                  className="w-full btn-mystic text-white"
+                                >
+                                  <Swords className="mr-2 h-4 w-4" />
+                                  {duel.status === 'waiting' ? t('duels.enterDuel') : t('duels.enterRoom')}
+                                </Button>
+                              )}
+                              <Button
+                                variant={hasSlot && !isMobile ? 'outline' : undefined}
+                                onClick={() => navigate(`/duel/${duel.id}?role=spectate`)}
+                                className={hasSlot && !isMobile ? 'w-full' : 'w-full btn-mystic text-white'}
+                              >
+                                <Users className="mr-2 h-4 w-4" />
+                                {t('duels.watchDuel')}
+                              </Button>
+                            </div>
+                          );
+                        })()}
 
-                        {duel.status === 'in_progress' && (() => {
-                          const mp = (duel as any).max_players || 2;
-                          let count = 1;
-                          if (duel.opponent_id) count++;
-                          if ((duel as any).player3_id) count++;
-                          if ((duel as any).player4_id) count++;
-                          return count < mp;
-                        })() && (
-                          <Button
-                            onClick={() => isMobile ? navigate(`/duel/${duel.id}?role=spectate`) : handleJoinDuel(duel.id)}
-                            className="w-full btn-mystic text-white"
-                          >
-                            <Users className="mr-2 h-4 w-4" />
-                            {isMobile ? 'Assistir' : t('duels.enterRoom')}
-                          </Button>
-                        )}
-
-                        {duel.status === 'in_progress' && (() => {
-                          const mp = (duel as any).max_players || 2;
-                          let count = 1;
-                          if (duel.opponent_id) count++;
-                          if ((duel as any).player3_id) count++;
-                          if ((duel as any).player4_id) count++;
-                          return count >= mp;
-                        })() && (
-                          <Button
-                            onClick={() => navigate(`/duel/${duel.id}`)}
-                            className="w-full btn-mystic text-white"
-                          >
-                            <Users className="mr-2 h-4 w-4" />
-                            {t('duels.watchDuel')}
-                          </Button>
-                        )}
                       </div>
                     </CardContent>
                   </Card>
