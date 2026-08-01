@@ -113,6 +113,10 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
 }, ref) => {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
+  // Dedicated audio elements per peer: guarantee we always hear every player,
+  // even when their <video> is hidden (deck overlay) or unmounted (PiP swap).
+  const remoteAudioRefs = useRef<Map<string, HTMLAudioElement>>(new Map());
+  const [audioBlocked, setAudioBlocked] = useState(false);
   const peersRef = useRef<Map<string, PeerState>>(new Map());
   const localStreamRef = useRef<MediaStream | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
