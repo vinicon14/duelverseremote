@@ -549,6 +549,24 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
           peer.ignoreOffer = !polite && offerCollision;
           if (peer.ignoreOffer) return;
 
+          // Perfect negotiation: the polite peer must roll back its own pending
+          // offer before accepting the remote one. Without this, glare (both
+          // sides offering at once — very common when a spectator joins two
+          // players simultaneously) threw here and one of the two video feeds
+          // never arrived.
+          if (offerCollision && polite) {
+            try {
+              await pc.setLocalDescription({ type: "rollback" } as RTCSessionDescriptionInit);
+            } catch (err) {
+              console.warn("[WebRTC] rollback failed (implicit rollback assumed):", err);
+            }
+          }
+
+          if (payload.type === "answer" && pc.signalingState !== "have-local-offer") {
+            // Stale/duplicate answer — ignore instead of throwing.
+            return;
+          }
+
           await pc.setRemoteDescription(description);
 
           if (payload.type === "offer") {
