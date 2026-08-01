@@ -536,12 +536,12 @@ const DuelRoom = () => {
               .rpc('join_duel', { p_duel_id: id });
 
             if (joinError || !joinResult?.joined) {
-              if (joinError) {
-                toast({ title: t('duelRoom.toastJoinErrorTitle'), description: t('duelRoom.toastJoinErrorDesc'), variant: "destructive" });
-                navigate('/duels');
-                return;
-              }
-              // joined=false but no error => already in or full; fall through to reload
+              // Não conseguiu entrar como jogador → continua como espectador
+              console.warn('[DuelRoom] Falha ao entrar como jogador, entrando como espectador', joinError);
+              toast({
+                title: t('duelRoom.toastSpectatorTitle'),
+                description: t('duelRoom.toastSpectatorDesc'),
+              });
             }
 
             // Reload duel data
@@ -564,11 +564,15 @@ const DuelRoom = () => {
               console.warn('cleanupDuelDiscordMessages skipped:', e);
             }
           } catch (error) {
-            toast({ title: t('duelRoom.toastJoinErrorTitle'), description: t('duelRoom.toastJoinErrorGeneric'), variant: "destructive" });
-            navigate('/duels');
-            return;
+            // Erro inesperado: ainda assim permite assistir em vez de expulsar
+            console.error('[DuelRoom] Erro ao entrar na sala:', error);
+            toast({
+              title: t('duelRoom.toastSpectatorTitle'),
+              description: t('duelRoom.toastSpectatorDesc'),
+            });
           }
         } else {
+
           // All slots full, enter as spectator
           console.log('[DuelRoom] Sala lotada, entrando como espectador');
           toast({
