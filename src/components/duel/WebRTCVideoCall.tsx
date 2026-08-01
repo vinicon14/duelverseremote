@@ -443,6 +443,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       peerState.stream = stream;
 
       const nextStream = stream;
+      registerRemoteStream(remotePeerId, nextStream);
       setRemoteStreams((prev) => {
         const next = new Map(prev);
         next.set(remotePeerId, nextStream);
