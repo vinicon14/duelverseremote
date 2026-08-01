@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Mic, MicOff, Video, VideoOff, Loader2, LayoutGrid, PictureInPicture2, ZoomIn, ZoomOut, Settings, Smartphone } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { usePhoneStream } from "@/contexts/PhoneStreamContext";
+import { registerRemoteStream, unregisterRemoteStream, clearRemoteStreams } from "@/utils/remoteAudioRegistry";
 
 export type VideoLayout = "side-by-side" | "pip";
 
