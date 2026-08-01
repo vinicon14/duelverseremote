@@ -48,6 +48,10 @@ export const YouTubeLiveButton = ({ duelId }: YouTubeLiveButtonProps) => {
       displayStreamRef.current.getTracks().forEach(t => t.stop());
       displayStreamRef.current = null;
     }
+    if (mixContextRef.current) {
+      try { mixContextRef.current.close(); } catch {}
+      mixContextRef.current = null;
+    }
 
     setIsRecording(false);
   }, []);
