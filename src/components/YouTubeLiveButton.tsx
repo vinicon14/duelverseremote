@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Radio, Square, Loader2, Download, Monitor } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAccountType } from "@/hooks/useAccountType";
+import { getRemoteAudioStreams } from "@/utils/remoteAudioRegistry";
 import {
   Dialog,
   DialogContent,
