@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Radio, Square, Loader2, Download, Monitor } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAccountType } from "@/hooks/useAccountType";
+import { getRemoteAudioStreams } from "@/utils/remoteAudioRegistry";
 import {
   Dialog,
   DialogContent,
@@ -35,6 +36,7 @@ export const YouTubeLiveButton = ({ duelId }: YouTubeLiveButtonProps) => {
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const displayStreamRef = useRef<MediaStream | null>(null);
+  const mixContextRef = useRef<AudioContext | null>(null);
   const chunksRef = useRef<Blob[]>([]);
 
   const stopRecording = useCallback(() => {
@@ -45,6 +47,10 @@ export const YouTubeLiveButton = ({ duelId }: YouTubeLiveButtonProps) => {
     if (displayStreamRef.current) {
       displayStreamRef.current.getTracks().forEach(t => t.stop());
       displayStreamRef.current = null;
+    }
+    if (mixContextRef.current) {
+      try { mixContextRef.current.close(); } catch {}
+      mixContextRef.current = null;
     }
 
     setIsRecording(false);
@@ -74,11 +80,30 @@ export const YouTubeLiveButton = ({ duelId }: YouTubeLiveButtonProps) => {
         });
       });
 
+      // Mixa o áudio do sistema com o áudio dos oponentes (WebRTC)
+      const mixContext = new AudioContext();
+      if (mixContext.state === 'suspended') await mixContext.resume();
+      mixContextRef.current = mixContext;
+      const destination = mixContext.createMediaStreamDestination();
+
+      const displayAudio = displayStream.getAudioTracks();
+      if (displayAudio.length > 0) {
+        mixContext.createMediaStreamSource(new MediaStream(displayAudio)).connect(destination);
+      }
+      getRemoteAudioStreams().forEach((s) => {
+        try { mixContext.createMediaStreamSource(s).connect(destination); } catch {}
+      });
+
+      const recordStream = new MediaStream([
+        ...displayStream.getVideoTracks(),
+        ...destination.stream.getAudioTracks(),
+      ]);
+
       const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')
         ? 'video/webm;codecs=vp9,opus'
         : 'video/webm;codecs=vp8,opus';
 
-      const mediaRecorder = new MediaRecorder(displayStream, {
+      const mediaRecorder = new MediaRecorder(recordStream, {
         mimeType,
         videoBitsPerSecond: 2500000,
       });

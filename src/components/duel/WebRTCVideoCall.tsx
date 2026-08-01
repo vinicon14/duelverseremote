@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Mic, MicOff, Video, VideoOff, Loader2, LayoutGrid, PictureInPicture2, ZoomIn, ZoomOut, Settings, Smartphone } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { usePhoneStream } from "@/contexts/PhoneStreamContext";
+import { registerRemoteStream, unregisterRemoteStream, clearRemoteStreams } from "@/utils/remoteAudioRegistry";
 
 export type VideoLayout = "side-by-side" | "pip";
 
@@ -299,6 +300,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       peersRef.current.delete(peerId);
     }
     remoteVideoRefs.current.delete(peerId);
+    unregisterRemoteStream(peerId);
     setRemoteStreams(prev => {
       const next = new Map(prev);
       next.delete(peerId);
@@ -441,6 +443,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       peerState.stream = stream;
 
       const nextStream = stream;
+      registerRemoteStream(remotePeerId, nextStream);
       setRemoteStreams((prev) => {
         const next = new Map(prev);
         next.set(remotePeerId, nextStream);
@@ -720,6 +723,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       localStreamRef.current = null;
       peersRef.current.forEach((peer) => peer.pc.close());
       peersRef.current.clear();
+      clearRemoteStreams();
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
