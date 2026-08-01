@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAccountType } from "@/hooks/useAccountType";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { getRemoteAudioStreams } from "@/utils/remoteAudioRegistry";
 import {
   Dialog,
   DialogContent,
