@@ -17,6 +17,7 @@ import { PhoneOff, Loader2, Scale, Layers, Sparkles, Zap, Clock, Coins, Plus, Tr
 import { Progress } from "@/components/ui/progress";
 import { Navbar } from "@/components/Navbar";
 import { DuelChat } from "@/components/DuelChat";
+import { SpectatorChat } from "@/components/duel/SpectatorChat";
 import { FloatingCalculator } from "@/components/FloatingCalculator";
 import { RecordMatchButton } from "@/components/RecordMatchButton";
 import { ElectronRecordButton } from "@/components/ElectronRecordButton";
