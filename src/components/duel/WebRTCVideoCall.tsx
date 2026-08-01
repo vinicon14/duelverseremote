@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback, useImperativeHandle, forwardR
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Mic, MicOff, Video, VideoOff, Loader2, LayoutGrid, PictureInPicture2, ZoomIn, ZoomOut, Settings, Smartphone } from "lucide-react";
+import { Mic, MicOff, Video, VideoOff, Loader2, LayoutGrid, PictureInPicture2, ZoomIn, ZoomOut, Settings, Smartphone, Volume2 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { usePhoneStream } from "@/contexts/PhoneStreamContext";
 import { registerRemoteStream, unregisterRemoteStream, clearRemoteStreams } from "@/utils/remoteAudioRegistry";
@@ -113,6 +113,10 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
 }, ref) => {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
+  // Dedicated audio elements per peer: guarantee we always hear every player,
+  // even when their <video> is hidden (deck overlay) or unmounted (PiP swap).
+  const remoteAudioRefs = useRef<Map<string, HTMLAudioElement>>(new Map());
+  const [audioBlocked, setAudioBlocked] = useState(false);
   const peersRef = useRef<Map<string, PeerState>>(new Map());
   const localStreamRef = useRef<MediaStream | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
@@ -731,21 +735,69 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     };
   }, [duelId, userId, handleSignal, isSpectator, audioBroadcastOnly, getActiveOutboundStream]);
 
-  // Attach remote streams to video elements
+  // Attach remote streams to video elements (video is always muted — audio is
+  // played by the dedicated <audio> elements below).
   useEffect(() => {
     remoteStreams.forEach((stream, peerId) => {
       const el = remoteVideoRefs.current.get(peerId);
       if (!el) return;
+      el.muted = true;
       if (el.srcObject !== stream) {
         el.srcObject = stream;
       }
-      // Autoplay of unmuted remote media can be blocked; retry muted as fallback
-      el.play?.().catch(() => {
-        el.muted = true;
-        el.play?.().catch(() => {});
-      });
+      el.play?.().catch(() => {});
     });
   }, [remoteStreams, remotePeerIds]);
+
+  // Attach remote AUDIO tracks to dedicated audio elements
+  useEffect(() => {
+    remoteStreams.forEach((stream, peerId) => {
+      const el = remoteAudioRefs.current.get(peerId);
+      if (!el) return;
+      const tracks = stream.getAudioTracks();
+      if (tracks.length === 0) return;
+      const current = el.srcObject as MediaStream | null;
+      const sameTracks =
+        current &&
+        current.getAudioTracks().length === tracks.length &&
+        current.getAudioTracks().every((t, i) => t.id === tracks[i].id);
+      if (!sameTracks) {
+        el.srcObject = new MediaStream(tracks);
+      }
+      el.muted = false;
+      el.volume = 1;
+      el.play?.()
+        .then(() => setAudioBlocked(false))
+        .catch(() => setAudioBlocked(true));
+    });
+  }, [remoteStreams, remotePeerIds]);
+
+  const enableRemoteAudio = useCallback(() => {
+    remoteAudioRefs.current.forEach((el) => {
+      el.muted = false;
+      el.volume = 1;
+      el.play?.().catch(() => {});
+    });
+    setAudioBlocked(false);
+  }, []);
+
+  const setRemoteAudioRef = useCallback((peerId: string, el: HTMLAudioElement | null) => {
+    if (!el) {
+      remoteAudioRefs.current.delete(peerId);
+      return;
+    }
+    remoteAudioRefs.current.set(peerId, el);
+    const stream = remoteStreams.get(peerId);
+    const tracks = stream?.getAudioTracks() ?? [];
+    if (tracks.length > 0) {
+      el.srcObject = new MediaStream(tracks);
+      el.muted = false;
+      el.play?.()
+        .then(() => setAudioBlocked(false))
+        .catch(() => setAudioBlocked(true));
+    }
+  }, [remoteStreams]);
+
 
 
   const toggleMute = () => {
@@ -800,15 +852,13 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   const setRemoteVideoRef = useCallback((peerId: string, el: HTMLVideoElement | null) => {
     if (el) {
       remoteVideoRefs.current.set(peerId, el);
+      el.muted = true;
       const stream = remoteStreams.get(peerId);
       if (stream && el.srcObject !== stream) {
         el.srcObject = stream;
       }
       if (stream) {
-        el.play?.().catch(() => {
-          el.muted = true;
-          el.play?.().catch(() => {});
-        });
+        el.play?.().catch(() => {});
       }
     } else {
       remoteVideoRefs.current.delete(peerId);
@@ -1114,6 +1164,28 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
             )}
           </div>
         </>
+      )}
+
+      {/* Dedicated audio playback for every remote peer (spectators hear all players) */}
+      {remotePeerIds.map((pid) => (
+        <audio
+          key={`audio-${pid}`}
+          ref={(el) => setRemoteAudioRef(pid, el)}
+          autoPlay
+          playsInline
+          className="hidden"
+        />
+      ))}
+
+      {audioBlocked && remotePeerIds.length > 0 && (
+        <Button
+          type="button"
+          size="sm"
+          onClick={enableRemoteAudio}
+          className="absolute top-2 left-1/2 -translate-x-1/2 z-30 rounded-full gap-1.5 shadow-lg"
+        >
+          <Volume2 className="w-3.5 h-3.5" /> Ativar áudio
+        </Button>
       )}
 
       {/* Controls bar — hidden for pure receive-only spectators */}
