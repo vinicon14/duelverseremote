@@ -1166,6 +1166,28 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         </>
       )}
 
+      {/* Dedicated audio playback for every remote peer (spectators hear all players) */}
+      {remotePeerIds.map((pid) => (
+        <audio
+          key={`audio-${pid}`}
+          ref={(el) => setRemoteAudioRef(pid, el)}
+          autoPlay
+          playsInline
+          className="hidden"
+        />
+      ))}
+
+      {audioBlocked && remotePeerIds.length > 0 && (
+        <Button
+          type="button"
+          size="sm"
+          onClick={enableRemoteAudio}
+          className="absolute top-2 left-1/2 -translate-x-1/2 z-30 rounded-full gap-1.5 shadow-lg"
+        >
+          <Volume2 className="w-3.5 h-3.5" /> Ativar áudio
+        </Button>
+      )}
+
       {/* Controls bar — hidden for pure receive-only spectators */}
       {(!isSpectator || audioBroadcastOnly) && (
         <div className="absolute bottom-1.5 sm:bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 sm:gap-2 z-20">
