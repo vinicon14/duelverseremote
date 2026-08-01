@@ -723,6 +723,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       localStreamRef.current = null;
       peersRef.current.forEach((peer) => peer.pc.close());
       peersRef.current.clear();
+      clearRemoteStreams();
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
