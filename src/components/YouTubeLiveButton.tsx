@@ -35,6 +35,7 @@ export const YouTubeLiveButton = ({ duelId }: YouTubeLiveButtonProps) => {
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const displayStreamRef = useRef<MediaStream | null>(null);
+  const mixContextRef = useRef<AudioContext | null>(null);
   const chunksRef = useRef<Blob[]>([]);
 
   const stopRecording = useCallback(() => {
