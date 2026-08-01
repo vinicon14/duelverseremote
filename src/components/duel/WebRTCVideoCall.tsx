@@ -299,6 +299,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       peersRef.current.delete(peerId);
     }
     remoteVideoRefs.current.delete(peerId);
+    unregisterRemoteStream(peerId);
     setRemoteStreams(prev => {
       const next = new Map(prev);
       next.delete(peerId);
