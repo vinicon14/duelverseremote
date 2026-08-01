@@ -735,21 +735,69 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     };
   }, [duelId, userId, handleSignal, isSpectator, audioBroadcastOnly, getActiveOutboundStream]);
 
-  // Attach remote streams to video elements
+  // Attach remote streams to video elements (video is always muted — audio is
+  // played by the dedicated <audio> elements below).
   useEffect(() => {
     remoteStreams.forEach((stream, peerId) => {
       const el = remoteVideoRefs.current.get(peerId);
       if (!el) return;
+      el.muted = true;
       if (el.srcObject !== stream) {
         el.srcObject = stream;
       }
-      // Autoplay of unmuted remote media can be blocked; retry muted as fallback
-      el.play?.().catch(() => {
-        el.muted = true;
-        el.play?.().catch(() => {});
-      });
+      el.play?.().catch(() => {});
     });
   }, [remoteStreams, remotePeerIds]);
+
+  // Attach remote AUDIO tracks to dedicated audio elements
+  useEffect(() => {
+    remoteStreams.forEach((stream, peerId) => {
+      const el = remoteAudioRefs.current.get(peerId);
+      if (!el) return;
+      const tracks = stream.getAudioTracks();
+      if (tracks.length === 0) return;
+      const current = el.srcObject as MediaStream | null;
+      const sameTracks =
+        current &&
+        current.getAudioTracks().length === tracks.length &&
+        current.getAudioTracks().every((t, i) => t.id === tracks[i].id);
+      if (!sameTracks) {
+        el.srcObject = new MediaStream(tracks);
+      }
+      el.muted = false;
+      el.volume = 1;
+      el.play?.()
+        .then(() => setAudioBlocked(false))
+        .catch(() => setAudioBlocked(true));
+    });
+  }, [remoteStreams, remotePeerIds]);
+
+  const enableRemoteAudio = useCallback(() => {
+    remoteAudioRefs.current.forEach((el) => {
+      el.muted = false;
+      el.volume = 1;
+      el.play?.().catch(() => {});
+    });
+    setAudioBlocked(false);
+  }, []);
+
+  const setRemoteAudioRef = useCallback((peerId: string, el: HTMLAudioElement | null) => {
+    if (!el) {
+      remoteAudioRefs.current.delete(peerId);
+      return;
+    }
+    remoteAudioRefs.current.set(peerId, el);
+    const stream = remoteStreams.get(peerId);
+    const tracks = stream?.getAudioTracks() ?? [];
+    if (tracks.length > 0) {
+      el.srcObject = new MediaStream(tracks);
+      el.muted = false;
+      el.play?.()
+        .then(() => setAudioBlocked(false))
+        .catch(() => setAudioBlocked(true));
+    }
+  }, [remoteStreams]);
+
 
 
   const toggleMute = () => {
