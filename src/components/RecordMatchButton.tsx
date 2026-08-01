@@ -355,6 +355,27 @@ export const RecordMatchButton = ({ duelId, tournamentId }: RecordMatchButtonPro
         setHasMic(false);
       }
 
+      // Áudio dos oponentes (WebRTC) — garante que a voz do player 2 entre na gravação
+      // mesmo quando o áudio do sistema/aba não é compartilhado.
+      const remoteAudioStreams = getRemoteAudioStreams();
+      remoteAudioStreams.forEach((remoteStream) => {
+        try {
+          const remoteSource = mixContext.createMediaStreamSource(remoteStream);
+          remoteSource.connect(destination);
+        } catch (remoteError) {
+          console.warn("Não foi possível mixar áudio remoto:", remoteError);
+        }
+      });
+
+      if (remoteAudioStreams.length === 0 && source !== "mic" && displayAudioTracks.length === 0) {
+        toast({
+          title: "Sem áudio do oponente",
+          description: "Nenhum áudio de oponente foi detectado na sala no momento.",
+        });
+      }
+
+
+
       const combinedStream = new MediaStream([
         ...displayStream.getVideoTracks(),
         ...destination.stream.getAudioTracks(),
