@@ -162,57 +162,27 @@ export const useYugiohCards = () => {
 
 
   const getCardById = useCallback(async (id: number, language: Language = 'pt'): Promise<YugiohCard | null> => {
-    try {
-      const langParam = language === 'pt' ? '&language=pt' : '';
-      const response = await fetch(
-        `https://db.ygoprodeck.com/api/v7/cardinfo.php?id=${id}${langParam}`
-      );
-      
-      if (!response.ok) {
-        // If Portuguese fetch fails, try English
-        if (language === 'pt') {
-          const englishResponse = await fetch(
-            `https://db.ygoprodeck.com/api/v7/cardinfo.php?id=${id}`
-          );
-          if (englishResponse.ok) {
-            const englishData = await englishResponse.json();
-            return englishData.data?.[0] || null;
-          }
-        }
+    const base = 'https://db.ygoprodeck.com/api/v7/cardinfo.php';
+    const fetchOne = async (u: string): Promise<YugiohCard | null> => {
+      try {
+        const res = await fetch(`${u}&_=${Date.now()}`, { cache: 'no-store' });
+        if (!res.ok) return null;
+        const json = await res.json();
+        return json.data?.[0] || null;
+      } catch {
         return null;
       }
-      
-      const data = await response.json();
-      const card = data.data?.[0];
-      
-      // If Portuguese fetch returns no data, try English
-      if (!card && language === 'pt') {
-        const englishResponse = await fetch(
-          `https://db.ygoprodeck.com/api/v7/cardinfo.php?id=${id}`
-        );
-        if (englishResponse.ok) {
-          const englishData = await englishResponse.json();
-          return englishData.data?.[0] || null;
-        }
-      }
-      
-      return card || null;
-    } catch {
-      // Try English as fallback on error
-      if (language === 'pt') {
-        try {
-          const englishResponse = await fetch(
-            `https://db.ygoprodeck.com/api/v7/cardinfo.php?id=${id}`
-          );
-          if (englishResponse.ok) {
-            const englishData = await englishResponse.json();
-            return englishData.data?.[0] || null;
-          }
-        } catch {}
-      }
-      return null;
-    }
+    };
+
+    const [en, pt] = await Promise.all([
+      fetchOne(`${base}?id=${id}`),
+      language === 'pt' ? fetchOne(`${base}?id=${id}&language=pt`) : Promise.resolve(null),
+    ]);
+
+    if (en && pt) return { ...en, name: pt.name, desc: pt.desc };
+    return en || pt;
   }, []);
+
 
   const fetchArchetypes = useCallback(async (): Promise<string[]> => {
     try {
