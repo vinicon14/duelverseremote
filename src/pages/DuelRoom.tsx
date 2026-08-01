@@ -1552,6 +1552,16 @@ const DuelRoom = () => {
         />
       )}
 
+      {/* Chat de espectadores estilo Twitch */}
+      {duel?.id && currentUser && !hideControls && (
+        <SpectatorChat
+          duelId={duel.id}
+          currentUserId={currentUser.id}
+          canSend={!!isSpectator}
+          isSpectator={!!isSpectator}
+        />
+      )}
+
       {/* Roster do Discord (se a sala foi criada/sincronizada via call de voz) */}
       {duel?.id && <DiscordVoiceRoster duelId={duel.id} />}
 
