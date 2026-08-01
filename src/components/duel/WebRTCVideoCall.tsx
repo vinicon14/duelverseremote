@@ -852,15 +852,13 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   const setRemoteVideoRef = useCallback((peerId: string, el: HTMLVideoElement | null) => {
     if (el) {
       remoteVideoRefs.current.set(peerId, el);
+      el.muted = true;
       const stream = remoteStreams.get(peerId);
       if (stream && el.srcObject !== stream) {
         el.srcObject = stream;
       }
       if (stream) {
-        el.play?.().catch(() => {
-          el.muted = true;
-          el.play?.().catch(() => {});
-        });
+        el.play?.().catch(() => {});
       }
     } else {
       remoteVideoRefs.current.delete(peerId);
