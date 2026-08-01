@@ -125,7 +125,7 @@ export const useYugiohCards = () => {
 
       const fetchList = async (u: string): Promise<YugiohCard[]> => {
         try {
-          const res = await fetch(`${u}&_=${Date.now()}`, { cache: 'no-store' });
+          const res = await fetch(u, { cache: 'no-store' });
           if (!res.ok) return [];
           const json = await res.json();
           return Array.isArray(json.data) ? json.data : [];
@@ -165,7 +165,7 @@ export const useYugiohCards = () => {
     const base = 'https://db.ygoprodeck.com/api/v7/cardinfo.php';
     const fetchOne = async (u: string): Promise<YugiohCard | null> => {
       try {
-        const res = await fetch(`${u}&_=${Date.now()}`, { cache: 'no-store' });
+        const res = await fetch(u, { cache: 'no-store' });
         if (!res.ok) return null;
         const json = await res.json();
         return json.data?.[0] || null;
