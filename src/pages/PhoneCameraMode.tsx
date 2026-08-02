@@ -304,8 +304,8 @@ const PhoneCameraMode = () => {
         <Button variant={cameraOn ? "default" : "secondary"} size="lg" className="rounded-full h-12 w-12 p-0" onClick={() => setCameraOn((v) => !v)} disabled={!outboundStream} title="Ligar/desligar câmera">
           {cameraOn ? <Camera className="h-6 w-6" /> : <CameraOff className="h-6 w-6" />}
         </Button>
-        <Button variant="secondary" size="lg" className="rounded-full h-12 w-12 p-0" onClick={() => setFacingMode((f) => (f === "user" ? "environment" : "user"))} disabled={!outboundStream || !cameraOn} title="Alternar câmera">
-          <SwitchCamera className="h-6 w-6" />
+        <Button variant="secondary" size="lg" className="rounded-full h-12 w-12 p-0" onClick={switchCamera} disabled={!outboundStream || switching} title="Alternar câmera frontal/traseira">
+          <SwitchCamera className={`h-6 w-6 ${switching ? "animate-spin" : ""}`} />
         </Button>
         <Button variant="secondary" size="lg" className="rounded-full h-12 w-12 p-0" onClick={rotateCamera} disabled={!outboundStream || !cameraOn} title="Girar 90° (horizontal via software)">
           <RotateCw className="h-6 w-6" />
