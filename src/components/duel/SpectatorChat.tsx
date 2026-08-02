@@ -86,7 +86,11 @@ export const SpectatorChat = ({ duelId, currentUserId, canSend, isSpectator, pla
         profiles?.forEach((p) => namesRef.current.set(p.user_id, p.username));
       }
       setHistory(
-        data.map((m) => ({ ...m, username: namesRef.current.get(m.user_id) || "Anônimo" })),
+        data.map((m) => ({
+          ...m,
+          username: namesRef.current.get(m.user_id) || "Anônimo",
+          isPlayer: playerSetRef.current.has(m.user_id),
+        })),
       );
     })();
     return () => {
