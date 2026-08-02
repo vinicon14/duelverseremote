@@ -176,9 +176,15 @@ export const SpectatorChat = ({ duelId, currentUserId, canSend, isSpectator, pla
         {visible.map((m) => (
           <p
             key={m.id}
-            className="animate-fade-in max-w-full text-right text-[11px] leading-tight text-foreground/90 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]"
+            className={`animate-fade-in max-w-full text-right leading-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] ${
+              m.isPlayer
+                ? "text-sm font-medium text-foreground"
+                : "text-[11px] text-foreground/90"
+            }`}
           >
-            <span className="font-semibold text-primary">{m.username}</span>{" "}
+            <span className={m.isPlayer ? "font-bold text-amber-400" : "font-semibold text-primary"}>
+              {m.username}
+            </span>{" "}
             <span className="break-words">{m.message}</span>
           </p>
         ))}
