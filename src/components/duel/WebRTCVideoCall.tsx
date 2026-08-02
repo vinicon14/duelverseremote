@@ -130,6 +130,8 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   // otherwise another spectator steals the slot meant for player 2.
   const spectatorPeersRef = useRef<Set<string>>(new Set());
   const [spectatorPeerIds, setSpectatorPeerIds] = useState<string[]>([]);
+  const [pipSwapped, setPipSwapped] = useState(false);
+
 
   const [zoomLevel, setZoomLevel] = useState(1);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
