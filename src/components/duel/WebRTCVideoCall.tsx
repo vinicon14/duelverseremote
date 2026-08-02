@@ -606,7 +606,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         console.error("[WebRTC] signal handling error:", err);
       }
     },
-    [userId, createPeerConnection, isSpectator]
+    [userId, createPeerConnection, isSpectator, audioBroadcastOnly]
   );
 
   useEffect(() => {
