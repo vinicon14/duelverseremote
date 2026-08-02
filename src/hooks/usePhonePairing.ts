@@ -146,12 +146,12 @@ export function useHostPairing() {
 export function usePhoneClientPairing(params: {
   sessionId: string | null;
   token: string | null;
-  facingMode: "user" | "environment";
+  facingMode?: "user" | "environment";
   cameraOn: boolean;
   micOn: boolean;
   initialStream?: MediaStream | null;
 }) {
-  const { sessionId, token, facingMode, cameraOn, micOn, initialStream = null } = params;
+  const { sessionId, token, cameraOn, micOn, initialStream = null } = params;
   const [status, setStatus] = useState<PairStatus>("idle");
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [error, setError] = useState<string | null>(null);
