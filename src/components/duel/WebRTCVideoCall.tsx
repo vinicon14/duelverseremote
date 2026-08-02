@@ -511,12 +511,27 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       const remotePeerId = payload.senderId;
 
       if (payload.type === "ready") {
+        // Remember whether this peer is a spectator so it never takes a video slot.
+        if (payload.isSpectator) {
+          if (!spectatorPeersRef.current.has(remotePeerId)) {
+            spectatorPeersRef.current.add(remotePeerId);
+            setSpectatorPeerIds((prev) => (prev.includes(remotePeerId) ? prev : [...prev, remotePeerId]));
+          }
+          // Spectator <-> spectator connections are useless (neither sends video)
+          // and only waste slots/bandwidth. Skip them entirely.
+          if (isSpectator && !audioBroadcastOnly) return;
+        } else if (spectatorPeersRef.current.has(remotePeerId)) {
+          spectatorPeersRef.current.delete(remotePeerId);
+          setSpectatorPeerIds((prev) => prev.filter((id) => id !== remotePeerId));
+        }
+
         const isNewPeer = !peersRef.current.has(remotePeerId);
         if (isNewPeer) {
           createPeerConnection(remotePeerId);
         }
         const peer = peersRef.current.get(remotePeerId);
         if (!peer) return;
+
 
         // Handshake symmetry: whenever we receive a broadcast "ready" (no targetId),
         // we reply with a targeted "ready" back so the other side ALSO creates its
