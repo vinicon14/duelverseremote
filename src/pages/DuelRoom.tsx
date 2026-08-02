@@ -1557,9 +1557,11 @@ const DuelRoom = () => {
         <SpectatorChat
           duelId={duel.id}
           currentUserId={currentUser.id}
-          canSend={!!isSpectator}
+          canSend
           isSpectator={!!isSpectator}
+          playerIds={[duel.creator_id, duel.opponent_id, duel.player3_id, duel.player4_id]}
         />
+
       )}
 
       {/* Roster do Discord (se a sala foi criada/sincronizada via call de voz) */}

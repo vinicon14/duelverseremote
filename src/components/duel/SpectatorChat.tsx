@@ -22,10 +22,12 @@ import { Eye, History, Send } from "lucide-react";
 interface SpectatorChatProps {
   duelId: string;
   currentUserId?: string;
-  /** true = pode enviar mensagens (espectador). false = somente leitura (jogador). */
+  /** true = pode enviar mensagens. */
   canSend: boolean;
   /** Identifica o usuário como espectador para o contador de presença. */
   isSpectator: boolean;
+  /** IDs dos jogadores da partida (mensagens deles aparecem maiores e por mais tempo). */
+  playerIds?: (string | null | undefined)[];
 }
 
 interface ChatMsg {
@@ -34,11 +36,16 @@ interface ChatMsg {
   message: string;
   created_at: string;
   username?: string;
+  isPlayer?: boolean;
 }
 
 const VISIBLE_MS = 9000;
+const PLAYER_VISIBLE_MS = 20000;
 
-export const SpectatorChat = ({ duelId, currentUserId, canSend, isSpectator }: SpectatorChatProps) => {
+export const SpectatorChat = ({ duelId, currentUserId, canSend, isSpectator, playerIds = [] }: SpectatorChatProps) => {
+  const playerSet = new Set(playerIds.filter(Boolean) as string[]);
+  const playerSetRef = useRef(playerSet);
+  playerSetRef.current = playerSet;
   const [history, setHistory] = useState<ChatMsg[]>([]);
   const [visible, setVisible] = useState<ChatMsg[]>([]);
   const [spectatorCount, setSpectatorCount] = useState(0);
@@ -79,7 +86,11 @@ export const SpectatorChat = ({ duelId, currentUserId, canSend, isSpectator }: S
         profiles?.forEach((p) => namesRef.current.set(p.user_id, p.username));
       }
       setHistory(
-        data.map((m) => ({ ...m, username: namesRef.current.get(m.user_id) || "Anônimo" })),
+        data.map((m) => ({
+          ...m,
+          username: namesRef.current.get(m.user_id) || "Anônimo",
+          isPlayer: playerSetRef.current.has(m.user_id),
+        })),
       );
     })();
     return () => {
@@ -102,13 +113,15 @@ export const SpectatorChat = ({ duelId, currentUserId, canSend, isSpectator }: S
         async (payload) => {
           const raw = payload.new as ChatMsg;
           const username = await resolveName(raw.user_id);
-          const msg: ChatMsg = { ...raw, username };
+          const isPlayer = playerSetRef.current.has(raw.user_id);
+          const msg: ChatMsg = { ...raw, username, isPlayer };
           setHistory((prev) => [...prev, msg]);
           setVisible((prev) => [...prev.slice(-6), msg]);
           setTimeout(() => {
             setVisible((prev) => prev.filter((m) => m.id !== msg.id));
-          }, VISIBLE_MS);
+          }, isPlayer ? PLAYER_VISIBLE_MS : VISIBLE_MS);
         },
+
       )
       .subscribe();
 
@@ -167,9 +180,15 @@ export const SpectatorChat = ({ duelId, currentUserId, canSend, isSpectator }: S
         {visible.map((m) => (
           <p
             key={m.id}
-            className="animate-fade-in max-w-full text-right text-[11px] leading-tight text-foreground/90 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]"
+            className={`animate-fade-in max-w-full text-right leading-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] ${
+              m.isPlayer
+                ? "text-sm font-medium text-foreground"
+                : "text-[11px] text-foreground/90"
+            }`}
           >
-            <span className="font-semibold text-primary">{m.username}</span>{" "}
+            <span className={m.isPlayer ? "font-bold text-amber-400" : "font-semibold text-primary"}>
+              {m.username}
+            </span>{" "}
             <span className="break-words">{m.message}</span>
           </p>
         ))}

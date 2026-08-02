@@ -28,6 +28,7 @@ const PhoneCameraMode = () => {
   const [rotation, setRotation] = useState<0 | 90 | 180 | 270>(0);
   const [startError, setStartError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
+  const [switching, setSwitching] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const wakeLockRef = useRef<any>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -100,6 +101,13 @@ const PhoneCameraMode = () => {
     });
     return () => bat?.removeEventListener?.("levelchange", handler);
   }, []);
+
+  // Keep the raw camera track in sync with the on/off toggle so the rotated
+  // canvas output also goes dark when the camera is turned off.
+  useEffect(() => {
+    rawStream?.getVideoTracks().forEach((t) => { t.enabled = cameraOn; });
+    rawStream?.getAudioTracks().forEach((t) => { t.enabled = micOn; });
+  }, [rawStream, cameraOn, micOn]);
 
   // Build a rotated MediaStream from rawStream using a canvas render loop.
   const buildRotatedStream = useCallback(async (raw: MediaStream, rot: number): Promise<MediaStream> => {
@@ -185,9 +193,30 @@ const PhoneCameraMode = () => {
     }
   };
 
+  // Reacquire the camera when the user switches front/back.
+  const switchCamera = async () => {
+    if (!rawStream || switching) return;
+    const next: "user" | "environment" = facingMode === "user" ? "environment" : "user";
+    setSwitching(true);
+    setStartError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: next }, width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      });
+      setFacingMode(next);
+      setRawStream(stream);
+    } catch (e: any) {
+      setStartError(e?.message || "Não foi possível alternar a câmera.");
+    } finally {
+      setSwitching(false);
+    }
+  };
+
   const rotateCamera = () => {
     setRotation((r) => ((r + 90) % 360) as 0 | 90 | 180 | 270);
   };
+
 
   const handleExit = () => navigate("/", { replace: true });
 
@@ -275,8 +304,8 @@ const PhoneCameraMode = () => {
         <Button variant={cameraOn ? "default" : "secondary"} size="lg" className="rounded-full h-12 w-12 p-0" onClick={() => setCameraOn((v) => !v)} disabled={!outboundStream} title="Ligar/desligar câmera">
           {cameraOn ? <Camera className="h-6 w-6" /> : <CameraOff className="h-6 w-6" />}
         </Button>
-        <Button variant="secondary" size="lg" className="rounded-full h-12 w-12 p-0" onClick={() => setFacingMode((f) => (f === "user" ? "environment" : "user"))} disabled={!outboundStream || !cameraOn} title="Alternar câmera">
-          <SwitchCamera className="h-6 w-6" />
+        <Button variant="secondary" size="lg" className="rounded-full h-12 w-12 p-0" onClick={switchCamera} disabled={!outboundStream || switching} title="Alternar câmera frontal/traseira">
+          <SwitchCamera className={`h-6 w-6 ${switching ? "animate-spin" : ""}`} />
         </Button>
         <Button variant="secondary" size="lg" className="rounded-full h-12 w-12 p-0" onClick={rotateCamera} disabled={!outboundStream || !cameraOn} title="Girar 90° (horizontal via software)">
           <RotateCw className="h-6 w-6" />
