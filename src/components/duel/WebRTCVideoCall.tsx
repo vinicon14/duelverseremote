@@ -318,6 +318,9 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       return next;
     });
     setRemotePeerIds(prev => prev.filter(id => id !== peerId));
+    spectatorPeersRef.current.delete(peerId);
+    setSpectatorPeerIds(prev => prev.filter(id => id !== peerId));
+
     console.log("[WebRTC] Peer removed:", peerId);
   }, []);
 
