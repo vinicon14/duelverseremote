@@ -184,53 +184,24 @@ export function usePhoneClientPairing(params: {
     if (audioSenderRef.current) await audioSenderRef.current.replaceTrack(audioTrack);
   }, [cameraOn, micOn]);
 
-  const constraintsKey = `${facingMode}:${cameraOn}:${micOn}`;
-
-  // Use the stream captured directly from the user's tap before starting WebRTC.
-  useEffect(() => {
-    if (!sessionId || !initialStream || initialStreamRef.current === initialStream) return;
-    initialStreamRef.current = initialStream;
-    appliedConstraintsRef.current = constraintsKey;
-    applyStream(initialStream).catch(() => {});
-  }, [sessionId, initialStream, constraintsKey, applyStream]);
-
-  // Re-acquire media and replace tracks when controls change after permission is granted.
+  // The phone page owns media acquisition (camera switching / rotation).
+  // Whenever it hands us a new stream, swap the outgoing tracks.
   useEffect(() => {
     if (!sessionId || !initialStream) return;
-    if (appliedConstraintsRef.current === constraintsKey) return;
+    if (initialStreamRef.current === initialStream) return;
+    initialStreamRef.current = initialStream;
+    appliedConstraintsRef.current = null;
+    applyStream(initialStream).catch(() => {});
+  }, [sessionId, initialStream, applyStream]);
 
-    let cancelled = false;
-    (async () => {
-      try {
-        if (!cameraOn && !micOn) {
-          const emptyStream = new MediaStream();
-          streamRef.current?.getTracks().forEach((t) => t.stop());
-          await applyStream(emptyStream);
-          appliedConstraintsRef.current = constraintsKey;
-          return;
-        }
+  // Toggle tracks on/off without re-acquiring media.
+  useEffect(() => {
+    const stream = streamRef.current;
+    if (!stream) return;
+    stream.getVideoTracks().forEach((t) => { t.enabled = cameraOn; });
+    stream.getAudioTracks().forEach((t) => { t.enabled = micOn; });
+  }, [cameraOn, micOn, localStream]);
 
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: cameraOn ? { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } } : false,
-          audio: micOn ? { echoCancellation: true, noiseSuppression: true } : false,
-        });
-        if (cancelled) {
-          stream.getTracks().forEach((t) => t.stop());
-          return;
-        }
-        // Stop previous
-        streamRef.current?.getTracks().forEach((t) => t.stop());
-        await applyStream(stream);
-        appliedConstraintsRef.current = constraintsKey;
-        setError(null);
-      } catch (e: any) {
-        setError(e?.message ?? "Falha ao acessar câmera/microfone");
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [sessionId, initialStream, constraintsKey, facingMode, cameraOn, micOn, applyStream]);
 
   useEffect(() => {
     if (!sessionId || !token) return;
