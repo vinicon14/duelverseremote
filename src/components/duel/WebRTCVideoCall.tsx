@@ -125,7 +125,14 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(new Map());
   const [remotePeerIds, setRemotePeerIds] = useState<string[]>([]);
+  // Peers that announced themselves as spectators. Their connections are kept for
+  // audio (judge spectators broadcast mic) but must NEVER occupy a video slot,
+  // otherwise another spectator steals the slot meant for player 2.
+  const spectatorPeersRef = useRef<Set<string>>(new Set());
+  const [spectatorPeerIds, setSpectatorPeerIds] = useState<string[]>([]);
   const [pipSwapped, setPipSwapped] = useState(false);
+
+
   const [zoomLevel, setZoomLevel] = useState(1);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const isDraggingRef = useRef(false);
@@ -311,6 +318,9 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       return next;
     });
     setRemotePeerIds(prev => prev.filter(id => id !== peerId));
+    spectatorPeersRef.current.delete(peerId);
+    setSpectatorPeerIds(prev => prev.filter(id => id !== peerId));
+
     console.log("[WebRTC] Peer removed:", peerId);
   }, []);
 
@@ -504,12 +514,27 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       const remotePeerId = payload.senderId;
 
       if (payload.type === "ready") {
+        // Remember whether this peer is a spectator so it never takes a video slot.
+        if (payload.isSpectator) {
+          if (!spectatorPeersRef.current.has(remotePeerId)) {
+            spectatorPeersRef.current.add(remotePeerId);
+            setSpectatorPeerIds((prev) => (prev.includes(remotePeerId) ? prev : [...prev, remotePeerId]));
+          }
+          // Spectator <-> spectator connections are useless (neither sends video)
+          // and only waste slots/bandwidth. Skip them entirely.
+          if (isSpectator && !audioBroadcastOnly) return;
+        } else if (spectatorPeersRef.current.has(remotePeerId)) {
+          spectatorPeersRef.current.delete(remotePeerId);
+          setSpectatorPeerIds((prev) => prev.filter((id) => id !== remotePeerId));
+        }
+
         const isNewPeer = !peersRef.current.has(remotePeerId);
         if (isNewPeer) {
           createPeerConnection(remotePeerId);
         }
         const peer = peersRef.current.get(remotePeerId);
         if (!peer) return;
+
 
         // Handshake symmetry: whenever we receive a broadcast "ready" (no targetId),
         // we reply with a targeted "ready" back so the other side ALSO creates its
@@ -584,7 +609,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         console.error("[WebRTC] signal handling error:", err);
       }
     },
-    [userId, createPeerConnection, isSpectator]
+    [userId, createPeerConnection, isSpectator, audioBroadcastOnly]
   );
 
   useEffect(() => {
@@ -879,16 +904,23 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   // so the order is non-deterministic and the creator may not be first (or may not
   // be present yet). Using array order made player 2 occupy the player 1 slot when
   // they connected first, leaving the player 2 slot empty.
-  const creatorPeerId = isSpectator && creatorId && remotePeerIds.includes(creatorId)
+  // Only real players may occupy video slots — spectator peers (including judge
+  // spectators that broadcast audio) are excluded so they never hide player 2.
+  const videoPeerIds = remotePeerIds.filter((pid) => !spectatorPeerIds.includes(pid));
+  const creatorPeerId = isSpectator && creatorId && videoPeerIds.includes(creatorId)
     ? creatorId
     : null;
+  // When creatorId is known, the player-1 panel is reserved for the creator only —
+  // never fall back to another player, or the same peer would render in two slots.
+  const player1PeerIdForSpectator = creatorId ? creatorPeerId : videoPeerIds[0] || null;
   const nonCreatorPeerIds = isSpectator
-    ? remotePeerIds.filter((pid) => pid !== creatorId)
-    : remotePeerIds;
+    ? videoPeerIds.filter((pid) => pid !== player1PeerIdForSpectator)
+    : videoPeerIds;
   // Expose to renderLocalPanel via the sortedPeerIds name it already reads.
   const sortedPeerIds = isSpectator
-    ? [creatorPeerId, ...nonCreatorPeerIds].filter((x): x is string => !!x)
-    : remotePeerIds;
+    ? [player1PeerIdForSpectator, ...nonCreatorPeerIds].filter((x): x is string => !!x)
+    : videoPeerIds;
+
 
   const remoteSlots: (string | null)[] = [];
   if (isSpectator) {
@@ -898,9 +930,10 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     }
   } else {
     for (let i = 0; i < totalSlots - 1; i++) {
-      remoteSlots.push(remotePeerIds[i] || null);
+      remoteSlots.push(videoPeerIds[i] || null);
     }
   }
+
 
   const localVideoCallbackRef = useCallback((el: HTMLVideoElement | null) => {
     (localVideoRef as React.MutableRefObject<HTMLVideoElement | null>).current = el;
