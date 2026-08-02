@@ -907,13 +907,17 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   const creatorPeerId = isSpectator && creatorId && videoPeerIds.includes(creatorId)
     ? creatorId
     : null;
+  // When creatorId is known, the player-1 panel is reserved for the creator only —
+  // never fall back to another player, or the same peer would render in two slots.
+  const player1PeerIdForSpectator = creatorId ? creatorPeerId : videoPeerIds[0] || null;
   const nonCreatorPeerIds = isSpectator
-    ? videoPeerIds.filter((pid) => pid !== creatorId)
+    ? videoPeerIds.filter((pid) => pid !== player1PeerIdForSpectator)
     : videoPeerIds;
   // Expose to renderLocalPanel via the sortedPeerIds name it already reads.
   const sortedPeerIds = isSpectator
-    ? [creatorPeerId, ...nonCreatorPeerIds].filter((x): x is string => !!x)
+    ? [player1PeerIdForSpectator, ...nonCreatorPeerIds].filter((x): x is string => !!x)
     : videoPeerIds;
+
 
   const remoteSlots: (string | null)[] = [];
   if (isSpectator) {
