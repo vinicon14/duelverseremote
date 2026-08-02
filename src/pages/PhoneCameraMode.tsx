@@ -185,9 +185,30 @@ const PhoneCameraMode = () => {
     }
   };
 
+  // Reacquire the camera when the user switches front/back.
+  const switchCamera = async () => {
+    if (!rawStream || switching) return;
+    const next: "user" | "environment" = facingMode === "user" ? "environment" : "user";
+    setSwitching(true);
+    setStartError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: next }, width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      });
+      setFacingMode(next);
+      setRawStream(stream);
+    } catch (e: any) {
+      setStartError(e?.message || "Não foi possível alternar a câmera.");
+    } finally {
+      setSwitching(false);
+    }
+  };
+
   const rotateCamera = () => {
     setRotation((r) => ((r + 90) % 360) as 0 | 90 | 180 | 270);
   };
+
 
   const handleExit = () => navigate("/", { replace: true });
 
