@@ -34,6 +34,7 @@ const PhoneCameraMode = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const rotateVideoRef = useRef<HTMLVideoElement | null>(null);
   const rafRef = useRef<number | null>(null);
+  const rawStreamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
     const previousBodyOverflow = document.body.style.overflow;
@@ -74,11 +75,13 @@ const PhoneCameraMode = () => {
   }, [localStream, outboundStream]);
 
   useEffect(() => {
-    return () => {
-      rawStream?.getTracks().forEach((t) => t.stop());
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    };
+    rawStreamRef.current = rawStream;
   }, [rawStream]);
+
+  useEffect(() => () => {
+    rawStreamRef.current?.getTracks().forEach((track) => track.stop());
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+  }, []);
 
   // Wake lock
   useEffect(() => {
@@ -174,10 +177,18 @@ const PhoneCameraMode = () => {
     setStartError(null);
     setStarting(true);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-      });
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { exact: facingMode }, width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+        });
+      } catch {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: facingMode }, width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+        });
+      }
       setRawStream(stream);
       setCameraOn(stream.getVideoTracks().length > 0);
       setMicOn(stream.getAudioTracks().length > 0);
@@ -199,15 +210,64 @@ const PhoneCameraMode = () => {
     const next: "user" | "environment" = facingMode === "user" ? "environment" : "user";
     setSwitching(true);
     setStartError(null);
+    const previousStream = rawStream;
+    const previousVideoTrack = previousStream.getVideoTracks()[0];
+    const audioTracks = previousStream.getAudioTracks();
+    const previousDeviceId = previousVideoTrack?.getSettings().deviceId;
+
+    // Android WebView, Opera and some Safari versions keep the physical camera
+    // locked until the current video track is stopped.
+    previousVideoTrack?.stop();
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: next }, width: { ideal: 1280 }, height: { ideal: 720 } },
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-      });
+      let cameraStream: MediaStream | null = null;
+      const baseVideo = { width: { ideal: 1280 }, height: { ideal: 720 } };
+
+      try {
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+          video: { ...baseVideo, facingMode: { exact: next } },
+          audio: false,
+        });
+      } catch {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const alternate = devices.find((device) => device.kind === "videoinput" && device.deviceId !== previousDeviceId);
+        if (alternate) {
+          try {
+            cameraStream = await navigator.mediaDevices.getUserMedia({
+              video: { ...baseVideo, deviceId: { exact: alternate.deviceId } },
+              audio: false,
+            });
+          } catch {
+            cameraStream = null;
+          }
+        }
+      }
+
+      if (!cameraStream) {
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+          video: { ...baseVideo, facingMode: { ideal: next } },
+          audio: false,
+        });
+      }
+
+      const videoTrack = cameraStream.getVideoTracks()[0];
+      if (!videoTrack) throw new Error("A câmera selecionada não está disponível.");
+      videoTrack.enabled = cameraOn;
+      const stream = new MediaStream([videoTrack, ...audioTracks]);
       setFacingMode(next);
       setRawStream(stream);
     } catch (e: any) {
-      setStartError(e?.message || "Não foi possível alternar a câmera.");
+      try {
+        const restored = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: facingMode }, width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false,
+        });
+        const restoredVideo = restored.getVideoTracks()[0];
+        if (restoredVideo) setRawStream(new MediaStream([restoredVideo, ...audioTracks]));
+      } catch {
+        audioTracks.forEach((track) => track.stop());
+      }
+      setStartError(e?.message || "Não foi possível alternar a câmera neste aparelho.");
     } finally {
       setSwitching(false);
     }

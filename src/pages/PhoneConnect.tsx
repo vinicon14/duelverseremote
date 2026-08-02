@@ -12,6 +12,7 @@ const PhoneConnect = () => {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const scannerRef = useRef<Html5Qrcode | null>(null);
+  const qrHandledRef = useRef(false);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,19 +29,34 @@ const PhoneConnect = () => {
   const startScan = async () => {
     setError(null);
     setScanning(true);
+    qrHandledRef.current = false;
     try {
       const scanner = new Html5Qrcode("qr-reader");
       scannerRef.current = scanner;
       await scanner.start(
         { facingMode: "environment" },
         { fps: 10, qrbox: { width: 250, height: 250 } },
-        (decoded) => {
+        async (decoded) => {
+          if (qrHandledRef.current) return;
           try {
             const url = new URL(decoded);
             const ns = url.searchParams.get("s");
             const nt = url.searchParams.get("t");
             if (ns && nt) {
-              scanner.stop().catch(() => {});
+              qrHandledRef.current = true;
+              // Release the scanner camera before mounting the transmission page.
+              // Several mobile browsers cannot hand the camera to the next route
+              // while html5-qrcode is still shutting down in the background.
+              await Promise.race([
+                scanner.stop().catch(() => {}),
+                new Promise<void>((resolve) => window.setTimeout(resolve, 700)),
+              ]);
+              try {
+                scanner.clear();
+              } catch {
+                // The route change below also unmounts and releases the scanner.
+              }
+              scannerRef.current = null;
               navigate(`/phone-camera?s=${encodeURIComponent(ns)}&t=${encodeURIComponent(nt)}`, {
                 replace: true,
               });
@@ -59,7 +75,8 @@ const PhoneConnect = () => {
 
   useEffect(() => {
     return () => {
-      scannerRef.current?.stop().catch(() => {});
+      const scanner = scannerRef.current;
+      scanner?.stop().then(() => scanner.clear()).catch(() => {});
       scannerRef.current = null;
     };
   }, []);
