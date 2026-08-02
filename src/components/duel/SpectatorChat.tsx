@@ -22,10 +22,12 @@ import { Eye, History, Send } from "lucide-react";
 interface SpectatorChatProps {
   duelId: string;
   currentUserId?: string;
-  /** true = pode enviar mensagens (espectador). false = somente leitura (jogador). */
+  /** true = pode enviar mensagens. */
   canSend: boolean;
   /** Identifica o usuário como espectador para o contador de presença. */
   isSpectator: boolean;
+  /** IDs dos jogadores da partida (mensagens deles aparecem maiores e por mais tempo). */
+  playerIds?: (string | null | undefined)[];
 }
 
 interface ChatMsg {
@@ -34,11 +36,16 @@ interface ChatMsg {
   message: string;
   created_at: string;
   username?: string;
+  isPlayer?: boolean;
 }
 
 const VISIBLE_MS = 9000;
+const PLAYER_VISIBLE_MS = 20000;
 
-export const SpectatorChat = ({ duelId, currentUserId, canSend, isSpectator }: SpectatorChatProps) => {
+export const SpectatorChat = ({ duelId, currentUserId, canSend, isSpectator, playerIds = [] }: SpectatorChatProps) => {
+  const playerSet = new Set(playerIds.filter(Boolean) as string[]);
+  const playerSetRef = useRef(playerSet);
+  playerSetRef.current = playerSet;
   const [history, setHistory] = useState<ChatMsg[]>([]);
   const [visible, setVisible] = useState<ChatMsg[]>([]);
   const [spectatorCount, setSpectatorCount] = useState(0);
