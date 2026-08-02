@@ -47,8 +47,15 @@ const PhoneConnect = () => {
               // Release the scanner camera before mounting the transmission page.
               // Several mobile browsers cannot hand the camera to the next route
               // while html5-qrcode is still shutting down in the background.
-              await scanner.stop().catch(() => {});
-              scanner.clear();
+              await Promise.race([
+                scanner.stop().catch(() => {}),
+                new Promise<void>((resolve) => window.setTimeout(resolve, 700)),
+              ]);
+              try {
+                scanner.clear();
+              } catch {
+                // The route change below also unmounts and releases the scanner.
+              }
               scannerRef.current = null;
               navigate(`/phone-camera?s=${encodeURIComponent(ns)}&t=${encodeURIComponent(nt)}`, {
                 replace: true,
