@@ -109,13 +109,15 @@ export const SpectatorChat = ({ duelId, currentUserId, canSend, isSpectator, pla
         async (payload) => {
           const raw = payload.new as ChatMsg;
           const username = await resolveName(raw.user_id);
-          const msg: ChatMsg = { ...raw, username };
+          const isPlayer = playerSetRef.current.has(raw.user_id);
+          const msg: ChatMsg = { ...raw, username, isPlayer };
           setHistory((prev) => [...prev, msg]);
           setVisible((prev) => [...prev.slice(-6), msg]);
           setTimeout(() => {
             setVisible((prev) => prev.filter((m) => m.id !== msg.id));
-          }, VISIBLE_MS);
+          }, isPlayer ? PLAYER_VISIBLE_MS : VISIBLE_MS);
         },
+
       )
       .subscribe();
 
