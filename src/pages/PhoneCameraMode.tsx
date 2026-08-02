@@ -28,6 +28,7 @@ const PhoneCameraMode = () => {
   const [rotation, setRotation] = useState<0 | 90 | 180 | 270>(0);
   const [startError, setStartError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
+  const [switching, setSwitching] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const wakeLockRef = useRef<any>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -100,6 +101,13 @@ const PhoneCameraMode = () => {
     });
     return () => bat?.removeEventListener?.("levelchange", handler);
   }, []);
+
+  // Keep the raw camera track in sync with the on/off toggle so the rotated
+  // canvas output also goes dark when the camera is turned off.
+  useEffect(() => {
+    rawStream?.getVideoTracks().forEach((t) => { t.enabled = cameraOn; });
+    rawStream?.getAudioTracks().forEach((t) => { t.enabled = micOn; });
+  }, [rawStream, cameraOn, micOn]);
 
   // Build a rotated MediaStream from rawStream using a canvas render loop.
   const buildRotatedStream = useCallback(async (raw: MediaStream, rot: number): Promise<MediaStream> => {
