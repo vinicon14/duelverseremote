@@ -901,16 +901,19 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   // so the order is non-deterministic and the creator may not be first (or may not
   // be present yet). Using array order made player 2 occupy the player 1 slot when
   // they connected first, leaving the player 2 slot empty.
-  const creatorPeerId = isSpectator && creatorId && remotePeerIds.includes(creatorId)
+  // Only real players may occupy video slots — spectator peers (including judge
+  // spectators that broadcast audio) are excluded so they never hide player 2.
+  const videoPeerIds = remotePeerIds.filter((pid) => !spectatorPeerIds.includes(pid));
+  const creatorPeerId = isSpectator && creatorId && videoPeerIds.includes(creatorId)
     ? creatorId
     : null;
   const nonCreatorPeerIds = isSpectator
-    ? remotePeerIds.filter((pid) => pid !== creatorId)
-    : remotePeerIds;
+    ? videoPeerIds.filter((pid) => pid !== creatorId)
+    : videoPeerIds;
   // Expose to renderLocalPanel via the sortedPeerIds name it already reads.
   const sortedPeerIds = isSpectator
     ? [creatorPeerId, ...nonCreatorPeerIds].filter((x): x is string => !!x)
-    : remotePeerIds;
+    : videoPeerIds;
 
   const remoteSlots: (string | null)[] = [];
   if (isSpectator) {
@@ -920,9 +923,10 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     }
   } else {
     for (let i = 0; i < totalSlots - 1; i++) {
-      remoteSlots.push(remotePeerIds[i] || null);
+      remoteSlots.push(videoPeerIds[i] || null);
     }
   }
+
 
   const localVideoCallbackRef = useCallback((el: HTMLVideoElement | null) => {
     (localVideoRef as React.MutableRefObject<HTMLVideoElement | null>).current = el;
