@@ -89,6 +89,9 @@ interface PeerState {
   stream: MediaStream | null;
   makingOffer: boolean;
   ignoreOffer: boolean;
+  createdAt: number;
+  lastVideoTrackAt: number | null;
+  pendingCandidates: RTCIceCandidateInit[];
 }
 
 export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCallProps>(({
@@ -327,7 +330,20 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   const createPeerConnection = useCallback((remotePeerId: string) => {
     const existing = peersRef.current.get(remotePeerId);
     if (existing) {
+      // Detach callbacks before closing. Otherwise the old connection's delayed
+      // "closed" event can remove the brand-new replacement from the map.
+      existing.pc.oniceconnectionstatechange = null;
+      existing.pc.onconnectionstatechange = null;
+      existing.pc.ontrack = null;
+      existing.pc.onnegotiationneeded = null;
       existing.pc.close();
+      unregisterRemoteStream(remotePeerId);
+      setRemoteStreams((prev) => {
+        const next = new Map(prev);
+        next.delete(remotePeerId);
+        return next;
+      });
+      setRemotePeerIds((prev) => prev.filter((id) => id !== remotePeerId));
     }
 
     const pc = new RTCPeerConnection(PC_CONFIG);
@@ -336,6 +352,9 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       stream: null,
       makingOffer: false,
       ignoreOffer: false,
+      createdAt: Date.now(),
+      lastVideoTrackAt: null,
+      pendingCandidates: [],
     };
     peersRef.current.set(remotePeerId, peerState);
 
@@ -455,6 +474,9 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         stream.addTrack(event.track);
       }
       peerState.stream = stream;
+      if (event.track.kind === "video") {
+        peerState.lastVideoTrackAt = Date.now();
+      }
 
       const nextStream = stream;
       registerRemoteStream(remotePeerId, nextStream);
@@ -532,10 +554,22 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         // Re-announcements (heartbeat below) then heal peers whose handshake was
         // lost, which was leaving spectators with only one of the two players.
         const existingPeer = peersRef.current.get(remotePeerId);
+        const hasLiveVideo = existingPeer?.stream
+          ?.getVideoTracks()
+          .some((track) => track.readyState === "live") ?? false;
+        const spectatorMissingVideo =
+          isSpectator &&
+          !payload.isSpectator &&
+          !!existingPeer &&
+          Date.now() - existingPeer.createdAt > 10000 &&
+          !hasLiveVideo;
         const isDead =
           !!existingPeer &&
           ["failed", "closed", "disconnected"].includes(existingPeer.pc.connectionState);
-        if (!existingPeer || isDead) {
+        if (!existingPeer || isDead || spectatorMissingVideo) {
+          if (spectatorMissingVideo) {
+            console.warn("[WebRTC] Spectator is missing player video; rebuilding peer:", remotePeerId);
+          }
           createPeerConnection(remotePeerId);
         }
         const peer = peersRef.current.get(remotePeerId);
@@ -589,6 +623,13 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
 
           await pc.setRemoteDescription(description);
 
+          if (peer.pendingCandidates.length > 0) {
+            const queuedCandidates = peer.pendingCandidates.splice(0);
+            for (const candidate of queuedCandidates) {
+              await pc.addIceCandidate(new RTCIceCandidate(candidate));
+            }
+          }
+
           if (payload.type === "offer") {
             await pc.setLocalDescription();
             channelRef.current?.send({
@@ -603,6 +644,10 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
             });
           }
         } else if (payload.type === "ice-candidate") {
+          if (!pc.remoteDescription) {
+            peer.pendingCandidates.push(payload.candidate);
+            return;
+          }
           try {
             await pc.addIceCandidate(new RTCIceCandidate(payload.candidate));
           } catch (err) {
