@@ -1479,6 +1479,15 @@ const DuelRoom = () => {
                               <Plus className="w-3 h-3" />
                             </Button>
                           )}
+                          <AddOpponentFriendButton
+                            currentUserId={currentUser?.id}
+                            opponentId={currentUser?.id === duel?.creator_id ? duel?.opponent_id : duel?.creator_id}
+                            opponentUsername={
+                              currentUser?.id === duel?.creator_id
+                                ? duel?.opponent?.username
+                                : duel?.creator?.username
+                            }
+                          />
                           <Button
                             onClick={callJudge}
                             disabled={judgeCalled}
