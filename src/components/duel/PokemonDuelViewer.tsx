@@ -20,6 +20,8 @@ import { Zap, RotateCcw, Eye, EyeOff, Shuffle, Star, Trash2, Search, ArrowUp, Mi
 import { useToast } from '@/components/ui/use-toast';
 import { useSavedDecks } from '@/hooks/useSavedDecks';
 import { PkmCardActionModal } from './PkmCardActionModal';
+import { ArenaEquipmentButton } from './ArenaEquipmentButton';
+import { useArenaEquipment } from '@/hooks/useArenaEquipment';
 
 interface PokemonFieldCard {
   id: string;
@@ -59,6 +61,7 @@ export const PokemonDuelViewer = ({ duelId, currentUserId, embedded = false }: P
   const { toast } = useToast();
   const { savedDecks, fetchDecks, isLoading: loadingDecks } = useSavedDecks('pokemon');
 
+  const { playmatUrl: activePlaymatUrl, sleeveUrl: activeSleeveUrl } = useArenaEquipment();
   const [fieldState, setFieldState] = useState<PokemonFieldState>({
     active: null,
     bench: [],
@@ -454,6 +457,7 @@ export const PokemonDuelViewer = ({ duelId, currentUserId, embedded = false }: P
             {p === 'draw' ? 'Compra' : p === 'main' ? 'Principal' : p === 'attack' ? 'Ataque' : 'Fim'}
           </Badge>
         ))}
+        <ArenaEquipmentButton compact className="ml-1" />
       </div>
 
       {/* Field Layout with playmat */}
