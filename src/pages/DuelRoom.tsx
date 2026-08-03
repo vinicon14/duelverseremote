@@ -18,6 +18,7 @@ import { Progress } from "@/components/ui/progress";
 import { Navbar } from "@/components/Navbar";
 import { DuelChat } from "@/components/DuelChat";
 import { SpectatorChat } from "@/components/duel/SpectatorChat";
+import { AddOpponentFriendButton } from "@/components/duel/AddOpponentFriendButton";
 import { FloatingCalculator } from "@/components/FloatingCalculator";
 import { RecordMatchButton } from "@/components/RecordMatchButton";
 import { ElectronRecordButton } from "@/components/ElectronRecordButton";
@@ -1479,6 +1480,15 @@ const DuelRoom = () => {
                               <Plus className="w-3 h-3" />
                             </Button>
                           )}
+                          <AddOpponentFriendButton
+                            currentUserId={currentUser?.id}
+                            opponentId={currentUser?.id === duel?.creator_id ? duel?.opponent_id : duel?.creator_id}
+                            opponentUsername={
+                              currentUser?.id === duel?.creator_id
+                                ? duel?.opponent?.username
+                                : duel?.creator?.username
+                            }
+                          />
                           <Button
                             onClick={callJudge}
                             disabled={judgeCalled}
