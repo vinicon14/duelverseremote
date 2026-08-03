@@ -20,6 +20,8 @@ import { Zap, RotateCcw, Eye, EyeOff, Shuffle, Star, Trash2, Search, ArrowUp, Mi
 import { useToast } from '@/components/ui/use-toast';
 import { useSavedDecks } from '@/hooks/useSavedDecks';
 import { PkmCardActionModal } from './PkmCardActionModal';
+import { ArenaEquipmentButton } from './ArenaEquipmentButton';
+import { useArenaEquipment } from '@/hooks/useArenaEquipment';
 
 interface PokemonFieldCard {
   id: string;
@@ -59,6 +61,7 @@ export const PokemonDuelViewer = ({ duelId, currentUserId, embedded = false }: P
   const { toast } = useToast();
   const { savedDecks, fetchDecks, isLoading: loadingDecks } = useSavedDecks('pokemon');
 
+  const { playmatUrl: activePlaymatUrl, sleeveUrl: activeSleeveUrl } = useArenaEquipment();
   const [fieldState, setFieldState] = useState<PokemonFieldState>({
     active: null,
     bench: [],
@@ -106,11 +109,11 @@ export const PokemonDuelViewer = ({ duelId, currentUserId, embedded = false }: P
         discardCards: fieldState.discard.map(c => ({ name: c.name, image: c.images?.small || c.images?.large || '', id: parseInt(c.id) || 0 })),
         handCount: fieldState.hand.length,
         deckCount: fieldState.deck.length,
-        playmatUrl: localStorage.getItem('activePlaymatUrl') || null,
-        sleeveUrl: localStorage.getItem('activeSleeveUrl') || null,
+        playmatUrl: activePlaymatUrl,
+        sleeveUrl: activeSleeveUrl,
       },
     });
-  }, [fieldState, currentUserId]);
+  }, [fieldState, currentUserId, activePlaymatUrl, activeSleeveUrl]);
 
   useEffect(() => {
     broadcastStateRef.current = broadcastState;
@@ -439,8 +442,6 @@ export const PokemonDuelViewer = ({ duelId, currentUserId, embedded = false }: P
     );
   }
 
-  const activePlaymatUrl = typeof window !== 'undefined' ? localStorage.getItem('activePlaymatUrl') : null;
-  const activeSleeveUrl = typeof window !== 'undefined' ? localStorage.getItem('activeSleeveUrl') : null;
 
   return (
     <div className={embedded ? "absolute inset-0 z-10 bg-card flex flex-col items-center justify-center overflow-hidden" : "fixed bottom-0 left-0 right-0 z-40 border-t border-border"}>
@@ -456,6 +457,7 @@ export const PokemonDuelViewer = ({ duelId, currentUserId, embedded = false }: P
             {p === 'draw' ? 'Compra' : p === 'main' ? 'Principal' : p === 'attack' ? 'Ataque' : 'Fim'}
           </Badge>
         ))}
+        <ArenaEquipmentButton compact className="ml-1" />
       </div>
 
       {/* Field Layout with playmat */}
