@@ -29,27 +29,44 @@ const Ranking = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchRankings(selectedTcg);
-  }, [selectedTcg]);
+    let active = true;
 
-  const fetchRankings = async (tcg: string) => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .rpc('get_leaderboard', { limit_count: 50, p_tcg_type: tcg });
+    const fetchRankings = async (showLoading = false) => {
+      if (showLoading) setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .rpc('get_leaderboard', { limit_count: 50, p_tcg_type: selectedTcg });
 
-      if (error) throw error;
-      setRankings(data || []);
-    } catch (error: any) {
-      toast({
-        title: t('ranking.errorLoad'),
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+        if (error) throw error;
+        if (active) setRankings(data || []);
+      } catch (error: any) {
+        if (!active) return;
+        toast({
+          title: t('ranking.errorLoad'),
+          description: error.message,
+          variant: "destructive",
+        });
+      } finally {
+        if (active && showLoading) setLoading(false);
+      }
+    };
+
+    void fetchRankings(true);
+
+    const channel = supabase
+      .channel(`ranking-${selectedTcg}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'tcg_profiles' },
+        () => void fetchRankings(false),
+      )
+      .subscribe();
+
+    return () => {
+      active = false;
+      supabase.removeChannel(channel);
+    };
+  }, [selectedTcg, t, toast]);
 
   const getRankIcon = (position: number) => {
     switch (position) {
@@ -110,7 +127,7 @@ const Ranking = () => {
 
               return (
                  <Card
-                  key={player.id}
+                   key={player.user_id}
                   className={`card-mystic hover:border-primary/40 transition-all animate-fade-in-up ${
                     isTopThree ? 'border-primary/30' : ''
                   }`}
