@@ -187,6 +187,7 @@ export const DuelDeckViewer = ({
   const [selectedEffectCard, setSelectedEffectCard] = useState<GameCard | null>(null);
   const [effectModalOpen, setEffectModalOpen] = useState(false);
   const [fieldState, setFieldState] = useState<FieldState>(INITIAL_FIELD_STATE);
+  const { playmatUrl: equippedPlaymatUrl, sleeveUrl: equippedSleeveUrl } = useArenaEquipment();
   
   // Modal states
   const [placementModal, setPlacementModal] = useState<{ open: boolean; card: GameCard | null }>({ 
@@ -361,7 +362,7 @@ export const DuelDeckViewer = ({
         sleeveUrl: equippedSleeveUrl,
       }
     });
-  }, [currentUserId, fieldState]);
+  }, [currentUserId, fieldState, equippedPlaymatUrl, equippedSleeveUrl]);
 
   useEffect(() => {
     broadcastStateRef.current = broadcastState;

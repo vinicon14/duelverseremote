@@ -367,11 +367,11 @@ export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId, embedd
         exile: fieldState.exile.map(serializeCard),
         stack: fieldState.stack.map(serializeCard),
         commandZone: fieldState.commandZone?.map(serializeCard) || [],
-        playmatUrl: localStorage.getItem('activePlaymatUrl') || null,
-        sleeveUrl: localStorage.getItem('activeSleeveUrl') || null,
+        playmatUrl: activePlaymatUrl,
+        sleeveUrl: activeSleeveUrl,
       },
     });
-  }, [fieldState, currentPhase, broadcastChannel, channelReady, currentUserId]);
+  }, [fieldState, currentPhase, broadcastChannel, channelReady, currentUserId, activePlaymatUrl, activeSleeveUrl]);
 
   useEffect(() => {
     broadcastStateRef.current = broadcastState;
@@ -395,8 +395,6 @@ export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId, embedd
   const moveTargets: MagicZoneType[] = ['hand', 'battlefield', 'lands', 'graveyard', 'exile', 'stack', 'library'];
   const viewingCards = useMemo(() => ([...(fieldState[viewingZone] as MagicCard[])]).reverse(), [fieldState, viewingZone]);
 
-  const activePlaymatUrl = typeof window !== 'undefined' ? localStorage.getItem('activePlaymatUrl') : null;
-  const activeSleeveUrl = typeof window !== 'undefined' ? localStorage.getItem('activeSleeveUrl') : null;
 
   if (embedded) {
     return (
