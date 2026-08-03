@@ -528,8 +528,14 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
           setSpectatorPeerIds((prev) => prev.filter((id) => id !== remotePeerId));
         }
 
-        const isNewPeer = !peersRef.current.has(remotePeerId);
-        if (isNewPeer) {
+        // Recreate the connection when it is missing OR stuck in a dead state.
+        // Re-announcements (heartbeat below) then heal peers whose handshake was
+        // lost, which was leaving spectators with only one of the two players.
+        const existingPeer = peersRef.current.get(remotePeerId);
+        const isDead =
+          !!existingPeer &&
+          ["failed", "closed", "disconnected"].includes(existingPeer.pc.connectionState);
+        if (!existingPeer || isDead) {
           createPeerConnection(remotePeerId);
         }
         const peer = peersRef.current.get(remotePeerId);
