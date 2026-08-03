@@ -35,7 +35,8 @@ export const TournamentChat = ({ tournamentId }: TournamentChatProps) => {
   useEffect(() => {
     getCurrentUser();
     fetchMessages();
-    subscribeToMessages();
+    const unsubscribe = subscribeToMessages();
+    return unsubscribe;
   }, [tournamentId]);
 
   useEffect(() => {
@@ -163,12 +164,12 @@ export const TournamentChat = ({ tournamentId }: TournamentChatProps) => {
   };
 
   return (
-    <Card className="card-mystic h-full flex flex-col">
-      <CardHeader>
+    <Card className="card-mystic flex h-full min-h-0 flex-col overflow-hidden">
+      <CardHeader className="shrink-0">
         <CardTitle className="text-lg">Chat do Torneio</CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 flex flex-col p-4 gap-4">
-        <ScrollArea className="h-[300px] sm:h-[400px] pr-4" ref={(node) => {
+      <CardContent className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden p-4">
+        <ScrollArea className="min-h-0 flex-1 pr-4" ref={(node) => {
           if (node) {
             const viewport = node.querySelector('[data-radix-scroll-area-viewport]');
             if (viewport) scrollRef.current = viewport as HTMLDivElement;
@@ -255,7 +256,7 @@ export const TournamentChat = ({ tournamentId }: TournamentChatProps) => {
           </div>
         </ScrollArea>
 
-        <form onSubmit={sendMessage} className="flex gap-2">
+        <form onSubmit={sendMessage} className="flex shrink-0 gap-2">
           <Input
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
@@ -263,7 +264,7 @@ export const TournamentChat = ({ tournamentId }: TournamentChatProps) => {
             className="flex-1"
             maxLength={500}
           />
-          <Button type="submit" size="icon" disabled={!newMessage.trim()}>
+          <Button type="submit" size="icon" disabled={!newMessage.trim()} aria-label="Enviar mensagem">
             <Send className="w-4 h-4" />
           </Button>
         </form>
