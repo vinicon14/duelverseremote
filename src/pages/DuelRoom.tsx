@@ -1550,6 +1550,16 @@ const DuelRoom = () => {
                             {isTimerPaused ? '▶️' : '⏸️'}
                           </Button>
                           <Button
+                            onClick={resetTimer}
+                            variant="outline"
+                            size="sm"
+                            className="bg-card/95 backdrop-blur-sm text-xs sm:text-sm"
+                            title="Resetar tempo"
+                          >
+                            🔄
+                          </Button>
+
+                          <Button
                             onClick={requestFinalize}
                             variant="outline"
                             size="sm"
