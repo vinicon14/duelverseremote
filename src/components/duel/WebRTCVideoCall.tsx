@@ -528,8 +528,14 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
           setSpectatorPeerIds((prev) => prev.filter((id) => id !== remotePeerId));
         }
 
-        const isNewPeer = !peersRef.current.has(remotePeerId);
-        if (isNewPeer) {
+        // Recreate the connection when it is missing OR stuck in a dead state.
+        // Re-announcements (heartbeat below) then heal peers whose handshake was
+        // lost, which was leaving spectators with only one of the two players.
+        const existingPeer = peersRef.current.get(remotePeerId);
+        const isDead =
+          !!existingPeer &&
+          ["failed", "closed", "disconnected"].includes(existingPeer.pc.connectionState);
+        if (!existingPeer || isDead) {
           createPeerConnection(remotePeerId);
         }
         const peer = peersRef.current.get(remotePeerId);
@@ -759,6 +765,26 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       }
     };
   }, [duelId, userId, handleSignal, isSpectator, audioBroadcastOnly, getActiveOutboundStream]);
+
+  // Handshake heartbeat: while we still expect more player streams than we have,
+  // re-announce ourselves periodically. A single "ready" at subscribe time can be
+  // missed (peer not subscribed yet, tab throttled, reconnect), which left
+  // spectators seeing only one of the two players.
+  useEffect(() => {
+    const expectedPlayers = isSpectator ? maxPlayers : maxPlayers - 1;
+    const interval = setInterval(() => {
+      const playerStreams = remotePeerIds.filter((pid) => !spectatorPeersRef.current.has(pid)).length;
+      if (playerStreams >= expectedPlayers) return;
+      channelRef.current?.send({
+        type: "broadcast",
+        event: "webrtc-signal",
+        payload: { type: "ready", senderId: userId, isSpectator },
+      });
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [userId, isSpectator, maxPlayers, remotePeerIds]);
+
+
 
   // Attach remote streams to video elements (video is always muted — audio is
   // played by the dedicated <audio> elements below).
