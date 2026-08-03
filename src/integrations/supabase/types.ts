@@ -1073,6 +1073,7 @@ export type Database = {
       match_history: {
         Row: {
           bet_amount: number
+          duel_id: string | null
           id: string
           played_at: string
           player1_id: string
@@ -1083,6 +1084,7 @@ export type Database = {
         }
         Insert: {
           bet_amount?: number
+          duel_id?: string | null
           id?: string
           played_at?: string
           player1_id: string
@@ -1093,6 +1095,7 @@ export type Database = {
         }
         Update: {
           bet_amount?: number
+          duel_id?: string | null
           id?: string
           played_at?: string
           player1_id?: string
