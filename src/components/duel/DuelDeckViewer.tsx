@@ -33,6 +33,8 @@ import { ZonePlacementModal } from './ZonePlacementModal';
 import { ZoneViewerModal } from './ZoneViewerModal';
 import { FieldCardActionsModal } from './FieldCardActionsModal';
 import { SideDeckSwapModal } from './SideDeckSwapModal';
+import { ArenaEquipmentButton } from './ArenaEquipmentButton';
+import { useArenaEquipment } from '@/hooks/useArenaEquipment';
 import { useDraggable } from '@/hooks/useDraggable';
 
 interface DuelDeckViewerProps {
@@ -355,8 +357,8 @@ export const DuelDeckViewer = ({
         })),
         deckCount: fieldState.deck.length,
         extraCount: fieldState.extraDeck.length,
-        playmatUrl: localStorage.getItem('activePlaymatUrl') || null,
-        sleeveUrl: localStorage.getItem('activeSleeveUrl') || null,
+        playmatUrl: equippedPlaymatUrl,
+        sleeveUrl: equippedSleeveUrl,
       }
     });
   }, [currentUserId, fieldState]);
@@ -1081,6 +1083,7 @@ export const DuelDeckViewer = ({
             M {fieldState.hand.length}
           </Badge>
           <div className="ml-auto flex items-center gap-1">
+            <ArenaEquipmentButton />
             <Button
               variant="ghost"
               size="icon"
@@ -1138,8 +1141,8 @@ export const DuelDeckViewer = ({
             onCardClick={handleCardOnFieldClick}
             onCardDrop={handleCardDrop}
             isFullscreen={false}
-            playmatUrl={localStorage.getItem('activePlaymatUrl')}
-            sleeveUrl={localStorage.getItem('activeSleeveUrl')}
+            playmatUrl={equippedPlaymatUrl}
+            sleeveUrl={equippedSleeveUrl}
             tcgType={tcgType}
             mobileCompact
           />
@@ -1309,6 +1312,7 @@ export const DuelDeckViewer = ({
                   <span className="font-semibold text-sm">Arena Digital</span>
                 </div>
                 <div className="flex items-center gap-1">
+                  <ArenaEquipmentButton compact />
                   <Button
                     variant="destructive"
                     size="sm"
@@ -1538,8 +1542,8 @@ export const DuelDeckViewer = ({
                     onCardClick={handleCardOnFieldClick}
                     onCardDrop={handleCardDrop}
                     isFullscreen={isFullscreen}
-                    playmatUrl={localStorage.getItem('activePlaymatUrl')}
-                    sleeveUrl={localStorage.getItem('activeSleeveUrl')}
+                    playmatUrl={equippedPlaymatUrl}
+                    sleeveUrl={equippedSleeveUrl}
                     tcgType={tcgType}
                   />
                 </div>
