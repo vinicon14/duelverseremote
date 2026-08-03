@@ -106,11 +106,11 @@ export const PokemonDuelViewer = ({ duelId, currentUserId, embedded = false }: P
         discardCards: fieldState.discard.map(c => ({ name: c.name, image: c.images?.small || c.images?.large || '', id: parseInt(c.id) || 0 })),
         handCount: fieldState.hand.length,
         deckCount: fieldState.deck.length,
-        playmatUrl: localStorage.getItem('activePlaymatUrl') || null,
-        sleeveUrl: localStorage.getItem('activeSleeveUrl') || null,
+        playmatUrl: activePlaymatUrl,
+        sleeveUrl: activeSleeveUrl,
       },
     });
-  }, [fieldState, currentUserId]);
+  }, [fieldState, currentUserId, activePlaymatUrl, activeSleeveUrl]);
 
   useEffect(() => {
     broadcastStateRef.current = broadcastState;
@@ -439,8 +439,6 @@ export const PokemonDuelViewer = ({ duelId, currentUserId, embedded = false }: P
     );
   }
 
-  const activePlaymatUrl = typeof window !== 'undefined' ? localStorage.getItem('activePlaymatUrl') : null;
-  const activeSleeveUrl = typeof window !== 'undefined' ? localStorage.getItem('activeSleeveUrl') : null;
 
   return (
     <div className={embedded ? "absolute inset-0 z-10 bg-card flex flex-col items-center justify-center overflow-hidden" : "fixed bottom-0 left-0 right-0 z-40 border-t border-border"}>

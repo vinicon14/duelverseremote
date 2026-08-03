@@ -17,6 +17,8 @@ import { MagicFieldBoard, MagicFieldState, MagicZoneType, MagicCard, MagicPhase 
 import { getMagicCardImage, MTG_CARD_BACK } from './mtgCardImage';
 import { Shuffle, Hand, ArrowDown, RotateCcw, Eye, Undo2, Search, BookOpen, ChevronDown as ChevronDownIcon, Swords, Shield } from 'lucide-react';
 import { MtgCardDetailDialog } from './MtgCardDetailDialog';
+import { ArenaEquipmentButton } from './ArenaEquipmentButton';
+import { useArenaEquipment } from '@/hooks/useArenaEquipment';
 
 const createInitialFieldState = (): MagicFieldState => ({
   battlefield: [],
@@ -39,6 +41,7 @@ interface MagicDuelViewerProps {
 
 export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId, embedded = false }: MagicDuelViewerProps) => {
   const [fieldState, setFieldState] = useState<MagicFieldState>(createInitialFieldState);
+  const { playmatUrl: activePlaymatUrl, sleeveUrl: activeSleeveUrl } = useArenaEquipment();
   const [currentPhase, setCurrentPhase] = useState<MagicPhase>('untap');
   const [deckLoaded, setDeckLoaded] = useState(false);
   const [zoneViewerOpen, setZoneViewerOpen] = useState(false);
@@ -402,7 +405,8 @@ export const MagicDuelViewer = ({ isOpen, onClose, duelId, currentUserId, embedd
         <div className="absolute inset-0 z-10 bg-card flex flex-col">
           <div className="flex items-center justify-between p-2 border-b border-border flex-shrink-0 flex-wrap gap-1">
             <span className="text-sm font-semibold">Arena MTG</span>
-            <div className="flex gap-1 flex-wrap">
+            <div className="flex gap-1 flex-wrap items-center">
+              <ArenaEquipmentButton compact />
               <Button size="sm" variant="outline" className="text-xs h-7 gap-1" onClick={drawInitialHand}>
                 <Hand className="w-3 h-3" /> Mão (7)
               </Button>
