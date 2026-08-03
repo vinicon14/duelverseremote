@@ -993,6 +993,46 @@ const DuelRoom = () => {
     }
   };
 
+  const resetTimer = async () => {
+    if (!id || !duel) return;
+
+    const isParticipant = currentUser?.id === duel.creator_id || currentUser?.id === duel.opponent_id;
+    if (!isParticipant) return;
+
+    const durationMins = duel.duration_minutes || 50;
+    const fullSeconds = durationMins * 60;
+
+    try {
+      const { error } = await supabase
+        .from('live_duels')
+        .update({
+          remaining_seconds: fullSeconds,
+          is_timer_paused: false,
+          started_at: new Date().toISOString(),
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      callDurationRef.current = fullSeconds;
+      setCallDuration(fullSeconds);
+      setIsTimerPaused(false);
+      isTimerPausedRef.current = false;
+
+      toast({
+        title: 'Tempo reiniciado',
+        description: `O cronômetro voltou para ${durationMins} minutos.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: t('duelRoom.toastTimerError'),
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+
   const callJudge = async () => {
     if (!id || !currentUser || judgeCalled) return;
 
