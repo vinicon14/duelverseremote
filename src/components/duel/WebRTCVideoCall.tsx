@@ -989,11 +989,17 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   // they connected first, leaving the player 2 slot empty.
   // Only real players may occupy video slots — spectator peers (including judge
   // spectators that broadcast audio) are excluded so they never hide player 2.
-  const videoPeerIds = remotePeerIds.filter((pid) =>
+  const officialPlayerIds = Array.from(new Set(playerIds.filter(Boolean)));
+  const connectedVideoPeerIds = Array.from(new Set(remotePeerIds)).filter((pid) =>
     !spectatorPeerIds.includes(pid) &&
-    (!isSpectator || playerIdsRef.current.size === 0 || playerIdsRef.current.has(pid)) &&
     (remoteStreams.get(pid)?.getVideoTracks().some((track) => track.readyState === "live") ?? false)
   );
+  // Spectator slots must follow the room roster, not connection arrival order.
+  // Besides keeping Player 1/2 stable, this prevents a duplicated/reconnected
+  // creator stream from being selected for both panels.
+  const videoPeerIds = isSpectator && officialPlayerIds.length > 0
+    ? officialPlayerIds.filter((pid) => connectedVideoPeerIds.includes(pid))
+    : connectedVideoPeerIds;
   const creatorPeerId = isSpectator && creatorId && videoPeerIds.includes(creatorId)
     ? creatorId
     : null;
@@ -1001,14 +1007,8 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   // never fall back to another player, or the same peer would render in two slots.
   const player1PeerIdForSpectator = creatorId ? creatorPeerId : videoPeerIds[0] || null;
   const nonCreatorPeerIds = isSpectator
-    ? videoPeerIds.filter((pid) => pid !== player1PeerIdForSpectator)
+    ? videoPeerIds.filter((pid) => pid !== creatorId && pid !== player1PeerIdForSpectator)
     : videoPeerIds;
-  // Expose to renderLocalPanel via the sortedPeerIds name it already reads.
-  const sortedPeerIds = isSpectator
-    ? [player1PeerIdForSpectator, ...nonCreatorPeerIds].filter((x): x is string => !!x)
-    : videoPeerIds;
-
-
   const remoteSlots: (string | null)[] = [];
   if (isSpectator) {
     // Non-creator peers fill the remote slots, regardless of how many slots exist.
@@ -1034,8 +1034,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     // For spectators: show the first remote stream as "Player 1" panel instead of local camera
     if (isSpectator) {
       // Spectator's "local panel" actually shows player 1 (creator) stream
-      // We use the first remote peer as player 1
-      const player1PeerId = sortedPeerIds[0] || null;
+      const player1PeerId = player1PeerIdForSpectator;
       return (
         <div className="relative w-full h-full overflow-hidden bg-black flex items-center justify-center">
           {player1PeerId ? (
@@ -1253,9 +1252,9 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
             ) : (
               /* Show local in small */
               isSpectator ? (
-                sortedPeerIds[0] ? (
+                player1PeerIdForSpectator ? (
                   <video
-                    ref={(el) => setRemoteVideoRef(sortedPeerIds[0], el)}
+                    ref={(el) => setRemoteVideoRef(player1PeerIdForSpectator, el)}
                     autoPlay
                     playsInline
                     muted
