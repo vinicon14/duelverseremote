@@ -825,6 +825,36 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   // spectators seeing only one of the two players.
   useEffect(() => {
     const expectedPlayers = isSpectator ? maxPlayers : maxPlayers - 1;
+    const announceReady = () => {
+      const channel = channelRef.current;
+      if (!channel) return;
+
+      channel.send({
+        type: "broadcast",
+        event: "webrtc-signal",
+        payload: { type: "ready", senderId: userId, isSpectator },
+      });
+
+      // A spectator must request each official player directly. Relying only on
+      // one room-wide broadcast is fragile when a player's tab is throttled or
+      // reconnecting and could leave both reserved panels without streams.
+      if (isSpectator) {
+        playerIdsRef.current.forEach((playerId) => {
+          if (playerId === userId) return;
+          channel.send({
+            type: "broadcast",
+            event: "webrtc-signal",
+            payload: {
+              type: "ready",
+              senderId: userId,
+              targetId: playerId,
+              isSpectator: true,
+            },
+          });
+        });
+      }
+    };
+
     const interval = setInterval(() => {
       const connectedPlayerVideos = Array.from(peersRef.current.entries()).filter(([peerId, peer]) => {
         if (spectatorPeersRef.current.has(peerId)) return false;
@@ -832,13 +862,15 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         return peer.stream?.getVideoTracks().some((track) => track.readyState === "live") ?? false;
       }).length;
       if (connectedPlayerVideos >= expectedPlayers) return;
-      channelRef.current?.send({
-        type: "broadcast",
-        event: "webrtc-signal",
-        payload: { type: "ready", senderId: userId, isSpectator },
-      });
+      announceReady();
     }, 4000);
-    return () => clearInterval(interval);
+
+    // Do not wait four seconds on mount/player-roster updates.
+    const initialAnnouncement = window.setTimeout(announceReady, 250);
+    return () => {
+      clearInterval(interval);
+      window.clearTimeout(initialAnnouncement);
+    };
   }, [userId, isSpectator, maxPlayers, remotePeerIds]);
 
 
@@ -992,7 +1024,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   const officialPlayerIds = Array.from(new Set(playerIds.filter(Boolean)));
   const connectedVideoPeerIds = Array.from(new Set(remotePeerIds)).filter((pid) =>
     !spectatorPeerIds.includes(pid) &&
-    (remoteStreams.get(pid)?.getVideoTracks().some((track) => track.readyState === "live") ?? false)
+    (remoteStreams.get(pid)?.getVideoTracks().some((track) => track.readyState !== "ended") ?? false)
   );
   // Spectator slots must follow the room roster, not connection arrival order.
   // Besides keeping Player 1/2 stable, this prevents a duplicated/reconnected
