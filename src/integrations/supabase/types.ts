@@ -1080,6 +1080,9 @@ export type Database = {
           player1_score: number
           player2_id: string
           player2_score: number
+          ranked_points_awarded: boolean
+          ranked_points_change: number
+          tcg_type: string | null
           winner_id: string | null
         }
         Insert: {
@@ -1091,6 +1094,9 @@ export type Database = {
           player1_score?: number
           player2_id: string
           player2_score?: number
+          ranked_points_awarded?: boolean
+          ranked_points_change?: number
+          tcg_type?: string | null
           winner_id?: string | null
         }
         Update: {
@@ -1102,6 +1108,9 @@ export type Database = {
           player1_score?: number
           player2_id?: string
           player2_score?: number
+          ranked_points_awarded?: boolean
+          ranked_points_change?: number
+          tcg_type?: string | null
           winner_id?: string | null
         }
         Relationships: [
