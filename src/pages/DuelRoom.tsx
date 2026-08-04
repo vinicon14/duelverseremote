@@ -1243,6 +1243,12 @@ const DuelRoom = () => {
                 isSpectator={!!isSpectator}
                 audioBroadcastOnly={!!isJudge}
                 creatorId={duel?.creator_id}
+                playerIds={[
+                  duel?.creator_id,
+                  duel?.opponent_id,
+                  (duel as any)?.player3_id,
+                  (duel as any)?.player4_id,
+                ].filter((playerId): playerId is string => !!playerId)}
                 onLayoutChange={setVideoLayout}
                 mobileArenaMode={mobileDigitalArenaOpen}
                 spectatorLpOverlay={isSpectator ? {
