@@ -871,7 +871,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       clearInterval(interval);
       window.clearTimeout(initialAnnouncement);
     };
-  }, [userId, isSpectator, maxPlayers, remotePeerIds, playerIds]);
+  }, [userId, isSpectator, maxPlayers, remotePeerIds]);
 
 
 
