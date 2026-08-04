@@ -825,6 +825,36 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   // spectators seeing only one of the two players.
   useEffect(() => {
     const expectedPlayers = isSpectator ? maxPlayers : maxPlayers - 1;
+    const announceReady = () => {
+      const channel = channelRef.current;
+      if (!channel) return;
+
+      channel.send({
+        type: "broadcast",
+        event: "webrtc-signal",
+        payload: { type: "ready", senderId: userId, isSpectator },
+      });
+
+      // A spectator must request each official player directly. Relying only on
+      // one room-wide broadcast is fragile when a player's tab is throttled or
+      // reconnecting and could leave both reserved panels without streams.
+      if (isSpectator) {
+        playerIdsRef.current.forEach((playerId) => {
+          if (playerId === userId) return;
+          channel.send({
+            type: "broadcast",
+            event: "webrtc-signal",
+            payload: {
+              type: "ready",
+              senderId: userId,
+              targetId: playerId,
+              isSpectator: true,
+            },
+          });
+        });
+      }
+    };
+
     const interval = setInterval(() => {
       const connectedPlayerVideos = Array.from(peersRef.current.entries()).filter(([peerId, peer]) => {
         if (spectatorPeersRef.current.has(peerId)) return false;
@@ -832,14 +862,13 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         return peer.stream?.getVideoTracks().some((track) => track.readyState === "live") ?? false;
       }).length;
       if (connectedPlayerVideos >= expectedPlayers) return;
-      channelRef.current?.send({
-        type: "broadcast",
-        event: "webrtc-signal",
-        payload: { type: "ready", senderId: userId, isSpectator },
-      });
+      announceReady();
     }, 4000);
+
+    // Do not wait four seconds on mount/player-roster updates.
+    const initialAnnouncement = window.setTimeout(announceReady, 250);
     return () => clearInterval(interval);
-  }, [userId, isSpectator, maxPlayers, remotePeerIds]);
+  }, [userId, isSpectator, maxPlayers, remotePeerIds, playerIds]);
 
 
 
