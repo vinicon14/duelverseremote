@@ -1024,7 +1024,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   const officialPlayerIds = Array.from(new Set(playerIds.filter(Boolean)));
   const connectedVideoPeerIds = Array.from(new Set(remotePeerIds)).filter((pid) =>
     !spectatorPeerIds.includes(pid) &&
-    (remoteStreams.get(pid)?.getVideoTracks().some((track) => track.readyState === "live") ?? false)
+    (remoteStreams.get(pid)?.getVideoTracks().some((track) => track.readyState !== "ended") ?? false)
   );
   // Spectator slots must follow the room roster, not connection arrival order.
   // Besides keeping Player 1/2 stable, this prevents a duplicated/reconnected
