@@ -543,13 +543,6 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
 
       const remotePeerId = payload.senderId;
 
-      // A spectator must only negotiate with the players assigned to this duel.
-      // This prevents other spectators and stale room peers from consuming one of
-      // the two visible video slots before the real player announces themselves.
-      if (isSpectator && playerIdsRef.current.size > 0 && !playerIdsRef.current.has(remotePeerId)) {
-        return;
-      }
-
       if (payload.type === "ready") {
         // Remember whether this peer is a spectator so it never takes a video slot.
         if (payload.isSpectator) {
@@ -1259,7 +1252,21 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
               )
             ) : (
               /* Show local in small */
-              localDeckOpen && localDeckContent ? (
+              isSpectator ? (
+                sortedPeerIds[0] ? (
+                  <video
+                    ref={(el) => setRemoteVideoRef(sortedPeerIds[0], el)}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-black/80">
+                    <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                  </div>
+                )
+              ) : localDeckOpen && localDeckContent ? (
                 <div className="w-full h-full overflow-hidden bg-background flex items-center justify-center">
                   <span className="text-[10px] text-muted-foreground">Deck aberto</span>
                 </div>
