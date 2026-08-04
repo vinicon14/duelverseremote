@@ -43,6 +43,8 @@ interface WebRTCVideoCallProps {
   audioBroadcastOnly?: boolean;
   /** Creator user ID - used by spectators to correctly order peers (creator on left) */
   creatorId?: string;
+  /** Official duel player IDs. Spectators only accept media from these peers. */
+  playerIds?: string[];
   /** Compact mobile arena: opponent field above, own field below, no internal scrollbars. */
   mobileArenaMode?: boolean;
 }
@@ -112,6 +114,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   isSpectator = false,
   audioBroadcastOnly = false,
   creatorId,
+  playerIds = [],
   mobileArenaMode = false,
 }, ref) => {
   const localVideoRef = useRef<HTMLVideoElement>(null);
@@ -133,7 +136,12 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   // otherwise another spectator steals the slot meant for player 2.
   const spectatorPeersRef = useRef<Set<string>>(new Set());
   const [spectatorPeerIds, setSpectatorPeerIds] = useState<string[]>([]);
+  const playerIdsRef = useRef(new Set(playerIds.filter(Boolean)));
   const [pipSwapped, setPipSwapped] = useState(false);
+
+  useEffect(() => {
+    playerIdsRef.current = new Set(playerIds.filter(Boolean));
+  }, [playerIds]);
 
 
   const [zoomLevel, setZoomLevel] = useState(1);
@@ -818,8 +826,12 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   useEffect(() => {
     const expectedPlayers = isSpectator ? maxPlayers : maxPlayers - 1;
     const interval = setInterval(() => {
-      const playerStreams = remotePeerIds.filter((pid) => !spectatorPeersRef.current.has(pid)).length;
-      if (playerStreams >= expectedPlayers) return;
+      const connectedPlayerVideos = Array.from(peersRef.current.entries()).filter(([peerId, peer]) => {
+        if (spectatorPeersRef.current.has(peerId)) return false;
+        if (isSpectator && playerIdsRef.current.size > 0 && !playerIdsRef.current.has(peerId)) return false;
+        return peer.stream?.getVideoTracks().some((track) => track.readyState === "live") ?? false;
+      }).length;
+      if (connectedPlayerVideos >= expectedPlayers) return;
       channelRef.current?.send({
         type: "broadcast",
         event: "webrtc-signal",
@@ -977,7 +989,11 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   // they connected first, leaving the player 2 slot empty.
   // Only real players may occupy video slots — spectator peers (including judge
   // spectators that broadcast audio) are excluded so they never hide player 2.
-  const videoPeerIds = remotePeerIds.filter((pid) => !spectatorPeerIds.includes(pid));
+  const videoPeerIds = remotePeerIds.filter((pid) =>
+    !spectatorPeerIds.includes(pid) &&
+    (!isSpectator || playerIdsRef.current.size === 0 || playerIdsRef.current.has(pid)) &&
+    (remoteStreams.get(pid)?.getVideoTracks().some((track) => track.readyState === "live") ?? false)
+  );
   const creatorPeerId = isSpectator && creatorId && videoPeerIds.includes(creatorId)
     ? creatorId
     : null;
@@ -1236,7 +1252,21 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
               )
             ) : (
               /* Show local in small */
-              localDeckOpen && localDeckContent ? (
+              isSpectator ? (
+                sortedPeerIds[0] ? (
+                  <video
+                    ref={(el) => setRemoteVideoRef(sortedPeerIds[0], el)}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-black/80">
+                    <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                  </div>
+                )
+              ) : localDeckOpen && localDeckContent ? (
                 <div className="w-full h-full overflow-hidden bg-background flex items-center justify-center">
                   <span className="text-[10px] text-muted-foreground">Deck aberto</span>
                 </div>
