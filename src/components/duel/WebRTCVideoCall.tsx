@@ -867,7 +867,10 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
 
     // Do not wait four seconds on mount/player-roster updates.
     const initialAnnouncement = window.setTimeout(announceReady, 250);
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      window.clearTimeout(initialAnnouncement);
+    };
   }, [userId, isSpectator, maxPlayers, remotePeerIds, playerIds]);
 
 
