@@ -512,6 +512,10 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
 
 
     pc.onnegotiationneeded = async () => {
+      // A regular spectator is receive-only. Let the player create the offer;
+      // otherwise recvonly transceivers trigger a competing spectator offer and
+      // the real player offer can be discarded during glare resolution.
+      if (isSpectator && !audioBroadcastOnly) return;
       try {
         peerState.makingOffer = true;
         await pc.setLocalDescription();
@@ -640,9 +644,6 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
           });
         }
 
-        // Offer creation is handled exclusively by onnegotiationneeded (fired
-        // automatically after addTrack). Creating a manual offer here in parallel
-        // caused glare that broke the SDP exchange, resulting in no remote media.
         return;
       }
 
@@ -654,7 +655,9 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       const peer = peersRef.current.get(remotePeerId);
       if (!peer) return;
       const pc = peer.pc;
-      const polite = userId < remotePeerId;
+      // Receive-only spectators must always accept the player's authoritative
+      // offer instead of deciding politeness from arbitrary UUID ordering.
+      const polite = isSpectator || userId < remotePeerId;
 
       try {
         if (payload.type === "offer" || payload.type === "answer") {
