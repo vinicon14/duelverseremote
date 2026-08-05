@@ -539,6 +539,53 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     return pc;
   }, [userId, isSpectator, audioBroadcastOnly, getActiveOutboundStream]);
 
+  const createSpectatorOffer = useCallback(async (playerId: string) => {
+    if (!isSpectator || playerId === userId) return;
+
+    if (!peersRef.current.has(playerId)) {
+      createPeerConnection(playerId);
+    }
+    let peer = peersRef.current.get(playerId);
+    if (!peer || peer.makingOffer) return;
+
+    // An unanswered SDP offer remains in `have-local-offer`; ICE never reaches
+    // failed, so the ICE restart handler cannot recover it. Rebuild explicitly
+    // and let the next heartbeat negotiate from a clean stable state.
+    if (
+      peer.pc.signalingState !== "stable" &&
+      peer.pc.connectionState !== "connected" &&
+      Date.now() - peer.createdAt > 8000
+    ) {
+      console.warn("[WebRTC] Rebuilding stuck spectator negotiation:", playerId);
+      createPeerConnection(playerId);
+      peer = peersRef.current.get(playerId);
+    }
+    if (!peer || peer.pc.signalingState !== "stable") return;
+    if (peer.pc.connectionState === "connected" && peer.stream?.getTracks().some((track) => track.readyState !== "ended")) return;
+
+    try {
+      peer.makingOffer = true;
+      const offer = await peer.pc.createOffer();
+      await peer.pc.setLocalDescription(offer);
+      await channelRef.current?.send({
+        type: "broadcast",
+        event: "webrtc-signal",
+        payload: {
+          type: "offer",
+          sdp: peer.pc.localDescription,
+          senderId: userId,
+          targetId: playerId,
+          isSpectator: true,
+        },
+      });
+      console.log("[WebRTC] Spectator offer sent to player:", playerId);
+    } catch (err) {
+      console.warn("[WebRTC] Spectator offer failed:", playerId, err);
+    } finally {
+      peer.makingOffer = false;
+    }
+  }, [isSpectator, userId, createPeerConnection]);
+
   const handleSignal = useCallback(
     async (payload: any) => {
       if (payload.senderId === userId) return;
@@ -546,6 +593,14 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       if (payload.targetId && payload.targetId !== userId) return;
 
       const remotePeerId = payload.senderId;
+
+      // Offers/candidates also carry the role. Mark it before constructing the
+      // peer so the player's negotiationneeded handler cannot race the
+      // spectator's authoritative recvonly offer.
+      if (payload.isSpectator && !spectatorPeersRef.current.has(remotePeerId)) {
+        spectatorPeersRef.current.add(remotePeerId);
+        setSpectatorPeerIds((prev) => (prev.includes(remotePeerId) ? prev : [...prev, remotePeerId]));
+      }
 
       if (payload.type === "ready") {
         // Remember whether this peer is a spectator so it never takes a video slot.
@@ -586,44 +641,6 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         }
         const peer = peersRef.current.get(remotePeerId);
         if (!peer) return;
-
-        // A directed request from a spectator must always result in an offer from
-        // the player. Some browsers do not reliably fire `negotiationneeded` when
-        // a peer is recreated or when tracks were attached before signaling was
-        // ready, leaving the spectator with permanently empty video panels.
-        if (payload.isSpectator && !isSpectator) {
-          window.setTimeout(async () => {
-            const currentPeer = peersRef.current.get(remotePeerId);
-            if (
-              !currentPeer ||
-              currentPeer !== peer ||
-              currentPeer.makingOffer ||
-              currentPeer.pc.signalingState !== "stable" ||
-              currentPeer.pc.connectionState === "connected"
-            ) return;
-
-            try {
-              currentPeer.makingOffer = true;
-              const offer = await currentPeer.pc.createOffer();
-              await currentPeer.pc.setLocalDescription(offer);
-              channelRef.current?.send({
-                type: "broadcast",
-                event: "webrtc-signal",
-                payload: {
-                  type: "offer",
-                  sdp: currentPeer.pc.localDescription,
-                  senderId: userId,
-                  targetId: remotePeerId,
-                },
-              });
-            } catch (err) {
-              console.warn("[WebRTC] Directed spectator offer failed:", err);
-            } finally {
-              currentPeer.makingOffer = false;
-            }
-          }, 0);
-        }
-
 
         // Handshake symmetry: whenever we receive a broadcast "ready" (no targetId),
         // we reply with a targeted "ready" back so the other side ALSO creates its
@@ -891,6 +908,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
               isSpectator: true,
             },
           });
+          void createSpectatorOffer(playerId);
         });
       }
     };
@@ -911,7 +929,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       clearInterval(interval);
       window.clearTimeout(initialAnnouncement);
     };
-  }, [userId, isSpectator, maxPlayers, remotePeerIds]);
+  }, [userId, isSpectator, maxPlayers, remotePeerIds, createSpectatorOffer]);
 
 
 
