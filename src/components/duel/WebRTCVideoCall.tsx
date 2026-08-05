@@ -516,10 +516,6 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       // otherwise recvonly transceivers trigger a competing spectator offer and
       // the real player offer can be discarded during glare resolution.
       if (isSpectator && !audioBroadcastOnly) return;
-      // Spectator connections use one deterministic negotiation path: the
-      // spectator offers recvonly and the player answers with its local tracks.
-      // If both sides offer, some browsers remain in glare and no ontrack fires.
-      if (!isSpectator && spectatorPeersRef.current.has(remotePeerId)) return;
       try {
         peerState.makingOffer = true;
         await pc.setLocalDescription();
@@ -549,8 +545,22 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     if (!peersRef.current.has(playerId)) {
       createPeerConnection(playerId);
     }
-    const peer = peersRef.current.get(playerId);
-    if (!peer || peer.makingOffer || peer.pc.signalingState !== "stable") return;
+    let peer = peersRef.current.get(playerId);
+    if (!peer || peer.makingOffer) return;
+
+    // An unanswered SDP offer remains in `have-local-offer`; ICE never reaches
+    // failed, so the ICE restart handler cannot recover it. Rebuild explicitly
+    // and let the next heartbeat negotiate from a clean stable state.
+    if (
+      peer.pc.signalingState !== "stable" &&
+      peer.pc.connectionState !== "connected" &&
+      Date.now() - peer.createdAt > 8000
+    ) {
+      console.warn("[WebRTC] Rebuilding stuck spectator negotiation:", playerId);
+      createPeerConnection(playerId);
+      peer = peersRef.current.get(playerId);
+    }
+    if (!peer || peer.pc.signalingState !== "stable") return;
     if (peer.pc.connectionState === "connected" && peer.stream?.getTracks().some((track) => track.readyState !== "ended")) return;
 
     try {
