@@ -1031,41 +1031,32 @@ export type Database = {
       }
       marketplace_purchases: {
         Row: {
-          admin_notes: string | null
           created_at: string
           id: string
           product_id: string
           quantity: number
           status: string
-          status_history: Json
           total_price: number
-          tracking_code: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
-          admin_notes?: string | null
           created_at?: string
           id?: string
           product_id: string
           quantity?: number
           status?: string
-          status_history?: Json
           total_price: number
-          tracking_code?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
-          admin_notes?: string | null
           created_at?: string
           id?: string
           product_id?: string
           quantity?: number
           status?: string
-          status_history?: Json
           total_price?: number
-          tracking_code?: string | null
           updated_at?: string
           user_id?: string
         }

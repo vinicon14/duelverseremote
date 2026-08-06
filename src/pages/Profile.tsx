@@ -11,8 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/Navbar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { Trophy, Swords, Star, Calendar, Video, Eye, Play, Sparkles, Loader2, Gift, CheckCircle2, Clapperboard, Target, Shield, Package } from "lucide-react";
-import { MyOrders } from "@/components/profile/MyOrders";
+import { Trophy, Swords, Star, Calendar, Video, Eye, Play, Sparkles, Loader2, Gift, CheckCircle2, Clapperboard, Target, Shield } from "lucide-react";
 import { TwoFactorSetup } from "@/components/TwoFactorSetup";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { ChangePasswordForm } from "@/components/ChangePasswordForm";
@@ -617,7 +616,7 @@ const Profile = () => {
             </Card>
 
             <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-              <TabsList className={`grid h-auto w-full grid-cols-2 rounded-xl bg-card/80 p-1 ${isOwnProfile ? 'md:grid-cols-6' : 'md:grid-cols-5'}`}>
+              <TabsList className="grid h-auto w-full grid-cols-2 rounded-xl bg-card/80 p-1 md:grid-cols-5">
                 <TabsTrigger value="stats" className="gap-2">
                   <Trophy className="h-4 w-4" />
                   {t('profile.tabStats')}
@@ -630,12 +629,6 @@ const Profile = () => {
                   <Target className="h-4 w-4" />
                   Ranqueada
                 </TabsTrigger>
-                {isOwnProfile && (
-                  <TabsTrigger value="orders" className="gap-2">
-                    <Package className="h-4 w-4" />
-                    Meus Pedidos
-                  </TabsTrigger>
-                )}
                 <TabsTrigger value="gallery" className="gap-2">
                   <Video className="h-4 w-4" />
                   {t('profile.tabGallery')}
@@ -645,12 +638,6 @@ const Profile = () => {
                   Segurança
                 </TabsTrigger>
               </TabsList>
-
-              {isOwnProfile && (
-                <TabsContent value="orders" className="space-y-6">
-                  <MyOrders userId={profile?.user_id ?? null} />
-                </TabsContent>
-              )}
 
               <TabsContent value="stats" className="space-y-6">
                 <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 animate-fade-in-up delay-150">
