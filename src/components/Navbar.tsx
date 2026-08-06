@@ -373,6 +373,10 @@ export const Navbar = () => {
                   {bgmMuted ? <VolumeX className="mr-2 h-4 w-4" /> : <Music className="mr-2 h-4 w-4" />}
                   {bgmMuted ? 'Ativar música' : 'Silenciar música'}
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleContactSupport}>
+                  <MessageCircle className="mr-2 h-4 w-4 text-green-500" />
+                  Fale Conosco
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleLogout}>
                   <LogOut className="mr-2 h-4 w-4" />
                   {t('nav.logout')}
