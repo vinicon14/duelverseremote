@@ -9,6 +9,7 @@ import { Save, Upload, ExternalLink, Monitor, Smartphone, Music, Trash2 } from "
 
 export const AdminSettings = () => {
   const [supportEmail, setSupportEmail] = useState("");
+  const [supportWhatsapp, setSupportWhatsapp] = useState("");
   
   const [landingVideoUrl, setLandingVideoUrl] = useState("");
   const [bgmVideoUrl, setBgmVideoUrl] = useState("");
@@ -69,6 +70,9 @@ export const AdminSettings = () => {
         const adSignupSetting = data.find((s) => s.key === 'ad_publisher_signup_url');
 
         if (emailSetting) setSupportEmail(emailSetting.value || '');
+        const whatsappSetting = data.find((s) => s.key === 'support_whatsapp');
+        if (whatsappSetting) setSupportWhatsapp(whatsappSetting.value || '');
+        
         
         if (videoSetting) setLandingVideoUrl(videoSetting.value || '');
         if (bgmSetting) setBgmVideoUrl(bgmSetting.value || '');
@@ -259,6 +263,7 @@ export const AdminSettings = () => {
     try {
       const settings = [
         { key: 'support_email', value: supportEmail },
+        { key: 'support_whatsapp', value: supportWhatsapp },
         
         { key: 'landing_video_url', value: landingVideoUrl },
         { key: 'bgm_video_url', value: bgmVideoUrl },
@@ -314,6 +319,21 @@ export const AdminSettings = () => {
               Email para onde os usuários devem enviar comprovante de pagamento
             </p>
           </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="support-whatsapp">WhatsApp de Suporte (Fale Conosco)</Label>
+            <Input
+              id="support-whatsapp"
+              type="tel"
+              placeholder="5511999999999"
+              value={supportWhatsapp}
+              onChange={(e) => setSupportWhatsapp(e.target.value)}
+            />
+            <p className="text-sm text-muted-foreground">
+              Número com DDI e DDD (apenas dígitos). Usado no botão "Fale Conosco" do menu do perfil.
+            </p>
+          </div>
+
 
         </CardContent>
       </Card>
