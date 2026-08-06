@@ -435,6 +435,10 @@ export const Navbar = () => {
                       {bgmMuted ? <VolumeX className="mr-2 h-4 w-4" /> : <Music className="mr-2 h-4 w-4" />}
                       {bgmMuted ? 'Ativar música' : 'Silenciar música'}
                     </Button>
+                    <Button variant="ghost" onClick={handleContactSupport} className="w-full justify-start h-11 text-base">
+                      <MessageCircle className="mr-2 h-4 w-4 text-green-500" />
+                      Fale Conosco
+                    </Button>
                     <Button variant="ghost" onClick={handleLogout} className="w-full justify-start h-11 text-base text-destructive">
                       <LogOut className="mr-2 h-4 w-4" />
                       {t('nav.logout')}
