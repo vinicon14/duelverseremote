@@ -320,6 +320,21 @@ export const AdminSettings = () => {
             </p>
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="support-whatsapp">WhatsApp de Suporte (Fale Conosco)</Label>
+            <Input
+              id="support-whatsapp"
+              type="tel"
+              placeholder="5511999999999"
+              value={supportWhatsapp}
+              onChange={(e) => setSupportWhatsapp(e.target.value)}
+            />
+            <p className="text-sm text-muted-foreground">
+              Número com DDI e DDD (apenas dígitos). Usado no botão "Fale Conosco" do menu do perfil.
+            </p>
+          </div>
+
+
         </CardContent>
       </Card>
 
