@@ -263,6 +263,7 @@ export const AdminSettings = () => {
     try {
       const settings = [
         { key: 'support_email', value: supportEmail },
+        { key: 'support_whatsapp', value: supportWhatsapp },
         
         { key: 'landing_video_url', value: landingVideoUrl },
         { key: 'bgm_video_url', value: bgmVideoUrl },
