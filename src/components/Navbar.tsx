@@ -8,7 +8,9 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Swords, Trophy, User, LogOut, Menu, Users, Zap, Shield, Store, Newspaper, Coins, Scale, Video, Layers, BarChart3, Crown, Gift, Music, VolumeX } from "lucide-react";
+import { Swords, Trophy, User, LogOut, Menu, Users, Zap, Shield, Store, Newspaper, Coins, Scale, Video, Layers, BarChart3, Crown, Gift, Music, VolumeX, MessageCircle } from "lucide-react";
+import { useSupportWhatsapp } from "@/hooks/useSupportWhatsapp";
+import { useToast } from "@/hooks/use-toast";
 import { toggleBgm, getBgmMuted } from "@/components/BackgroundMusic";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -38,6 +40,21 @@ export const Navbar = () => {
   const { isPro } = useAccountType();
   const { activeTcg } = useTcg();
   const [bgmMuted, setBgmMuted] = useState<boolean>(() => getBgmMuted());
+
+  const { url: supportWhatsappUrl } = useSupportWhatsapp();
+  const { toast } = useToast();
+
+  const handleContactSupport = () => {
+    if (!supportWhatsappUrl) {
+      toast({
+        title: 'Suporte indisponível',
+        description: 'O número de WhatsApp ainda não foi configurado pelo administrador.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    window.open(supportWhatsappUrl, '_blank', 'noopener,noreferrer');
+  };
 
   useEffect(() => {
     const handler = (e: any) => setBgmMuted(!!e?.detail?.muted);
