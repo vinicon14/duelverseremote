@@ -9,6 +9,7 @@ import { Save, Upload, ExternalLink, Monitor, Smartphone, Music, Trash2 } from "
 
 export const AdminSettings = () => {
   const [supportEmail, setSupportEmail] = useState("");
+  const [supportWhatsapp, setSupportWhatsapp] = useState("");
   
   const [landingVideoUrl, setLandingVideoUrl] = useState("");
   const [bgmVideoUrl, setBgmVideoUrl] = useState("");
@@ -69,6 +70,9 @@ export const AdminSettings = () => {
         const adSignupSetting = data.find((s) => s.key === 'ad_publisher_signup_url');
 
         if (emailSetting) setSupportEmail(emailSetting.value || '');
+        const whatsappSetting = data.find((s) => s.key === 'support_whatsapp');
+        if (whatsappSetting) setSupportWhatsapp(whatsappSetting.value || '');
+        
         
         if (videoSetting) setLandingVideoUrl(videoSetting.value || '');
         if (bgmSetting) setBgmVideoUrl(bgmSetting.value || '');
