@@ -91,9 +91,22 @@ export default function Admin() {
             </TabsList>
           </div>
           
+          <TabsContent value="metrics" className="mt-6">
+            <AdminMetrics />
+          </TabsContent>
+
+          <TabsContent value="monetag" className="mt-6">
+            <AdminMonetag />
+          </TabsContent>
+
+          <TabsContent value="ranked" className="mt-6">
+            <AdminRankingReset />
+          </TabsContent>
+
           <TabsContent value="news" className="mt-6">
             <AdminNews />
           </TabsContent>
+
           
           <TabsContent value="discord" className="mt-6">
             <AdminDiscord />
