@@ -1036,6 +1036,14 @@ export type Database = {
           id: string
           product_id: string
           quantity: number
+          shipping_address: string | null
+          shipping_city: string | null
+          shipping_complement: string | null
+          shipping_district: string | null
+          shipping_number: string | null
+          shipping_phone: string | null
+          shipping_state: string | null
+          shipping_zip: string | null
           status: string
           status_history: Json
           total_price: number
@@ -1049,6 +1057,14 @@ export type Database = {
           id?: string
           product_id: string
           quantity?: number
+          shipping_address?: string | null
+          shipping_city?: string | null
+          shipping_complement?: string | null
+          shipping_district?: string | null
+          shipping_number?: string | null
+          shipping_phone?: string | null
+          shipping_state?: string | null
+          shipping_zip?: string | null
           status?: string
           status_history?: Json
           total_price: number
@@ -1062,6 +1078,14 @@ export type Database = {
           id?: string
           product_id?: string
           quantity?: number
+          shipping_address?: string | null
+          shipping_city?: string | null
+          shipping_complement?: string | null
+          shipping_district?: string | null
+          shipping_number?: string | null
+          shipping_phone?: string | null
+          shipping_state?: string | null
+          shipping_zip?: string | null
           status?: string
           status_history?: Json
           total_price?: number
@@ -2346,6 +2370,11 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_platform_metrics: { Args: { p_days?: number }; Returns: Json }
+      admin_reset_ranked_points: {
+        Args: { p_reset_record?: boolean; p_tcg_type?: string }
+        Returns: Json
+      }
       admin_set_user_verified: {
         Args: { _user_id: string; _verified: boolean }
         Returns: Json
@@ -2366,6 +2395,7 @@ export type Database = {
         Args: { p_points: number }
         Returns: number
       }
+      change_nickname: { Args: { p_new_username: string }; Returns: Json }
       check_expired_subscriptions: { Args: never; Returns: undefined }
       claim_ads_xp_bundle: {
         Args: { _tcg_type: string }
@@ -2591,9 +2621,10 @@ export type Database = {
         }
         Returns: Json
       }
-      purchase_marketplace_items:
-        | { Args: { p_items: Json }; Returns: Json }
-        | { Args: { p_coupon_code?: string; p_items: Json }; Returns: Json }
+      purchase_marketplace_items: {
+        Args: { p_coupon_code?: string; p_items: Json; p_shipping?: Json }
+        Returns: Json
+      }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {

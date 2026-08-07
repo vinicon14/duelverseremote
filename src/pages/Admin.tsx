@@ -25,6 +25,9 @@ import { AdminDuelCoinsPackages } from "@/components/admin/AdminDuelCoinsPackage
 import { AdminDiscord } from "@/components/admin/AdminDiscord";
 import { AdminCoupons } from "@/components/admin/AdminCoupons";
 import { AdminVerifications } from "@/components/admin/AdminVerifications";
+import { AdminMetrics } from "@/components/admin/AdminMetrics";
+import { AdminMonetag } from "@/components/admin/AdminMonetag";
+import { AdminRankingReset } from "@/components/admin/AdminRankingReset";
 import { Shield, Loader2 } from "lucide-react";
 
 export default function Admin() {
@@ -68,9 +71,12 @@ export default function Admin() {
         <Tabs defaultValue="news" className="w-full">
           <div className="overflow-x-auto -mx-4 px-4 pb-2">
             <TabsList className="flex w-max sm:w-full overflow-x-auto gap-1">
+            <TabsTrigger value="metrics">Métricas</TabsTrigger>
             <TabsTrigger value="news">{t('admin.tabs.news')}</TabsTrigger>
               <TabsTrigger value="discord">{t('admin.tabs.discord')}</TabsTrigger>
             <TabsTrigger value="ads">{t('admin.tabs.ads')}</TabsTrigger>
+            <TabsTrigger value="monetag">Monetag</TabsTrigger>
+            <TabsTrigger value="ranked">Ranqueada</TabsTrigger>
             <TabsTrigger value="users">{t('admin.tabs.users')}</TabsTrigger>
             <TabsTrigger value="duels">{t('admin.tabs.duels')}</TabsTrigger>
             <TabsTrigger value="tournaments">{t('admin.tabs.tournaments')}</TabsTrigger>
@@ -85,9 +91,22 @@ export default function Admin() {
             </TabsList>
           </div>
           
+          <TabsContent value="metrics" className="mt-6">
+            <AdminMetrics />
+          </TabsContent>
+
+          <TabsContent value="monetag" className="mt-6">
+            <AdminMonetag />
+          </TabsContent>
+
+          <TabsContent value="ranked" className="mt-6">
+            <AdminRankingReset />
+          </TabsContent>
+
           <TabsContent value="news" className="mt-6">
             <AdminNews />
           </TabsContent>
+
           
           <TabsContent value="discord" className="mt-6">
             <AdminDiscord />
