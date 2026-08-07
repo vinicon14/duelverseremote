@@ -71,9 +71,12 @@ export default function Admin() {
         <Tabs defaultValue="news" className="w-full">
           <div className="overflow-x-auto -mx-4 px-4 pb-2">
             <TabsList className="flex w-max sm:w-full overflow-x-auto gap-1">
+            <TabsTrigger value="metrics">Métricas</TabsTrigger>
             <TabsTrigger value="news">{t('admin.tabs.news')}</TabsTrigger>
               <TabsTrigger value="discord">{t('admin.tabs.discord')}</TabsTrigger>
             <TabsTrigger value="ads">{t('admin.tabs.ads')}</TabsTrigger>
+            <TabsTrigger value="monetag">Monetag</TabsTrigger>
+            <TabsTrigger value="ranked">Ranqueada</TabsTrigger>
             <TabsTrigger value="users">{t('admin.tabs.users')}</TabsTrigger>
             <TabsTrigger value="duels">{t('admin.tabs.duels')}</TabsTrigger>
             <TabsTrigger value="tournaments">{t('admin.tabs.tournaments')}</TabsTrigger>
