@@ -25,6 +25,9 @@ import { AdminDuelCoinsPackages } from "@/components/admin/AdminDuelCoinsPackage
 import { AdminDiscord } from "@/components/admin/AdminDiscord";
 import { AdminCoupons } from "@/components/admin/AdminCoupons";
 import { AdminVerifications } from "@/components/admin/AdminVerifications";
+import { AdminMetrics } from "@/components/admin/AdminMetrics";
+import { AdminMonetag } from "@/components/admin/AdminMonetag";
+import { AdminRankingReset } from "@/components/admin/AdminRankingReset";
 import { Shield, Loader2 } from "lucide-react";
 
 export default function Admin() {
