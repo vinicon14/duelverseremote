@@ -561,7 +561,13 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       peer = peersRef.current.get(playerId);
     }
     if (!peer || peer.pc.signalingState !== "stable") return;
-    if (peer.pc.connectionState === "connected" && peer.stream?.getTracks().some((track) => track.readyState !== "ended")) return;
+    // An audio-only connection is not healthy for a spectator. Previously any
+    // live track (usually audio) stopped the retry loop, leaving one panel stuck
+    // forever when that player's video m-line was lost during negotiation.
+    const hasLiveVideo = peer.stream
+      ?.getVideoTracks()
+      .some((track) => track.readyState === "live") ?? false;
+    if (peer.pc.connectionState === "connected" && hasLiveVideo) return;
 
     try {
       peer.makingOffer = true;
@@ -842,6 +848,11 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         config: { broadcast: { self: false } },
       });
 
+      // Publish the reference before subscribing. A fast targeted response can
+      // arrive immediately after SUBSCRIBED; assigning this afterwards caused
+      // answers/ICE candidates to be silently dropped on intermittent joins.
+      channelRef.current = channel;
+
       channel
         .on("broadcast", { event: "webrtc-signal" }, ({ payload }) => {
           handleSignal(payload);
@@ -857,7 +868,6 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
           }
         });
 
-      channelRef.current = channel;
     };
 
     init();
@@ -930,6 +940,36 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       window.clearTimeout(initialAnnouncement);
     };
   }, [userId, isSpectator, maxPlayers, remotePeerIds, createSpectatorOffer]);
+
+  // A live MediaStreamTrack may end after a successful handshake without moving
+  // RTCPeerConnection to "failed" (camera replacement, mobile backgrounding,
+  // browser suspension). Re-negotiate that specific official player instead of
+  // waiting forever behind a loading panel.
+  useEffect(() => {
+    if (!isSpectator) return;
+
+    const recoverMissingVideo = () => {
+      playerIdsRef.current.forEach((playerId) => {
+        if (playerId === userId) return;
+        const peer = peersRef.current.get(playerId);
+        const hasLiveVideo = peer?.stream
+          ?.getVideoTracks()
+          .some((track) => track.readyState === "live") ?? false;
+        if (!hasLiveVideo) void createSpectatorOffer(playerId);
+      });
+    };
+
+    const interval = window.setInterval(recoverMissingVideo, 6000);
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") recoverMissingVideo();
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [isSpectator, userId, createSpectatorOffer]);
 
 
 
