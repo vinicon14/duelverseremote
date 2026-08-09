@@ -39,6 +39,9 @@ const Friends = () => {
   // Hook que usa Presence para verificar status online real
   const { isOnline } = useFriendsOnlineStatus(friendIds);
 
+  // Mensagens privadas não lidas por amigo
+  const { unreadFrom, total: totalUnread } = useUnreadMessages();
+
   useEffect(() => {
     checkAuth();
   }, []);
