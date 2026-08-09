@@ -321,8 +321,13 @@ const Friends = () => {
 
         <Tabs defaultValue="friends" className="space-y-6">
           <TabsList className="grid w-full max-w-md grid-cols-3">
-            <TabsTrigger value="friends">
+            <TabsTrigger value="friends" className="relative">
               {t('friends.tabFriends', { count: friends.length })}
+              {totalUnread > 0 && (
+                <span className="ml-1 min-w-4 h-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
+                  {totalUnread > 9 ? "9+" : totalUnread}
+                </span>
+              )}
             </TabsTrigger>
             <TabsTrigger value="requests">
               {t('friends.tabRequests', { count: pendingRequests.length })}
