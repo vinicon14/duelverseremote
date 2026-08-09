@@ -204,6 +204,7 @@ const RouterContent = ({ user }: { user: User | null }) => {
         <Route path="/transfer-history" element={<TransferHistory />} />
         <Route path="/marketplace" element={<Marketplace />} />
         <Route path="/my-items" element={<MyItems />} />
+        <Route path="/my-orders" element={<MyOrders />} />
         <Route path="/buy-duelcoins" element={<BuyDuelCoins />} />
         <Route path="/install-app" element={<InstallApp />} />
         <Route path="/discord-activity" element={<DiscordActivity />} />
