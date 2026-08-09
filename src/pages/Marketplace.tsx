@@ -25,6 +25,7 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTranslation } from "react-i18next";
+import { SellerOrders } from "@/components/marketplace/SellerOrders";
 
 interface MarketplaceProduct {
   id: string;
