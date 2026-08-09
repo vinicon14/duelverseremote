@@ -86,6 +86,7 @@ const TournamentManager = lazy(() => import("./pages/TournamentManager"));
 const TransferHistory = lazy(() => import("./pages/TransferHistory"));
 const Marketplace = lazy(() => import("./pages/Marketplace"));
 const MyItems = lazy(() => import("./pages/MyItems"));
+const MyOrders = lazy(() => import("./pages/MyOrders"));
 const BuyDuelCoins = lazy(() => import("./pages/BuyDuelCoins"));
 const ProHome = lazy(() => import("./pages/pro/ProHome"));
 const ProDuels = lazy(() => import("./pages/pro/ProDuels"));
