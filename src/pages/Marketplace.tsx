@@ -637,8 +637,14 @@ export default function Marketplace() {
                 )}
               </SheetContent>
             </Sheet>
+
+            <Button variant="outline" onClick={() => navigate("/my-orders")} className="gap-2">
+              <Package className="w-4 h-4" />
+              Meus pedidos
+            </Button>
           </div>
         </div>
+
 
         {/* Search Bar */}
         <div className="relative mb-6">
