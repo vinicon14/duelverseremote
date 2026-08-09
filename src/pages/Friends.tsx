@@ -391,9 +391,16 @@ const Friends = () => {
                             <Button
                               variant="outline"
                               size="sm"
+                              className="relative"
                               onClick={() => navigate(`/chat/${friend.user_id}`)}
                             >
+                              <MessageCircle className="w-4 h-4 mr-1" />
                               {t('friends.chat')}
+                              {unreadFrom(friend.user_id) > 0 && (
+                                <span className="absolute -top-2 -right-2 min-w-5 h-5 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
+                                  {unreadFrom(friend.user_id) > 9 ? "9+" : unreadFrom(friend.user_id)}
+                                </span>
+                              )}
                             </Button>
                             <Button
                               size="sm"
