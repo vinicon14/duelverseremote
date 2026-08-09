@@ -667,7 +667,18 @@ export default function Marketplace() {
                 {t('marketplace.tabMyProducts')}
               </TabsTrigger>
             )}
+            {isPro && (
+              <TabsTrigger value="seller-orders" className="gap-1 sm:gap-2 text-xs sm:text-sm flex-1 sm:flex-none">
+                <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                Pedidos recebidos
+              </TabsTrigger>
+            )}
           </TabsList>
+
+          <TabsContent value="seller-orders">
+            <SellerOrders />
+          </TabsContent>
+
 
           {/* Official Products Tab */}
           <TabsContent value="official">
