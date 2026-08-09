@@ -14,9 +14,10 @@ import { Input } from "@/components/ui/input";
 import { Navbar } from "@/components/Navbar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { Users, UserPlus, Check, X, Search, Swords } from "lucide-react";
+import { Users, UserPlus, Check, X, Search, Swords, MessageCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useFriendsOnlineStatus } from "@/hooks/useFriendsOnlineStatus";
+import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { useTranslation } from "react-i18next";
 
 const Friends = () => {
@@ -37,6 +38,9 @@ const Friends = () => {
   
   // Hook que usa Presence para verificar status online real
   const { isOnline } = useFriendsOnlineStatus(friendIds);
+
+  // Mensagens privadas não lidas por amigo
+  const { unreadFrom, total: totalUnread } = useUnreadMessages();
 
   useEffect(() => {
     checkAuth();
@@ -317,8 +321,13 @@ const Friends = () => {
 
         <Tabs defaultValue="friends" className="space-y-6">
           <TabsList className="grid w-full max-w-md grid-cols-3">
-            <TabsTrigger value="friends">
+            <TabsTrigger value="friends" className="relative">
               {t('friends.tabFriends', { count: friends.length })}
+              {totalUnread > 0 && (
+                <span className="ml-1 min-w-4 h-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
+                  {totalUnread > 9 ? "9+" : totalUnread}
+                </span>
+              )}
             </TabsTrigger>
             <TabsTrigger value="requests">
               {t('friends.tabRequests', { count: pendingRequests.length })}
@@ -387,9 +396,16 @@ const Friends = () => {
                             <Button
                               variant="outline"
                               size="sm"
+                              className="relative"
                               onClick={() => navigate(`/chat/${friend.user_id}`)}
                             >
+                              <MessageCircle className="w-4 h-4 mr-1" />
                               {t('friends.chat')}
+                              {unreadFrom(friend.user_id) > 0 && (
+                                <span className="absolute -top-2 -right-2 min-w-5 h-5 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
+                                  {unreadFrom(friend.user_id) > 9 ? "9+" : unreadFrom(friend.user_id)}
+                                </span>
+                              )}
                             </Button>
                             <Button
                               size="sm"

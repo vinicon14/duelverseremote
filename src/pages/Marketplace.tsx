@@ -25,6 +25,7 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTranslation } from "react-i18next";
+import { SellerOrders } from "@/components/marketplace/SellerOrders";
 
 interface MarketplaceProduct {
   id: string;
@@ -636,8 +637,14 @@ export default function Marketplace() {
                 )}
               </SheetContent>
             </Sheet>
+
+            <Button variant="outline" onClick={() => navigate("/my-orders")} className="gap-2">
+              <Package className="w-4 h-4" />
+              Meus pedidos
+            </Button>
           </div>
         </div>
+
 
         {/* Search Bar */}
         <div className="relative mb-6">
@@ -667,7 +674,18 @@ export default function Marketplace() {
                 {t('marketplace.tabMyProducts')}
               </TabsTrigger>
             )}
+            {isPro && (
+              <TabsTrigger value="seller-orders" className="gap-1 sm:gap-2 text-xs sm:text-sm flex-1 sm:flex-none">
+                <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                Pedidos recebidos
+              </TabsTrigger>
+            )}
           </TabsList>
+
+          <TabsContent value="seller-orders">
+            <SellerOrders />
+          </TabsContent>
+
 
           {/* Official Products Tab */}
           <TabsContent value="official">

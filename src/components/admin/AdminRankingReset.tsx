@@ -49,7 +49,7 @@ export function AdminRankingReset() {
           Resetar Ranqueada
         </CardTitle>
         <CardDescription>
-          Zera os pontos de ranking de todos os jogadores. Use ao iniciar uma nova temporada ou quando uma nova Banlist entrar em vigor.
+          Zera os pontos de ranking de Yu-Gi-Oh! (Advanced, Rush e Genesis). Use ao iniciar uma nova temporada ou quando uma nova Banlist entrar em vigor.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -58,10 +58,10 @@ export function AdminRankingReset() {
           <Select value={tcg} onValueChange={setTcg}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos os TCGs</SelectItem>
-              <SelectItem value="yugioh">Yu-Gi-Oh!</SelectItem>
-              <SelectItem value="mtg">Magic</SelectItem>
-              <SelectItem value="pokemon">Pokémon</SelectItem>
+              <SelectItem value="all">Todas as categorias</SelectItem>
+              <SelectItem value="advanced">Yu-Gi-Oh! Advanced</SelectItem>
+              <SelectItem value="rush">Yu-Gi-Oh! Rush Duel</SelectItem>
+              <SelectItem value="genesis">Yu-Gi-Oh! Genesis</SelectItem>
             </SelectContent>
           </Select>
         </div>

@@ -2666,6 +2666,41 @@ export type Database = {
           username: string
         }[]
       }
+      seller_marketplace_orders: {
+        Args: never
+        Returns: {
+          buyer_id: string
+          buyer_username: string
+          created_at: string
+          id: string
+          is_physical: boolean
+          product_category: string
+          product_id: string
+          product_image_url: string
+          product_name: string
+          quantity: number
+          shipping_address: string
+          shipping_city: string
+          shipping_complement: string
+          shipping_district: string
+          shipping_number: string
+          shipping_phone: string
+          shipping_state: string
+          shipping_zip: string
+          status: string
+          total_price: number
+          tracking_code: string
+          updated_at: string
+        }[]
+      }
+      seller_update_order_status: {
+        Args: {
+          p_purchase_id: string
+          p_status: string
+          p_tracking_code?: string
+        }
+        Returns: Json
+      }
       set_match_winner: {
         Args: { p_match_id: string; p_winner_id: string }
         Returns: Json

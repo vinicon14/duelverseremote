@@ -11,7 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/Navbar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { Trophy, Swords, Star, Calendar, Video, Eye, Play, Sparkles, Loader2, Gift, CheckCircle2, Clapperboard, Target, Shield } from "lucide-react";
+import { Trophy, Swords, Star, Calendar, Video, Eye, Play, Sparkles, Loader2, Gift, CheckCircle2, Clapperboard, Target, Shield, Package } from "lucide-react";
+import { ChangeNicknameDialog } from "@/components/profile/ChangeNicknameDialog";
 import { TwoFactorSetup } from "@/components/TwoFactorSetup";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { ChangePasswordForm } from "@/components/ChangePasswordForm";
@@ -504,8 +505,16 @@ const Profile = () => {
                   </div>
 
                   {isOwnProfile && (
-                    <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+                    <div className="flex flex-col sm:flex-row flex-wrap gap-2 w-full md:w-auto">
                       <ChangePasswordForm />
+                      <ChangeNicknameDialog
+                        currentUsername={profile?.username}
+                        onChanged={(username) => setProfile((prev: any) => ({ ...prev, username }))}
+                      />
+                      <Button variant="outline" onClick={() => navigate('/my-orders')} className="w-full sm:w-auto">
+                        <Package className="mr-2 h-4 w-4" />
+                        Meus pedidos
+                      </Button>
                       <Button onClick={() => navigate('/duels')} className="btn-mystic text-white">
                         <Swords className="mr-2 h-4 w-4" />
                         {t('profile.newDuel')}

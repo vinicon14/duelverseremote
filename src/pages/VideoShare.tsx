@@ -182,10 +182,20 @@ export default function VideoShare() {
           {/* Video Player */}
           <div className="aspect-video bg-black rounded-lg overflow-hidden mb-6">
             <video
+              key={recording.id}
               src={recording.video_url}
               controls
-              autoPlay
+              playsInline
+              preload="metadata"
+              controlsList="nodownload"
               className="w-full h-full"
+              onError={() =>
+                toast({
+                  title: "Erro ao reproduzir",
+                  description: "Não foi possível carregar este vídeo. Tente novamente em instantes.",
+                  variant: "destructive",
+                })
+              }
             />
           </div>
 
