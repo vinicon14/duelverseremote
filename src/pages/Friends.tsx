@@ -14,9 +14,10 @@ import { Input } from "@/components/ui/input";
 import { Navbar } from "@/components/Navbar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { Users, UserPlus, Check, X, Search, Swords } from "lucide-react";
+import { Users, UserPlus, Check, X, Search, Swords, MessageCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useFriendsOnlineStatus } from "@/hooks/useFriendsOnlineStatus";
+import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { useTranslation } from "react-i18next";
 
 const Friends = () => {
