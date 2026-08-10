@@ -631,7 +631,15 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         setSpectatorPeerIds((prev) => (prev.includes(remotePeerId) ? prev : [...prev, remotePeerId]));
       }
 
+      // A spectator asked us (a player) to (re)send our offer.
+      if (payload.type === "request-offer") {
+        if (isSpectator && !audioBroadcastOnly) return;
+        void sendOfferTo(remotePeerId, !!payload.rebuild);
+        return;
+      }
+
       if (payload.type === "ready") {
+
         // Remember whether this peer is a spectator so it never takes a video slot.
         if (payload.isSpectator) {
           if (!spectatorPeersRef.current.has(remotePeerId)) {
