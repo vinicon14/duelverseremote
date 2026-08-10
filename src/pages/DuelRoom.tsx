@@ -523,7 +523,11 @@ const DuelRoom = () => {
       // Se a sala tem slots abertos para o jogador entrar
       const isAlreadyInDuel = isCreator || isOpponent || isPlayer3 || isPlayer4;
       const entryRole = searchParams.get('role');
-      const wantsToSpectate = entryRole === 'spectate' || entryRole === 'judge';
+      // Mobile não entra como jogador: carrega direto no modo espectador.
+      const isPhoneViewport =
+        typeof window !== 'undefined' && window.innerWidth < 768;
+      const wantsToSpectate =
+        entryRole === 'spectate' || entryRole === 'judge' || (isPhoneViewport && !isAlreadyInDuel);
 
       if (!isAlreadyInDuel && !wantsToSpectate) {
         // Try to join an open slot via secure RPC (atomic + validated server-side)
