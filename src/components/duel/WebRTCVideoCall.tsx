@@ -539,40 +539,31 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     return pc;
   }, [userId, isSpectator, audioBroadcastOnly, getActiveOutboundStream]);
 
-  const createSpectatorOffer = useCallback(async (playerId: string) => {
-    if (!isSpectator || playerId === userId) return;
+  // Player-side: build/refresh a connection toward a peer and send an offer.
+  // Only peers that actually have media (the duelists) create offers — this
+  // removes the glare that was leaving spectators with one frozen panel.
+  const sendOfferTo = useCallback(async (remotePeerId: string, forceRebuild = false) => {
+    if (isSpectator && !audioBroadcastOnly) return;
+    if (remotePeerId === userId) return;
 
-    if (!peersRef.current.has(playerId)) {
-      createPeerConnection(playerId);
-    }
-    let peer = peersRef.current.get(playerId);
-    if (!peer || peer.makingOffer) return;
-
-    // An unanswered SDP offer remains in `have-local-offer`; ICE never reaches
-    // failed, so the ICE restart handler cannot recover it. Rebuild explicitly
-    // and let the next heartbeat negotiate from a clean stable state.
-    if (
+    let peer = peersRef.current.get(remotePeerId);
+    const isDead =
+      !!peer && ["failed", "closed", "disconnected"].includes(peer.pc.connectionState);
+    const isStuck =
+      !!peer &&
       peer.pc.signalingState !== "stable" &&
       peer.pc.connectionState !== "connected" &&
-      Date.now() - peer.createdAt > 8000
-    ) {
-      console.warn("[WebRTC] Rebuilding stuck spectator negotiation:", playerId);
-      createPeerConnection(playerId);
-      peer = peersRef.current.get(playerId);
+      Date.now() - peer.createdAt > 8000;
+
+    if (!peer || isDead || isStuck || forceRebuild) {
+      createPeerConnection(remotePeerId);
+      peer = peersRef.current.get(remotePeerId);
     }
-    if (!peer || peer.pc.signalingState !== "stable") return;
-    // An audio-only connection is not healthy for a spectator. Previously any
-    // live track (usually audio) stopped the retry loop, leaving one panel stuck
-    // forever when that player's video m-line was lost during negotiation.
-    const hasLiveVideo = peer.stream
-      ?.getVideoTracks()
-      .some((track) => track.readyState === "live") ?? false;
-    if (peer.pc.connectionState === "connected" && hasLiveVideo) return;
+    if (!peer || peer.makingOffer || peer.pc.signalingState !== "stable") return;
 
     try {
       peer.makingOffer = true;
-      const offer = await peer.pc.createOffer();
-      await peer.pc.setLocalDescription(offer);
+      await peer.pc.setLocalDescription();
       await channelRef.current?.send({
         type: "broadcast",
         event: "webrtc-signal",
@@ -580,17 +571,49 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
           type: "offer",
           sdp: peer.pc.localDescription,
           senderId: userId,
-          targetId: playerId,
-          isSpectator: true,
+          targetId: remotePeerId,
+          isSpectator,
         },
       });
-      console.log("[WebRTC] Spectator offer sent to player:", playerId);
+      console.log("[WebRTC] Offer sent to:", remotePeerId);
     } catch (err) {
-      console.warn("[WebRTC] Spectator offer failed:", playerId, err);
+      console.warn("[WebRTC] Offer failed:", remotePeerId, err);
     } finally {
       peer.makingOffer = false;
     }
-  }, [isSpectator, userId, createPeerConnection]);
+  }, [isSpectator, audioBroadcastOnly, userId, createPeerConnection]);
+
+  // Spectator-side: never offer (receive-only). Ask the player to (re)offer until
+  // BOTH audio and video are flowing, so spectators always see AND hear everyone.
+  const createSpectatorOffer = useCallback(async (playerId: string) => {
+    if (!isSpectator || playerId === userId) return;
+
+    const peer = peersRef.current.get(playerId);
+    const liveVideo = peer?.stream?.getVideoTracks().some((t) => t.readyState === "live") ?? false;
+    const liveAudio = peer?.stream?.getAudioTracks().some((t) => t.readyState === "live") ?? false;
+    const connected = peer?.pc.connectionState === "connected";
+    if (connected && liveVideo && liveAudio) return;
+
+    // Handshake stalled: drop the local half so the incoming offer rebuilds it clean.
+    const stalled = !!peer && Date.now() - peer.createdAt > 10000 && !(connected && liveVideo);
+    if (stalled) {
+      console.warn("[WebRTC] Spectator handshake stalled, resetting peer:", playerId);
+      removePeer(playerId);
+    }
+
+    channelRef.current?.send({
+      type: "broadcast",
+      event: "webrtc-signal",
+      payload: {
+        type: "request-offer",
+        senderId: userId,
+        targetId: playerId,
+        isSpectator: true,
+        rebuild: stalled,
+      },
+    });
+  }, [isSpectator, userId, removePeer]);
+
 
   const handleSignal = useCallback(
     async (payload: any) => {
@@ -608,7 +631,15 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         setSpectatorPeerIds((prev) => (prev.includes(remotePeerId) ? prev : [...prev, remotePeerId]));
       }
 
+      // A spectator asked us (a player) to (re)send our offer.
+      if (payload.type === "request-offer") {
+        if (isSpectator && !audioBroadcastOnly) return;
+        void sendOfferTo(remotePeerId, !!payload.rebuild);
+        return;
+      }
+
       if (payload.type === "ready") {
+
         // Remember whether this peer is a spectator so it never takes a video slot.
         if (payload.isSpectator) {
           if (!spectatorPeersRef.current.has(remotePeerId)) {
@@ -647,6 +678,13 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         }
         const peer = peersRef.current.get(remotePeerId);
         if (!peer) return;
+
+        // Player side: proactively offer to whoever announced itself, so a
+        // spectator never waits on a negotiationneeded event that may not fire.
+        if (!isSpectator || audioBroadcastOnly) {
+          void sendOfferTo(remotePeerId);
+        }
+
 
         // Handshake symmetry: whenever we receive a broadcast "ready" (no targetId),
         // we reply with a targeted "ready" back so the other side ALSO creates its
@@ -731,7 +769,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         console.error("[WebRTC] signal handling error:", err);
       }
     },
-    [userId, createPeerConnection, isSpectator, audioBroadcastOnly]
+    [userId, createPeerConnection, isSpectator, audioBroadcastOnly, sendOfferTo]
   );
 
   useEffect(() => {
@@ -927,8 +965,13 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       const connectedPlayerVideos = Array.from(peersRef.current.entries()).filter(([peerId, peer]) => {
         if (spectatorPeersRef.current.has(peerId)) return false;
         if (isSpectator && playerIdsRef.current.size > 0 && !playerIdsRef.current.has(peerId)) return false;
-        return peer.stream?.getVideoTracks().some((track) => track.readyState === "live") ?? false;
+        const liveVideo = peer.stream?.getVideoTracks().some((t) => t.readyState === "live") ?? false;
+        if (!isSpectator) return liveVideo;
+        // Spectators must also HEAR each player before the heartbeat stops.
+        const liveAudio = peer.stream?.getAudioTracks().some((t) => t.readyState === "live") ?? false;
+        return liveVideo && liveAudio;
       }).length;
+
       if (connectedPlayerVideos >= expectedPlayers) return;
       announceReady();
     }, 4000);
@@ -951,13 +994,12 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     const recoverMissingVideo = () => {
       playerIdsRef.current.forEach((playerId) => {
         if (playerId === userId) return;
-        const peer = peersRef.current.get(playerId);
-        const hasLiveVideo = peer?.stream
-          ?.getVideoTracks()
-          .some((track) => track.readyState === "live") ?? false;
-        if (!hasLiveVideo) void createSpectatorOffer(playerId);
+        // createSpectatorOffer self-guards: it only re-requests when video OR
+        // audio from that player is missing.
+        void createSpectatorOffer(playerId);
       });
     };
+
 
     const interval = window.setInterval(recoverMissingVideo, 6000);
     const handleVisibility = () => {
