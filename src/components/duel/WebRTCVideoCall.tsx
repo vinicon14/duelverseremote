@@ -679,6 +679,13 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         const peer = peersRef.current.get(remotePeerId);
         if (!peer) return;
 
+        // Player side: proactively offer to whoever announced itself, so a
+        // spectator never waits on a negotiationneeded event that may not fire.
+        if (!isSpectator || audioBroadcastOnly) {
+          void sendOfferTo(remotePeerId);
+        }
+
+
         // Handshake symmetry: whenever we receive a broadcast "ready" (no targetId),
         // we reply with a targeted "ready" back so the other side ALSO creates its
         // PeerConnection. Without this, whichever peer subscribed first misses the
@@ -762,7 +769,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         console.error("[WebRTC] signal handling error:", err);
       }
     },
-    [userId, createPeerConnection, isSpectator, audioBroadcastOnly]
+    [userId, createPeerConnection, isSpectator, audioBroadcastOnly, sendOfferTo]
   );
 
   useEffect(() => {
