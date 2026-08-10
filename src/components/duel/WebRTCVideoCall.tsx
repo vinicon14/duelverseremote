@@ -989,13 +989,12 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     const recoverMissingVideo = () => {
       playerIdsRef.current.forEach((playerId) => {
         if (playerId === userId) return;
-        const peer = peersRef.current.get(playerId);
-        const hasLiveVideo = peer?.stream
-          ?.getVideoTracks()
-          .some((track) => track.readyState === "live") ?? false;
-        if (!hasLiveVideo) void createSpectatorOffer(playerId);
+        // createSpectatorOffer self-guards: it only re-requests when video OR
+        // audio from that player is missing.
+        void createSpectatorOffer(playerId);
       });
     };
+
 
     const interval = window.setInterval(recoverMissingVideo, 6000);
     const handleVisibility = () => {
