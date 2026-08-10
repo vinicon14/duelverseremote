@@ -965,8 +965,13 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       const connectedPlayerVideos = Array.from(peersRef.current.entries()).filter(([peerId, peer]) => {
         if (spectatorPeersRef.current.has(peerId)) return false;
         if (isSpectator && playerIdsRef.current.size > 0 && !playerIdsRef.current.has(peerId)) return false;
-        return peer.stream?.getVideoTracks().some((track) => track.readyState === "live") ?? false;
+        const liveVideo = peer.stream?.getVideoTracks().some((t) => t.readyState === "live") ?? false;
+        if (!isSpectator) return liveVideo;
+        // Spectators must also HEAR each player before the heartbeat stops.
+        const liveAudio = peer.stream?.getAudioTracks().some((t) => t.readyState === "live") ?? false;
+        return liveVideo && liveAudio;
       }).length;
+
       if (connectedPlayerVideos >= expectedPlayers) return;
       announceReady();
     }, 4000);
