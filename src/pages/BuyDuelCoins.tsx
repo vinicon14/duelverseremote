@@ -49,7 +49,11 @@ export default function BuyDuelCoins() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  // Pix é exclusivo do servidor brasileiro; demais regiões usam apenas cartão.
+  const isBrazilServer =
+    (typeof localStorage !== "undefined" && (localStorage.getItem("userCountry") || "").toUpperCase() === "BR") ||
+    i18n.language === "pt-BR";
   const [packages, setPackages] = useState<DuelCoinsPackage[]>([]);
   const [orders, setOrders] = useState<DuelCoinsOrder[]>([]);
   const [loading, setLoading] = useState(true);
