@@ -346,19 +346,21 @@ export default function BuyDuelCoins() {
                       )}
                     </div>
                     <div className="flex flex-col gap-2">
-                      <Button
-                        onClick={() => handleBuyPix(pkg)}
-                        disabled={buying === pkg.id || buyingCard === pkg.id}
-                        className="w-full btn-mystic"
-                        size="lg"
-                      >
-                        {buying === pkg.id ? (
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        ) : (
-                          <QrCode className="w-4 h-4 mr-2" />
-                        )}
-                        {buying === pkg.id ? t('buyCoins.generatingPix') : t('buyCoins.payPix')}
-                      </Button>
+                      {isBrazilServer && (
+                        <Button
+                          onClick={() => handleBuyPix(pkg)}
+                          disabled={buying === pkg.id || buyingCard === pkg.id}
+                          className="w-full btn-mystic"
+                          size="lg"
+                        >
+                          {buying === pkg.id ? (
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          ) : (
+                            <QrCode className="w-4 h-4 mr-2" />
+                          )}
+                          {buying === pkg.id ? t('buyCoins.generatingPix') : t('buyCoins.payPix')}
+                        </Button>
+                      )}
                       <Button
                         onClick={() => handleBuyCard(pkg)}
                         disabled={buying === pkg.id || buyingCard === pkg.id}
