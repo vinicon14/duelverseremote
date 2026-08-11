@@ -638,7 +638,7 @@ export default function Marketplace() {
                       <Button
                         className="w-full btn-mystic"
                         disabled={purchasing || cartTotal > balance}
-                        onClick={handleCheckout}
+                        onClick={() => handleCheckout()}
                       >
                         {purchasing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Check className="w-4 h-4 mr-2" />}
                         {t('marketplace.checkout')}
