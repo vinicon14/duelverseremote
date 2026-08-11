@@ -309,12 +309,19 @@ export default function Marketplace() {
     }
   };
 
-  const handleCheckout = async () => {
+  const handleCheckout = async (shipping?: ShippingInfo | null) => {
     if (!user) {
       toast({ title: "Faça login", description: "Você precisa estar logado para comprar", variant: "destructive" });
       return;
     }
     if (cart.length === 0) return;
+
+    // Produtos físicos exigem dados de entrega antes de concluir a compra.
+    const hasPhysical = cart.some((item) => isPhysicalProduct(item.product));
+    if (hasPhysical && !shipping) {
+      setShippingOpen(true);
+      return;
+    }
 
     // Check stock for all items
     for (const item of cart) {
@@ -336,6 +343,7 @@ export default function Marketplace() {
           product_id: item.product.id,
           quantity: item.quantity,
         })),
+        p_shipping: shipping ?? null,
       });
 
       if (error) throw new Error(error.message);
