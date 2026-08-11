@@ -57,7 +57,7 @@ export default function Admin() {
     <div className="min-h-screen bg-transparent">
       <Navbar />
       
-      <main className="container mx-auto px-4 py-8 pt-24">
+      <main className="container mx-auto px-4 py-8">
         <div className="mb-6 sm:mb-8">
           <div className="flex items-center gap-2 sm:gap-3 mb-2">
             <Shield className="w-6 h-6 sm:w-8 sm:h-8 text-primary shrink-0" />

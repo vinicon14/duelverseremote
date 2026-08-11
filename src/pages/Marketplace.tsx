@@ -20,8 +20,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useAccountType } from "@/hooks/useAccountType";
 import { supabase } from "@/integrations/supabase/client";
 import { ShoppingCart, Coins, Package, Sparkles, Zap, Minus, Plus, X, Loader2, ShoppingBag, Check, Store as StoreIcon, PlusCircle, Tag, Crown, Upload, Image, Search, Edit, Trash2, ToggleLeft, ToggleRight } from "lucide-react";
-import { ShippingDialog, type ShippingInfo } from "@/components/marketplace/ShippingDialog";
-import { isPhysicalProduct } from "@/hooks/useMarketplacePurchase";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -67,7 +65,6 @@ export default function Marketplace() {
   const [balance, setBalance] = useState(0);
   const [user, setUser] = useState<any>(null);
   const [purchaseSuccess, setPurchaseSuccess] = useState(false);
-  const [shippingOpen, setShippingOpen] = useState(false);
   const [filter, setFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
@@ -312,19 +309,12 @@ export default function Marketplace() {
     }
   };
 
-  const handleCheckout = async (shipping?: ShippingInfo | null) => {
+  const handleCheckout = async () => {
     if (!user) {
       toast({ title: "Faça login", description: "Você precisa estar logado para comprar", variant: "destructive" });
       return;
     }
     if (cart.length === 0) return;
-
-    // Produtos físicos exigem dados de entrega antes de concluir a compra.
-    const hasPhysical = cart.some((item) => isPhysicalProduct(item.product));
-    if (hasPhysical && !shipping) {
-      setShippingOpen(true);
-      return;
-    }
 
     // Check stock for all items
     for (const item of cart) {
@@ -346,7 +336,6 @@ export default function Marketplace() {
           product_id: item.product.id,
           quantity: item.quantity,
         })),
-        p_shipping: shipping ?? null,
       });
 
       if (error) throw new Error(error.message);
@@ -638,7 +627,7 @@ export default function Marketplace() {
                       <Button
                         className="w-full btn-mystic"
                         disabled={purchasing || cartTotal > balance}
-                        onClick={() => handleCheckout()}
+                        onClick={handleCheckout}
                       >
                         {purchasing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Check className="w-4 h-4 mr-2" />}
                         {t('marketplace.checkout')}
@@ -649,19 +638,9 @@ export default function Marketplace() {
               </SheetContent>
             </Sheet>
 
-            <ShippingDialog
-              open={shippingOpen}
-              onOpenChange={setShippingOpen}
-              submitting={purchasing}
-              onConfirm={(info) => {
-                setShippingOpen(false);
-                handleCheckout(info);
-              }}
-            />
-
             <Button variant="outline" onClick={() => navigate("/my-orders")} className="gap-2">
               <Package className="w-4 h-4" />
-              {t('orders.title')}
+              Meus pedidos
             </Button>
           </div>
         </div>
