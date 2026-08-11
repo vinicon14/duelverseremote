@@ -866,5 +866,49 @@
     "sentToastDesc": "Verifica se è apparsa una notifica del browser",
     "errorToast": "Errore durante la creazione della notifica",
     "unknownError": "Errore sconosciuto"
+  },
+  "orders": {
+    "title": "I miei ordini",
+    "empty": "Non hai ancora effettuato ordini.",
+    "goStore": "Vai al negozio",
+    "tracking": "Tracciamento",
+    "copied": "Codice copiato",
+    "loadError": "Impossibile caricare i tuoi ordini.",
+    "error": "Errore",
+    "removed": "Prodotto rimosso",
+    "status": {
+      "pending": "Ordine ricevuto",
+      "paid": "Pagamento confermato",
+      "completed": "Pagamento confermato",
+      "preparing": "In preparazione",
+      "shipped": "Spedito",
+      "shipping": "In transito",
+      "delivered": "Consegnato",
+      "cancelled": "Annullato"
+    }
+  },
+  "shipping": {
+    "title": "Dati di consegna",
+    "desc": "I prodotti fisici richiedono un indirizzo di spedizione.",
+    "useLocation": "Usa posizione attuale",
+    "phone": "Telefono",
+    "zip": "CAP",
+    "address": "Indirizzo",
+    "number": "Numero",
+    "complement": "Interno",
+    "district": "Quartiere",
+    "city": "Città",
+    "state": "Provincia",
+    "cancel": "Annulla",
+    "confirm": "Conferma acquisto",
+    "incomplete": "Dati incompleti",
+    "incompleteDesc": "Compila telefono, CAP, indirizzo, numero, città e provincia.",
+    "unavailable": "Non disponibile",
+    "unavailableDesc": "Il tuo dispositivo non supporta la geolocalizzazione.",
+    "filled": "Posizione compilata",
+    "filledDesc": "Controlla e completa i dati.",
+    "locError": "Impossibile ottenere l'indirizzo.",
+    "denied": "Permesso negato",
+    "deniedDesc": "Inserisci l'indirizzo manualmente."
   }
 }

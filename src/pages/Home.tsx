@@ -28,7 +28,7 @@ export default function Home() {
         <h1 className="sr-only">{t('home.quickMatchTitle')} - Duelverse</h1>
         <div className="flex flex-col md:flex-row gap-4 md:gap-6">
           {/* Quick Match - HERO SECTION */}
-          <Card className="card-mystic hover:border-primary/40 transition-all cursor-pointer animate-fade-in-up delay-100 flex-1 group" onClick={() => navigate('/matchmaking')}>
+          <Card className="card-mystic hover:border-primary/40 transition-all cursor-pointer animate-fade-in-up delay-100 flex-1 group hidden md:block" onClick={() => navigate('/matchmaking')}>
             <CardContent className="p-6 md:p-10 flex flex-col items-center justify-center text-center h-full relative">
 
               <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-xl"></div>

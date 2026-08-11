@@ -866,5 +866,49 @@
     "sentToastDesc": "Prüfen Sie, ob eine Browser-Benachrichtigung erschien",
     "errorToast": "Fehler beim Erstellen der Benachrichtigung",
     "unknownError": "Unbekannter Fehler"
+  },
+  "orders": {
+    "title": "Meine Bestellungen",
+    "empty": "Du hast noch keine Bestellungen aufgegeben.",
+    "goStore": "Zum Shop",
+    "tracking": "Sendungsverfolgung",
+    "copied": "Code kopiert",
+    "loadError": "Bestellungen konnten nicht geladen werden.",
+    "error": "Fehler",
+    "removed": "Entferntes Produkt",
+    "status": {
+      "pending": "Bestellung erhalten",
+      "paid": "Zahlung bestätigt",
+      "completed": "Zahlung bestätigt",
+      "preparing": "Wird vorbereitet",
+      "shipped": "Versandt",
+      "shipping": "Unterwegs",
+      "delivered": "Zugestellt",
+      "cancelled": "Storniert"
+    }
+  },
+  "shipping": {
+    "title": "Lieferdaten",
+    "desc": "Physische Produkte benötigen eine Lieferadresse.",
+    "useLocation": "Aktuellen Standort verwenden",
+    "phone": "Telefon",
+    "zip": "PLZ",
+    "address": "Adresse",
+    "number": "Nummer",
+    "complement": "Zusatz",
+    "district": "Stadtteil",
+    "city": "Stadt",
+    "state": "Bundesland",
+    "cancel": "Abbrechen",
+    "confirm": "Kauf bestätigen",
+    "incomplete": "Unvollständige Daten",
+    "incompleteDesc": "Bitte Telefon, PLZ, Adresse, Nummer, Stadt und Bundesland ausfüllen.",
+    "unavailable": "Nicht verfügbar",
+    "unavailableDesc": "Dein Gerät unterstützt keine Standortbestimmung.",
+    "filled": "Standort übernommen",
+    "filledDesc": "Bitte Daten prüfen und ergänzen.",
+    "locError": "Adresse konnte nicht ermittelt werden.",
+    "denied": "Zugriff verweigert",
+    "deniedDesc": "Bitte Adresse manuell eingeben."
   }
 }

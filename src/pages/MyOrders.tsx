@@ -1,6 +1,7 @@
 /**
  * DuelVerse - Meus Pedidos
  * Lista todos os pedidos do usuário com status e código de rastreio.
+ * Textos localizados via i18n (namespace `orders`).
  */
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -10,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "react-i18next";
 import { Package, Loader2, Copy, ShoppingBag, Truck } from "lucide-react";
 
 interface OrderRow {
@@ -27,13 +29,16 @@ interface OrderRow {
   marketplace_products: { name: string; image_url: string | null; category: string; product_type: string } | null;
 }
 
-export const ORDER_STATUS_LABELS: Record<string, { label: string; className: string }> = {
-  pending: { label: "Pendente", className: "bg-yellow-500/20 text-yellow-500" },
-  completed: { label: "Concluído", className: "bg-green-500/20 text-green-500" },
-  preparing: { label: "Em preparação", className: "bg-blue-500/20 text-blue-400" },
-  shipped: { label: "Enviado", className: "bg-purple-500/20 text-purple-400" },
-  delivered: { label: "Entregue", className: "bg-green-500/20 text-green-500" },
-  cancelled: { label: "Cancelado", className: "bg-destructive/20 text-destructive" },
+/** Classes visuais por status — os rótulos vêm do i18n (`orders.status.*`). */
+export const ORDER_STATUS_CLASSES: Record<string, string> = {
+  pending: "bg-yellow-500/20 text-yellow-500",
+  paid: "bg-emerald-500/20 text-emerald-400",
+  completed: "bg-green-500/20 text-green-500",
+  preparing: "bg-blue-500/20 text-blue-400",
+  shipped: "bg-purple-500/20 text-purple-400",
+  shipping: "bg-orange-500/20 text-orange-400",
+  delivered: "bg-green-500/20 text-green-500",
+  cancelled: "bg-destructive/20 text-destructive",
 };
 
 export default function MyOrders() {
@@ -41,6 +46,7 @@ export default function MyOrders() {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { t, i18n } = useTranslation();
 
   useEffect(() => {
     const load = async () => {
@@ -56,18 +62,18 @@ export default function MyOrders() {
         .order("created_at", { ascending: false });
 
       if (error) {
-        toast({ title: "Erro", description: "Não foi possível carregar seus pedidos.", variant: "destructive" });
+        toast({ title: t("orders.error"), description: t("orders.loadError"), variant: "destructive" });
       } else {
         setOrders((data as unknown as OrderRow[]) || []);
       }
       setLoading(false);
     };
     load();
-  }, [navigate, toast]);
+  }, [navigate, toast, t]);
 
   const copyTracking = (code: string) => {
     navigator.clipboard.writeText(code);
-    toast({ title: "Código copiado", description: code });
+    toast({ title: t("orders.copied"), description: code });
   };
 
   return (
@@ -76,7 +82,7 @@ export default function MyOrders() {
       <main className="container mx-auto px-4 py-8 pt-24 max-w-4xl">
         <div className="flex items-center gap-3 mb-6">
           <Package className="w-7 h-7 text-primary" />
-          <h1 className="text-2xl sm:text-3xl font-bold text-gradient-mystic">Meus Pedidos</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gradient-mystic">{t("orders.title")}</h1>
         </div>
 
         {loading ? (
@@ -86,19 +92,20 @@ export default function MyOrders() {
         ) : orders.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
             <ShoppingBag className="w-16 h-16 mb-4 opacity-30" />
-            <p className="mb-4">Você ainda não realizou pedidos.</p>
-            <Button className="btn-mystic" onClick={() => navigate("/marketplace")}>Ir para a loja</Button>
+            <p className="mb-4">{t("orders.empty")}</p>
+            <Button className="btn-mystic" onClick={() => navigate("/marketplace")}>{t("orders.goStore")}</Button>
           </div>
         ) : (
           <div className="space-y-3">
             {orders.map((order) => {
-              const status = ORDER_STATUS_LABELS[order.status] || { label: order.status, className: "bg-muted text-muted-foreground" };
+              const statusClass = ORDER_STATUS_CLASSES[order.status] || "bg-muted text-muted-foreground";
+              const statusLabel = t(`orders.status.${order.status}`, { defaultValue: order.status });
               const product = order.marketplace_products;
               return (
                 <Card key={order.id} className="border-border">
                   <CardContent className="p-4 flex gap-4 items-start">
                     {product?.image_url ? (
-                      <img src={product.image_url} alt={product.name} className="w-16 h-16 rounded object-cover" />
+                      <img src={product.image_url} alt={product.name} loading="lazy" className="w-16 h-16 rounded object-cover" />
                     ) : (
                       <div className="w-16 h-16 rounded bg-muted flex items-center justify-center">
                         <Package className="w-7 h-7 text-muted-foreground" />
@@ -106,11 +113,11 @@ export default function MyOrders() {
                     )}
                     <div className="flex-1 min-w-0 space-y-1">
                       <div className="flex items-start justify-between gap-2 flex-wrap">
-                        <p className="font-semibold">{product?.name || "Produto removido"}</p>
-                        <Badge className={`${status.className} border-0`}>{status.label}</Badge>
+                        <p className="font-semibold">{product?.name || t("orders.removed")}</p>
+                        <Badge className={`${statusClass} border-0`}>{statusLabel}</Badge>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        {new Date(order.created_at).toLocaleString("pt-BR")} · {order.quantity}x · {order.total_price} DuelCoins
+                        {new Date(order.created_at).toLocaleString(i18n.language)} · {order.quantity}x · {order.total_price} DuelCoins
                       </p>
                       {order.shipping_address && (
                         <p className="text-xs text-muted-foreground flex items-center gap-1">
@@ -124,7 +131,7 @@ export default function MyOrders() {
                           className="text-xs text-primary hover:underline flex items-center gap-1"
                         >
                           <Copy className="w-3 h-3" />
-                          Rastreio: {order.tracking_code}
+                          {t("orders.tracking")}: {order.tracking_code}
                         </button>
                       )}
                     </div>
