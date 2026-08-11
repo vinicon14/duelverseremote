@@ -649,9 +649,19 @@ export default function Marketplace() {
               </SheetContent>
             </Sheet>
 
+            <ShippingDialog
+              open={shippingOpen}
+              onOpenChange={setShippingOpen}
+              submitting={purchasing}
+              onConfirm={(info) => {
+                setShippingOpen(false);
+                handleCheckout(info);
+              }}
+            />
+
             <Button variant="outline" onClick={() => navigate("/my-orders")} className="gap-2">
               <Package className="w-4 h-4" />
-              Meus pedidos
+              {t('orders.title')}
             </Button>
           </div>
         </div>
