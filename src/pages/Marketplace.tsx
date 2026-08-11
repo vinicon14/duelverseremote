@@ -65,6 +65,7 @@ export default function Marketplace() {
   const [balance, setBalance] = useState(0);
   const [user, setUser] = useState<any>(null);
   const [purchaseSuccess, setPurchaseSuccess] = useState(false);
+  const [shippingOpen, setShippingOpen] = useState(false);
   const [filter, setFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
