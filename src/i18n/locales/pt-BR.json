@@ -895,5 +895,49 @@
   "whatsappGroup": {
     "label": "Grupo WhatsApp",
     "dismissHint": "Clique com o botão direito para ocultar"
+  },
+  "orders": {
+    "title": "Meus Pedidos",
+    "empty": "Você ainda não realizou pedidos.",
+    "goStore": "Ir para a loja",
+    "tracking": "Rastreio",
+    "copied": "Código copiado",
+    "loadError": "Não foi possível carregar seus pedidos.",
+    "error": "Erro",
+    "removed": "Produto removido",
+    "status": {
+      "pending": "Pedido recebido",
+      "paid": "Pagamento confirmado",
+      "completed": "Pagamento confirmado",
+      "preparing": "Pedido sendo preparado",
+      "shipped": "Enviado",
+      "shipping": "A caminho",
+      "delivered": "Entregue",
+      "cancelled": "Cancelado"
+    }
+  },
+  "shipping": {
+    "title": "Dados de entrega",
+    "desc": "Produtos físicos precisam de endereço para envio.",
+    "useLocation": "Usar localização atual",
+    "phone": "Telefone",
+    "zip": "CEP",
+    "address": "Endereço",
+    "number": "Número",
+    "complement": "Complemento",
+    "district": "Bairro",
+    "city": "Cidade",
+    "state": "Estado",
+    "cancel": "Cancelar",
+    "confirm": "Confirmar compra",
+    "incomplete": "Dados incompletos",
+    "incompleteDesc": "Preencha telefone, CEP, endereço, número, cidade e estado.",
+    "unavailable": "Indisponível",
+    "unavailableDesc": "Seu dispositivo não suporta geolocalização.",
+    "filled": "Localização preenchida",
+    "filledDesc": "Confira e complete os dados.",
+    "locError": "Não foi possível obter o endereço.",
+    "denied": "Permissão negada",
+    "deniedDesc": "Preencha o endereço manualmente."
   }
 }
