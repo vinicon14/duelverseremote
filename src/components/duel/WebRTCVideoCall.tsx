@@ -744,9 +744,9 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       const peer = peersRef.current.get(remotePeerId);
       if (!peer) return;
       const pc = peer.pc;
-      // Receive-only spectators must always accept the player's authoritative
-      // offer instead of deciding politeness from arbitrary UUID ordering.
-      const polite = isSpectator || userId < remotePeerId;
+      // The side that does not own the offer is always polite and accepts the
+      // incoming description (with implicit rollback when needed).
+      const polite = !shouldOfferTo(remotePeerId);
 
       try {
         if (payload.type === "offer" || payload.type === "answer") {
