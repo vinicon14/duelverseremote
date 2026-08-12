@@ -335,6 +335,32 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     console.log("[WebRTC] Peer removed:", peerId);
   }, []);
 
+  // Deterministic single-offerer rule. Two duelists offering each other at the
+  // same time (glare) was leaving both players without the opponent's video.
+  // - spectators never offer
+  // - players always offer toward spectators
+  // - between two players, only the lower userId offers; the other one asks
+  const shouldOfferTo = useCallback((remotePeerId: string) => {
+    if (isSpectator && !audioBroadcastOnly) return false;
+    if (remotePeerId === userId) return false;
+    if (spectatorPeersRef.current.has(remotePeerId)) return true;
+    return userId < remotePeerId;
+  }, [isSpectator, audioBroadcastOnly, userId]);
+
+  const requestOfferFrom = useCallback((remotePeerId: string, rebuild = false) => {
+    channelRef.current?.send({
+      type: "broadcast",
+      event: "webrtc-signal",
+      payload: {
+        type: "request-offer",
+        senderId: userId,
+        targetId: remotePeerId,
+        isSpectator,
+        rebuild,
+      },
+    });
+  }, [userId, isSpectator]);
+
   const createPeerConnection = useCallback((remotePeerId: string) => {
     const existing = peersRef.current.get(remotePeerId);
     if (existing) {
@@ -512,10 +538,10 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
 
 
     pc.onnegotiationneeded = async () => {
-      // A regular spectator is receive-only. Let the player create the offer;
-      // otherwise recvonly transceivers trigger a competing spectator offer and
-      // the real player offer can be discarded during glare resolution.
-      if (isSpectator && !audioBroadcastOnly) return;
+      // Only the designated offerer for this peer may negotiate. Spectators are
+      // receive-only, and between two duelists a single side owns the offer so
+      // both cameras always come through.
+      if (!shouldOfferTo(remotePeerId)) return;
       try {
         peerState.makingOffer = true;
         await pc.setLocalDescription();
@@ -537,7 +563,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     };
 
     return pc;
-  }, [userId, isSpectator, audioBroadcastOnly, getActiveOutboundStream]);
+  }, [userId, isSpectator, audioBroadcastOnly, getActiveOutboundStream, shouldOfferTo]);
 
   // Player-side: build/refresh a connection toward a peer and send an offer.
   // Only peers that actually have media (the duelists) create offers — this
@@ -679,10 +705,12 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         const peer = peersRef.current.get(remotePeerId);
         if (!peer) return;
 
-        // Player side: proactively offer to whoever announced itself, so a
-        // spectator never waits on a negotiationneeded event that may not fire.
-        if (!isSpectator || audioBroadcastOnly) {
+        // Single-offerer rule: either we offer, or we explicitly ask the other
+        // side to offer. Never both — that glare was killing player<->player video.
+        if (shouldOfferTo(remotePeerId)) {
           void sendOfferTo(remotePeerId);
+        } else if (!isSpectator || audioBroadcastOnly) {
+          requestOfferFrom(remotePeerId);
         }
 
 
@@ -716,9 +744,9 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       const peer = peersRef.current.get(remotePeerId);
       if (!peer) return;
       const pc = peer.pc;
-      // Receive-only spectators must always accept the player's authoritative
-      // offer instead of deciding politeness from arbitrary UUID ordering.
-      const polite = isSpectator || userId < remotePeerId;
+      // The side that does not own the offer is always polite and accepts the
+      // incoming description (with implicit rollback when needed).
+      const polite = !shouldOfferTo(remotePeerId);
 
       try {
         if (payload.type === "offer" || payload.type === "answer") {
@@ -769,7 +797,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         console.error("[WebRTC] signal handling error:", err);
       }
     },
-    [userId, createPeerConnection, isSpectator, audioBroadcastOnly, sendOfferTo]
+    [userId, createPeerConnection, isSpectator, audioBroadcastOnly, sendOfferTo, shouldOfferTo, requestOfferFrom]
   );
 
   useEffect(() => {
@@ -958,6 +986,22 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
           });
           void createSpectatorOffer(playerId);
         });
+      } else {
+        // Player side: chase every other official player. Offer when we own the
+        // offer for that pair, otherwise ask them to offer us.
+        playerIdsRef.current.forEach((playerId) => {
+          if (playerId === userId) return;
+          const peer = peersRef.current.get(playerId);
+          const liveVideo = peer?.stream?.getVideoTracks().some((t) => t.readyState === "live") ?? false;
+          const connected = peer?.pc.connectionState === "connected";
+          if (connected && liveVideo) return;
+          const stalled = !!peer && Date.now() - peer.createdAt > 10000 && !connected;
+          if (shouldOfferTo(playerId)) {
+            void sendOfferTo(playerId, stalled);
+          } else {
+            requestOfferFrom(playerId, stalled);
+          }
+        });
       }
     };
 
@@ -982,7 +1026,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       clearInterval(interval);
       window.clearTimeout(initialAnnouncement);
     };
-  }, [userId, isSpectator, maxPlayers, remotePeerIds, createSpectatorOffer]);
+  }, [userId, isSpectator, maxPlayers, remotePeerIds, createSpectatorOffer, shouldOfferTo, sendOfferTo, requestOfferFrom]);
 
   // A live MediaStreamTrack may end after a successful handshake without moving
   // RTCPeerConnection to "failed" (camera replacement, mobile backgrounding,
