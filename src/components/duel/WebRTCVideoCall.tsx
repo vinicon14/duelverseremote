@@ -335,6 +335,32 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     console.log("[WebRTC] Peer removed:", peerId);
   }, []);
 
+  // Deterministic single-offerer rule. Two duelists offering each other at the
+  // same time (glare) was leaving both players without the opponent's video.
+  // - spectators never offer
+  // - players always offer toward spectators
+  // - between two players, only the lower userId offers; the other one asks
+  const shouldOfferTo = useCallback((remotePeerId: string) => {
+    if (isSpectator && !audioBroadcastOnly) return false;
+    if (remotePeerId === userId) return false;
+    if (spectatorPeersRef.current.has(remotePeerId)) return true;
+    return userId < remotePeerId;
+  }, [isSpectator, audioBroadcastOnly, userId]);
+
+  const requestOfferFrom = useCallback((remotePeerId: string, rebuild = false) => {
+    channelRef.current?.send({
+      type: "broadcast",
+      event: "webrtc-signal",
+      payload: {
+        type: "request-offer",
+        senderId: userId,
+        targetId: remotePeerId,
+        isSpectator,
+        rebuild,
+      },
+    });
+  }, [userId, isSpectator]);
+
   const createPeerConnection = useCallback((remotePeerId: string) => {
     const existing = peersRef.current.get(remotePeerId);
     if (existing) {
