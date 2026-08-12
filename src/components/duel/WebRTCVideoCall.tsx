@@ -563,7 +563,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     };
 
     return pc;
-  }, [userId, isSpectator, audioBroadcastOnly, getActiveOutboundStream]);
+  }, [userId, isSpectator, audioBroadcastOnly, getActiveOutboundStream, shouldOfferTo]);
 
   // Player-side: build/refresh a connection toward a peer and send an offer.
   // Only peers that actually have media (the duelists) create offers — this
