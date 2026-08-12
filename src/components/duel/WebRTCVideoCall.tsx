@@ -705,10 +705,12 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         const peer = peersRef.current.get(remotePeerId);
         if (!peer) return;
 
-        // Player side: proactively offer to whoever announced itself, so a
-        // spectator never waits on a negotiationneeded event that may not fire.
-        if (!isSpectator || audioBroadcastOnly) {
+        // Single-offerer rule: either we offer, or we explicitly ask the other
+        // side to offer. Never both — that glare was killing player<->player video.
+        if (shouldOfferTo(remotePeerId)) {
           void sendOfferTo(remotePeerId);
+        } else if (!isSpectator || audioBroadcastOnly) {
+          requestOfferFrom(remotePeerId);
         }
 
 
