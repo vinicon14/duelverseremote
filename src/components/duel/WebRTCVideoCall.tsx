@@ -986,6 +986,22 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
           });
           void createSpectatorOffer(playerId);
         });
+      } else {
+        // Player side: chase every other official player. Offer when we own the
+        // offer for that pair, otherwise ask them to offer us.
+        playerIdsRef.current.forEach((playerId) => {
+          if (playerId === userId) return;
+          const peer = peersRef.current.get(playerId);
+          const liveVideo = peer?.stream?.getVideoTracks().some((t) => t.readyState === "live") ?? false;
+          const connected = peer?.pc.connectionState === "connected";
+          if (connected && liveVideo) return;
+          const stalled = !!peer && Date.now() - peer.createdAt > 10000 && !connected;
+          if (shouldOfferTo(playerId)) {
+            void sendOfferTo(playerId, stalled);
+          } else {
+            requestOfferFrom(playerId, stalled);
+          }
+        });
       }
     };
 
