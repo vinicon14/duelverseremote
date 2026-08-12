@@ -139,7 +139,7 @@ export default function VideoShare() {
     return (
       <div className="min-h-screen bg-transparent">
         <Navbar />
-        <main className="container mx-auto px-4 py-8 pt-24">
+        <main className="container mx-auto px-4 py-8">
           <div className="flex items-center justify-center h-64">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
@@ -152,7 +152,7 @@ export default function VideoShare() {
     return (
       <div className="min-h-screen bg-transparent">
         <Navbar />
-        <main className="container mx-auto px-4 py-8 pt-24">
+        <main className="container mx-auto px-4 py-8">
           <Card className="max-w-2xl mx-auto">
             <CardContent className="flex flex-col items-center justify-center py-16">
               <Eye className="w-16 h-16 text-muted-foreground mb-4" />
@@ -177,7 +177,7 @@ export default function VideoShare() {
     <div className="min-h-screen bg-transparent">
       <Navbar />
       
-      <main className="container mx-auto px-4 py-8 pt-24">
+      <main className="container mx-auto px-4 py-8">
         <div className="max-w-5xl mx-auto">
           {/* Video Player */}
           <div className="aspect-video bg-black rounded-lg overflow-hidden mb-6">
