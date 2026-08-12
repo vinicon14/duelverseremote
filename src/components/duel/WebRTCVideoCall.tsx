@@ -538,10 +538,10 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
 
 
     pc.onnegotiationneeded = async () => {
-      // A regular spectator is receive-only. Let the player create the offer;
-      // otherwise recvonly transceivers trigger a competing spectator offer and
-      // the real player offer can be discarded during glare resolution.
-      if (isSpectator && !audioBroadcastOnly) return;
+      // Only the designated offerer for this peer may negotiate. Spectators are
+      // receive-only, and between two duelists a single side owns the offer so
+      // both cameras always come through.
+      if (!shouldOfferTo(remotePeerId)) return;
       try {
         peerState.makingOffer = true;
         await pc.setLocalDescription();
