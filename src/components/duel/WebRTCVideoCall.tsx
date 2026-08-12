@@ -1026,7 +1026,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       clearInterval(interval);
       window.clearTimeout(initialAnnouncement);
     };
-  }, [userId, isSpectator, maxPlayers, remotePeerIds, createSpectatorOffer]);
+  }, [userId, isSpectator, maxPlayers, remotePeerIds, createSpectatorOffer, shouldOfferTo, sendOfferTo, requestOfferFrom]);
 
   // A live MediaStreamTrack may end after a successful handshake without moving
   // RTCPeerConnection to "failed" (camera replacement, mobile backgrounding,
