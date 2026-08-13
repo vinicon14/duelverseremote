@@ -14,20 +14,23 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { DuelCoinsBalance } from "@/components/DuelCoinsBalance";
 import { DailyXpClaim } from "@/components/DailyXpClaim";
 import { useTranslation } from "react-i18next";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function Home() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   return (
     <SidebarProvider defaultOpen>
       <div className="h-[100dvh] overflow-hidden bg-transparent flex w-full">
         <Navbar />
         
-        <main className="flex-1 container max-w-5xl mx-auto px-4 pt-20 pb-4 h-[100dvh] overflow-y-auto md:overflow-hidden flex flex-col justify-center">
+        <main className="flex-1 container max-w-5xl mx-auto px-4 pt-24 pb-6 h-[100dvh] overflow-y-auto md:overflow-hidden flex flex-col justify-center">
         <h1 className="sr-only">{t('home.quickMatchTitle')} - Duelverse</h1>
         <div className="flex flex-col md:flex-row gap-4 md:gap-6">
-          {/* Quick Match - HERO SECTION */}
+          {/* Quick Match - HERO SECTION (desktop only) */}
+          {!isMobile && (
           <Card className="card-mystic hover:border-primary/40 transition-all cursor-pointer animate-fade-in-up delay-100 flex-1 group" onClick={() => navigate('/matchmaking')}>
             <CardContent className="p-6 md:p-10 flex flex-col items-center justify-center text-center h-full relative">
 
@@ -43,9 +46,11 @@ export default function Home() {
               </Button>
             </CardContent>
           </Card>
+          )}
 
           {/* Lateral Column */}
-          <div className="flex flex-col gap-3 md:gap-4 md:w-[320px]">
+          <div className={`flex flex-col gap-3 md:gap-4 ${isMobile ? 'w-full' : 'md:w-[320px]'}`}>
+
             {/* Saldo de DuelCoins reestilizado lateral */}
             <div className="animate-fade-in-up">
               <DuelCoinsBalance />
