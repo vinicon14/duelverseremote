@@ -311,7 +311,7 @@ export default function Marketplace() {
     }
   };
 
-  const handleCheckout = async () => {
+  const executeCheckout = async (shipping: ShippingInfo | null = null) => {
     if (!user) {
       toast({ title: "Faça login", description: "Você precisa estar logado para comprar", variant: "destructive" });
       return;
@@ -338,7 +338,9 @@ export default function Marketplace() {
           product_id: item.product.id,
           quantity: item.quantity,
         })),
+        p_shipping: shipping,
       });
+
 
       if (error) throw new Error(error.message);
       const result = data as { success?: boolean; message?: string } | null;
