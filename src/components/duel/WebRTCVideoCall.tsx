@@ -153,6 +153,9 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   const spectatorPeersRef = useRef<Set<string>>(new Set());
   const [spectatorPeerIds, setSpectatorPeerIds] = useState<string[]>([]);
   const playerIdsRef = useRef(new Set(playerIds.filter(Boolean)));
+  // Peers whose direct path failed at least once -> retry through TURN only.
+  const relayOnlyPeersRef = useRef<Set<string>>(new Set());
+
   const [pipSwapped, setPipSwapped] = useState(false);
 
   useEffect(() => {
