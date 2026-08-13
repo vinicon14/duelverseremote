@@ -3,6 +3,7 @@
  * Coleta telefone, CEP e endereço completo para produtos físicos.
  */
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,6 +44,7 @@ export function ShippingDialog({ open, onOpenChange, onConfirm, submitting }: Sh
   const [info, setInfo] = useState<ShippingInfo>(emptyShipping);
   const [locating, setLocating] = useState(false);
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   const set = (key: keyof ShippingInfo, value: string) => setInfo((prev) => ({ ...prev, [key]: value }));
 
@@ -67,7 +69,7 @@ export function ShippingDialog({ open, onOpenChange, onConfirm, submitting }: Sh
 
   const useCurrentLocation = () => {
     if (!navigator.geolocation) {
-      toast({ title: "Indisponível", description: "Seu dispositivo não suporta geolocalização.", variant: "destructive" });
+      toast({ title: t("shipping.unavailable"), description: t("shipping.unavailableDesc"), variant: "destructive" });
       return;
     }
     setLocating(true);
@@ -89,16 +91,16 @@ export function ShippingDialog({ open, onOpenChange, onConfirm, submitting }: Sh
             city: a.city || a.town || a.village || prev.city,
             state: a["ISO3166-2-lvl4"]?.split("-")?.[1] || a.state || prev.state,
           }));
-          toast({ title: "Localização preenchida", description: "Confira e complete os dados." });
+          toast({ title: t("shipping.filled"), description: t("shipping.filledDesc") });
         } catch {
-          toast({ title: "Erro", description: "Não foi possível obter o endereço.", variant: "destructive" });
+          toast({ title: t("shipping.error"), description: t("shipping.errorDesc"), variant: "destructive" });
         } finally {
           setLocating(false);
         }
       },
       () => {
         setLocating(false);
-        toast({ title: "Permissão negada", description: "Preencha o endereço manualmente.", variant: "destructive" });
+        toast({ title: t("shipping.denied"), description: t("shipping.deniedDesc"), variant: "destructive" });
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
@@ -108,7 +110,7 @@ export function ShippingDialog({ open, onOpenChange, onConfirm, submitting }: Sh
     const required: (keyof ShippingInfo)[] = ["phone", "zip", "address", "number", "city", "state"];
     const missing = required.filter((k) => !info[k].trim());
     if (missing.length > 0) {
-      toast({ title: "Dados incompletos", description: "Preencha telefone, CEP, endereço, número, cidade e estado.", variant: "destructive" });
+      toast({ title: t("shipping.incomplete"), description: t("shipping.incompleteDesc"), variant: "destructive" });
       return;
     }
     onConfirm(info);
@@ -120,23 +122,23 @@ export function ShippingDialog({ open, onOpenChange, onConfirm, submitting }: Sh
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Truck className="w-5 h-5 text-primary" />
-            Dados de entrega
+            {t("shipping.title")}
           </DialogTitle>
-          <DialogDescription>Produtos físicos precisam de endereço para envio.</DialogDescription>
+          <DialogDescription>{t("shipping.description")}</DialogDescription>
         </DialogHeader>
 
         <Button variant="outline" onClick={useCurrentLocation} disabled={locating} className="w-full">
           {locating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <MapPin className="w-4 h-4 mr-2" />}
-          Usar localização atual
+          {t("shipping.useLocation")}
         </Button>
 
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1">
-            <Label>Telefone *</Label>
+            <Label>{t("shipping.phone")} *</Label>
             <Input value={info.phone} onChange={(e) => set("phone", e.target.value)} placeholder="(11) 99999-9999" maxLength={20} />
           </div>
           <div className="space-y-1">
-            <Label>CEP *</Label>
+            <Label>{t("shipping.zip")} *</Label>
             <Input
               value={info.zip}
               onChange={(e) => set("zip", e.target.value)}
@@ -146,36 +148,36 @@ export function ShippingDialog({ open, onOpenChange, onConfirm, submitting }: Sh
             />
           </div>
           <div className="space-y-1 sm:col-span-2">
-            <Label>Endereço *</Label>
+            <Label>{t("shipping.address")} *</Label>
             <Input value={info.address} onChange={(e) => set("address", e.target.value)} placeholder="Rua / Avenida" maxLength={200} />
           </div>
           <div className="space-y-1">
-            <Label>Número *</Label>
+            <Label>{t("shipping.number")} *</Label>
             <Input value={info.number} onChange={(e) => set("number", e.target.value)} maxLength={20} />
           </div>
           <div className="space-y-1">
-            <Label>Complemento</Label>
+            <Label>{t("shipping.complement")}</Label>
             <Input value={info.complement} onChange={(e) => set("complement", e.target.value)} maxLength={100} />
           </div>
           <div className="space-y-1">
-            <Label>Bairro</Label>
+            <Label>{t("shipping.district")}</Label>
             <Input value={info.district} onChange={(e) => set("district", e.target.value)} maxLength={100} />
           </div>
           <div className="space-y-1">
-            <Label>Cidade *</Label>
+            <Label>{t("shipping.city")} *</Label>
             <Input value={info.city} onChange={(e) => set("city", e.target.value)} maxLength={100} />
           </div>
           <div className="space-y-1">
-            <Label>Estado *</Label>
+            <Label>{t("shipping.state")} *</Label>
             <Input value={info.state} onChange={(e) => set("state", e.target.value)} placeholder="SP" maxLength={40} />
           </div>
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>{t("shipping.cancel")}</Button>
           <Button className="btn-mystic" onClick={handleConfirm} disabled={submitting}>
             {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-            Confirmar compra
+            {t("shipping.confirm")}
           </Button>
         </DialogFooter>
       </DialogContent>
