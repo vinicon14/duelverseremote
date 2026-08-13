@@ -866,5 +866,49 @@
     "sentToastDesc": "Tarayıcı bildiriminin görünüp görünmediğini kontrol edin",
     "errorToast": "Bildirim oluşturma hatası",
     "unknownError": "Bilinmeyen hata"
+  },
+  "orders": {
+    "title": "My Orders",
+    "empty": "You haven't placed any orders yet.",
+    "goToStore": "Go to store",
+    "loadError": "Could not load your orders.",
+    "copied": "Code copied",
+    "tracking": "Tracking",
+    "items": "item(s)",
+    "status": {
+      "pending": "Order received",
+      "paid": "Payment confirmed",
+      "preparing": "Preparing order",
+      "shipped": "Shipped",
+      "shipping": "On the way",
+      "delivered": "Delivered",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    }
+  },
+  "shipping": {
+    "title": "Delivery details",
+    "description": "Physical products need a shipping address.",
+    "useLocation": "Use current location",
+    "phone": "Phone",
+    "zip": "ZIP code",
+    "address": "Address",
+    "number": "Number",
+    "complement": "Complement",
+    "district": "District",
+    "city": "City",
+    "state": "State",
+    "confirm": "Confirm purchase",
+    "cancel": "Cancel",
+    "incomplete": "Incomplete data",
+    "incompleteDesc": "Fill in phone, ZIP code, address, number, city and state.",
+    "unavailable": "Unavailable",
+    "unavailableDesc": "Your device does not support geolocation.",
+    "filled": "Location filled",
+    "filledDesc": "Check and complete the data.",
+    "error": "Error",
+    "errorDesc": "Could not get the address.",
+    "denied": "Permission denied",
+    "deniedDesc": "Fill in the address manually."
   }
 }

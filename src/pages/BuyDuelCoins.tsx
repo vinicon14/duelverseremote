@@ -49,7 +49,9 @@ export default function BuyDuelCoins() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  // Pix existe apenas no servidor brasileiro.
+  const isBrazil = i18n.language === "pt-BR";
   const [packages, setPackages] = useState<DuelCoinsPackage[]>([]);
   const [orders, setOrders] = useState<DuelCoinsOrder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -342,6 +344,7 @@ export default function BuyDuelCoins() {
                       )}
                     </div>
                     <div className="flex flex-col gap-2">
+                      {isBrazil && (
                       <Button
                         onClick={() => handleBuyPix(pkg)}
                         disabled={buying === pkg.id || buyingCard === pkg.id}
@@ -355,6 +358,7 @@ export default function BuyDuelCoins() {
                         )}
                         {buying === pkg.id ? t('buyCoins.generatingPix') : t('buyCoins.payPix')}
                       </Button>
+                      )}
                       <Button
                         onClick={() => handleBuyCard(pkg)}
                         disabled={buying === pkg.id || buyingCard === pkg.id}

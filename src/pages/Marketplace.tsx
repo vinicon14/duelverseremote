@@ -26,6 +26,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTranslation } from "react-i18next";
 import { SellerOrders } from "@/components/marketplace/SellerOrders";
+import { ShippingDialog, type ShippingInfo } from "@/components/marketplace/ShippingDialog";
+import { isPhysicalProduct } from "@/hooks/useMarketplacePurchase";
+
 
 interface MarketplaceProduct {
   id: string;
@@ -77,6 +80,9 @@ export default function Marketplace() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [shippingOpen, setShippingOpen] = useState(false);
+  const [pendingPurchase, setPendingPurchase] = useState<{ kind: "direct" | "cart"; product?: MarketplaceProduct } | null>(null);
+
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -239,7 +245,7 @@ export default function Marketplace() {
   const cartTotal = cart.reduce((sum, item) => sum + item.product.price_duelcoins * item.quantity, 0);
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
-  const handleBuyDirect = async (product: MarketplaceProduct) => {
+  const executeBuyDirect = async (product: MarketplaceProduct, shipping: ShippingInfo | null = null) => {
     if (!user) {
       toast({ title: "Faça login", description: "Você precisa estar logado para comprar", variant: "destructive" });
       return;
@@ -258,7 +264,9 @@ export default function Marketplace() {
       // adiciona ao inventário — tudo no servidor).
       const { data, error } = await (supabase.rpc as any)('purchase_marketplace_items', {
         p_items: [{ product_id: product.id, quantity: 1 }],
+        p_shipping: shipping,
       });
+
 
       if (error) throw new Error(error.message);
       const result = data as { success?: boolean; message?: string } | null;
@@ -309,7 +317,7 @@ export default function Marketplace() {
     }
   };
 
-  const handleCheckout = async () => {
+  const executeCheckout = async (shipping: ShippingInfo | null = null) => {
     if (!user) {
       toast({ title: "Faça login", description: "Você precisa estar logado para comprar", variant: "destructive" });
       return;
@@ -336,7 +344,9 @@ export default function Marketplace() {
           product_id: item.product.id,
           quantity: item.quantity,
         })),
+        p_shipping: shipping,
       });
+
 
       if (error) throw new Error(error.message);
       const result = data as { success?: boolean; message?: string } | null;
@@ -388,6 +398,39 @@ export default function Marketplace() {
       setPurchasing(false);
     }
   };
+
+  /** Produtos físicos exigem endereço antes de concluir a compra. */
+  const handleBuyDirect = (product: MarketplaceProduct) => {
+    if (isPhysicalProduct(product)) {
+      setPendingPurchase({ kind: "direct", product });
+      setShippingOpen(true);
+      return;
+    }
+    executeBuyDirect(product);
+  };
+
+  const handleCheckout = () => {
+    if (cart.some((item) => isPhysicalProduct(item.product))) {
+      setPendingPurchase({ kind: "cart" });
+      setShippingOpen(true);
+      return;
+    }
+    executeCheckout();
+  };
+
+  const handleShippingConfirm = async (info: ShippingInfo) => {
+    const pending = pendingPurchase;
+    setShippingOpen(false);
+    setPendingPurchase(null);
+    if (!pending) return;
+    if (pending.kind === "direct" && pending.product) {
+      await executeBuyDirect(pending.product, info);
+    } else {
+      await executeCheckout(info);
+    }
+  };
+
+
 
   const handleCreateProduct = async () => {
     if (!isPro) {
@@ -640,7 +683,7 @@ export default function Marketplace() {
 
             <Button variant="outline" onClick={() => navigate("/my-orders")} className="gap-2">
               <Package className="w-4 h-4" />
-              Meus pedidos
+              {t("orders.title")}
             </Button>
           </div>
         </div>
@@ -1131,7 +1174,19 @@ export default function Marketplace() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Dados de entrega para produtos físicos */}
+        <ShippingDialog
+          open={shippingOpen}
+          onOpenChange={(open) => {
+            setShippingOpen(open);
+            if (!open) setPendingPurchase(null);
+          }}
+          onConfirm={handleShippingConfirm}
+          submitting={purchasing}
+        />
       </main>
+
     </div>
   );
 }
