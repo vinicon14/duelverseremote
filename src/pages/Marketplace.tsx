@@ -1174,7 +1174,19 @@ export default function Marketplace() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Dados de entrega para produtos físicos */}
+        <ShippingDialog
+          open={shippingOpen}
+          onOpenChange={(open) => {
+            setShippingOpen(open);
+            if (!open) setPendingPurchase(null);
+          }}
+          onConfirm={handleShippingConfirm}
+          submitting={purchasing}
+        />
       </main>
+
     </div>
   );
 }
