@@ -26,6 +26,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTranslation } from "react-i18next";
 import { SellerOrders } from "@/components/marketplace/SellerOrders";
+import { ShippingDialog, type ShippingInfo } from "@/components/marketplace/ShippingDialog";
+import { isPhysicalProduct } from "@/hooks/useMarketplacePurchase";
+
 
 interface MarketplaceProduct {
   id: string;
