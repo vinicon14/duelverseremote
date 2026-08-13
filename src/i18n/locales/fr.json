@@ -866,5 +866,49 @@
     "sentToastDesc": "Vérifiez si une notification du navigateur est apparue",
     "errorToast": "Erreur lors de la création de la notification",
     "unknownError": "Erreur inconnue"
+  },
+  "orders": {
+    "title": "Mes commandes",
+    "empty": "Vous n'avez pas encore passé de commande.",
+    "goToStore": "Aller à la boutique",
+    "loadError": "Impossible de charger vos commandes.",
+    "copied": "Code copié",
+    "tracking": "Suivi",
+    "items": "article(s)",
+    "status": {
+      "pending": "Commande reçue",
+      "paid": "Paiement confirmé",
+      "preparing": "Commande en préparation",
+      "shipped": "Expédiée",
+      "shipping": "En route",
+      "delivered": "Livrée",
+      "completed": "Terminée",
+      "cancelled": "Annulée"
+    }
+  },
+  "shipping": {
+    "title": "Informations de livraison",
+    "description": "Les produits physiques nécessitent une adresse de livraison.",
+    "useLocation": "Utiliser ma position",
+    "phone": "Téléphone",
+    "zip": "Code postal",
+    "address": "Adresse",
+    "number": "Numéro",
+    "complement": "Complément",
+    "district": "Quartier",
+    "city": "Ville",
+    "state": "Région",
+    "confirm": "Confirmer l'achat",
+    "cancel": "Annuler",
+    "incomplete": "Données incomplètes",
+    "incompleteDesc": "Renseignez téléphone, code postal, adresse, numéro, ville et région.",
+    "unavailable": "Indisponible",
+    "unavailableDesc": "Votre appareil ne prend pas en charge la géolocalisation.",
+    "filled": "Position renseignée",
+    "filledDesc": "Vérifiez et complétez les données.",
+    "error": "Erreur",
+    "errorDesc": "Impossible d'obtenir l'adresse.",
+    "denied": "Permission refusée",
+    "deniedDesc": "Saisissez l'adresse manuellement."
   }
 }
