@@ -373,7 +373,10 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       setRemotePeerIds((prev) => prev.filter((id) => id !== remotePeerId));
     }
 
-    const pc = new RTCPeerConnection(PC_CONFIG);
+    const forceRelay = relayOnlyPeersRef.current.has(remotePeerId);
+    if (forceRelay) console.warn("[WebRTC] Using relay-only path for:", remotePeerId);
+    const pc = new RTCPeerConnection(buildPcConfig(forceRelay));
+
     const peerState: PeerState = {
       pc,
       stream: null,
