@@ -50,12 +50,15 @@ interface Purchase {
 }
 
 const ORDER_STATUSES = [
-  { value: 'pending', label: 'Pendente', color: 'bg-yellow-500' },
-  { value: 'preparing', label: 'Em Preparação', color: 'bg-blue-500' },
-  { value: 'shipping', label: 'A Caminho', color: 'bg-orange-500' },
+  { value: 'pending', label: 'Pedido recebido', color: 'bg-yellow-500' },
+  { value: 'paid', label: 'Pagamento confirmado', color: 'bg-cyan-500' },
+  { value: 'preparing', label: 'Pedido sendo preparado', color: 'bg-blue-500' },
+  { value: 'shipped', label: 'Enviado', color: 'bg-purple-500' },
+  { value: 'shipping', label: 'A caminho', color: 'bg-orange-500' },
   { value: 'delivered', label: 'Entregue', color: 'bg-green-500' },
   { value: 'cancelled', label: 'Cancelado', color: 'bg-red-500' },
 ];
+
 
 const emptyForm = {
   name: "",
