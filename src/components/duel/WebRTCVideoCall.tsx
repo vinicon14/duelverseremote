@@ -464,20 +464,28 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         // Opera/Brave and VPN setups often fail the first ICE pass; always try a
         // restart (relay candidates included) before dropping the peer.
         console.warn(`[WebRTC] ICE ${state}, attempting restart for:`, remotePeerId);
+        if (state === 'failed') relayOnlyPeersRef.current.add(remotePeerId);
         attemptIceRestart();
         setTimeout(() => {
           if (pc.iceConnectionState === 'failed') {
             console.warn("[WebRTC] Second restart attempt for:", remotePeerId);
+            relayOnlyPeersRef.current.add(remotePeerId);
             attemptIceRestart();
           }
         }, 5000);
         setTimeout(() => {
           if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed') {
+            // Drop it: the reconnection heartbeat rebuilds the peer, this time
+            // pinned to TURN relay so symmetric NAT / carrier networks work.
             console.warn("[WebRTC] Peer lost after restart attempts:", remotePeerId);
+            relayOnlyPeersRef.current.add(remotePeerId);
             removePeer(remotePeerId);
           }
-        }, 20000);
+        }, 15000);
+      } else if (state === 'connected' || state === 'completed') {
+        // Keep the relay pin for this session only if it was actually needed.
       } else if (state === 'closed') {
+
         removePeer(remotePeerId);
       }
     };
