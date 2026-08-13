@@ -56,7 +56,18 @@ const ICE_SERVERS: RTCIceServer[] = [
   { urls: "stun:stun.cloudflare.com:3478" },
   // Free TURN servers for NAT traversal between different networks.
   // Multiple transports (UDP/TCP/TLS) so browsers with restrictive WebRTC
-  // policies (Opera/Brave/VPN) still find a working relay path.
+  // policies (Opera/Brave/VPN) and symmetric NATs (mobile carriers) still
+  // find a working relay path.
+  {
+    urls: [
+      "turn:global.relay.metered.ca:80",
+      "turn:global.relay.metered.ca:80?transport=tcp",
+      "turn:global.relay.metered.ca:443",
+      "turns:global.relay.metered.ca:443?transport=tcp",
+    ],
+    username: "openrelayproject",
+    credential: "openrelayproject",
+  },
   {
     urls: [
       "turn:openrelay.metered.ca:80",
@@ -84,6 +95,11 @@ const PC_CONFIG: RTCConfiguration = {
   bundlePolicy: "max-bundle",
   rtcpMuxPolicy: "require",
 };
+
+/** Peers whose direct (host/srflx) path already failed: force TURN relay only. */
+const buildPcConfig = (forceRelay: boolean): RTCConfiguration =>
+  forceRelay ? { ...PC_CONFIG, iceTransportPolicy: "relay" } : PC_CONFIG;
+
 
 
 interface PeerState {
@@ -137,6 +153,9 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   const spectatorPeersRef = useRef<Set<string>>(new Set());
   const [spectatorPeerIds, setSpectatorPeerIds] = useState<string[]>([]);
   const playerIdsRef = useRef(new Set(playerIds.filter(Boolean)));
+  // Peers whose direct path failed at least once -> retry through TURN only.
+  const relayOnlyPeersRef = useRef<Set<string>>(new Set());
+
   const [pipSwapped, setPipSwapped] = useState(false);
 
   useEffect(() => {
@@ -354,7 +373,10 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       setRemotePeerIds((prev) => prev.filter((id) => id !== remotePeerId));
     }
 
-    const pc = new RTCPeerConnection(PC_CONFIG);
+    const forceRelay = relayOnlyPeersRef.current.has(remotePeerId);
+    if (forceRelay) console.warn("[WebRTC] Using relay-only path for:", remotePeerId);
+    const pc = new RTCPeerConnection(buildPcConfig(forceRelay));
+
     const peerState: PeerState = {
       pc,
       stream: null,
@@ -442,20 +464,28 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         // Opera/Brave and VPN setups often fail the first ICE pass; always try a
         // restart (relay candidates included) before dropping the peer.
         console.warn(`[WebRTC] ICE ${state}, attempting restart for:`, remotePeerId);
+        if (state === 'failed') relayOnlyPeersRef.current.add(remotePeerId);
         attemptIceRestart();
         setTimeout(() => {
           if (pc.iceConnectionState === 'failed') {
             console.warn("[WebRTC] Second restart attempt for:", remotePeerId);
+            relayOnlyPeersRef.current.add(remotePeerId);
             attemptIceRestart();
           }
         }, 5000);
         setTimeout(() => {
           if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed') {
+            // Drop it: the reconnection heartbeat rebuilds the peer, this time
+            // pinned to TURN relay so symmetric NAT / carrier networks work.
             console.warn("[WebRTC] Peer lost after restart attempts:", remotePeerId);
+            relayOnlyPeersRef.current.add(remotePeerId);
             removePeer(remotePeerId);
           }
-        }, 20000);
+        }, 15000);
+      } else if (state === 'connected' || state === 'completed') {
+        // Keep the relay pin for this session only if it was actually needed.
       } else if (state === 'closed') {
+
         removePeer(remotePeerId);
       }
     };
