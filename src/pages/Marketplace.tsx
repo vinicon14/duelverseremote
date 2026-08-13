@@ -239,7 +239,7 @@ export default function Marketplace() {
   const cartTotal = cart.reduce((sum, item) => sum + item.product.price_duelcoins * item.quantity, 0);
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
-  const handleBuyDirect = async (product: MarketplaceProduct) => {
+  const executeBuyDirect = async (product: MarketplaceProduct, shipping: ShippingInfo | null = null) => {
     if (!user) {
       toast({ title: "Faça login", description: "Você precisa estar logado para comprar", variant: "destructive" });
       return;
@@ -258,7 +258,9 @@ export default function Marketplace() {
       // adiciona ao inventário — tudo no servidor).
       const { data, error } = await (supabase.rpc as any)('purchase_marketplace_items', {
         p_items: [{ product_id: product.id, quantity: 1 }],
+        p_shipping: shipping,
       });
+
 
       if (error) throw new Error(error.message);
       const result = data as { success?: boolean; message?: string } | null;
