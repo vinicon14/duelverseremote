@@ -396,6 +396,39 @@ export default function Marketplace() {
     }
   };
 
+  /** Produtos físicos exigem endereço antes de concluir a compra. */
+  const handleBuyDirect = (product: MarketplaceProduct) => {
+    if (isPhysicalProduct(product)) {
+      setPendingPurchase({ kind: "direct", product });
+      setShippingOpen(true);
+      return;
+    }
+    executeBuyDirect(product);
+  };
+
+  const handleCheckout = () => {
+    if (cart.some((item) => isPhysicalProduct(item.product))) {
+      setPendingPurchase({ kind: "cart" });
+      setShippingOpen(true);
+      return;
+    }
+    executeCheckout();
+  };
+
+  const handleShippingConfirm = async (info: ShippingInfo) => {
+    const pending = pendingPurchase;
+    setShippingOpen(false);
+    setPendingPurchase(null);
+    if (!pending) return;
+    if (pending.kind === "direct" && pending.product) {
+      await executeBuyDirect(pending.product, info);
+    } else {
+      await executeCheckout(info);
+    }
+  };
+
+
+
   const handleCreateProduct = async () => {
     if (!isPro) {
       toast({ title: "Apenas PRO", description: "Apenas usuários PRO podem criar produtos para venda", variant: "destructive" });
