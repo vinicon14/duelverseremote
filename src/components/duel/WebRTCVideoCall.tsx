@@ -56,7 +56,18 @@ const ICE_SERVERS: RTCIceServer[] = [
   { urls: "stun:stun.cloudflare.com:3478" },
   // Free TURN servers for NAT traversal between different networks.
   // Multiple transports (UDP/TCP/TLS) so browsers with restrictive WebRTC
-  // policies (Opera/Brave/VPN) still find a working relay path.
+  // policies (Opera/Brave/VPN) and symmetric NATs (mobile carriers) still
+  // find a working relay path.
+  {
+    urls: [
+      "turn:global.relay.metered.ca:80",
+      "turn:global.relay.metered.ca:80?transport=tcp",
+      "turn:global.relay.metered.ca:443",
+      "turns:global.relay.metered.ca:443?transport=tcp",
+    ],
+    username: "openrelayproject",
+    credential: "openrelayproject",
+  },
   {
     urls: [
       "turn:openrelay.metered.ca:80",
@@ -84,6 +95,11 @@ const PC_CONFIG: RTCConfiguration = {
   bundlePolicy: "max-bundle",
   rtcpMuxPolicy: "require",
 };
+
+/** Peers whose direct (host/srflx) path already failed: force TURN relay only. */
+const buildPcConfig = (forceRelay: boolean): RTCConfiguration =>
+  forceRelay ? { ...PC_CONFIG, iceTransportPolicy: "relay" } : PC_CONFIG;
+
 
 
 interface PeerState {
