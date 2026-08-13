@@ -80,6 +80,9 @@ export default function Marketplace() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [shippingOpen, setShippingOpen] = useState(false);
+  const [pendingPurchase, setPendingPurchase] = useState<{ kind: "direct" | "cart"; product?: MarketplaceProduct } | null>(null);
+
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
