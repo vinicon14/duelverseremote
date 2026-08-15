@@ -17,19 +17,27 @@ const CACHE_MS = 10 * 60 * 1000;
 
 async function meteredServers(): Promise<unknown[]> {
   const apiKey = Deno.env.get("METERED_API_KEY");
-  const domain = Deno.env.get("METERED_DOMAIN") ?? "global.relay.metered.ca";
   if (!apiKey) return [];
-  try {
-    const res = await fetch(
-      `https://${domain}/api/v1/turn/credentials?apiKey=${encodeURIComponent(apiKey)}`,
-    );
-    if (!res.ok) return [];
-    const list = await res.json();
-    return Array.isArray(list) ? list : [];
-  } catch (_e) {
-    return [];
+  const domain = Deno.env.get("METERED_DOMAIN");
+  const hosts = domain
+    ? [domain]
+    : ["duelverse.metered.live", "global.relay.metered.ca"];
+  for (const host of hosts) {
+    try {
+      const res = await fetch(
+        `https://${host}/api/v1/turn/credentials?apiKey=${encodeURIComponent(apiKey)}`,
+        { signal: AbortSignal.timeout(4000) },
+      );
+      if (!res.ok) continue;
+      const list = await res.json();
+      if (Array.isArray(list) && list.length > 0) return list;
+    } catch (_e) {
+      // try next host
+    }
   }
+  return [];
 }
+
 
 function staticTurn(): unknown[] {
   const urls = Deno.env.get("TURN_URLS");
