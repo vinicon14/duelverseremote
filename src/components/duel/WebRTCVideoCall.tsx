@@ -98,6 +98,26 @@ const buildPcConfig = (forceRelay: boolean): RTCConfiguration => {
   return forceRelay && hasTurn ? { ...config, iceTransportPolicy: "relay" } : config;
 };
 
+const isVirtualCamera = (label?: string) => /droidcam|obs virtual|virtual camera|iriun|epoccam/i.test(label ?? "");
+
+/** Virtual cameras often expose formats that Chromium renders as a green frame
+ * when 16:9/HD is forced. Keep their native 4:3-compatible capture profile. */
+const stabilizeVideoTrack = async (track?: MediaStreamTrack) => {
+  if (!track) return;
+  track.contentHint = "motion";
+  if (!isVirtualCamera(track.label)) return;
+  try {
+    await track.applyConstraints({
+      width: { ideal: 640 },
+      height: { ideal: 480 },
+      frameRate: { ideal: 24, max: 30 },
+    });
+    console.log("[WebRTC] Virtual camera compatibility mode enabled:", track.label);
+  } catch (err) {
+    console.warn("[WebRTC] Could not apply virtual camera compatibility mode:", err);
+  }
+};
+
 
 
 
@@ -203,15 +223,20 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     // Em mobile, priorizar câmera traseira ('environment') quando nenhum deviceId específico for informado
     const isMobile = typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
     const defaultFacing = isMobile ? 'environment' : 'user';
+    const selectedVideo = videoDevices.find((device) => device.deviceId === videoId);
+    const virtualCameraSelected = isVirtualCamera(selectedVideo?.label);
     const constraints: MediaStreamConstraints = {
       audio: audioId ? { deviceId: { exact: audioId }, echoCancellation: true, noiseSuppression: true, autoGainControl: true } : { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
       video: videoId
-        ? { deviceId: { exact: videoId }, width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16 / 9 } }
+        ? virtualCameraSelected
+          ? { deviceId: { exact: videoId }, width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 24, max: 30 } }
+          : { deviceId: { exact: videoId }, width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16 / 9 } }
         : { facingMode: { ideal: defaultFacing }, width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16 / 9 } },
     };
 
     try {
       const newStream = await navigator.mediaDevices.getUserMedia(constraints);
+      await stabilizeVideoTrack(newStream.getVideoTracks()[0]);
 
       const previousStream = localStreamRef.current;
       localStreamRef.current = newStream;
@@ -257,7 +282,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     } catch (err) {
       console.error("[WebRTC] Failed to switch device:", err);
     }
-  }, [isMuted, isVideoOff, enumerateDevices]);
+  }, [isMuted, isVideoOff, enumerateDevices, videoDevices]);
 
   useImperativeHandle(ref, () => ({
     setVideoEnabled: (enabled: boolean) => {
@@ -843,7 +868,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         noiseSuppression: true,
         autoGainControl: true,
       };
-      const constraints = [
+      const mobileConstraints: MediaStreamConstraints[] = [
         // Start with a broadly supported capture size. Some Android/Chromium
         // hardware encoders expose a green preview at forced 720p.
         { video: { facingMode: { ideal: primaryFacing }, width: { ideal: 960 }, height: { ideal: 540 }, aspectRatio: { ideal: 16 / 9 } }, audio: audioConstraints },
@@ -853,10 +878,20 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         { video: true, audio: audioConstraints },
         { video: true, audio: false },
       ];
+      // Desktop virtual cameras such as DroidCam must start in their native
+      // format. Requesting 16:9 before reading the device label can produce a
+      // permanent green frame even if constraints are relaxed afterwards.
+      const desktopConstraints: MediaStreamConstraints[] = [
+        { video: true, audio: audioConstraints },
+        { video: { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 24, max: 30 } }, audio: audioConstraints },
+        { video: true, audio: false },
+      ];
+      const constraints = isMobile ? mobileConstraints : desktopConstraints;
 
       for (const constraint of constraints) {
         try {
           const stream = await navigator.mediaDevices.getUserMedia(constraint);
+          await stabilizeVideoTrack(stream.getVideoTracks()[0]);
           console.log("[WebRTC] Media acquired with:", JSON.stringify(constraint));
           return stream;
         } catch (err) {
