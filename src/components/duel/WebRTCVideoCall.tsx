@@ -222,12 +222,13 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       }
 
       // Replace tracks in all peer connections
+      const trackReplacements: Promise<void>[] = [];
       peersRef.current.forEach((peerState) => {
         const senders = peerState.pc.getSenders();
         newStream.getTracks().forEach(newTrack => {
           const sender = senders.find(s => s.track?.kind === newTrack.kind);
           if (sender) {
-            void sender.replaceTrack(newTrack);
+            trackReplacements.push(sender.replaceTrack(newTrack));
           } else {
             peerState.pc.addTrack(newTrack, newStream);
           }
@@ -236,6 +237,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
 
       // Stop the former capture only after every sender points at the new tracks.
       // Stopping first can leave Chromium/Android encoders on a green frame.
+      await Promise.allSettled(trackReplacements);
       previousStream?.getTracks().forEach((track) => track.stop());
 
       // Re-enumerate to get labels (available after permission grant)
@@ -970,7 +972,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         channelRef.current = null;
       }
     };
-  }, [duelId, userId, handleSignal, isSpectator, audioBroadcastOnly, getActiveOutboundStream]);
+  }, [duelId, userId, handleSignal, isSpectator, audioBroadcastOnly, getActiveOutboundStream, sendOfferTo]);
 
   // Handshake heartbeat: while we still expect more player streams than we have,
   // re-announce ourselves periodically. A single "ready" at subscribe time can be
