@@ -28,9 +28,12 @@ async function meteredServers(): Promise<unknown[]> {
         `https://${host}/api/v1/turn/credentials?apiKey=${encodeURIComponent(apiKey)}`,
         { signal: AbortSignal.timeout(4000) },
       );
+      console.log("[ice] metered host", host, "status", res.status);
       if (!res.ok) continue;
       const list = await res.json();
       if (Array.isArray(list) && list.length > 0) return list;
+      console.log("[ice] metered host", host, "returned no servers");
+
     } catch (_e) {
       // try next host
     }
