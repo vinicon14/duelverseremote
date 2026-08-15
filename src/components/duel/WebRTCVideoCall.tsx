@@ -49,56 +49,55 @@ interface WebRTCVideoCallProps {
   mobileArenaMode?: boolean;
 }
 
-const ICE_SERVERS: RTCIceServer[] = [
+// Baseline STUN servers. TURN relays (needed on 4G / symmetric NAT / VPN, where
+// the opponent camera never arrives on a direct path) are fetched at runtime
+// from the backend so credentials can be rotated without a deploy.
+const STUN_SERVERS: RTCIceServer[] = [
   { urls: "stun:stun.l.google.com:19302" },
   { urls: "stun:stun1.l.google.com:19302" },
   { urls: "stun:stun2.l.google.com:19302" },
   { urls: "stun:stun.cloudflare.com:3478" },
-  // Free TURN servers for NAT traversal between different networks.
-  // Multiple transports (UDP/TCP/TLS) so browsers with restrictive WebRTC
-  // policies (Opera/Brave/VPN) and symmetric NATs (mobile carriers) still
-  // find a working relay path.
-  {
-    urls: [
-      "turn:global.relay.metered.ca:80",
-      "turn:global.relay.metered.ca:80?transport=tcp",
-      "turn:global.relay.metered.ca:443",
-      "turns:global.relay.metered.ca:443?transport=tcp",
-    ],
-    username: "openrelayproject",
-    credential: "openrelayproject",
-  },
-  {
-    urls: [
-      "turn:openrelay.metered.ca:80",
-      "turn:openrelay.metered.ca:80?transport=tcp",
-      "turn:openrelay.metered.ca:443",
-      "turn:openrelay.metered.ca:443?transport=tcp",
-      "turns:openrelay.metered.ca:443?transport=tcp",
-    ],
-    username: "openrelayproject",
-    credential: "openrelayproject",
-  },
-  {
-    urls: [
-      "turn:relay1.expressturn.com:3478",
-      "turn:relay1.expressturn.com:3478?transport=tcp",
-    ],
-    username: "ef4XQ4ZQ8HLPXQ7NHR",
-    credential: "eZ9d3TgqAcgOwzKX",
-  },
 ];
 
-const PC_CONFIG: RTCConfiguration = {
-  iceServers: ICE_SERVERS,
+let runtimeIceServers: RTCIceServer[] = STUN_SERVERS;
+let iceServersPromise: Promise<void> | null = null;
+
+/** Fetch TURN credentials once per page load (cached module-wide). */
+const ensureIceServers = () => {
+  if (iceServersPromise) return iceServersPromise;
+  iceServersPromise = (async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke("get-ice-servers");
+      const servers = (data as any)?.iceServers;
+      if (!error && Array.isArray(servers) && servers.length > 0) {
+        runtimeIceServers = servers as RTCIceServer[];
+        console.log("[WebRTC] ICE servers loaded:", servers.length, "hasTurn:", (data as any)?.hasTurn);
+      }
+    } catch (err) {
+      console.warn("[WebRTC] Falling back to STUN-only ICE servers:", err);
+    }
+  })();
+  return iceServersPromise;
+};
+
+const basePcConfig = (): RTCConfiguration => ({
+  iceServers: runtimeIceServers,
   iceCandidatePoolSize: 4,
   bundlePolicy: "max-bundle",
   rtcpMuxPolicy: "require",
+});
+
+/** Peers whose direct (host/srflx) path already failed: force TURN relay only.
+ *  Only meaningful when a TURN server is actually configured. */
+const buildPcConfig = (forceRelay: boolean): RTCConfiguration => {
+  const config = basePcConfig();
+  const hasTurn = runtimeIceServers.some((s) => {
+    const urls = Array.isArray(s.urls) ? s.urls : [s.urls];
+    return urls.some((u) => typeof u === "string" && u.startsWith("turn"));
+  });
+  return forceRelay && hasTurn ? { ...config, iceTransportPolicy: "relay" } : config;
 };
 
-/** Peers whose direct (host/srflx) path already failed: force TURN relay only. */
-const buildPcConfig = (forceRelay: boolean): RTCConfiguration =>
-  forceRelay ? { ...PC_CONFIG, iceTransportPolicy: "relay" } : PC_CONFIG;
 
 
 
