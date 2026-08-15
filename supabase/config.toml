@@ -15,6 +15,8 @@ project_id = "xxttwzewtqxvpgefggah"
     verify_jwt = true
   [functions.get-stream-token]
     verify_jwt = true
+  [functions.get-ice-servers]
+    verify_jwt = false
   [functions.mercadopago-create-pix]
     verify_jwt = false
   [functions.mercadopago-webhook]
