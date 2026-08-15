@@ -854,6 +854,10 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     };
 
     const init = async () => {
+      // Load TURN credentials before any PeerConnection is created, otherwise
+      // the first handshake gathers STUN-only candidates and the opponent's
+      // camera never arrives on restrictive networks (4G, VPN, symmetric NAT).
+      await ensureIceServers();
       const stream = await acquireMedia();
       if (disposed) {
         stream?.getTracks().forEach((t) => t.stop());
