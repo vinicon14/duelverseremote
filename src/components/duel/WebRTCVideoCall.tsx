@@ -213,12 +213,12 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     try {
       const newStream = await navigator.mediaDevices.getUserMedia(constraints);
 
-      // Stop old tracks
-      localStreamRef.current?.getTracks().forEach(t => t.stop());
+      const previousStream = localStreamRef.current;
       localStreamRef.current = newStream;
 
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = newStream;
+        localVideoRef.current.play?.().catch(() => {});
       }
 
       // Replace tracks in all peer connections
@@ -227,12 +227,16 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         newStream.getTracks().forEach(newTrack => {
           const sender = senders.find(s => s.track?.kind === newTrack.kind);
           if (sender) {
-            sender.replaceTrack(newTrack);
+            void sender.replaceTrack(newTrack);
           } else {
             peerState.pc.addTrack(newTrack, newStream);
           }
         });
       });
+
+      // Stop the former capture only after every sender points at the new tracks.
+      // Stopping first can leave Chromium/Android encoders on a green frame.
+      previousStream?.getTracks().forEach((track) => track.stop());
 
       // Re-enumerate to get labels (available after permission grant)
       await enumerateDevices();
@@ -283,7 +287,13 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   const getActiveOutboundStream = useCallback(() => {
     const original = localStreamRef.current;
     const activePhoneStream = phoneStreamRef.current;
-    const activeVideo = activePhoneStream?.getVideoTracks()[0] ?? original?.getVideoTracks()[0] ?? null;
+    const phoneVideo = activePhoneStream?.getVideoTracks()[0];
+    const pcVideo = original?.getVideoTracks()[0];
+    // A disconnected phone can leave an ended track in context. Never let that
+    // stale track keep overriding the working PC camera.
+    const phoneVideoUsable = phoneVideo?.readyState === "live";
+    const pcVideoUsable = pcVideo?.readyState === "live";
+    const activeVideo = phoneVideoUsable ? phoneVideo : pcVideoUsable ? pcVideo : null;
 
     // Audio fallback: if phone mic is off, ended, muted, or missing, use PC mic
     const phoneAudio = activePhoneStream?.getAudioTracks()[0];
@@ -832,10 +842,11 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         autoGainControl: true,
       };
       const constraints = [
-        { video: { facingMode: { exact: primaryFacing }, width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16 / 9 } }, audio: audioConstraints },
-        { video: { facingMode: { ideal: primaryFacing }, width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16 / 9 } }, audio: audioConstraints },
+        // Start with a broadly supported capture size. Some Android/Chromium
+        // hardware encoders expose a green preview at forced 720p.
+        { video: { facingMode: { ideal: primaryFacing }, width: { ideal: 960 }, height: { ideal: 540 }, aspectRatio: { ideal: 16 / 9 } }, audio: audioConstraints },
         { video: { facingMode: { ideal: primaryFacing } }, audio: audioConstraints },
-        { video: { facingMode: { ideal: fallbackFacing }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: audioConstraints },
+        { video: { facingMode: { ideal: fallbackFacing }, width: { ideal: 960 }, height: { ideal: 540 } }, audio: audioConstraints },
         { video: { facingMode: { ideal: fallbackFacing } }, audio: audioConstraints },
         { video: true, audio: audioConstraints },
         { video: true, audio: false },
@@ -867,6 +878,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         localStreamRef.current = stream;
         if (localVideoRef.current) {
           localVideoRef.current.srcObject = stream;
+          localVideoRef.current.play?.().catch(() => {});
         }
         // Track initial device IDs
         const aTrack = stream.getAudioTracks()[0];
@@ -876,6 +888,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
 
         // Detect when local tracks end (camera unplugged, mic disconnected, etc.)
         stream.getTracks().forEach((track) => {
+          track.enabled = track.kind === "video" ? !isVideoOffRef.current : !isMutedRef.current;
           track.onended = () => {
             console.warn(`[WebRTC] Local ${track.kind} track ended:`, track.label);
             if (track.kind === 'video') {
@@ -908,6 +921,8 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
               peerState.pc.addTrack(track, outboundStream);
             }
           });
+          // Changing a recvonly transceiver to sendrecv requires a fresh SDP.
+          void sendOfferTo(peerId);
         });
 
 
@@ -1232,6 +1247,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     const outboundStream = getActiveOutboundStream();
     if (el && outboundStream && el.srcObject !== outboundStream) {
       el.srcObject = outboundStream;
+      el.play?.().catch(() => {});
     }
   }, [getActiveOutboundStream]);
 
