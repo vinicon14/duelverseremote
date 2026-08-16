@@ -165,6 +165,55 @@ const getCardBack = (tcgType?: string, sleeveUrl?: string | null) => {
   return YGO_CARD_BACK_URL;
 };
 
+/**
+ * Renders the opponent's hand as real face-down cards.
+ * Only cards the opponent explicitly revealed are shown face-up (temporarily).
+ */
+const OpponentHandRow = ({
+  count,
+  cards,
+  cardBack,
+  compact = false,
+}: {
+  count: number;
+  cards?: OpponentHandCard[];
+  cardBack: string;
+  compact?: boolean;
+}) => {
+  const list: OpponentHandCard[] =
+    cards && cards.length > 0
+      ? cards
+      : Array.from({ length: Math.max(0, count) }).map((_, i) => ({ instanceId: `ph-${i}` }));
+
+  return (
+    <div className="flex items-center gap-1 p-1 rounded-md bg-muted/40 border border-border/60">
+      <Hand className="h-3 w-3 text-primary shrink-0" />
+      <span className="text-[10px] font-semibold tabular-nums shrink-0">{count}</span>
+      <div className="flex items-center gap-[2px] overflow-x-auto">
+        {list.length === 0 ? (
+          <span className="text-[10px] text-muted-foreground px-1">Mão vazia</span>
+        ) : (
+          list.map((c) => (
+            <img
+              key={c.instanceId}
+              src={c.revealed ? (c.image || cardBack) : cardBack}
+              alt={c.revealed ? (c.name || 'Carta revelada') : ''}
+              title={c.revealed ? c.name : undefined}
+              draggable={false}
+              className={cn(
+                'rounded-[2px] object-cover border shadow-sm shrink-0',
+                compact ? 'h-8 w-[23px]' : 'h-12 w-[34px]',
+                c.revealed ? 'border-primary ring-1 ring-primary animate-scale-in' : 'border-border/60'
+              )}
+            />
+          ))
+        )}
+      </div>
+    </div>
+  );
+};
+
+
 const isMonsterOpponentCard = (card: OpponentCard) => {
   const normalized = card.type?.toLowerCase() || '';
   return normalized.includes('monster') && !normalized.includes('spell') && !normalized.includes('trap');
