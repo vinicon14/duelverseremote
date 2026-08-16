@@ -182,6 +182,9 @@ export const FloatingOpponentViewer = ({
   // Multi-opponent support: store states keyed by opponent userId
   const [opponentStates, setOpponentStates] = useState<Map<string, OpponentState>>(new Map());
   const [activeOpponentId, setActiveOpponentId] = useState<string | null>(null);
+  /** Opponent ids currently playing the shuffle animation. */
+  const [shufflingOpponents, setShufflingOpponents] = useState<Set<string>>(new Set());
+
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMinimized, setIsMinimized] = useState(embedded ? false : true);
   const [isVisible, setIsVisible] = useState(true);
