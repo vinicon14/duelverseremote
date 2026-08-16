@@ -226,22 +226,26 @@ const PileZone = ({
   icon: Icon,
   label,
   onClick,
+  onContextMenu,
   onDragOver,
   onDrop,
   iconColor,
   sleeveUrl,
   mobileCompact = false,
+  isShuffling = false,
 }: {
   zone: FieldZoneType;
   cards: GameCard[];
   icon: typeof Layers;
   label: string;
   onClick: () => void;
+  onContextMenu?: (e: React.MouseEvent) => void;
   onDragOver: (e: React.DragEvent) => void;
   onDrop: (e: React.DragEvent) => void;
   iconColor: string;
   sleeveUrl?: string | null;
   mobileCompact?: boolean;
+  isShuffling?: boolean;
 }) => {
   return (
     <div
@@ -254,6 +258,7 @@ const PileZone = ({
         cards.length > 0 && "border-solid border-primary/20"
       )}
       onClick={onClick}
+      onContextMenu={onContextMenu}
       onDragOver={onDragOver}
       onDrop={onDrop}
     >
@@ -261,11 +266,27 @@ const PileZone = ({
         <div className="relative w-full h-full">
           {/* Show top card back for deck, or top card for others */}
           {zone === 'deck' ? (
-            <img
-              src={sleeveUrl || CARD_BACK_URL}
-              alt="Deck"
-              className="w-full h-full object-cover rounded-md shadow-sm"
-            />
+            <>
+              <img
+                src={sleeveUrl || CARD_BACK_URL}
+                alt="Deck"
+                className={cn(
+                  "w-full h-full object-cover rounded-md shadow-sm",
+                  isShuffling && "animate-deck-shuffle"
+                )}
+              />
+              {isShuffling && (
+                <>
+                  <img
+                    src={sleeveUrl || CARD_BACK_URL}
+                    alt=""
+                    aria-hidden
+                    className="absolute inset-0 w-full h-full object-cover rounded-md opacity-80 animate-deck-shuffle-alt"
+                  />
+                  <span className="absolute inset-0 rounded-md ring-2 ring-primary/70 pointer-events-none" />
+                </>
+              )}
+            </>
           ) : (
             <img
               src={cards[cards.length - 1]?.card_images?.[0]?.image_url_small || CARD_BACK_URL}
@@ -290,6 +311,7 @@ const PileZone = ({
 };
 
 export const DuelFieldBoard = ({
+
   fieldState,
   onZoneClick,
   onCardClick,
