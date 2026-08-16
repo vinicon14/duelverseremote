@@ -302,7 +302,9 @@ export const FloatingOpponentViewer = ({
           } else {
             newState = {
               hand: payload.hand || 0,
+              handCards: payload.handCards || undefined,
               field: payload.field || [],
+
               monsterZones: payload.monsterZones || undefined,
               spellZones: payload.spellZones || undefined,
               extraMonsterZones: payload.extraMonsterZones || undefined,
