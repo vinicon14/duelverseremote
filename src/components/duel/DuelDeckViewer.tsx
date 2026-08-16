@@ -211,6 +211,14 @@ export const DuelDeckViewer = ({
   const [showSearch, setShowSearch] = useState(false);
   const [attachMode, setAttachMode] = useState<{ targetZone: FieldZoneType; cardToAttach: GameCard } | null>(null);
   const [showSideSwap, setShowSideSwap] = useState(false);
+  /** Deck viewer open state blocks normal draws (hidden-information rule). */
+  const [isShuffling, setIsShuffling] = useState(false);
+  /** InstanceIds of hand cards temporarily revealed to opponent/spectators. */
+  const [revealedHandIds, setRevealedHandIds] = useState<string[]>([]);
+  const [deckContextMenu, setDeckContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const revealTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const shuffleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const [mobileDrag, setMobileDrag] = useState<{
     card: GameCard;
     sourceZone: 'hand';
