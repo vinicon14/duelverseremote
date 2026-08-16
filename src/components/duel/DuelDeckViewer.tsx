@@ -476,13 +476,12 @@ export const DuelDeckViewer = ({
     return newArray;
   };
 
+  /** Normal draw: always takes the current top card and only while the deck is closed. */
   const drawCard = useCallback(() => {
+    if (isDeckViewerOpenRef.current) return;
     setFieldState(prev => {
       if (prev.deck.length === 0) return prev;
-      // Random draw - select a random card from the deck
-      const randomIndex = Math.floor(Math.random() * prev.deck.length);
-      const drawnCard = prev.deck[randomIndex];
-      const remaining = prev.deck.filter((_, idx) => idx !== randomIndex);
+      const [drawnCard, ...remaining] = prev.deck;
       return {
         ...prev,
         deck: remaining,
@@ -492,23 +491,16 @@ export const DuelDeckViewer = ({
   }, []);
 
   const drawMultiple = useCallback((count: number) => {
+    if (isDeckViewerOpenRef.current) return;
     setFieldState(prev => {
       const toDraw = Math.min(count, prev.deck.length);
       if (toDraw === 0) return prev;
-      
-      // Random draw - select random cards from the deck
-      const deckCopy = [...prev.deck];
-      const drawnCards: GameCard[] = [];
-      
-      for (let i = 0; i < toDraw; i++) {
-        const randomIndex = Math.floor(Math.random() * deckCopy.length);
-        drawnCards.push({ ...deckCopy[randomIndex], isFaceDown: false });
-        deckCopy.splice(randomIndex, 1);
-      }
-      
+
+      const drawnCards = prev.deck.slice(0, toDraw).map(c => ({ ...c, isFaceDown: false }));
+
       return {
         ...prev,
-        deck: deckCopy,
+        deck: prev.deck.slice(toDraw),
         hand: [...prev.hand, ...drawnCards],
       };
     });
@@ -516,31 +508,60 @@ export const DuelDeckViewer = ({
 
   // Rush Duel: at the start of each turn, draw until you have 5 cards in hand.
   const drawUpToFive = useCallback(() => {
+    if (isDeckViewerOpenRef.current) return;
     setFieldState(prev => {
       const need = 5 - prev.hand.length;
       if (need <= 0 || prev.deck.length === 0) return prev;
       const toDraw = Math.min(need, prev.deck.length);
-      const deckCopy = [...prev.deck];
-      const drawnCards: GameCard[] = [];
-      for (let i = 0; i < toDraw; i++) {
-        const randomIndex = Math.floor(Math.random() * deckCopy.length);
-        drawnCards.push({ ...deckCopy[randomIndex], isFaceDown: false });
-        deckCopy.splice(randomIndex, 1);
-      }
+      const drawnCards = prev.deck.slice(0, toDraw).map(c => ({ ...c, isFaceDown: false }));
       return {
         ...prev,
-        deck: deckCopy,
+        deck: prev.deck.slice(toDraw),
         hand: [...prev.hand, ...drawnCards],
       };
     });
   }, []);
 
+  /** Broadcasts a shuffle animation to opponent and spectators (never the order). */
+  const notifyShuffleAnimation = useCallback(() => {
+    setIsShuffling(true);
+    if (shuffleTimerRef.current) clearTimeout(shuffleTimerRef.current);
+    shuffleTimerRef.current = setTimeout(() => setIsShuffling(false), 1400);
+
+    const channel = broadcastChannelRef.current;
+    if (channel && broadcastReadyRef.current && currentUserId) {
+      channel.send({
+        type: 'broadcast',
+        event: 'deck-shuffle',
+        payload: { userId: currentUserId },
+      });
+    }
+  }, [currentUserId]);
+
+  /** Manual shuffle — the deck stays face-down for everyone during the animation. */
   const shuffleDeck = useCallback(() => {
+    setDeckContextMenu(null);
+    setViewerModal({ open: false, zone: null });
+    notifyShuffleAnimation();
     setFieldState(prev => ({
       ...prev,
       deck: shuffleArray(prev.deck),
     }));
+  }, [notifyShuffleAnimation]);
+
+  /** Temporarily reveals a hand card to opponent and spectators. */
+  const revealHandCard = useCallback((instanceId: string, durationMs = 9000) => {
+    if (!instanceId) return;
+    setRevealedHandIds(prev => (prev.includes(instanceId) ? prev : [...prev, instanceId]));
+
+    const existing = revealTimersRef.current[instanceId];
+    if (existing) clearTimeout(existing);
+    revealTimersRef.current[instanceId] = setTimeout(() => {
+      delete revealTimersRef.current[instanceId];
+      setRevealedHandIds(prev => prev.filter(id => id !== instanceId));
+    }, durationMs);
   }, []);
+
 
   const returnAllToDeck = useCallback(() => {
     setFieldState(prev => {
