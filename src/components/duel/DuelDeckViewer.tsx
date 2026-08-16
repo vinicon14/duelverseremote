@@ -1127,7 +1127,7 @@ export const DuelDeckViewer = ({
 
       return newState;
     });
-  }, [viewerModal.zone]);
+  }, [viewerModal.zone, revealHandCard]);
 
   // Calculate total cards
   const totalMainDeck = deck.reduce((acc, c) => acc + c.quantity, 0);
