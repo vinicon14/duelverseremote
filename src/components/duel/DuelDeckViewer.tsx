@@ -407,7 +407,7 @@ export const DuelDeckViewer = ({
         sleeveUrl: equippedSleeveUrl,
       }
     });
-  }, [currentUserId, fieldState, equippedPlaymatUrl, equippedSleeveUrl]);
+  }, [currentUserId, fieldState, equippedPlaymatUrl, equippedSleeveUrl, revealedHandIds]);
 
   useEffect(() => {
     broadcastStateRef.current = broadcastState;
