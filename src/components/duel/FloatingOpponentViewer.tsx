@@ -716,7 +716,10 @@ export const FloatingOpponentViewer = ({
                       <ZoneSlotDisplay key={`empty-spell-${idx}`} card={null} label={`S${idx + 1}`} compact />
                     ))
                   )}
-                  <MiniPile icon={Layers} label="Deck" count={opponentState.deckCount} color="text-blue-500" />
+                  <div className={cn(activeOpponentId && shufflingOpponents.has(activeOpponentId) && "animate-deck-shuffle")}>
+                    <MiniPile icon={Layers} label="Deck" count={opponentState.deckCount} color="text-blue-500" />
+                  </div>
+
                 </div>
 
                 <OpponentHandRow
