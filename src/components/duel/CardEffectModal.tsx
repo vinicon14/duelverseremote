@@ -1,6 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Swords, Shield, Star, Sparkles, BookOpen, ChevronDown } from 'lucide-react';
+import { Swords, Shield, Star, Sparkles, BookOpen, ChevronDown, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 
