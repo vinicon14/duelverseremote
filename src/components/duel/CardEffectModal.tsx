@@ -1,6 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Swords, Shield, Star, Sparkles, BookOpen, ChevronDown } from 'lucide-react';
+import { Swords, Shield, Star, Sparkles, BookOpen, ChevronDown, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 
@@ -33,9 +33,14 @@ interface CardEffectModalProps {
   onPlaceCard?: () => void;
   showPlaceButton?: boolean;
   initialShowEffect?: boolean;
+  /** Temporarily reveals this card to the opponent and spectators. */
+  onRevealCard?: () => void;
+  showRevealButton?: boolean;
+  isRevealed?: boolean;
 }
 
-export const CardEffectModal = ({ open, onClose, card, onPlaceCard, showPlaceButton, initialShowEffect = false }: CardEffectModalProps) => {
+export const CardEffectModal = ({ open, onClose, card, onPlaceCard, showPlaceButton, initialShowEffect = false, onRevealCard, showRevealButton, isRevealed }: CardEffectModalProps) => {
+
   const [showEffect, setShowEffect] = useState(initialShowEffect);
   
   if (!card) return null;
@@ -179,6 +184,21 @@ export const CardEffectModal = ({ open, onClose, card, onPlaceCard, showPlaceBut
                 Esconder Efeito
               </Button>
             )}
+            {showRevealButton && onRevealCard && (
+              <Button
+                onClick={() => {
+                  onRevealCard();
+                  onClose();
+                }}
+                variant="secondary"
+                className="w-full"
+                size="sm"
+                disabled={isRevealed}
+              >
+                <Eye className="h-4 w-4 mr-2" />
+                {isRevealed ? 'Revelando...' : 'Revelar Carta'}
+              </Button>
+            )}
             {showPlaceButton && onPlaceCard && (
               <Button
                 onClick={() => {
@@ -191,6 +211,7 @@ export const CardEffectModal = ({ open, onClose, card, onPlaceCard, showPlaceBut
                 Colocar no Campo
               </Button>
             )}
+
           </div>
         </div>
       </DialogContent>

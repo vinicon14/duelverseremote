@@ -108,6 +108,18 @@ export default {
             transform: "translateY(-10px)",
           },
         },
+        "deck-shuffle": {
+          "0%, 100%": { transform: "translateX(0) rotate(0deg)" },
+          "25%": { transform: "translateX(-22%) rotate(-7deg)" },
+          "50%": { transform: "translateX(0) rotate(0deg)" },
+          "75%": { transform: "translateX(22%) rotate(7deg)" },
+        },
+        "deck-shuffle-alt": {
+          "0%, 100%": { transform: "translateX(0) rotate(0deg)" },
+          "25%": { transform: "translateX(20%) rotate(8deg)" },
+          "50%": { transform: "translateY(-14%) rotate(0deg)" },
+          "75%": { transform: "translateX(-20%) rotate(-8deg)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -115,7 +127,10 @@ export default {
         "glow-pulse": "glow-pulse 2s ease-in-out infinite",
         "slide-up": "slide-up 0.5s ease-out",
         "float": "float 3s ease-in-out infinite",
+        "deck-shuffle": "deck-shuffle 0.45s ease-in-out infinite",
+        "deck-shuffle-alt": "deck-shuffle-alt 0.45s ease-in-out infinite",
       },
+
     },
   },
   plugins: [require("tailwindcss-animate")],

@@ -211,6 +211,14 @@ export const DuelDeckViewer = ({
   const [showSearch, setShowSearch] = useState(false);
   const [attachMode, setAttachMode] = useState<{ targetZone: FieldZoneType; cardToAttach: GameCard } | null>(null);
   const [showSideSwap, setShowSideSwap] = useState(false);
+  /** Deck viewer open state blocks normal draws (hidden-information rule). */
+  const [isShuffling, setIsShuffling] = useState(false);
+  /** InstanceIds of hand cards temporarily revealed to opponent/spectators. */
+  const [revealedHandIds, setRevealedHandIds] = useState<string[]>([]);
+  const [deckContextMenu, setDeckContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const revealTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const shuffleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const [mobileDrag, setMobileDrag] = useState<{
     card: GameCard;
     sourceZone: 'hand';
@@ -242,6 +250,21 @@ export const DuelDeckViewer = ({
   useEffect(() => {
     isOpenRef.current = isOpen;
   }, [isOpen]);
+
+  /** True while the player is looking inside their own deck — normal draw is blocked. */
+  const isDeckViewerOpen = viewerModal.open && viewerModal.zone === 'deck';
+  const isDeckViewerOpenRef = useRef(isDeckViewerOpen);
+  useEffect(() => {
+    isDeckViewerOpenRef.current = isDeckViewerOpen;
+  }, [isDeckViewerOpen]);
+
+  useEffect(() => {
+    return () => {
+      Object.values(revealTimersRef.current).forEach(clearTimeout);
+      if (shuffleTimerRef.current) clearTimeout(shuffleTimerRef.current);
+    };
+  }, []);
+
 
   // Setup broadcast channel
   useEffect(() => {
@@ -316,7 +339,29 @@ export const DuelDeckViewer = ({
       payload: {
         userId: currentUserId,
         hand: fieldState.hand.length,
+        /**
+         * Hand cards sent as face-down placeholders. Only cards explicitly and
+         * temporarily revealed carry their real identity.
+         */
+        handCards: fieldState.hand.map(c => {
+          const revealed = revealedHandIds.includes(c.instanceId);
+          return revealed
+            ? {
+                instanceId: c.instanceId,
+                revealed: true,
+                id: c.id,
+                name: c.name,
+                image: c.card_images?.[0]?.image_url_small || '',
+                atk: c.atk,
+                def: c.def,
+                desc: c.desc,
+                type: c.type,
+                race: c.race,
+              }
+            : { instanceId: c.instanceId, revealed: false };
+        }),
         field: getFieldCards(),
+
         monsterZones: {
           monster1: fieldState.monster1 ? { id: fieldState.monster1.id, name: fieldState.monster1.isFaceDown ? 'Face-down' : fieldState.monster1.name, image: fieldState.monster1.isFaceDown ? CARD_BACK_URL : fieldState.monster1.card_images?.[0]?.image_url_small, isFaceDown: fieldState.monster1.isFaceDown, position: fieldState.monster1.position, materials: fieldState.monster1.attachedCards?.length || 0, atk: fieldState.monster1.atk, def: fieldState.monster1.def, desc: fieldState.monster1.desc, type: fieldState.monster1.type, race: fieldState.monster1.race } : null,
           monster2: fieldState.monster2 ? { id: fieldState.monster2.id, name: fieldState.monster2.isFaceDown ? 'Face-down' : fieldState.monster2.name, image: fieldState.monster2.isFaceDown ? CARD_BACK_URL : fieldState.monster2.card_images?.[0]?.image_url_small, isFaceDown: fieldState.monster2.isFaceDown, position: fieldState.monster2.position, materials: fieldState.monster2.attachedCards?.length || 0, atk: fieldState.monster2.atk, def: fieldState.monster2.def, desc: fieldState.monster2.desc, type: fieldState.monster2.type, race: fieldState.monster2.race } : null,
@@ -362,7 +407,7 @@ export const DuelDeckViewer = ({
         sleeveUrl: equippedSleeveUrl,
       }
     });
-  }, [currentUserId, fieldState, equippedPlaymatUrl, equippedSleeveUrl]);
+  }, [currentUserId, fieldState, equippedPlaymatUrl, equippedSleeveUrl, revealedHandIds]);
 
   useEffect(() => {
     broadcastStateRef.current = broadcastState;
@@ -398,16 +443,19 @@ export const DuelDeckViewer = ({
         }
       });
 
-      const shuffledDeck = shuffleArray(expandedDeck);
+      // The deck keeps exactly the order defined in the Deck Builder list.
+      // No automatic shuffle — shuffling is a manual (or effect-driven) action.
+      const orderedDeck = expandedDeck;
 
-      // Rush Duel: opening hand of 5 cards drawn automatically.
+      // Rush Duel: opening hand of 5 cards drawn from the top.
       let openingHand: GameCard[] = [];
-      let remainingDeck = shuffledDeck;
+      let remainingDeck = orderedDeck;
       if (isRushDuel) {
-        const drawCount = Math.min(5, shuffledDeck.length);
-        openingHand = shuffledDeck.slice(0, drawCount).map(c => ({ ...c, isFaceDown: false }));
-        remainingDeck = shuffledDeck.slice(drawCount);
+        const drawCount = Math.min(5, orderedDeck.length);
+        openingHand = orderedDeck.slice(0, drawCount).map(c => ({ ...c, isFaceDown: false }));
+        remainingDeck = orderedDeck.slice(drawCount);
       }
+
 
       setFieldState({
         ...INITIAL_FIELD_STATE,
@@ -428,13 +476,12 @@ export const DuelDeckViewer = ({
     return newArray;
   };
 
+  /** Normal draw: always takes the current top card and only while the deck is closed. */
   const drawCard = useCallback(() => {
+    if (isDeckViewerOpenRef.current) return;
     setFieldState(prev => {
       if (prev.deck.length === 0) return prev;
-      // Random draw - select a random card from the deck
-      const randomIndex = Math.floor(Math.random() * prev.deck.length);
-      const drawnCard = prev.deck[randomIndex];
-      const remaining = prev.deck.filter((_, idx) => idx !== randomIndex);
+      const [drawnCard, ...remaining] = prev.deck;
       return {
         ...prev,
         deck: remaining,
@@ -444,23 +491,16 @@ export const DuelDeckViewer = ({
   }, []);
 
   const drawMultiple = useCallback((count: number) => {
+    if (isDeckViewerOpenRef.current) return;
     setFieldState(prev => {
       const toDraw = Math.min(count, prev.deck.length);
       if (toDraw === 0) return prev;
-      
-      // Random draw - select random cards from the deck
-      const deckCopy = [...prev.deck];
-      const drawnCards: GameCard[] = [];
-      
-      for (let i = 0; i < toDraw; i++) {
-        const randomIndex = Math.floor(Math.random() * deckCopy.length);
-        drawnCards.push({ ...deckCopy[randomIndex], isFaceDown: false });
-        deckCopy.splice(randomIndex, 1);
-      }
-      
+
+      const drawnCards = prev.deck.slice(0, toDraw).map(c => ({ ...c, isFaceDown: false }));
+
       return {
         ...prev,
-        deck: deckCopy,
+        deck: prev.deck.slice(toDraw),
         hand: [...prev.hand, ...drawnCards],
       };
     });
@@ -468,31 +508,60 @@ export const DuelDeckViewer = ({
 
   // Rush Duel: at the start of each turn, draw until you have 5 cards in hand.
   const drawUpToFive = useCallback(() => {
+    if (isDeckViewerOpenRef.current) return;
     setFieldState(prev => {
       const need = 5 - prev.hand.length;
       if (need <= 0 || prev.deck.length === 0) return prev;
       const toDraw = Math.min(need, prev.deck.length);
-      const deckCopy = [...prev.deck];
-      const drawnCards: GameCard[] = [];
-      for (let i = 0; i < toDraw; i++) {
-        const randomIndex = Math.floor(Math.random() * deckCopy.length);
-        drawnCards.push({ ...deckCopy[randomIndex], isFaceDown: false });
-        deckCopy.splice(randomIndex, 1);
-      }
+      const drawnCards = prev.deck.slice(0, toDraw).map(c => ({ ...c, isFaceDown: false }));
       return {
         ...prev,
-        deck: deckCopy,
+        deck: prev.deck.slice(toDraw),
         hand: [...prev.hand, ...drawnCards],
       };
     });
   }, []);
 
+  /** Broadcasts a shuffle animation to opponent and spectators (never the order). */
+  const notifyShuffleAnimation = useCallback(() => {
+    setIsShuffling(true);
+    if (shuffleTimerRef.current) clearTimeout(shuffleTimerRef.current);
+    shuffleTimerRef.current = setTimeout(() => setIsShuffling(false), 1400);
+
+    const channel = broadcastChannelRef.current;
+    if (channel && broadcastReadyRef.current && currentUserId) {
+      channel.send({
+        type: 'broadcast',
+        event: 'deck-shuffle',
+        payload: { userId: currentUserId },
+      });
+    }
+  }, [currentUserId]);
+
+  /** Manual shuffle — the deck stays face-down for everyone during the animation. */
   const shuffleDeck = useCallback(() => {
+    setDeckContextMenu(null);
+    setViewerModal({ open: false, zone: null });
+    notifyShuffleAnimation();
     setFieldState(prev => ({
       ...prev,
       deck: shuffleArray(prev.deck),
     }));
+  }, [notifyShuffleAnimation]);
+
+  /** Temporarily reveals a hand card to opponent and spectators. */
+  const revealHandCard = useCallback((instanceId: string, durationMs = 9000) => {
+    if (!instanceId) return;
+    setRevealedHandIds(prev => (prev.includes(instanceId) ? prev : [...prev, instanceId]));
+
+    const existing = revealTimersRef.current[instanceId];
+    if (existing) clearTimeout(existing);
+    revealTimersRef.current[instanceId] = setTimeout(() => {
+      delete revealTimersRef.current[instanceId];
+      setRevealedHandIds(prev => prev.filter(id => id !== instanceId));
+    }, durationMs);
   }, []);
+
 
   const returnAllToDeck = useCallback(() => {
     setFieldState(prev => {
@@ -841,7 +910,10 @@ export const DuelDeckViewer = ({
       
       const newDeck = [...prev.deck];
       const [foundCard] = newDeck.splice(cardIndex, 1);
-      
+
+      // Searching the deck reveals the card taken (temporarily) to everyone.
+      revealHandCard(foundCard.instanceId);
+
       return {
         ...prev,
         deck: newDeck,
@@ -850,7 +922,8 @@ export const DuelDeckViewer = ({
     });
     setSearchQuery('');
     setShowSearch(false);
-  }, []);
+  }, [revealHandCard]);
+
 
   // Card actions from modal
   const handleFieldCardAction = useCallback((action: string) => {
@@ -1020,7 +1093,12 @@ export const DuelDeckViewer = ({
       switch (action) {
         case 'toHand':
           newState.hand = [...prev.hand, { ...card, isFaceDown: false }];
+          // Cards taken from the deck are revealed temporarily. No auto-shuffle.
+          if (zone === 'deck' || zone === 'extraDeck' || zone === 'sideDeck') {
+            revealHandCard(card.instanceId);
+          }
           break;
+
         case 'toGY':
           newState.graveyard = zone === 'graveyard' ? sourceArray : [...prev.graveyard, card];
           break;
@@ -1049,7 +1127,7 @@ export const DuelDeckViewer = ({
 
       return newState;
     });
-  }, [viewerModal.zone]);
+  }, [viewerModal.zone, revealHandCard]);
 
   // Calculate total cards
   const totalMainDeck = deck.reduce((acc, c) => acc + c.quantity, 0);
@@ -1139,6 +1217,8 @@ export const DuelDeckViewer = ({
           <DuelFieldBoard
             fieldState={fieldState}
             onZoneClick={handleZoneClick}
+            shufflingDeck={isShuffling}
+
             onCardClick={handleCardOnFieldClick}
             onCardDrop={handleCardDrop}
             isFullscreen={false}
@@ -1540,6 +1620,8 @@ export const DuelDeckViewer = ({
                   <DuelFieldBoard
                     fieldState={fieldState}
                     onZoneClick={handleZoneClick}
+                    shufflingDeck={isShuffling}
+
                     onCardClick={handleCardOnFieldClick}
                     onCardDrop={handleCardDrop}
                     isFullscreen={isFullscreen}
@@ -1580,7 +1662,7 @@ export const DuelDeckViewer = ({
         onReturnToTop={viewerModal.zone === 'deck' ? (card, idx) => handleZoneViewerAction('toTop', card, idx) : undefined}
         onReturnToBottom={viewerModal.zone === 'deck' ? (card, idx) => handleZoneViewerAction('toBottom', card, idx) : undefined}
         onShuffle={viewerModal.zone === 'deck' ? shuffleDeck : undefined}
-        onDraw={viewerModal.zone === 'deck' ? drawCard : undefined}
+        onDraw={undefined}
         onInvokeToField={(card, idx) => handleZoneViewerAction('toField', card, idx)}
         hasXYZMonster={hasXYZOnField()}
         onAttachAsMaterial={(card, idx) => {
@@ -1645,6 +1727,11 @@ export const DuelDeckViewer = ({
         onClose={() => setEffectModalOpen(false)}
         card={selectedEffectCard}
         showPlaceButton={selectedEffectCard && fieldState.hand.some(c => c.instanceId === selectedEffectCard.instanceId)}
+        showRevealButton={!!selectedEffectCard && fieldState.hand.some(c => c.instanceId === selectedEffectCard.instanceId)}
+        isRevealed={!!selectedEffectCard && revealedHandIds.includes(selectedEffectCard.instanceId)}
+        onRevealCard={() => {
+          if (selectedEffectCard) revealHandCard(selectedEffectCard.instanceId);
+        }}
         onPlaceCard={() => {
           if (selectedEffectCard) {
             setPlacementModal({ open: true, card: selectedEffectCard });
@@ -1652,6 +1739,7 @@ export const DuelDeckViewer = ({
           }
         }}
       />
+
 
       {/* Side Deck Swap Modal */}
       <SideDeckSwapModal

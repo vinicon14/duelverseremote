@@ -78,9 +78,25 @@ interface ExtraMonsterZones {
   extraMonster2: OpponentCard | null;
 }
 
+interface OpponentHandCard {
+  instanceId: string;
+  revealed?: boolean;
+  id?: number;
+  name?: string;
+  image?: string;
+  atk?: number;
+  def?: number;
+  desc?: string;
+  type?: string;
+  race?: string;
+}
+
 interface OpponentState {
   hand: number;
+  /** Face-down placeholders; only temporarily revealed cards carry real data. */
+  handCards?: OpponentHandCard[];
   field: OpponentCard[];
+
   monsterZones?: ZoneCards;
   spellZones?: SpellZoneCards;
   extraMonsterZones?: ExtraMonsterZones;
@@ -149,6 +165,55 @@ const getCardBack = (tcgType?: string, sleeveUrl?: string | null) => {
   return YGO_CARD_BACK_URL;
 };
 
+/**
+ * Renders the opponent's hand as real face-down cards.
+ * Only cards the opponent explicitly revealed are shown face-up (temporarily).
+ */
+const OpponentHandRow = ({
+  count,
+  cards,
+  cardBack,
+  compact = false,
+}: {
+  count: number;
+  cards?: OpponentHandCard[];
+  cardBack: string;
+  compact?: boolean;
+}) => {
+  const list: OpponentHandCard[] =
+    cards && cards.length > 0
+      ? cards
+      : Array.from({ length: Math.max(0, count) }).map((_, i) => ({ instanceId: `ph-${i}` }));
+
+  return (
+    <div className="flex items-center gap-1 p-1 rounded-md bg-muted/40 border border-border/60">
+      <Hand className="h-3 w-3 text-primary shrink-0" />
+      <span className="text-[10px] font-semibold tabular-nums shrink-0">{count}</span>
+      <div className="flex items-center gap-[2px] overflow-x-auto">
+        {list.length === 0 ? (
+          <span className="text-[10px] text-muted-foreground px-1">Mão vazia</span>
+        ) : (
+          list.map((c) => (
+            <img
+              key={c.instanceId}
+              src={c.revealed ? (c.image || cardBack) : cardBack}
+              alt={c.revealed ? (c.name || 'Carta revelada') : ''}
+              title={c.revealed ? c.name : undefined}
+              draggable={false}
+              className={cn(
+                'rounded-[2px] object-cover border shadow-sm shrink-0',
+                compact ? 'h-8 w-[23px]' : 'h-12 w-[34px]',
+                c.revealed ? 'border-primary ring-1 ring-primary animate-scale-in' : 'border-border/60'
+              )}
+            />
+          ))
+        )}
+      </div>
+    </div>
+  );
+};
+
+
 const isMonsterOpponentCard = (card: OpponentCard) => {
   const normalized = card.type?.toLowerCase() || '';
   return normalized.includes('monster') && !normalized.includes('spell') && !normalized.includes('trap');
@@ -166,6 +231,9 @@ export const FloatingOpponentViewer = ({
   // Multi-opponent support: store states keyed by opponent userId
   const [opponentStates, setOpponentStates] = useState<Map<string, OpponentState>>(new Map());
   const [activeOpponentId, setActiveOpponentId] = useState<string | null>(null);
+  /** Opponent ids currently playing the shuffle animation. */
+  const [shufflingOpponents, setShufflingOpponents] = useState<Set<string>>(new Set());
+
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMinimized, setIsMinimized] = useState(embedded ? false : true);
   const [isVisible, setIsVisible] = useState(true);
@@ -286,7 +354,9 @@ export const FloatingOpponentViewer = ({
           } else {
             newState = {
               hand: payload.hand || 0,
+              handCards: payload.handCards || undefined,
               field: payload.field || [],
+
               monsterZones: payload.monsterZones || undefined,
               spellZones: payload.spellZones || undefined,
               extraMonsterZones: payload.extraMonsterZones || undefined,
@@ -308,6 +378,24 @@ export const FloatingOpponentViewer = ({
           setActiveOpponentId(prev => prev || opId);
         }
       })
+      .on('broadcast', { event: 'deck-shuffle' }, ({ payload }) => {
+        // Shuffle is only an animation for viewers — the new order stays hidden.
+        const opId = payload?.userId as string | undefined;
+        if (!opId || opId === currentUserId) return;
+        setShufflingOpponents(prev => {
+          const next = new Set(prev);
+          next.add(opId);
+          return next;
+        });
+        setTimeout(() => {
+          setShufflingOpponents(prev => {
+            const next = new Set(prev);
+            next.delete(opId);
+            return next;
+          });
+        }, 1400);
+      })
+
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
           initialRequestTimer = setTimeout(requestLatestDeckState, 150);
@@ -628,14 +716,21 @@ export const FloatingOpponentViewer = ({
                       <ZoneSlotDisplay key={`empty-spell-${idx}`} card={null} label={`S${idx + 1}`} compact />
                     ))
                   )}
-                  <MiniPile icon={Layers} label="Deck" count={opponentState.deckCount} color="text-blue-500" />
+                  <div className={cn(activeOpponentId && shufflingOpponents.has(activeOpponentId) && "animate-deck-shuffle")}>
+                    <MiniPile icon={Layers} label="Deck" count={opponentState.deckCount} color="text-blue-500" />
+                  </div>
+
                 </div>
 
-                <div className="grid grid-cols-3 gap-1">
-                  <div className="h-7 rounded border border-border/60 bg-background/80 flex items-center justify-center gap-1 text-[10px] font-semibold">
-                    <Hand className="h-3 w-3 text-primary" />
-                    <span className="tabular-nums">{opponentState.hand}</span>
-                  </div>
+                <OpponentHandRow
+                  count={opponentState.hand}
+                  cards={opponentState.handCards}
+                  cardBack={cardBack}
+                  compact
+                />
+
+                <div className="grid grid-cols-2 gap-1">
+
                   <div className="h-7 rounded border border-border/60 bg-background/80 flex items-center justify-center gap-1 text-[10px] font-semibold">
                     <Ban className="h-3 w-3 text-purple-500" />
                     <span className="tabular-nums">{opponentState.banished.length}</span>
@@ -793,6 +888,10 @@ export const FloatingOpponentViewer = ({
               <div className="flex items-center gap-1">
                 <Layers className="h-3 w-3 text-muted-foreground" />
                 <span className="text-xs">{opponentState.tcgType === 'magic' ? 'Grimório' : 'Deck'}: {opponentState.deckCount}</span>
+                {activeOpponentId && shufflingOpponents.has(activeOpponentId) && (
+                  <Badge variant="outline" className="text-[9px] h-4 px-1 animate-pulse">Embaralhando…</Badge>
+                )}
+
               </div>
               {opponentState.tcgType === 'pokemon' && (
                 <div className="flex items-center gap-1">
@@ -813,6 +912,17 @@ export const FloatingOpponentViewer = ({
                 {isCollapsed ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3" />}
               </Button>
             </div>
+
+            {/* Opponent hand as physical face-down cards */}
+            {!isCollapsed && (
+              <OpponentHandRow
+                count={opponentState.hand}
+                cards={opponentState.handCards}
+                cardBack={cardBack}
+              />
+            )}
+
+
 
             {!isCollapsed && opponentState.tcgType === 'magic' && (
               <div

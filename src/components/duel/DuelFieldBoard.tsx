@@ -74,6 +74,9 @@ export interface FieldState {
 interface DuelFieldBoardProps {
   fieldState: FieldState;
   onZoneClick: (zone: FieldZoneType) => void;
+  onZoneContextMenu?: (zone: FieldZoneType, e: React.MouseEvent) => void;
+  /** When true, the deck pile plays a shuffle animation (never reveals card order). */
+  shufflingDeck?: boolean;
   onCardClick: (card: GameCard, zone: FieldZoneType) => void;
   onCardDrop: (zone: FieldZoneType, card: GameCard) => void;
   isFullscreen?: boolean;
@@ -83,6 +86,7 @@ interface DuelFieldBoardProps {
   tcgType?: string | null;
   mobileCompact?: boolean;
 }
+
 
 // Local state for effect modal will be managed inside component
 
@@ -222,22 +226,26 @@ const PileZone = ({
   icon: Icon,
   label,
   onClick,
+  onContextMenu,
   onDragOver,
   onDrop,
   iconColor,
   sleeveUrl,
   mobileCompact = false,
+  isShuffling = false,
 }: {
   zone: FieldZoneType;
   cards: GameCard[];
   icon: typeof Layers;
   label: string;
   onClick: () => void;
+  onContextMenu?: (e: React.MouseEvent) => void;
   onDragOver: (e: React.DragEvent) => void;
   onDrop: (e: React.DragEvent) => void;
   iconColor: string;
   sleeveUrl?: string | null;
   mobileCompact?: boolean;
+  isShuffling?: boolean;
 }) => {
   return (
     <div
@@ -250,6 +258,7 @@ const PileZone = ({
         cards.length > 0 && "border-solid border-primary/20"
       )}
       onClick={onClick}
+      onContextMenu={onContextMenu}
       onDragOver={onDragOver}
       onDrop={onDrop}
     >
@@ -257,11 +266,27 @@ const PileZone = ({
         <div className="relative w-full h-full">
           {/* Show top card back for deck, or top card for others */}
           {zone === 'deck' ? (
-            <img
-              src={sleeveUrl || CARD_BACK_URL}
-              alt="Deck"
-              className="w-full h-full object-cover rounded-md shadow-sm"
-            />
+            <>
+              <img
+                src={sleeveUrl || CARD_BACK_URL}
+                alt="Deck"
+                className={cn(
+                  "w-full h-full object-cover rounded-md shadow-sm",
+                  isShuffling && "animate-deck-shuffle"
+                )}
+              />
+              {isShuffling && (
+                <>
+                  <img
+                    src={sleeveUrl || CARD_BACK_URL}
+                    alt=""
+                    aria-hidden
+                    className="absolute inset-0 w-full h-full object-cover rounded-md opacity-80 animate-deck-shuffle-alt"
+                  />
+                  <span className="absolute inset-0 rounded-md ring-2 ring-primary/70 pointer-events-none" />
+                </>
+              )}
+            </>
           ) : (
             <img
               src={cards[cards.length - 1]?.card_images?.[0]?.image_url_small || CARD_BACK_URL}
@@ -288,8 +313,11 @@ const PileZone = ({
 export const DuelFieldBoard = ({
   fieldState,
   onZoneClick,
+  onZoneContextMenu,
+  shufflingDeck = false,
   onCardClick,
   onCardDrop,
+
   isFullscreen = false,
   playmatUrl,
   sleeveUrl,
@@ -485,12 +513,15 @@ export const DuelFieldBoard = ({
             icon={Layers}
             label="Deck"
             onClick={() => onZoneClick('deck')}
+            onContextMenu={onZoneContextMenu ? (e) => { e.preventDefault(); onZoneContextMenu('deck', e); } : undefined}
             onDragOver={handleDragOver}
             onDrop={handleDrop('deck')}
             iconColor="text-blue-500"
             sleeveUrl={sleeveUrl}
             mobileCompact={mobileCompact}
+            isShuffling={shufflingDeck}
           />
+
         </div>
 
         {/* Bottom Row: Banished and Side */}
