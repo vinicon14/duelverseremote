@@ -190,6 +190,11 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   const MAX_ZOOM = 4;
   const MIN_ZOOM = 0.7;
   const ZOOM_STEP = 0.15;
+  // Real camera zoom (native track zoom when supported, canvas pipeline otherwise)
+  const zoomPipelineRef = useRef<CameraZoomPipeline | null>(null);
+  const zoomLevelRef = useRef(1);
+  const panOffsetRef = useRef({ x: 0, y: 0 });
+  const nativeZoomActiveRef = useRef(false);
 
   // Device selection
   const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
