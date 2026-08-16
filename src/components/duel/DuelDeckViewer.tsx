@@ -910,7 +910,10 @@ export const DuelDeckViewer = ({
       
       const newDeck = [...prev.deck];
       const [foundCard] = newDeck.splice(cardIndex, 1);
-      
+
+      // Searching the deck reveals the card taken (temporarily) to everyone.
+      revealHandCard(foundCard.instanceId);
+
       return {
         ...prev,
         deck: newDeck,
@@ -919,7 +922,8 @@ export const DuelDeckViewer = ({
     });
     setSearchQuery('');
     setShowSearch(false);
-  }, []);
+  }, [revealHandCard]);
+
 
   // Card actions from modal
   const handleFieldCardAction = useCallback((action: string) => {
