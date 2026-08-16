@@ -6,6 +6,7 @@ import { Mic, MicOff, Video, VideoOff, Loader2, LayoutGrid, PictureInPicture2, Z
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { usePhoneStream } from "@/contexts/PhoneStreamContext";
 import { registerRemoteStream, unregisterRemoteStream, clearRemoteStreams } from "@/utils/remoteAudioRegistry";
+import { CameraZoomPipeline, applyNativeZoom, getNativeZoomRange } from "@/utils/cameraZoom";
 
 export type VideoLayout = "side-by-side" | "pip";
 
