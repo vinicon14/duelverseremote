@@ -719,11 +719,15 @@ export const FloatingOpponentViewer = ({
                   <MiniPile icon={Layers} label="Deck" count={opponentState.deckCount} color="text-blue-500" />
                 </div>
 
-                <div className="grid grid-cols-3 gap-1">
-                  <div className="h-7 rounded border border-border/60 bg-background/80 flex items-center justify-center gap-1 text-[10px] font-semibold">
-                    <Hand className="h-3 w-3 text-primary" />
-                    <span className="tabular-nums">{opponentState.hand}</span>
-                  </div>
+                <OpponentHandRow
+                  count={opponentState.hand}
+                  cards={opponentState.handCards}
+                  cardBack={cardBack}
+                  compact
+                />
+
+                <div className="grid grid-cols-2 gap-1">
+
                   <div className="h-7 rounded border border-border/60 bg-background/80 flex items-center justify-center gap-1 text-[10px] font-semibold">
                     <Ban className="h-3 w-3 text-purple-500" />
                     <span className="tabular-nums">{opponentState.banished.length}</span>
