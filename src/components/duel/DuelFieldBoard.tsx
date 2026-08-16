@@ -311,11 +311,13 @@ const PileZone = ({
 };
 
 export const DuelFieldBoard = ({
-
   fieldState,
   onZoneClick,
+  onZoneContextMenu,
+  shufflingDeck = false,
   onCardClick,
   onCardDrop,
+
   isFullscreen = false,
   playmatUrl,
   sleeveUrl,
