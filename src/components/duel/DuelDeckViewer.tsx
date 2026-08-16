@@ -1727,6 +1727,11 @@ export const DuelDeckViewer = ({
         onClose={() => setEffectModalOpen(false)}
         card={selectedEffectCard}
         showPlaceButton={selectedEffectCard && fieldState.hand.some(c => c.instanceId === selectedEffectCard.instanceId)}
+        showRevealButton={!!selectedEffectCard && fieldState.hand.some(c => c.instanceId === selectedEffectCard.instanceId)}
+        isRevealed={!!selectedEffectCard && revealedHandIds.includes(selectedEffectCard.instanceId)}
+        onRevealCard={() => {
+          if (selectedEffectCard) revealHandCard(selectedEffectCard.instanceId);
+        }}
         onPlaceCard={() => {
           if (selectedEffectCard) {
             setPlacementModal({ open: true, card: selectedEffectCard });
@@ -1734,6 +1739,7 @@ export const DuelDeckViewer = ({
           }
         }}
       />
+
 
       {/* Side Deck Swap Modal */}
       <SideDeckSwapModal
