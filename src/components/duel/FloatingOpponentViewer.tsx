@@ -78,9 +78,25 @@ interface ExtraMonsterZones {
   extraMonster2: OpponentCard | null;
 }
 
+interface OpponentHandCard {
+  instanceId: string;
+  revealed?: boolean;
+  id?: number;
+  name?: string;
+  image?: string;
+  atk?: number;
+  def?: number;
+  desc?: string;
+  type?: string;
+  race?: string;
+}
+
 interface OpponentState {
   hand: number;
+  /** Face-down placeholders; only temporarily revealed cards carry real data. */
+  handCards?: OpponentHandCard[];
   field: OpponentCard[];
+
   monsterZones?: ZoneCards;
   spellZones?: SpellZoneCards;
   extraMonsterZones?: ExtraMonsterZones;
