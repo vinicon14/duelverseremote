@@ -513,12 +513,15 @@ export const DuelFieldBoard = ({
             icon={Layers}
             label="Deck"
             onClick={() => onZoneClick('deck')}
+            onContextMenu={onZoneContextMenu ? (e) => { e.preventDefault(); onZoneContextMenu('deck', e); } : undefined}
             onDragOver={handleDragOver}
             onDrop={handleDrop('deck')}
             iconColor="text-blue-500"
             sleeveUrl={sleeveUrl}
             mobileCompact={mobileCompact}
+            isShuffling={shufflingDeck}
           />
+
         </div>
 
         {/* Bottom Row: Banished and Side */}
