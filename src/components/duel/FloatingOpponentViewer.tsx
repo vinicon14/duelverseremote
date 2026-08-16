@@ -326,6 +326,24 @@ export const FloatingOpponentViewer = ({
           setActiveOpponentId(prev => prev || opId);
         }
       })
+      .on('broadcast', { event: 'deck-shuffle' }, ({ payload }) => {
+        // Shuffle is only an animation for viewers — the new order stays hidden.
+        const opId = payload?.userId as string | undefined;
+        if (!opId || opId === currentUserId) return;
+        setShufflingOpponents(prev => {
+          const next = new Set(prev);
+          next.add(opId);
+          return next;
+        });
+        setTimeout(() => {
+          setShufflingOpponents(prev => {
+            const next = new Set(prev);
+            next.delete(opId);
+            return next;
+          });
+        }, 1400);
+      })
+
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
           initialRequestTimer = setTimeout(requestLatestDeckState, 150);
