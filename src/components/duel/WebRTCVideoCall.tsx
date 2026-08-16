@@ -352,8 +352,8 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     return stream.getTracks().length > 0 ? stream : null;
   }, []);
 
-  useEffect(() => {
-    if (isSpectator) return;
+  /** Push the current outbound stream (already zoom-processed) to every peer. */
+  const republishOutbound = useCallback(() => {
     const outboundStream = getActiveOutboundStream();
     const activeVideo = outboundStream?.getVideoTracks()[0] ?? null;
     const activeAudio = outboundStream?.getAudioTracks()[0] ?? null;
@@ -377,11 +377,88 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     });
 
     // Update local preview
-    if (localVideoRef.current) {
+    if (localVideoRef.current && outboundStream) {
       localVideoRef.current.srcObject = outboundStream;
       localVideoRef.current.play?.().catch(() => {});
     }
-  }, [phoneStream, isSpectator, getActiveOutboundStream]);
+  }, [getActiveOutboundStream]);
+
+  useEffect(() => {
+    if (isSpectator) return;
+    republishOutbound();
+  }, [phoneStream, isSpectator, republishOutbound]);
+
+  // ==== Real camera zoom ====
+  // Applies the zoom to the captured video itself (native track zoom when the
+  // device supports it, canvas crop/shrink pipeline otherwise), so the opponent
+  // and spectators see exactly the same zoom in / zoom out.
+  useEffect(() => {
+    if (isSpectator) return;
+    zoomLevelRef.current = zoomLevel;
+    panOffsetRef.current = panOffset;
+
+    let cancelled = false;
+    const apply = async () => {
+      const phoneVideo = phoneStreamRef.current?.getVideoTracks()[0];
+      const source =
+        (phoneVideo?.readyState === "live" ? phoneVideo : localStreamRef.current?.getVideoTracks()[0]) ?? null;
+      if (!source || source.readyState !== "live") return;
+
+      const range = getNativeZoomRange(source);
+
+      // 1) Native optical/digital zoom of the device (phones, some webcams)
+      if (range && zoomLevel >= 1) {
+        const ratio = (zoomLevel - 1) / (MAX_ZOOM - 1);
+        const target = range.min + (range.max - range.min) * ratio;
+        const ok = await applyNativeZoom(source, target);
+        if (ok && !cancelled) {
+          nativeZoomActiveRef.current = true;
+          if (zoomPipelineRef.current) {
+            zoomPipelineRef.current.stop();
+            zoomPipelineRef.current = null;
+          }
+          republishOutbound();
+          return;
+        }
+      }
+
+      // Reset any native zoom before falling back to the software pipeline
+      if (nativeZoomActiveRef.current && range) {
+        await applyNativeZoom(source, range.min);
+        nativeZoomActiveRef.current = false;
+      }
+
+      // 2) Software pipeline (crop for zoom in, shrink for zoom out)
+      if (zoomLevel === 1) {
+        if (zoomPipelineRef.current) {
+          zoomPipelineRef.current.stop();
+          zoomPipelineRef.current = null;
+          if (!cancelled) republishOutbound();
+        }
+        return;
+      }
+
+      if (!zoomPipelineRef.current) zoomPipelineRef.current = new CameraZoomPipeline();
+      const pipeline = zoomPipelineRef.current;
+      pipeline.setZoom(zoomLevel, panOffset);
+      const hadOutput = pipeline.sourceTrack === source && !!pipeline.outputTrack;
+      await pipeline.attach(source);
+      if (cancelled) return;
+      pipeline.setZoom(zoomLevel, panOffset);
+      if (!hadOutput) republishOutbound();
+    };
+
+    apply();
+    return () => {
+      cancelled = true;
+    };
+  }, [zoomLevel, panOffset, phoneStream, isSpectator, republishOutbound]);
+
+  useEffect(() => () => {
+    zoomPipelineRef.current?.stop();
+    zoomPipelineRef.current = null;
+  }, []);
+
 
 
   // Remove a disconnected peer from state so UI reverts to "Aguardando jogador"
