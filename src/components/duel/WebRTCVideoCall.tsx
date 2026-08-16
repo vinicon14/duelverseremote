@@ -1273,6 +1273,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     const videoTrack = stream.getVideoTracks()[0];
     if (videoTrack) {
       videoTrack.enabled = !videoTrack.enabled;
+      zoomPipelineRef.current?.syncEnabled();
       setIsVideoOff(!videoTrack.enabled);
     }
   };
