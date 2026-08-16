@@ -251,6 +251,21 @@ export const DuelDeckViewer = ({
     isOpenRef.current = isOpen;
   }, [isOpen]);
 
+  /** True while the player is looking inside their own deck — normal draw is blocked. */
+  const isDeckViewerOpen = viewerModal.open && viewerModal.zone === 'deck';
+  const isDeckViewerOpenRef = useRef(isDeckViewerOpen);
+  useEffect(() => {
+    isDeckViewerOpenRef.current = isDeckViewerOpen;
+  }, [isDeckViewerOpen]);
+
+  useEffect(() => {
+    return () => {
+      Object.values(revealTimersRef.current).forEach(clearTimeout);
+      if (shuffleTimerRef.current) clearTimeout(shuffleTimerRef.current);
+    };
+  }, []);
+
+
   // Setup broadcast channel
   useEffect(() => {
     if (!duelId || !currentUserId) return;
