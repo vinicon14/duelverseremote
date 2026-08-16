@@ -888,6 +888,10 @@ export const FloatingOpponentViewer = ({
               <div className="flex items-center gap-1">
                 <Layers className="h-3 w-3 text-muted-foreground" />
                 <span className="text-xs">{opponentState.tcgType === 'magic' ? 'Grimório' : 'Deck'}: {opponentState.deckCount}</span>
+                {activeOpponentId && shufflingOpponents.has(activeOpponentId) && (
+                  <Badge variant="outline" className="text-[9px] h-4 px-1 animate-pulse">Embaralhando…</Badge>
+                )}
+
               </div>
               {opponentState.tcgType === 'pokemon' && (
                 <div className="flex items-center gap-1">
