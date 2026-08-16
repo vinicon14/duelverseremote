@@ -443,16 +443,19 @@ export const DuelDeckViewer = ({
         }
       });
 
-      const shuffledDeck = shuffleArray(expandedDeck);
+      // The deck keeps exactly the order defined in the Deck Builder list.
+      // No automatic shuffle — shuffling is a manual (or effect-driven) action.
+      const orderedDeck = expandedDeck;
 
-      // Rush Duel: opening hand of 5 cards drawn automatically.
+      // Rush Duel: opening hand of 5 cards drawn from the top.
       let openingHand: GameCard[] = [];
-      let remainingDeck = shuffledDeck;
+      let remainingDeck = orderedDeck;
       if (isRushDuel) {
-        const drawCount = Math.min(5, shuffledDeck.length);
-        openingHand = shuffledDeck.slice(0, drawCount).map(c => ({ ...c, isFaceDown: false }));
-        remainingDeck = shuffledDeck.slice(drawCount);
+        const drawCount = Math.min(5, orderedDeck.length);
+        openingHand = orderedDeck.slice(0, drawCount).map(c => ({ ...c, isFaceDown: false }));
+        remainingDeck = orderedDeck.slice(drawCount);
       }
+
 
       setFieldState({
         ...INITIAL_FIELD_STATE,
