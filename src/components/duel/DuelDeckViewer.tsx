@@ -1620,6 +1620,8 @@ export const DuelDeckViewer = ({
                   <DuelFieldBoard
                     fieldState={fieldState}
                     onZoneClick={handleZoneClick}
+                    shufflingDeck={isShuffling}
+
                     onCardClick={handleCardOnFieldClick}
                     onCardDrop={handleCardDrop}
                     isFullscreen={isFullscreen}
