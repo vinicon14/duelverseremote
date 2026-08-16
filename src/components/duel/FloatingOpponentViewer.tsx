@@ -902,6 +902,17 @@ export const FloatingOpponentViewer = ({
               </Button>
             </div>
 
+            {/* Opponent hand as physical face-down cards */}
+            {!isCollapsed && (
+              <OpponentHandRow
+                count={opponentState.hand}
+                cards={opponentState.handCards}
+                cardBack={cardBack}
+              />
+            )}
+
+
+
             {!isCollapsed && opponentState.tcgType === 'magic' && (
               <div
                 className="space-y-2 p-2 rounded-lg relative overflow-hidden"
