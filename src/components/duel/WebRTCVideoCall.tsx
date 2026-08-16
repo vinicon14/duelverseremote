@@ -326,7 +326,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     // stale track keep overriding the working PC camera.
     const phoneVideoUsable = phoneVideo?.readyState === "live";
     const pcVideoUsable = pcVideo?.readyState === "live";
-    const activeVideo = phoneVideoUsable ? phoneVideo : pcVideoUsable ? pcVideo : null;
+    const rawVideo = phoneVideoUsable ? phoneVideo : pcVideoUsable ? pcVideo : null;
 
     // Audio fallback: if phone mic is off, ended, muted, or missing, use PC mic
     const phoneAudio = activePhoneStream?.getAudioTracks()[0];
@@ -334,8 +334,17 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     const phoneAudioUsable = phoneAudio && phoneAudio.readyState === "live" && phoneAudio.enabled;
     const activeAudio = phoneAudioUsable ? phoneAudio : pcAudio ?? null;
 
-    if (activeVideo) activeVideo.enabled = !isVideoOffRef.current;
+    if (rawVideo) rawVideo.enabled = !isVideoOffRef.current;
     if (activeAudio) activeAudio.enabled = !isMutedRef.current;
+
+    // If a software zoom pipeline is running on top of this exact source, send
+    // the processed (zoomed) track so remote peers also see the zoom.
+    const pipeline = zoomPipelineRef.current;
+    let activeVideo = rawVideo;
+    if (rawVideo && pipeline && pipeline.sourceTrack === rawVideo && pipeline.outputTrack) {
+      pipeline.syncEnabled();
+      activeVideo = pipeline.outputTrack;
+    }
 
     const stream = new MediaStream();
     if (activeVideo) stream.addTrack(activeVideo);
