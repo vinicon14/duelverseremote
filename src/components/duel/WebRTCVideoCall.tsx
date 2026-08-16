@@ -6,6 +6,7 @@ import { Mic, MicOff, Video, VideoOff, Loader2, LayoutGrid, PictureInPicture2, Z
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { usePhoneStream } from "@/contexts/PhoneStreamContext";
 import { registerRemoteStream, unregisterRemoteStream, clearRemoteStreams } from "@/utils/remoteAudioRegistry";
+import { CameraZoomPipeline, applyNativeZoom, getNativeZoomRange } from "@/utils/cameraZoom";
 
 export type VideoLayout = "side-by-side" | "pip";
 
@@ -189,6 +190,11 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   const MAX_ZOOM = 4;
   const MIN_ZOOM = 0.7;
   const ZOOM_STEP = 0.15;
+  // Real camera zoom (native track zoom when supported, canvas pipeline otherwise)
+  const zoomPipelineRef = useRef<CameraZoomPipeline | null>(null);
+  const zoomLevelRef = useRef(1);
+  const panOffsetRef = useRef({ x: 0, y: 0 });
+  const nativeZoomActiveRef = useRef(false);
 
   // Device selection
   const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
@@ -320,7 +326,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     // stale track keep overriding the working PC camera.
     const phoneVideoUsable = phoneVideo?.readyState === "live";
     const pcVideoUsable = pcVideo?.readyState === "live";
-    const activeVideo = phoneVideoUsable ? phoneVideo : pcVideoUsable ? pcVideo : null;
+    const rawVideo = phoneVideoUsable ? phoneVideo : pcVideoUsable ? pcVideo : null;
 
     // Audio fallback: if phone mic is off, ended, muted, or missing, use PC mic
     const phoneAudio = activePhoneStream?.getAudioTracks()[0];
@@ -328,8 +334,17 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     const phoneAudioUsable = phoneAudio && phoneAudio.readyState === "live" && phoneAudio.enabled;
     const activeAudio = phoneAudioUsable ? phoneAudio : pcAudio ?? null;
 
-    if (activeVideo) activeVideo.enabled = !isVideoOffRef.current;
+    if (rawVideo) rawVideo.enabled = !isVideoOffRef.current;
     if (activeAudio) activeAudio.enabled = !isMutedRef.current;
+
+    // If a software zoom pipeline is running on top of this exact source, send
+    // the processed (zoomed) track so remote peers also see the zoom.
+    const pipeline = zoomPipelineRef.current;
+    let activeVideo = rawVideo;
+    if (rawVideo && pipeline && pipeline.sourceTrack === rawVideo && pipeline.outputTrack) {
+      pipeline.syncEnabled();
+      activeVideo = pipeline.outputTrack;
+    }
 
     const stream = new MediaStream();
     if (activeVideo) stream.addTrack(activeVideo);
@@ -337,8 +352,8 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     return stream.getTracks().length > 0 ? stream : null;
   }, []);
 
-  useEffect(() => {
-    if (isSpectator) return;
+  /** Push the current outbound stream (already zoom-processed) to every peer. */
+  const republishOutbound = useCallback(() => {
     const outboundStream = getActiveOutboundStream();
     const activeVideo = outboundStream?.getVideoTracks()[0] ?? null;
     const activeAudio = outboundStream?.getAudioTracks()[0] ?? null;
@@ -362,11 +377,88 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     });
 
     // Update local preview
-    if (localVideoRef.current) {
+    if (localVideoRef.current && outboundStream) {
       localVideoRef.current.srcObject = outboundStream;
       localVideoRef.current.play?.().catch(() => {});
     }
-  }, [phoneStream, isSpectator, getActiveOutboundStream]);
+  }, [getActiveOutboundStream]);
+
+  useEffect(() => {
+    if (isSpectator) return;
+    republishOutbound();
+  }, [phoneStream, isSpectator, republishOutbound]);
+
+  // ==== Real camera zoom ====
+  // Applies the zoom to the captured video itself (native track zoom when the
+  // device supports it, canvas crop/shrink pipeline otherwise), so the opponent
+  // and spectators see exactly the same zoom in / zoom out.
+  useEffect(() => {
+    if (isSpectator) return;
+    zoomLevelRef.current = zoomLevel;
+    panOffsetRef.current = panOffset;
+
+    let cancelled = false;
+    const apply = async () => {
+      const phoneVideo = phoneStreamRef.current?.getVideoTracks()[0];
+      const source =
+        (phoneVideo?.readyState === "live" ? phoneVideo : localStreamRef.current?.getVideoTracks()[0]) ?? null;
+      if (!source || source.readyState !== "live") return;
+
+      const range = getNativeZoomRange(source);
+
+      // 1) Native optical/digital zoom of the device (phones, some webcams)
+      if (range && zoomLevel >= 1) {
+        const ratio = (zoomLevel - 1) / (MAX_ZOOM - 1);
+        const target = range.min + (range.max - range.min) * ratio;
+        const ok = await applyNativeZoom(source, target);
+        if (ok && !cancelled) {
+          nativeZoomActiveRef.current = true;
+          if (zoomPipelineRef.current) {
+            zoomPipelineRef.current.stop();
+            zoomPipelineRef.current = null;
+          }
+          republishOutbound();
+          return;
+        }
+      }
+
+      // Reset any native zoom before falling back to the software pipeline
+      if (nativeZoomActiveRef.current && range) {
+        await applyNativeZoom(source, range.min);
+        nativeZoomActiveRef.current = false;
+      }
+
+      // 2) Software pipeline (crop for zoom in, shrink for zoom out)
+      if (zoomLevel === 1) {
+        if (zoomPipelineRef.current) {
+          zoomPipelineRef.current.stop();
+          zoomPipelineRef.current = null;
+          if (!cancelled) republishOutbound();
+        }
+        return;
+      }
+
+      if (!zoomPipelineRef.current) zoomPipelineRef.current = new CameraZoomPipeline();
+      const pipeline = zoomPipelineRef.current;
+      pipeline.setZoom(zoomLevel, panOffset);
+      const hadOutput = pipeline.sourceTrack === source && !!pipeline.outputTrack;
+      await pipeline.attach(source);
+      if (cancelled) return;
+      pipeline.setZoom(zoomLevel, panOffset);
+      if (!hadOutput) republishOutbound();
+    };
+
+    apply();
+    return () => {
+      cancelled = true;
+    };
+  }, [zoomLevel, panOffset, phoneStream, isSpectator, republishOutbound]);
+
+  useEffect(() => () => {
+    zoomPipelineRef.current?.stop();
+    zoomPipelineRef.current = null;
+  }, []);
+
 
 
   // Remove a disconnected peer from state so UI reverts to "Aguardando jogador"
@@ -1181,6 +1273,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     const videoTrack = stream.getVideoTracks()[0];
     if (videoTrack) {
       videoTrack.enabled = !videoTrack.enabled;
+      zoomPipelineRef.current?.syncEnabled();
       setIsVideoOff(!videoTrack.enabled);
     }
   };
@@ -1338,11 +1431,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
           playsInline
           muted
           className={`w-full h-full object-contain rounded-2xl ${localDeckOpen ? 'hidden' : ''} ${zoomLevel > 1 ? 'cursor-grab active:cursor-grabbing' : ''}`}
-          style={{
-            transform: zoomLevel > 1 
-              ? `scaleX(-1) scale(${zoomLevel}) translate(${panOffset.x / zoomLevel}px, ${panOffset.y / zoomLevel}px)`
-              : 'scaleX(-1)',
-          }}
+          style={{ transform: 'scaleX(-1)' }}
           onPointerDown={handlePanStart}
           onPointerMove={handlePanMove}
           onPointerUp={handlePanEnd}
@@ -1439,7 +1528,6 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         /* ===== 4-PLAYER GRID (2x2 quadrants) ===== */
         <div 
           className={`grid grid-cols-2 grid-rows-2 w-full h-full transition-transform duration-200 origin-center ${zoomLevel < 1 ? 'rounded-2xl border-2 border-purple-500' : ''}`}
-          style={zoomLevel < 1 ? { transform: `scale(${zoomLevel})` } : undefined}
         >
           {/* Top-left: Local (you) */}
           <div className="relative overflow-hidden">
@@ -1462,7 +1550,6 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         /* ===== SIDE-BY-SIDE (desktop) / STACKED (mobile) ===== */
         <div 
           className={`${mobileArenaMode ? 'flex flex-col-reverse' : 'flex flex-col sm:flex-row'} w-full h-full transition-transform duration-200 origin-center ${zoomLevel < 1 ? 'rounded-2xl border-2 border-purple-500 overflow-hidden' : ''}`}
-          style={zoomLevel < 1 ? { transform: `scale(${zoomLevel})` } : undefined}
         >
           <div className="relative flex-1 min-h-0">
             {renderLocalPanel()}
@@ -1477,8 +1564,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
           {/* Big panel — always show deck viewers here regardless of swap */}
           <div 
             className={`w-full h-full transition-transform duration-200 origin-center ${zoomLevel < 1 ? 'rounded-2xl border-2 border-purple-500 overflow-hidden' : ''}`}
-            style={zoomLevel < 1 ? { transform: `scale(${zoomLevel})` } : undefined}
-          >
+            >
             {pipSwapped ? (
               /* Local is big — show local deck or local video */
               renderLocalPanel()
@@ -1535,11 +1621,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
                     playsInline
                     muted
                     className={`w-full h-full object-cover ${zoomLevel > 1 ? 'cursor-grab active:cursor-grabbing' : ''}`}
-                    style={{
-                      transform: zoomLevel > 1 
-                        ? `scaleX(-1) scale(${zoomLevel}) translate(${panOffset.x / zoomLevel}px, ${panOffset.y / zoomLevel}px)`
-                        : 'scaleX(-1)',
-                    }}
+                    style={{ transform: 'scaleX(-1)' }}
                     onPointerDown={handlePanStart}
                     onPointerMove={handlePanMove}
                     onPointerUp={handlePanEnd}
