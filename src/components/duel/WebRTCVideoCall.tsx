@@ -1527,7 +1527,6 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         /* ===== 4-PLAYER GRID (2x2 quadrants) ===== */
         <div 
           className={`grid grid-cols-2 grid-rows-2 w-full h-full transition-transform duration-200 origin-center ${zoomLevel < 1 ? 'rounded-2xl border-2 border-purple-500' : ''}`}
-          style={zoomLevel < 1 ? { transform: `scale(${zoomLevel})` } : undefined}
         >
           {/* Top-left: Local (you) */}
           <div className="relative overflow-hidden">
@@ -1550,7 +1549,6 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         /* ===== SIDE-BY-SIDE (desktop) / STACKED (mobile) ===== */
         <div 
           className={`${mobileArenaMode ? 'flex flex-col-reverse' : 'flex flex-col sm:flex-row'} w-full h-full transition-transform duration-200 origin-center ${zoomLevel < 1 ? 'rounded-2xl border-2 border-purple-500 overflow-hidden' : ''}`}
-          style={zoomLevel < 1 ? { transform: `scale(${zoomLevel})` } : undefined}
         >
           <div className="relative flex-1 min-h-0">
             {renderLocalPanel()}
@@ -1565,8 +1563,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
           {/* Big panel — always show deck viewers here regardless of swap */}
           <div 
             className={`w-full h-full transition-transform duration-200 origin-center ${zoomLevel < 1 ? 'rounded-2xl border-2 border-purple-500 overflow-hidden' : ''}`}
-            style={zoomLevel < 1 ? { transform: `scale(${zoomLevel})` } : undefined}
-          >
+            >
             {pipSwapped ? (
               /* Local is big — show local deck or local video */
               renderLocalPanel()
