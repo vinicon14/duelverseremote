@@ -1662,7 +1662,7 @@ export const DuelDeckViewer = ({
         onReturnToTop={viewerModal.zone === 'deck' ? (card, idx) => handleZoneViewerAction('toTop', card, idx) : undefined}
         onReturnToBottom={viewerModal.zone === 'deck' ? (card, idx) => handleZoneViewerAction('toBottom', card, idx) : undefined}
         onShuffle={viewerModal.zone === 'deck' ? shuffleDeck : undefined}
-        onDraw={viewerModal.zone === 'deck' ? drawCard : undefined}
+        onDraw={undefined}
         onInvokeToField={(card, idx) => handleZoneViewerAction('toField', card, idx)}
         hasXYZMonster={hasXYZOnField()}
         onAttachAsMaterial={(card, idx) => {
