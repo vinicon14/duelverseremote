@@ -339,7 +339,29 @@ export const DuelDeckViewer = ({
       payload: {
         userId: currentUserId,
         hand: fieldState.hand.length,
+        /**
+         * Hand cards sent as face-down placeholders. Only cards explicitly and
+         * temporarily revealed carry their real identity.
+         */
+        handCards: fieldState.hand.map(c => {
+          const revealed = revealedHandIds.includes(c.instanceId);
+          return revealed
+            ? {
+                instanceId: c.instanceId,
+                revealed: true,
+                id: c.id,
+                name: c.name,
+                image: c.card_images?.[0]?.image_url_small || '',
+                atk: c.atk,
+                def: c.def,
+                desc: c.desc,
+                type: c.type,
+                race: c.race,
+              }
+            : { instanceId: c.instanceId, revealed: false };
+        }),
         field: getFieldCards(),
+
         monsterZones: {
           monster1: fieldState.monster1 ? { id: fieldState.monster1.id, name: fieldState.monster1.isFaceDown ? 'Face-down' : fieldState.monster1.name, image: fieldState.monster1.isFaceDown ? CARD_BACK_URL : fieldState.monster1.card_images?.[0]?.image_url_small, isFaceDown: fieldState.monster1.isFaceDown, position: fieldState.monster1.position, materials: fieldState.monster1.attachedCards?.length || 0, atk: fieldState.monster1.atk, def: fieldState.monster1.def, desc: fieldState.monster1.desc, type: fieldState.monster1.type, race: fieldState.monster1.race } : null,
           monster2: fieldState.monster2 ? { id: fieldState.monster2.id, name: fieldState.monster2.isFaceDown ? 'Face-down' : fieldState.monster2.name, image: fieldState.monster2.isFaceDown ? CARD_BACK_URL : fieldState.monster2.card_images?.[0]?.image_url_small, isFaceDown: fieldState.monster2.isFaceDown, position: fieldState.monster2.position, materials: fieldState.monster2.attachedCards?.length || 0, atk: fieldState.monster2.atk, def: fieldState.monster2.def, desc: fieldState.monster2.desc, type: fieldState.monster2.type, race: fieldState.monster2.race } : null,
