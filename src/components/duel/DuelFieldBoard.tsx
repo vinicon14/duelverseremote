@@ -74,6 +74,9 @@ export interface FieldState {
 interface DuelFieldBoardProps {
   fieldState: FieldState;
   onZoneClick: (zone: FieldZoneType) => void;
+  onZoneContextMenu?: (zone: FieldZoneType, e: React.MouseEvent) => void;
+  /** When true, the deck pile plays a shuffle animation (never reveals card order). */
+  shufflingDeck?: boolean;
   onCardClick: (card: GameCard, zone: FieldZoneType) => void;
   onCardDrop: (zone: FieldZoneType, card: GameCard) => void;
   isFullscreen?: boolean;
@@ -83,6 +86,7 @@ interface DuelFieldBoardProps {
   tcgType?: string | null;
   mobileCompact?: boolean;
 }
+
 
 // Local state for effect modal will be managed inside component
 
