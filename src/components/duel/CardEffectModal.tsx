@@ -184,6 +184,21 @@ export const CardEffectModal = ({ open, onClose, card, onPlaceCard, showPlaceBut
                 Esconder Efeito
               </Button>
             )}
+            {showRevealButton && onRevealCard && (
+              <Button
+                onClick={() => {
+                  onRevealCard();
+                  onClose();
+                }}
+                variant="secondary"
+                className="w-full"
+                size="sm"
+                disabled={isRevealed}
+              >
+                <Eye className="h-4 w-4 mr-2" />
+                {isRevealed ? 'Revelando...' : 'Revelar Carta'}
+              </Button>
+            )}
             {showPlaceButton && onPlaceCard && (
               <Button
                 onClick={() => {
@@ -196,6 +211,7 @@ export const CardEffectModal = ({ open, onClose, card, onPlaceCard, showPlaceBut
                 Colocar no Campo
               </Button>
             )}
+
           </div>
         </div>
       </DialogContent>
