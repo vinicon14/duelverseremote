@@ -33,9 +33,14 @@ interface CardEffectModalProps {
   onPlaceCard?: () => void;
   showPlaceButton?: boolean;
   initialShowEffect?: boolean;
+  /** Temporarily reveals this card to the opponent and spectators. */
+  onRevealCard?: () => void;
+  showRevealButton?: boolean;
+  isRevealed?: boolean;
 }
 
-export const CardEffectModal = ({ open, onClose, card, onPlaceCard, showPlaceButton, initialShowEffect = false }: CardEffectModalProps) => {
+export const CardEffectModal = ({ open, onClose, card, onPlaceCard, showPlaceButton, initialShowEffect = false, onRevealCard, showRevealButton, isRevealed }: CardEffectModalProps) => {
+
   const [showEffect, setShowEffect] = useState(initialShowEffect);
   
   if (!card) return null;
