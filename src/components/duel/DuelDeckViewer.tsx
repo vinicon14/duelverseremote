@@ -1093,7 +1093,12 @@ export const DuelDeckViewer = ({
       switch (action) {
         case 'toHand':
           newState.hand = [...prev.hand, { ...card, isFaceDown: false }];
+          // Cards taken from the deck are revealed temporarily. No auto-shuffle.
+          if (zone === 'deck' || zone === 'extraDeck' || zone === 'sideDeck') {
+            revealHandCard(card.instanceId);
+          }
           break;
+
         case 'toGY':
           newState.graveyard = zone === 'graveyard' ? sourceArray : [...prev.graveyard, card];
           break;
