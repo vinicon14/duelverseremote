@@ -8,6 +8,10 @@
  *    crops (zoom in) or shrinks (zoom out) the frames and produce a NEW video
  *    track through canvas.captureStream(). That processed track is what gets
  *    sent to the peers, so the opponent also sees the zoom.
+ *
+ * The pipeline is defensive on purpose: if anything fails (no frames, no
+ * canvas support, hidden tab throttling) it reports failure and the caller
+ * keeps sending the raw camera track instead of a black/green canvas.
  */
 
 export const getNativeZoomRange = (track?: MediaStreamTrack | null) => {
@@ -40,7 +44,7 @@ export class CameraZoomPipeline {
   private videoEl: HTMLVideoElement | null = null;
   private canvas: HTMLCanvasElement | null = null;
   private ctx: CanvasRenderingContext2D | null = null;
-  private raf: number | null = null;
+  private timer: number | null = null;
   private source: MediaStreamTrack | null = null;
   private output: MediaStreamTrack | null = null;
   private zoom = 1;
@@ -59,16 +63,27 @@ export class CameraZoomPipeline {
     this.pan = pan;
   }
 
-  /** Attach (or reuse) the pipeline for a given source track. */
+  /**
+   * Attach (or reuse) the pipeline for a given source track.
+   * Returns null when the processed track could not be produced — the caller
+   * must then keep using the raw camera track.
+   */
   async attach(track: MediaStreamTrack): Promise<MediaStreamTrack | null> {
     if (this.source === track && this.outputTrack) return this.outputTrack;
     this.stop();
+
+    if (track.readyState !== "live") return null;
     this.source = track;
 
     const videoEl = document.createElement("video");
     videoEl.autoplay = true;
     videoEl.playsInline = true;
     videoEl.muted = true;
+    // Keep it in the DOM (invisible): detached elements can be paused/throttled
+    // by the browser, which freezes the canvas and produces black frames.
+    videoEl.style.cssText =
+      "position:fixed;left:-10000px;top:0;width:2px;height:2px;opacity:0;pointer-events:none;";
+    document.body.appendChild(videoEl);
     videoEl.srcObject = new MediaStream([track]);
     this.videoEl = videoEl;
     try {
@@ -76,12 +91,33 @@ export class CameraZoomPipeline {
     } catch {
       /* ignore */
     }
-    await new Promise<void>((resolve) => {
-      if (videoEl.videoWidth > 0) return resolve();
-      const done = () => resolve();
-      videoEl.onloadedmetadata = done;
-      setTimeout(done, 1500);
+
+    // Wait for real frames; bail out if the source never produces any.
+    const ready = await new Promise<boolean>((resolve) => {
+      if (videoEl.videoWidth > 0) return resolve(true);
+      let done = false;
+      const finish = (ok: boolean) => {
+        if (done) return;
+        done = true;
+        resolve(ok);
+      };
+      videoEl.onloadedmetadata = () => finish(videoEl.videoWidth > 0);
+      const poll = window.setInterval(() => {
+        if (videoEl.videoWidth > 0) {
+          window.clearInterval(poll);
+          finish(true);
+        }
+      }, 100);
+      window.setTimeout(() => {
+        window.clearInterval(poll);
+        finish(videoEl.videoWidth > 0);
+      }, 2500);
     });
+
+    if (!ready || this.videoEl !== videoEl) {
+      this.stop();
+      return null;
+    }
 
     const settings = track.getSettings?.() ?? {};
     const width = videoEl.videoWidth || Number(settings.width) || 1280;
@@ -102,6 +138,7 @@ export class CameraZoomPipeline {
       const cv = this.canvas;
       const v = this.videoEl;
       if (!ctx || !cv || !v) return;
+      if (v.paused) v.play?.().catch(() => {});
       const sw = v.videoWidth || cv.width;
       const sh = v.videoHeight || cv.height;
       const z = this.zoom;
@@ -110,42 +147,51 @@ export class CameraZoomPipeline {
       ctx.fillRect(0, 0, cv.width, cv.height);
 
       if (sw > 0 && sh > 0) {
-        if (z >= 1) {
-          const cropW = sw / z;
-          const cropH = sh / z;
-          const maxOffX = (sw - cropW) / 2;
-          const maxOffY = (sh - cropH) / 2;
-          const offX = Math.max(-maxOffX, Math.min(maxOffX, (this.pan.x / z) * (sw / cv.width)));
-          const offY = Math.max(-maxOffY, Math.min(maxOffY, (-this.pan.y / z) * (sh / cv.height)));
-          ctx.drawImage(
-            v,
-            (sw - cropW) / 2 + offX,
-            (sh - cropH) / 2 + offY,
-            cropW,
-            cropH,
-            0,
-            0,
-            cv.width,
-            cv.height,
-          );
-        } else {
-          // Zoom out: shrink the frame inside the canvas (pillarbox/letterbox)
-          const dw = cv.width * z;
-          const dh = cv.height * z;
-          ctx.drawImage(v, 0, 0, sw, sh, (cv.width - dw) / 2, (cv.height - dh) / 2, dw, dh);
+        try {
+          if (z >= 1) {
+            const cropW = sw / z;
+            const cropH = sh / z;
+            const maxOffX = (sw - cropW) / 2;
+            const maxOffY = (sh - cropH) / 2;
+            const offX = Math.max(-maxOffX, Math.min(maxOffX, (this.pan.x / z) * (sw / cv.width)));
+            const offY = Math.max(-maxOffY, Math.min(maxOffY, (-this.pan.y / z) * (sh / cv.height)));
+            ctx.drawImage(
+              v,
+              (sw - cropW) / 2 + offX,
+              (sh - cropH) / 2 + offY,
+              cropW,
+              cropH,
+              0,
+              0,
+              cv.width,
+              cv.height,
+            );
+          } else {
+            // Zoom out: shrink the frame inside the canvas (pillarbox/letterbox)
+            const dw = cv.width * z;
+            const dh = cv.height * z;
+            ctx.drawImage(v, 0, 0, sw, sh, (cv.width - dw) / 2, (cv.height - dh) / 2, dw, dh);
+          }
+        } catch {
+          /* frame not ready yet */
         }
       }
-      this.raf = requestAnimationFrame(draw);
     };
+
     draw();
+    // setInterval instead of rAF: rAF is suspended when the tab is hidden,
+    // which would freeze the outgoing track for the opponent.
+    this.timer = window.setInterval(draw, 1000 / 30);
 
     const stream = (canvas as any).captureStream?.(30) as MediaStream | undefined;
     const output = stream?.getVideoTracks()[0] ?? null;
-    if (output) {
-      output.contentHint = "motion";
-      // Mirror the enabled state of the source (camera off toggle)
-      output.enabled = track.enabled;
+    if (!output || output.readyState !== "live") {
+      this.stop();
+      return null;
     }
+    output.contentHint = "motion";
+    // Mirror the enabled state of the source (camera off toggle)
+    output.enabled = track.enabled;
     this.output = output;
     return output;
   }
@@ -155,13 +201,14 @@ export class CameraZoomPipeline {
   }
 
   stop() {
-    if (this.raf) cancelAnimationFrame(this.raf);
-    this.raf = null;
+    if (this.timer) window.clearInterval(this.timer);
+    this.timer = null;
     this.output?.stop();
     this.output = null;
     if (this.videoEl) {
       this.videoEl.pause();
       this.videoEl.srcObject = null;
+      this.videoEl.remove();
     }
     this.videoEl = null;
     this.canvas = null;
