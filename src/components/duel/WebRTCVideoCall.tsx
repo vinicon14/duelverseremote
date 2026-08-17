@@ -442,11 +442,26 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       const pipeline = zoomPipelineRef.current;
       pipeline.setZoom(zoomLevel, panOffset);
       const hadOutput = pipeline.sourceTrack === source && !!pipeline.outputTrack;
-      await pipeline.attach(source);
+      let processed: MediaStreamTrack | null = null;
+      try {
+        processed = await pipeline.attach(source);
+      } catch {
+        processed = null;
+      }
       if (cancelled) return;
+      if (!processed) {
+        // Pipeline failed (no frames, virtual camera, canvas unsupported):
+        // drop it and keep streaming the raw camera track instead of a
+        // black/green canvas.
+        pipeline.stop();
+        zoomPipelineRef.current = null;
+        republishOutbound();
+        return;
+      }
       pipeline.setZoom(zoomLevel, panOffset);
       if (!hadOutput) republishOutbound();
     };
+
 
     apply();
     return () => {
