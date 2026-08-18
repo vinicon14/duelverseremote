@@ -60,26 +60,66 @@ const STUN_SERVERS: RTCIceServer[] = [
   { urls: "stun:stun.cloudflare.com:3478" },
 ];
 
-let runtimeIceServers: RTCIceServer[] = STUN_SERVERS;
+// Free public TURN relays used until the backend list arrives (or if it fails).
+// Without a relay, users on 4G / symmetric NAT / VPN never receive the
+// opponent's camera (and vice-versa), which looks like an infinite loading.
+const FALLBACK_TURN: RTCIceServer[] = [
+  {
+    urls: [
+      "turn:openrelay.metered.ca:80",
+      "turn:openrelay.metered.ca:443",
+      "turn:openrelay.metered.ca:443?transport=tcp",
+      "turns:openrelay.metered.ca:443",
+    ],
+    username: "openrelayproject",
+    credential: "openrelayproject",
+  },
+  {
+    urls: [
+      "turn:global.relay.metered.ca:80",
+      "turn:global.relay.metered.ca:443",
+      "turn:global.relay.metered.ca:443?transport=tcp",
+    ],
+    username: "openrelayproject",
+    credential: "openrelayproject",
+  },
+];
+
+let runtimeIceServers: RTCIceServer[] = [...STUN_SERVERS, ...FALLBACK_TURN];
 let iceServersPromise: Promise<void> | null = null;
 
-/** Fetch TURN credentials once per page load (cached module-wide). */
+const hasTurnIn = (servers: RTCIceServer[]) =>
+  servers.some((s) => {
+    const urls = Array.isArray(s.urls) ? s.urls : [s.urls];
+    return urls.some((u) => typeof u === "string" && u.startsWith("turn"));
+  });
+
+/** Fetch TURN credentials once per page load (cached module-wide).
+ *  Never blocks the handshake for more than 3s: a slow/failed backend must not
+ *  delay (or prevent) the peer connections. */
 const ensureIceServers = () => {
   if (iceServersPromise) return iceServersPromise;
-  iceServersPromise = (async () => {
+  const load = (async () => {
     try {
       const { data, error } = await supabase.functions.invoke("get-ice-servers");
       const servers = (data as any)?.iceServers;
       if (!error && Array.isArray(servers) && servers.length > 0) {
-        runtimeIceServers = servers as RTCIceServer[];
-        console.log("[WebRTC] ICE servers loaded:", servers.length, "hasTurn:", (data as any)?.hasTurn);
+        const list = servers as RTCIceServer[];
+        // Always keep a relay path available.
+        runtimeIceServers = hasTurnIn(list) ? list : [...list, ...FALLBACK_TURN];
+        console.log("[WebRTC] ICE servers loaded:", runtimeIceServers.length, "hasTurn:", hasTurnIn(runtimeIceServers));
       }
     } catch (err) {
-      console.warn("[WebRTC] Falling back to STUN-only ICE servers:", err);
+      console.warn("[WebRTC] Falling back to default ICE servers:", err);
     }
   })();
+  iceServersPromise = Promise.race([
+    load,
+    new Promise<void>((resolve) => setTimeout(resolve, 3000)),
+  ]);
   return iceServersPromise;
 };
+
 
 const basePcConfig = (): RTCConfiguration => ({
   iceServers: runtimeIceServers,
