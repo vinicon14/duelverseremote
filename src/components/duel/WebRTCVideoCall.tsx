@@ -804,15 +804,14 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     const peer = peersRef.current.get(playerId);
     const liveVideo = peer?.stream?.getVideoTracks().some((t) => t.readyState === "live") ?? false;
     const liveAudio = peer?.stream?.getAudioTracks().some((t) => t.readyState === "live") ?? false;
-    const connected = peer?.pc.connectionState === "connected" || peer?.pc.connectionState === "connecting";
-    if (connected && liveVideo && liveAudio) return;
+    const connected = peer?.pc.connectionState === "connected";
+    if (connected && liveVideo) return;
 
     // Never destroy a healthy video connection just because that player has no
     // microphone track (permission denied, no mic, or video-only fallback). The
     // previous check rebuilt that peer every 10 seconds, making duelists who were
     // spectating each other alternate between video and an infinite loader.
-    const hasUsableMedia = liveVideo || liveAudio;
-    const stalled = !!peer && Date.now() - peer.createdAt > 10000 && (!connected || !hasUsableMedia);
+    const stalled = !!peer && Date.now() - peer.createdAt > 10000 && (!connected || !liveVideo);
     if (stalled) {
       console.warn("[WebRTC] Spectator handshake stalled, resetting peer:", playerId);
       removePeer(playerId);
