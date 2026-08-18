@@ -803,12 +803,14 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
 
     const peer = peersRef.current.get(playerId);
     const liveVideo = peer?.stream?.getVideoTracks().some((t) => t.readyState === "live") ?? false;
-    const liveAudio = peer?.stream?.getAudioTracks().some((t) => t.readyState === "live") ?? false;
     const connected = peer?.pc.connectionState === "connected";
-    if (connected && liveVideo && liveAudio) return;
+    if (connected && liveVideo) return;
 
-    // Handshake stalled: drop the local half so the incoming offer rebuilds it clean.
-    const stalled = !!peer && Date.now() - peer.createdAt > 10000 && !(connected && liveVideo);
+    // Never destroy a healthy video connection just because that player has no
+    // microphone track (permission denied, no mic, or video-only fallback). The
+    // previous check rebuilt that peer every 10 seconds, making duelists who were
+    // spectating each other alternate between video and an infinite loader.
+    const stalled = !!peer && Date.now() - peer.createdAt > 10000 && (!connected || !liveVideo);
     if (stalled) {
       console.warn("[WebRTC] Spectator handshake stalled, resetting peer:", playerId);
       removePeer(playerId);
@@ -1199,9 +1201,9 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         if (isSpectator && playerIdsRef.current.size > 0 && !playerIdsRef.current.has(peerId)) return false;
         const liveVideo = peer.stream?.getVideoTracks().some((t) => t.readyState === "live") ?? false;
         if (!isSpectator) return liveVideo;
-        // Spectators must also HEAR each player before the heartbeat stops.
-        const liveAudio = peer.stream?.getAudioTracks().some((t) => t.readyState === "live") ?? false;
-        return liveVideo && liveAudio;
+        // Video is the authoritative signal that this player is watchable. A
+        // missing microphone must not keep forcing SDP renegotiations forever.
+        return liveVideo;
       }).length;
 
       if (connectedPlayerVideos >= expectedPlayers) return;
