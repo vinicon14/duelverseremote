@@ -803,7 +803,6 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
 
     const peer = peersRef.current.get(playerId);
     const liveVideo = peer?.stream?.getVideoTracks().some((t) => t.readyState === "live") ?? false;
-    const liveAudio = peer?.stream?.getAudioTracks().some((t) => t.readyState === "live") ?? false;
     const connected = peer?.pc.connectionState === "connected";
     if (connected && liveVideo) return;
 
