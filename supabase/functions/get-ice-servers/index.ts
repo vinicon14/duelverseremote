@@ -42,19 +42,10 @@ async function meteredServers(): Promise<unknown[]> {
 }
 
 
-// Free public TURN relays. Used only when no paid/managed TURN is configured,
-// so users on 4G / symmetric NAT still get a relay path instead of no video.
+// Best-effort public relay. Used only when no managed TURN is configured.
+// It is NOT reported as a verified relay (hasTurn stays false) so the client
+// never forces `iceTransportPolicy: "relay"` onto an unreliable host.
 const FALLBACK_TURN = [
-  {
-    urls: [
-      "turn:openrelay.metered.ca:80",
-      "turn:openrelay.metered.ca:443",
-      "turn:openrelay.metered.ca:443?transport=tcp",
-      "turns:openrelay.metered.ca:443",
-    ],
-    username: "openrelayproject",
-    credential: "openrelayproject",
-  },
   {
     urls: [
       "turn:global.relay.metered.ca:80",
@@ -74,22 +65,25 @@ function staticTurn(): unknown[] {
   return [{ urls: urls.split(",").map((u) => u.trim()).filter(Boolean), username, credential }];
 }
 
+let cachedHasTurn = false;
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   if (cache && Date.now() - cache.at < CACHE_MS) {
-    return new Response(JSON.stringify({ iceServers: cache.servers, hasTurn: true }), {
+    return new Response(JSON.stringify({ iceServers: cache.servers, hasTurn: cachedHasTurn }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 
   let turn = [...staticTurn(), ...(await meteredServers())];
-  if (turn.length === 0) turn = [...FALLBACK_TURN];
+  const hasTurn = turn.length > 0;
+  if (!hasTurn) turn = [...FALLBACK_TURN];
   const servers = [...STUN_SERVERS, ...turn];
   cache = { at: Date.now(), servers };
+  cachedHasTurn = hasTurn;
 
-
-  return new Response(JSON.stringify({ iceServers: servers, hasTurn: turn.length > 0 }), {
+  return new Response(JSON.stringify({ iceServers: servers, hasTurn }), {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 });

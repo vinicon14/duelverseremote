@@ -60,20 +60,10 @@ const STUN_SERVERS: RTCIceServer[] = [
   { urls: "stun:stun.cloudflare.com:3478" },
 ];
 
-// Free public TURN relays used until the backend list arrives (or if it fails).
-// Without a relay, users on 4G / symmetric NAT / VPN never receive the
-// opponent's camera (and vice-versa), which looks like an infinite loading.
+// Best-effort public relay used only until the backend list arrives. It is NOT
+// considered a verified relay: forcing `iceTransportPolicy: "relay"` on a dead
+// TURN server blocks even the peers that would connect directly.
 const FALLBACK_TURN: RTCIceServer[] = [
-  {
-    urls: [
-      "turn:openrelay.metered.ca:80",
-      "turn:openrelay.metered.ca:443",
-      "turn:openrelay.metered.ca:443?transport=tcp",
-      "turns:openrelay.metered.ca:443",
-    ],
-    username: "openrelayproject",
-    credential: "openrelayproject",
-  },
   {
     urls: [
       "turn:global.relay.metered.ca:80",
@@ -86,6 +76,8 @@ const FALLBACK_TURN: RTCIceServer[] = [
 ];
 
 let runtimeIceServers: RTCIceServer[] = [...STUN_SERVERS, ...FALLBACK_TURN];
+// True only when the backend confirmed real (configured) TURN credentials.
+let verifiedTurn = false;
 let iceServersPromise: Promise<void> | null = null;
 
 const hasTurnIn = (servers: RTCIceServer[]) =>
@@ -107,7 +99,13 @@ const ensureIceServers = () => {
         const list = servers as RTCIceServer[];
         // Always keep a relay path available.
         runtimeIceServers = hasTurnIn(list) ? list : [...list, ...FALLBACK_TURN];
-        console.log("[WebRTC] ICE servers loaded:", runtimeIceServers.length, "hasTurn:", hasTurnIn(runtimeIceServers));
+        verifiedTurn = Boolean((data as any)?.hasTurn);
+        console.log(
+          "[WebRTC] ICE servers loaded:",
+          runtimeIceServers.length,
+          "verifiedTurn:",
+          verifiedTurn,
+        );
       }
     } catch (err) {
       console.warn("[WebRTC] Falling back to default ICE servers:", err);
@@ -129,14 +127,11 @@ const basePcConfig = (): RTCConfiguration => ({
 });
 
 /** Peers whose direct (host/srflx) path already failed: force TURN relay only.
- *  Only meaningful when a TURN server is actually configured. */
+ *  Only safe when a verified TURN server is actually configured — otherwise we
+ *  would throw away the host/srflx candidates that still had a chance. */
 const buildPcConfig = (forceRelay: boolean): RTCConfiguration => {
   const config = basePcConfig();
-  const hasTurn = runtimeIceServers.some((s) => {
-    const urls = Array.isArray(s.urls) ? s.urls : [s.urls];
-    return urls.some((u) => typeof u === "string" && u.startsWith("turn"));
-  });
-  return forceRelay && hasTurn ? { ...config, iceTransportPolicy: "relay" } : config;
+  return forceRelay && verifiedTurn ? { ...config, iceTransportPolicy: "relay" } : config;
 };
 
 const isVirtualCamera = (label?: string) => /droidcam|obs virtual|virtual camera|iriun|epoccam/i.test(label ?? "");
