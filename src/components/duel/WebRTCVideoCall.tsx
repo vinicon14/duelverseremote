@@ -127,11 +127,11 @@ const basePcConfig = (): RTCConfiguration => ({
 });
 
 /** Peers whose direct (host/srflx) path already failed: force TURN relay only.
- *  Only safe when a verified TURN server is actually configured — otherwise we
- *  would throw away the host/srflx candidates that still had a chance. */
+ *  The normal connection already exhausted direct candidates, so rebuilding it
+ *  with relay-only avoids repeating the same failed route indefinitely. */
 const buildPcConfig = (forceRelay: boolean): RTCConfiguration => {
   const config = basePcConfig();
-  return forceRelay && verifiedTurn ? { ...config, iceTransportPolicy: "relay" } : config;
+  return forceRelay ? { ...config, iceTransportPolicy: "relay" } : config;
 };
 
 const isVirtualCamera = (label?: string) => /droidcam|obs virtual|virtual camera|iriun|epoccam/i.test(label ?? "");
