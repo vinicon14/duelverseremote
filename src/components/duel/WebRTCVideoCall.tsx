@@ -127,11 +127,11 @@ const basePcConfig = (): RTCConfiguration => ({
 });
 
 /** Peers whose direct (host/srflx) path already failed: force TURN relay only.
- *  Only safe when a verified TURN server is actually configured — otherwise we
- *  would throw away the host/srflx candidates that still had a chance. */
+ *  The normal connection already exhausted direct candidates, so rebuilding it
+ *  with relay-only avoids repeating the same failed route indefinitely. */
 const buildPcConfig = (forceRelay: boolean): RTCConfiguration => {
   const config = basePcConfig();
-  return forceRelay && verifiedTurn ? { ...config, iceTransportPolicy: "relay" } : config;
+  return forceRelay ? { ...config, iceTransportPolicy: "relay" } : config;
 };
 
 const isVirtualCamera = (label?: string) => /droidcam|obs virtual|virtual camera|iriun|epoccam/i.test(label ?? "");
@@ -532,6 +532,17 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     console.log("[WebRTC] Peer removed:", peerId);
   }, []);
 
+  // Exactly one side must initiate player-to-player negotiation. Letting both
+  // duelists create offers at the same time causes repeated glare/rollback on
+  // Chromium-based browsers and can leave both remote panels without media.
+  // Players always initiate toward spectators; between players the stable UUID
+  // ordering elects a single offerer.
+  const canInitiateOffer = useCallback((remotePeerId: string) => {
+    if (isSpectator) return false;
+    if (spectatorPeersRef.current.has(remotePeerId)) return true;
+    return userId < remotePeerId;
+  }, [isSpectator, userId]);
+
   const createPeerConnection = useCallback((remotePeerId: string) => {
     const existing = peersRef.current.get(remotePeerId);
     if (existing) {
@@ -610,9 +621,11 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
 
     // Monitor ICE connection and auto-recover or remove disconnected peer
     const attemptIceRestart = () => {
+      if (!canInitiateOffer(remotePeerId) || peerState.makingOffer) return;
       try {
         pc.restartIce();
         if (pc.signalingState === "stable") {
+          peerState.makingOffer = true;
           pc.createOffer({ iceRestart: true })
             .then((offer) => pc.setLocalDescription(offer))
             .then(() => {
@@ -627,9 +640,13 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
                 },
               });
             })
-            .catch((err) => console.warn("[WebRTC] ICE restart offer failed:", err));
+            .catch((err) => console.warn("[WebRTC] ICE restart offer failed:", err))
+            .finally(() => {
+              peerState.makingOffer = false;
+            });
         }
       } catch (err) {
+        peerState.makingOffer = false;
         console.warn("[WebRTC] restartIce failed:", err);
       }
     };
@@ -720,13 +737,11 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
 
 
     pc.onnegotiationneeded = async () => {
-      // A regular spectator is receive-only. Let the player create the offer;
-      // otherwise recvonly transceivers trigger a competing spectator offer and
-      // the real player offer can be discarded during glare resolution.
-      if (isSpectator && !audioBroadcastOnly) return;
+      if (!canInitiateOffer(remotePeerId)) return;
       try {
         peerState.makingOffer = true;
-        await pc.setLocalDescription();
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
         channelRef.current?.send({
           type: "broadcast",
           event: "webrtc-signal",
@@ -745,13 +760,13 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     };
 
     return pc;
-  }, [userId, isSpectator, audioBroadcastOnly, getActiveOutboundStream]);
+  }, [userId, isSpectator, audioBroadcastOnly, getActiveOutboundStream, canInitiateOffer, removePeer]);
 
   // Player-side: build/refresh a connection toward a peer and send an offer.
   // Only peers that actually have media (the duelists) create offers — this
   // removes the glare that was leaving spectators with one frozen panel.
   const sendOfferTo = useCallback(async (remotePeerId: string, forceRebuild = false) => {
-    if (isSpectator && !audioBroadcastOnly) return;
+    if (!canInitiateOffer(remotePeerId)) return;
     if (remotePeerId === userId) return;
 
     let peer = peersRef.current.get(remotePeerId);
@@ -771,7 +786,8 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
 
     try {
       peer.makingOffer = true;
-      await peer.pc.setLocalDescription();
+      const offer = await peer.pc.createOffer();
+      await peer.pc.setLocalDescription(offer);
       await channelRef.current?.send({
         type: "broadcast",
         event: "webrtc-signal",
@@ -789,7 +805,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     } finally {
       peer.makingOffer = false;
     }
-  }, [isSpectator, audioBroadcastOnly, userId, createPeerConnection]);
+  }, [userId, createPeerConnection, canInitiateOffer]);
 
   // Spectator-side: never offer (receive-only). Ask the player to (re)offer until
   // BOTH audio and video are flowing, so spectators always see AND hear everyone.
@@ -950,7 +966,8 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
           }
 
           if (payload.type === "offer") {
-            await pc.setLocalDescription();
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
             channelRef.current?.send({
               type: "broadcast",
               event: "webrtc-signal",
