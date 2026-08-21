@@ -80,7 +80,7 @@ const TournamentDetail = () => {
 
       const { data: participantsData, error: participantsError } = await supabase
         .from('tournament_participants')
-        .select('id, user_id, status, score, wins, losses, registered_at')
+        .select('id, user_id, status, score, wins, losses, draws, registered_at')
         .eq('tournament_id', id)
         .order('score', { ascending: false });
 
@@ -1035,7 +1035,7 @@ const TournamentDetail = () => {
                          <div className="flex-1">
                            <p className="font-medium">{participant.profiles?.username || 'Usuário'}</p>
                            <p className="text-xs text-muted-foreground">
-                             Pontos: {participant.score ?? 0} • V: {participant.wins ?? 0} D: {participant.losses ?? 0}
+                             Pontos: {participant.score ?? 0} • V: {participant.wins ?? 0} D: {participant.losses ?? 0} E: {participant.draws ?? 0}
                            </p>
                          </div>
                         {participant.placement && (
