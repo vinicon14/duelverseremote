@@ -303,7 +303,7 @@ export const CreatorTournamentDashboard = ({
               <Card 
                 key={match.id} 
                 className={`card-mystic ${
-                  match.status === 'completed' ? 'opacity-50' : ''
+                  match.status === 'completed' ? 'opacity-80' : ''
                 }`}
               >
                 <CardHeader className="pb-3">
