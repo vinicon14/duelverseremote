@@ -237,15 +237,26 @@ export const CreatorTournamentDashboard = ({
                 Gerencie as partidas e distribua pontos
               </p>
             </div>
-            <Button
-              className="btn-mystic text-white"
-              disabled={!canGenerateNewBracket()}
-              onClick={onGenerateNewBracket}
-            >
-              <ChevronRight className="w-4 h-4 mr-2 rotate-180" />
-              Gerar Nova Chave
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={handleRecalcPoints}
+                disabled={recalculating}
+              >
+                <RefreshCw className={`w-4 h-4 mr-2 ${recalculating ? 'animate-spin' : ''}`} />
+                Recalcular Pontos
+              </Button>
+              <Button
+                className="btn-mystic text-white"
+                disabled={!canGenerateNewBracket()}
+                onClick={onGenerateNewBracket}
+              >
+                <ChevronRight className="w-4 h-4 mr-2 rotate-180" />
+                Gerar Nova Chave
+              </Button>
+            </div>
           </div>
+
           {!canGenerateNewBracket() && (
             <p className="text-xs text-yellow-500 mt-2">
               ⚠️ Aguardando todos os reportes para gerar nova chave
