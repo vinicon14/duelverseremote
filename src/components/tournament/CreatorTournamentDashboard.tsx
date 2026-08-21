@@ -45,6 +45,25 @@ export const CreatorTournamentDashboard = ({
   const [matches, setMatches] = useState<MatchWithReports[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMatch, setSelectedMatch] = useState<MatchWithReports | null>(null);
+  const [recalculating, setRecalculating] = useState(false);
+
+  const handleRecalcPoints = async () => {
+    setRecalculating(true);
+    try {
+      const { data, error } = await (supabase as any).rpc('recalc_tournament_stats', {
+        p_tournament_id: tournamentId,
+      });
+      if (error) throw error;
+      if (data && data.success === false) throw new Error(data.message);
+      toast({ title: "Pontos recalculados!", description: "A classificação foi atualizada." });
+      fetchMatchesWithReports();
+    } catch (error: any) {
+      toast({ title: "Erro ao recalcular", description: error.message, variant: "destructive" });
+    } finally {
+      setRecalculating(false);
+    }
+  };
+
 
   useEffect(() => {
     fetchMatchesWithReports();
