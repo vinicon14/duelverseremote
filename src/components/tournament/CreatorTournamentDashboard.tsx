@@ -158,31 +158,32 @@ export const CreatorTournamentDashboard = ({
     return pendingMatches.every(m => m.player1_reported && m.player2_reported);
   };
 
-  const handleSetWinner = async (matchId: string, winnerId: string) => {
+  const handleSetResult = async (matchId: string, result: 'player1_win' | 'player2_win' | 'draw') => {
     try {
-      // Call Supabase function to set winner
-      const { error } = await (supabase as any)
-        .rpc('set_match_winner', {
+      const { data, error } = await (supabase as any)
+        .rpc('set_match_result', {
           p_match_id: matchId,
-          p_winner_id: winnerId
+          p_result: result,
         });
 
       if (error) throw error;
+      if (data && data.success === false) throw new Error(data.message);
 
       toast({
-        title: "Vencedor definido!",
-        description: "Os pontos foram distribuídos automaticamente.",
+        title: result === 'draw' ? "Empate registrado!" : "Resultado atualizado!",
+        description: "Os pontos do torneio foram recalculados automaticamente.",
       });
 
       onMatchResolved(matchId);
       fetchMatchesWithReports();
     } catch (error: any) {
       toast({
-        title: "Erro ao definir vencedor",
+        title: "Erro ao definir resultado",
         description: error.message,
         variant: "destructive",
       });
     }
+
   };
 
   const getReportSummary = (match: MatchWithReports) => {
