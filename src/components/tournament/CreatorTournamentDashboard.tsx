@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Trophy, Users, Clock, CheckCircle, XCircle, ChevronRight, MessageSquare } from "lucide-react";
+import { Trophy, Users, Clock, CheckCircle, XCircle, ChevronRight, MessageSquare, Handshake, RefreshCw } from "lucide-react";
 import { TournamentChat } from "@/components/TournamentChat";
 
 interface CreatorTournamentDashboardProps {
