@@ -57,8 +57,9 @@ export const CreatorTournamentDashboard = ({
         .from('tournament_matches')
         .select(`
           id, round, player1_id, player2_id, status, match_deadline,
-          player1_reported, player2_reported
+          player1_reported, player2_reported, winner_id, player1_result, player2_result
         `)
+
         .eq('tournament_id', tournamentId)
         .order('round', { ascending: true })
         .order('created_at', { ascending: true });
