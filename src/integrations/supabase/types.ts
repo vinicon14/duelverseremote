@@ -1962,6 +1962,7 @@ export type Database = {
       }
       tournament_participants: {
         Row: {
+          draws: number
           id: string
           losses: number | null
           registered_at: string | null
@@ -1973,6 +1974,7 @@ export type Database = {
           wins: number | null
         }
         Insert: {
+          draws?: number
           id?: string
           losses?: number | null
           registered_at?: string | null
@@ -1984,6 +1986,7 @@ export type Database = {
           wins?: number | null
         }
         Update: {
+          draws?: number
           id?: string
           losses?: number | null
           registered_at?: string | null
@@ -2637,6 +2640,10 @@ export type Database = {
         Args: { p_tournament_id: string }
         Returns: Json
       }
+      recalc_tournament_stats_internal: {
+        Args: { p_tournament_id: string }
+        Returns: undefined
+      }
       record_match_result: {
         Args: {
           p_bet_amount: number
@@ -2699,6 +2706,10 @@ export type Database = {
           p_status: string
           p_tracking_code?: string
         }
+        Returns: Json
+      }
+      set_match_result: {
+        Args: { p_match_id: string; p_result: string }
         Returns: Json
       }
       set_match_winner: {

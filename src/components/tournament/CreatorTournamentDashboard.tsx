@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Trophy, Users, Clock, CheckCircle, XCircle, ChevronRight, MessageSquare } from "lucide-react";
+import { Trophy, Users, Clock, CheckCircle, XCircle, ChevronRight, MessageSquare, Handshake, RefreshCw } from "lucide-react";
 import { TournamentChat } from "@/components/TournamentChat";
 
 interface CreatorTournamentDashboardProps {
@@ -22,8 +22,12 @@ interface MatchWithReports {
   player2_username: string | null;
   player1_reported: boolean;
   player2_reported: boolean;
+  winner_id: string | null;
+  player1_result: string | null;
+  player2_result: string | null;
   status: string;
   match_deadline: string | null;
+
   reports: {
     reporter_id: string;
     reporter_username: string;
@@ -41,6 +45,25 @@ export const CreatorTournamentDashboard = ({
   const [matches, setMatches] = useState<MatchWithReports[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMatch, setSelectedMatch] = useState<MatchWithReports | null>(null);
+  const [recalculating, setRecalculating] = useState(false);
+
+  const handleRecalcPoints = async () => {
+    setRecalculating(true);
+    try {
+      const { data, error } = await (supabase as any).rpc('recalc_tournament_stats', {
+        p_tournament_id: tournamentId,
+      });
+      if (error) throw error;
+      if (data && data.success === false) throw new Error(data.message);
+      toast({ title: "Pontos recalculados!", description: "A classificação foi atualizada." });
+      fetchMatchesWithReports();
+    } catch (error: any) {
+      toast({ title: "Erro ao recalcular", description: error.message, variant: "destructive" });
+    } finally {
+      setRecalculating(false);
+    }
+  };
+
 
   useEffect(() => {
     fetchMatchesWithReports();
@@ -53,8 +76,9 @@ export const CreatorTournamentDashboard = ({
         .from('tournament_matches')
         .select(`
           id, round, player1_id, player2_id, status, match_deadline,
-          player1_reported, player2_reported
+          player1_reported, player2_reported, winner_id, player1_result, player2_result
         `)
+
         .eq('tournament_id', tournamentId)
         .order('round', { ascending: true })
         .order('created_at', { ascending: true });
@@ -153,31 +177,32 @@ export const CreatorTournamentDashboard = ({
     return pendingMatches.every(m => m.player1_reported && m.player2_reported);
   };
 
-  const handleSetWinner = async (matchId: string, winnerId: string) => {
+  const handleSetResult = async (matchId: string, result: 'player1_win' | 'player2_win' | 'draw') => {
     try {
-      // Call Supabase function to set winner
-      const { error } = await (supabase as any)
-        .rpc('set_match_winner', {
+      const { data, error } = await (supabase as any)
+        .rpc('set_match_result', {
           p_match_id: matchId,
-          p_winner_id: winnerId
+          p_result: result,
         });
 
       if (error) throw error;
+      if (data && data.success === false) throw new Error(data.message);
 
       toast({
-        title: "Vencedor definido!",
-        description: "Os pontos foram distribuídos automaticamente.",
+        title: result === 'draw' ? "Empate registrado!" : "Resultado atualizado!",
+        description: "Os pontos do torneio foram recalculados automaticamente.",
       });
 
       onMatchResolved(matchId);
       fetchMatchesWithReports();
     } catch (error: any) {
       toast({
-        title: "Erro ao definir vencedor",
+        title: "Erro ao definir resultado",
         description: error.message,
         variant: "destructive",
       });
     }
+
   };
 
   const getReportSummary = (match: MatchWithReports) => {
@@ -231,15 +256,26 @@ export const CreatorTournamentDashboard = ({
                 Gerencie as partidas e distribua pontos
               </p>
             </div>
-            <Button
-              className="btn-mystic text-white"
-              disabled={!canGenerateNewBracket()}
-              onClick={onGenerateNewBracket}
-            >
-              <ChevronRight className="w-4 h-4 mr-2 rotate-180" />
-              Gerar Nova Chave
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={handleRecalcPoints}
+                disabled={recalculating}
+              >
+                <RefreshCw className={`w-4 h-4 mr-2 ${recalculating ? 'animate-spin' : ''}`} />
+                Recalcular Pontos
+              </Button>
+              <Button
+                className="btn-mystic text-white"
+                disabled={!canGenerateNewBracket()}
+                onClick={onGenerateNewBracket}
+              >
+                <ChevronRight className="w-4 h-4 mr-2 rotate-180" />
+                Gerar Nova Chave
+              </Button>
+            </div>
           </div>
+
           {!canGenerateNewBracket() && (
             <p className="text-xs text-yellow-500 mt-2">
               ⚠️ Aguardando todos os reportes para gerar nova chave
@@ -267,7 +303,7 @@ export const CreatorTournamentDashboard = ({
               <Card 
                 key={match.id} 
                 className={`card-mystic ${
-                  match.status === 'completed' ? 'opacity-50' : ''
+                  match.status === 'completed' ? 'opacity-80' : ''
                 }`}
               >
                 <CardHeader className="pb-3">
@@ -330,34 +366,61 @@ export const CreatorTournamentDashboard = ({
                     </div>
                   )}
 
-                  {/* Actions for Creator - Manual override always allowed */}
-                  {bothPlayersReady && match.status !== 'completed' && (
+                  {/* Resultado atual */}
+                  {match.status === 'completed' && (
+                    <div className="text-center text-sm">
+                      <span className="text-muted-foreground">Resultado atual: </span>
+                      <span className="font-medium">
+                        {match.player1_result === 'draw' || match.player2_result === 'draw'
+                          ? 'Empate'
+                          : match.winner_id === match.player1_id
+                            ? `${match.player1_username} venceu`
+                            : match.winner_id === match.player2_id
+                              ? `${match.player2_username} venceu`
+                              : 'Não definido'}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Actions for Creator - edição permitida a qualquer momento */}
+                  {bothPlayersReady && (
                     <div className="space-y-2">
-                      {!allReported && (
-                        <p className="text-xs text-yellow-500 text-center">
-                          ⚠️ Reporte manual: você pode definir o vencedor mesmo sem o reporte dos jogadores.
-                        </p>
-                      )}
-                      <div className="flex gap-2">
+                      <p className="text-xs text-yellow-500 text-center">
+                        {match.status === 'completed'
+                          ? '✏️ Você pode editar o resultado a qualquer momento — os pontos são recalculados.'
+                          : !allReported
+                            ? '⚠️ Reporte manual: você pode definir o resultado mesmo sem o reporte dos jogadores.'
+                            : ''}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
                         <Button
                           variant="outline"
-                          className="flex-1 border-green-500/50 text-green-500 hover:bg-green-500/10"
-                          onClick={() => handleSetWinner(match.id, match.player1_id!)}
+                          className="flex-1 min-w-[140px] border-green-500/50 text-green-500 hover:bg-green-500/10"
+                          onClick={() => handleSetResult(match.id, 'player1_win')}
                         >
                           <CheckCircle className="w-4 h-4 mr-2" />
                           {match.player1_username} Venceu
                         </Button>
                         <Button
                           variant="outline"
-                          className="flex-1 border-green-500/50 text-green-500 hover:bg-green-500/10"
-                          onClick={() => handleSetWinner(match.id, match.player2_id!)}
+                          className="flex-1 min-w-[140px] border-green-500/50 text-green-500 hover:bg-green-500/10"
+                          onClick={() => handleSetResult(match.id, 'player2_win')}
                         >
                           <CheckCircle className="w-4 h-4 mr-2" />
                           {match.player2_username} Venceu
                         </Button>
+                        <Button
+                          variant="outline"
+                          className="flex-1 min-w-[140px] border-yellow-500/50 text-yellow-500 hover:bg-yellow-500/10"
+                          onClick={() => handleSetResult(match.id, 'draw')}
+                        >
+                          <Handshake className="w-4 h-4 mr-2" />
+                          Empate
+                        </Button>
                       </div>
                     </div>
                   )}
+
 
                   {/* Reports Table */}
                   {match.reports.length > 0 && (
