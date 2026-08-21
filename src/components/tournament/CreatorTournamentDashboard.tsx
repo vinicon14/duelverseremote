@@ -22,8 +22,12 @@ interface MatchWithReports {
   player2_username: string | null;
   player1_reported: boolean;
   player2_reported: boolean;
+  winner_id: string | null;
+  player1_result: string | null;
+  player2_result: string | null;
   status: string;
   match_deadline: string | null;
+
   reports: {
     reporter_id: string;
     reporter_username: string;
