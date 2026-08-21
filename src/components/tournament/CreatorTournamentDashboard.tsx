@@ -336,34 +336,61 @@ export const CreatorTournamentDashboard = ({
                     </div>
                   )}
 
-                  {/* Actions for Creator - Manual override always allowed */}
-                  {bothPlayersReady && match.status !== 'completed' && (
+                  {/* Resultado atual */}
+                  {match.status === 'completed' && (
+                    <div className="text-center text-sm">
+                      <span className="text-muted-foreground">Resultado atual: </span>
+                      <span className="font-medium">
+                        {match.player1_result === 'draw' || match.player2_result === 'draw'
+                          ? 'Empate'
+                          : match.winner_id === match.player1_id
+                            ? `${match.player1_username} venceu`
+                            : match.winner_id === match.player2_id
+                              ? `${match.player2_username} venceu`
+                              : 'Não definido'}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Actions for Creator - edição permitida a qualquer momento */}
+                  {bothPlayersReady && (
                     <div className="space-y-2">
-                      {!allReported && (
-                        <p className="text-xs text-yellow-500 text-center">
-                          ⚠️ Reporte manual: você pode definir o vencedor mesmo sem o reporte dos jogadores.
-                        </p>
-                      )}
-                      <div className="flex gap-2">
+                      <p className="text-xs text-yellow-500 text-center">
+                        {match.status === 'completed'
+                          ? '✏️ Você pode editar o resultado a qualquer momento — os pontos são recalculados.'
+                          : !allReported
+                            ? '⚠️ Reporte manual: você pode definir o resultado mesmo sem o reporte dos jogadores.'
+                            : ''}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
                         <Button
                           variant="outline"
-                          className="flex-1 border-green-500/50 text-green-500 hover:bg-green-500/10"
-                          onClick={() => handleSetWinner(match.id, match.player1_id!)}
+                          className="flex-1 min-w-[140px] border-green-500/50 text-green-500 hover:bg-green-500/10"
+                          onClick={() => handleSetResult(match.id, 'player1_win')}
                         >
                           <CheckCircle className="w-4 h-4 mr-2" />
                           {match.player1_username} Venceu
                         </Button>
                         <Button
                           variant="outline"
-                          className="flex-1 border-green-500/50 text-green-500 hover:bg-green-500/10"
-                          onClick={() => handleSetWinner(match.id, match.player2_id!)}
+                          className="flex-1 min-w-[140px] border-green-500/50 text-green-500 hover:bg-green-500/10"
+                          onClick={() => handleSetResult(match.id, 'player2_win')}
                         >
                           <CheckCircle className="w-4 h-4 mr-2" />
                           {match.player2_username} Venceu
                         </Button>
+                        <Button
+                          variant="outline"
+                          className="flex-1 min-w-[140px] border-yellow-500/50 text-yellow-500 hover:bg-yellow-500/10"
+                          onClick={() => handleSetResult(match.id, 'draw')}
+                        >
+                          <Handshake className="w-4 h-4 mr-2" />
+                          Empate
+                        </Button>
                       </div>
                     </div>
                   )}
+
 
                   {/* Reports Table */}
                   {match.reports.length > 0 && (
