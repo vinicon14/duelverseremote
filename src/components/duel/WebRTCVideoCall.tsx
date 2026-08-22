@@ -271,8 +271,8 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       video: videoId
         ? virtualCameraSelected
           ? { deviceId: { exact: videoId }, width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 24, max: 30 } }
-          : { deviceId: { exact: videoId }, width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16 / 9 } }
-        : { facingMode: { ideal: defaultFacing }, width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: { ideal: 16 / 9 } },
+          : { deviceId: { exact: videoId }, width: { ideal: 1280 }, height: { ideal: 720 } }
+        : { facingMode: { ideal: defaultFacing }, width: { ideal: 1280 }, height: { ideal: 720 } },
     };
 
     try {
