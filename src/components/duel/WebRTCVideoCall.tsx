@@ -1032,7 +1032,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       const mobileConstraints: MediaStreamConstraints[] = [
         // Start with a broadly supported capture size. Some Android/Chromium
         // hardware encoders expose a green preview at forced 720p.
-        { video: { facingMode: { ideal: primaryFacing }, width: { ideal: 960 }, height: { ideal: 540 }, aspectRatio: { ideal: 16 / 9 } }, audio: audioConstraints },
+        { video: { facingMode: { ideal: primaryFacing }, width: { ideal: 960 }, height: { ideal: 540 } }, audio: audioConstraints },
         { video: { facingMode: { ideal: primaryFacing } }, audio: audioConstraints },
         { video: { facingMode: { ideal: fallbackFacing }, width: { ideal: 960 }, height: { ideal: 540 } }, audio: audioConstraints },
         { video: { facingMode: { ideal: fallbackFacing } }, audio: audioConstraints },
