@@ -2656,6 +2656,10 @@ export type Database = {
         }
         Returns: string
       }
+      regenerate_tournament_bracket: {
+        Args: { p_from_round: number; p_tournament_id: string }
+        Returns: Json
+      }
       review_verification_request: {
         Args: { _approve: boolean; _reason?: string; _request_id: string }
         Returns: Json
