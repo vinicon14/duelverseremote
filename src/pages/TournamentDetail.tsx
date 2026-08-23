@@ -360,6 +360,50 @@ const TournamentDetail = () => {
     }
   };
 
+  const creatorSetResult = async (matchId: string, result: 'player1_win' | 'player2_win' | 'draw') => {
+    if (!confirm('Definir este resultado? Os pontos do torneio serão recalculados.')) return;
+    try {
+      const { data, error } = await (supabase as any).rpc('set_match_result', {
+        p_match_id: matchId,
+        p_result: result,
+      });
+      if (error) throw error;
+      if (data && data.success === false) throw new Error(data.message);
+      toast({
+        title: result === 'draw' ? 'Empate registrado!' : 'Resultado atualizado!',
+        description: 'Os pontos do torneio foram recalculados.',
+      });
+      await fetchTournamentData();
+    } catch (error: any) {
+      toast({ title: 'Erro ao definir resultado', description: error.message, variant: 'destructive' });
+    }
+  };
+
+  const regenerateBracket = async (fromRound: number) => {
+    if (!id) return;
+    if (!confirm(`Regerar a chave a partir da rodada ${fromRound}? As rodadas posteriores serão apagadas e recriadas com os resultados atuais.`)) return;
+    try {
+      const { data, error } = await (supabase as any).rpc('regenerate_tournament_bracket', {
+        p_tournament_id: id,
+        p_from_round: fromRound,
+      });
+      if (error) throw error;
+      if (data && data.success === false) throw new Error(data.message);
+      const gen = data?.generation;
+      toast({
+        title: 'Chave regerada!',
+        description: gen && gen.success === false
+          ? `Rodadas posteriores removidas e pontos recalculados. ${gen.message}`
+          : `Nova rodada criada com ${gen?.matches_created ?? 0} partida(s).`,
+      });
+      await fetchTournamentData();
+    } catch (error: any) {
+      toast({ title: 'Erro ao regerar chave', description: error.message, variant: 'destructive' });
+    }
+  };
+
+
+
   // Verifica se a rodada atual está totalmente concluída e há próxima rodada
   const canGenerateNextRound = () => {
     if (!tournament || !matches.length) return false;
@@ -965,22 +1009,21 @@ const TournamentDetail = () => {
                                           </div>
                                         </div>
 
-                                        {/* Creator manual override */}
+                                        {/* Creator manual override / edição de resultado */}
                                         {tournament.status === 'active' &&
                                           tournament.created_by === currentUser?.id &&
-                                          match.status !== 'completed' &&
                                           match.player1_id && match.player2_id && (
                                             <div className="mt-3 pt-3 border-t border-border/40">
                                               <p className="text-[10px] text-yellow-500 mb-2 flex items-center gap-1 uppercase tracking-wider font-semibold">
                                                 <AlertTriangle className="w-3 h-3" />
-                                                Reporte manual (criador)
+                                                {match.status === 'completed' ? 'Editar resultado (criador)' : 'Reporte manual (criador)'}
                                               </p>
                                               <div className="flex flex-col gap-1.5">
                                                 <Button
                                                   size="sm"
                                                   variant="outline"
                                                   className="text-xs border-green-500/50 text-green-500 hover:bg-green-500/10 h-7"
-                                                  onClick={() => creatorSetWinner(match.id, match.player1_id)}
+                                                  onClick={() => creatorSetResult(match.id, 'player1_win')}
                                                 >
                                                   <CheckCircle className="w-3 h-3 mr-1" />
                                                   {match.player1?.[0]?.username || 'P1'} venceu
@@ -989,14 +1032,23 @@ const TournamentDetail = () => {
                                                   size="sm"
                                                   variant="outline"
                                                   className="text-xs border-green-500/50 text-green-500 hover:bg-green-500/10 h-7"
-                                                  onClick={() => creatorSetWinner(match.id, match.player2_id)}
+                                                  onClick={() => creatorSetResult(match.id, 'player2_win')}
                                                 >
                                                   <CheckCircle className="w-3 h-3 mr-1" />
                                                   {match.player2?.[0]?.username || 'P2'} venceu
                                                 </Button>
+                                                <Button
+                                                  size="sm"
+                                                  variant="outline"
+                                                  className="text-xs border-yellow-500/50 text-yellow-500 hover:bg-yellow-500/10 h-7"
+                                                  onClick={() => creatorSetResult(match.id, 'draw')}
+                                                >
+                                                  Empate
+                                                </Button>
                                               </div>
                                             </div>
                                           )}
+
                                       </CardContent>
                                     </Card>
                                   );
