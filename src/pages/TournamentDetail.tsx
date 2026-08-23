@@ -965,22 +965,21 @@ const TournamentDetail = () => {
                                           </div>
                                         </div>
 
-                                        {/* Creator manual override */}
+                                        {/* Creator manual override / edição de resultado */}
                                         {tournament.status === 'active' &&
                                           tournament.created_by === currentUser?.id &&
-                                          match.status !== 'completed' &&
                                           match.player1_id && match.player2_id && (
                                             <div className="mt-3 pt-3 border-t border-border/40">
                                               <p className="text-[10px] text-yellow-500 mb-2 flex items-center gap-1 uppercase tracking-wider font-semibold">
                                                 <AlertTriangle className="w-3 h-3" />
-                                                Reporte manual (criador)
+                                                {match.status === 'completed' ? 'Editar resultado (criador)' : 'Reporte manual (criador)'}
                                               </p>
                                               <div className="flex flex-col gap-1.5">
                                                 <Button
                                                   size="sm"
                                                   variant="outline"
                                                   className="text-xs border-green-500/50 text-green-500 hover:bg-green-500/10 h-7"
-                                                  onClick={() => creatorSetWinner(match.id, match.player1_id)}
+                                                  onClick={() => creatorSetResult(match.id, 'player1_win')}
                                                 >
                                                   <CheckCircle className="w-3 h-3 mr-1" />
                                                   {match.player1?.[0]?.username || 'P1'} venceu
@@ -989,14 +988,23 @@ const TournamentDetail = () => {
                                                   size="sm"
                                                   variant="outline"
                                                   className="text-xs border-green-500/50 text-green-500 hover:bg-green-500/10 h-7"
-                                                  onClick={() => creatorSetWinner(match.id, match.player2_id)}
+                                                  onClick={() => creatorSetResult(match.id, 'player2_win')}
                                                 >
                                                   <CheckCircle className="w-3 h-3 mr-1" />
                                                   {match.player2?.[0]?.username || 'P2'} venceu
                                                 </Button>
+                                                <Button
+                                                  size="sm"
+                                                  variant="outline"
+                                                  className="text-xs border-yellow-500/50 text-yellow-500 hover:bg-yellow-500/10 h-7"
+                                                  onClick={() => creatorSetResult(match.id, 'draw')}
+                                                >
+                                                  Empate
+                                                </Button>
                                               </div>
                                             </div>
                                           )}
+
                                       </CardContent>
                                     </Card>
                                   );
