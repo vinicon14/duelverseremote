@@ -195,6 +195,9 @@ export const CreatorTournamentDashboard = ({
     }
   };
 
+  const availableRounds = Array.from(new Set(matches.map((m) => m.round))).sort((a, b) => a - b);
+
+
   const canGenerateNewBracket = () => {
     // Can generate new bracket if all pending/in_progress matches have both reports
     const pendingMatches = matches.filter(m => 
