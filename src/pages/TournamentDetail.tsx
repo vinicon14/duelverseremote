@@ -360,6 +360,50 @@ const TournamentDetail = () => {
     }
   };
 
+  const creatorSetResult = async (matchId: string, result: 'player1_win' | 'player2_win' | 'draw') => {
+    if (!confirm('Definir este resultado? Os pontos do torneio serão recalculados.')) return;
+    try {
+      const { data, error } = await (supabase as any).rpc('set_match_result', {
+        p_match_id: matchId,
+        p_result: result,
+      });
+      if (error) throw error;
+      if (data && data.success === false) throw new Error(data.message);
+      toast({
+        title: result === 'draw' ? 'Empate registrado!' : 'Resultado atualizado!',
+        description: 'Os pontos do torneio foram recalculados.',
+      });
+      await fetchTournamentData();
+    } catch (error: any) {
+      toast({ title: 'Erro ao definir resultado', description: error.message, variant: 'destructive' });
+    }
+  };
+
+  const regenerateBracket = async (fromRound: number) => {
+    if (!id) return;
+    if (!confirm(`Regerar a chave a partir da rodada ${fromRound}? As rodadas posteriores serão apagadas e recriadas com os resultados atuais.`)) return;
+    try {
+      const { data, error } = await (supabase as any).rpc('regenerate_tournament_bracket', {
+        p_tournament_id: id,
+        p_from_round: fromRound,
+      });
+      if (error) throw error;
+      if (data && data.success === false) throw new Error(data.message);
+      const gen = data?.generation;
+      toast({
+        title: 'Chave regerada!',
+        description: gen && gen.success === false
+          ? `Rodadas posteriores removidas e pontos recalculados. ${gen.message}`
+          : `Nova rodada criada com ${gen?.matches_created ?? 0} partida(s).`,
+      });
+      await fetchTournamentData();
+    } catch (error: any) {
+      toast({ title: 'Erro ao regerar chave', description: error.message, variant: 'destructive' });
+    }
+  };
+
+
+
   // Verifica se a rodada atual está totalmente concluída e há próxima rodada
   const canGenerateNextRound = () => {
     if (!tournament || !matches.length) return false;
