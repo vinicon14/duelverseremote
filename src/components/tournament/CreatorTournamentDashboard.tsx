@@ -279,13 +279,13 @@ export const CreatorTournamentDashboard = ({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-sm text-muted-foreground">
-                Gerencie as partidas e distribua pontos
+                Gerencie as partidas, edite resultados e regere o chaveamento
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button
                 variant="outline"
                 onClick={handleRecalcPoints}
@@ -305,11 +305,43 @@ export const CreatorTournamentDashboard = ({
             </div>
           </div>
 
+          {availableRounds.length > 0 && (
+            <div className="mt-4 border-t pt-4 space-y-2">
+              <p className="text-xs text-muted-foreground">
+                Alterou um resultado antigo? Regere a chave a partir da rodada corrigida — as rodadas
+                seguintes são apagadas, os pontos recalculados e um novo chaveamento é criado.
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                  value={regenFromRound ?? availableRounds[availableRounds.length - 1]}
+                  onChange={(e) => setRegenFromRound(Number(e.target.value))}
+                >
+                  {availableRounds.map((r) => (
+                    <option key={r} value={r}>Rodada {r}</option>
+                  ))}
+                </select>
+                <Button
+                  variant="outline"
+                  className="border-yellow-500/50 text-yellow-500 hover:bg-yellow-500/10"
+                  disabled={regenerating}
+                  onClick={() =>
+                    handleRegenerateBracket(regenFromRound ?? availableRounds[availableRounds.length - 1])
+                  }
+                >
+                  <RefreshCw className={`w-4 h-4 mr-2 ${regenerating ? 'animate-spin' : ''}`} />
+                  Regerar chave a partir desta rodada
+                </Button>
+              </div>
+            </div>
+          )}
+
           {!canGenerateNewBracket() && (
             <p className="text-xs text-yellow-500 mt-2">
               ⚠️ Aguardando todos os reportes para gerar nova chave
             </p>
           )}
+
         </CardContent>
       </Card>
 
