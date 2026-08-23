@@ -46,6 +46,8 @@ export const CreatorTournamentDashboard = ({
   const [loading, setLoading] = useState(true);
   const [selectedMatch, setSelectedMatch] = useState<MatchWithReports | null>(null);
   const [recalculating, setRecalculating] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
+  const [regenFromRound, setRegenFromRound] = useState<number | null>(null);
 
   const handleRecalcPoints = async () => {
     setRecalculating(true);
@@ -63,6 +65,33 @@ export const CreatorTournamentDashboard = ({
       setRecalculating(false);
     }
   };
+
+  const handleRegenerateBracket = async (fromRound: number) => {
+    if (!confirm(`Regerar a chave a partir da rodada ${fromRound}? Todas as rodadas posteriores serão apagadas e recriadas com os resultados atuais.`)) return;
+    setRegenerating(true);
+    try {
+      const { data, error } = await (supabase as any).rpc('regenerate_tournament_bracket', {
+        p_tournament_id: tournamentId,
+        p_from_round: fromRound,
+      });
+      if (error) throw error;
+      if (data && data.success === false) throw new Error(data.message);
+      const gen = data?.generation;
+      toast({
+        title: "Chave regerada!",
+        description: gen && gen.success === false
+          ? `Rodadas posteriores removidas e pontos recalculados. ${gen.message}`
+          : `Nova rodada criada com ${gen?.matches_created ?? 0} partida(s).`,
+      });
+      fetchMatchesWithReports();
+      onGenerateNewBracket();
+    } catch (error: any) {
+      toast({ title: "Erro ao regerar chave", description: error.message, variant: "destructive" });
+    } finally {
+      setRegenerating(false);
+    }
+  };
+
 
 
   useEffect(() => {
