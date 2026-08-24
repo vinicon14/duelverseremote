@@ -37,6 +37,7 @@ const TournamentDetail = () => {
   const [isGeneratingBracket, setIsGeneratingBracket] = useState(false);
   const [reportModalOpen, setReportModalOpen] = useState(false);
   const [selectedReportMatch, setSelectedReportMatch] = useState<any>(null);
+  const [regenFromRound, setRegenFromRound] = useState<number | null>(null);
 
   // Helper para verificar se o torneio está pronto para finalização
   const isReadyForCompletion = () => {
@@ -828,6 +829,28 @@ const TournamentDetail = () => {
                           >
                             Recalcular pontos
                           </Button>
+                          {allRounds.length > 0 && (
+                            <div className="flex gap-2 w-full sm:w-auto">
+                              <select
+                                className="h-9 rounded-md border border-input bg-background px-2 text-xs"
+                                value={regenFromRound ?? allRounds[allRounds.length - 1]}
+                                onChange={(e) => setRegenFromRound(Number(e.target.value))}
+                              >
+                                {allRounds.map((r) => (
+                                  <option key={r} value={r}>Rodada {r}</option>
+                                ))}
+                              </select>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-xs border-yellow-500/50 text-yellow-500 hover:bg-yellow-500/10 flex-1 sm:flex-none"
+                                onClick={() => regenerateBracket(regenFromRound ?? allRounds[allRounds.length - 1])}
+                                title="Apaga rodadas posteriores, recalcula pontos e gera novo chaveamento"
+                              >
+                                Regerar chave
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
