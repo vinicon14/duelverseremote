@@ -37,6 +37,7 @@ const TournamentDetail = () => {
   const [isGeneratingBracket, setIsGeneratingBracket] = useState(false);
   const [reportModalOpen, setReportModalOpen] = useState(false);
   const [selectedReportMatch, setSelectedReportMatch] = useState<any>(null);
+  const [regenFromRound, setRegenFromRound] = useState<number | null>(null);
 
   // Helper para verificar se o torneio está pronto para finalização
   const isReadyForCompletion = () => {
