@@ -807,11 +807,14 @@ export type Database = {
       live_duels: {
         Row: {
           bet_amount: number
+          closed_reason: string | null
           created_at: string
           creator_id: string
           custom_counters: Json
           discord_messages: Json
           duration_minutes: number
+          expires_at: string | null
+          expiry_warned: boolean
           finalize_conflict_count: number
           finalize_votes: Json
           finished_at: string | null
@@ -837,11 +840,14 @@ export type Database = {
         }
         Insert: {
           bet_amount?: number
+          closed_reason?: string | null
           created_at?: string
           creator_id: string
           custom_counters?: Json
           discord_messages?: Json
           duration_minutes?: number
+          expires_at?: string | null
+          expiry_warned?: boolean
           finalize_conflict_count?: number
           finalize_votes?: Json
           finished_at?: string | null
@@ -867,11 +873,14 @@ export type Database = {
         }
         Update: {
           bet_amount?: number
+          closed_reason?: string | null
           created_at?: string
           creator_id?: string
           custom_counters?: Json
           discord_messages?: Json
           duration_minutes?: number
+          expires_at?: string | null
+          expiry_warned?: boolean
           finalize_conflict_count?: number
           finalize_votes?: Json
           finished_at?: string | null
@@ -2374,6 +2383,10 @@ export type Database = {
         Returns: Json
       }
       admin_platform_metrics: { Args: { p_days?: number }; Returns: Json }
+      admin_platform_metrics_v2: {
+        Args: { p_from: string; p_to: string }
+        Returns: Json
+      }
       admin_reset_ranked_points: {
         Args: { p_reset_record?: boolean; p_tcg_type?: string }
         Returns: Json
@@ -2475,6 +2488,7 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      expire_idle_duel_rooms: { Args: never; Returns: Json }
       generate_next_round: { Args: { p_tournament_id: string }; Returns: Json }
       get_discord_link_for_user: {
         Args: { p_user_id: string }
@@ -2728,6 +2742,17 @@ export type Database = {
       tournament_refund_participant: {
         Args: { p_participant_id: string; p_tournament_id: string }
         Returns: Json
+      }
+      tournament_standings: {
+        Args: { p_tournament_id: string }
+        Returns: {
+          draws: number
+          losses: number
+          rank_position: number
+          score: number
+          user_id: string
+          wins: number
+        }[]
       }
       transfer_duelcoins: {
         Args: { p_amount: number; p_receiver_id: string }
