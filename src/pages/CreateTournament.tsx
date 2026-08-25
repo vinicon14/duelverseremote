@@ -147,15 +147,22 @@ const CreateTournament = () => {
                     <SelectValue placeholder="Selecione o tipo" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="single_elimination">Eliminação Simples</SelectItem>
-                    <SelectItem value="swiss">Suíço + Top 4</SelectItem>
+                    <SelectItem value="single_elimination">Mata-Mata (Eliminação Simples)</SelectItem>
+                    <SelectItem value="swiss">Sistema Suíço</SelectItem>
+                    <SelectItem value="swiss_top4">Sistema Suíço + Top 4 Mata-Mata</SelectItem>
                   </SelectContent>
                 </Select>
                 {tournamentType === 'swiss' && (
                   <p className="text-xs text-muted-foreground mt-1">
-                    {swissRounds} rodadas suíças → Top 4 eliminatório
+                    {swissRounds} rodadas suíças — classificação final por pontos
                   </p>
                 )}
+                {tournamentType === 'swiss_top4' && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Fase 1: {swissRounds} rodadas suíças → Fase 2: Top 4 (1º x 4º, 2º x 3º) e final
+                  </p>
+                )}
+
               </div>
 
               {/* Requires Decklist */}
