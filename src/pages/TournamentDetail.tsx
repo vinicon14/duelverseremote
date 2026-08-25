@@ -20,6 +20,8 @@ import { TournamentWinnerSelector } from "@/components/TournamentWinnerSelector"
 import { TournamentChat } from "@/components/TournamentChat";
 import { PlayerMatchReportModal } from "@/components/tournament/PlayerMatchReportModal";
 import { TournamentDecklistViewer } from "@/components/tournament/TournamentDecklistViewer";
+import { Top4Bracket } from "@/components/tournament/Top4Bracket";
+
 import { useAdmin } from "@/hooks/useAdmin";
 import { useIsMobile } from "@/hooks/use-mobile";
 
