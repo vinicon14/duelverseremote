@@ -29,6 +29,8 @@ import { BackgroundMusic } from "@/components/BackgroundMusic";
 import { SoundEffectsProvider } from "@/components/SoundEffectsProvider";
 
 import { useRealtimeNotifications } from "@/hooks/useRealtimeNotifications";
+import { initPushNotifications } from "@/lib/push";
+
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useSubscriptionExpirationCheck } from "@/hooks/useSubscriptionExpirationCheck";
 import { useDiscordPresence } from "@/hooks/useDiscordPresence";
