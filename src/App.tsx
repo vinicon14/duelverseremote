@@ -236,6 +236,12 @@ const MainAppContent = () => {
   
   // Enable realtime notifications
   useRealtimeNotifications(user?.id);
+
+  // Initialize modular push notification providers (web push + Monetag)
+  useEffect(() => {
+    initPushNotifications().catch(() => undefined);
+  }, []);
+
   
   // Listen for duel invite responses (accepted/rejected)
   useDuelInviteResponse(user?.id);
