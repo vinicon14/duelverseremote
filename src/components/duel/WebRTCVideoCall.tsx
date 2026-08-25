@@ -868,6 +868,14 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         return;
       }
 
+      // Remove the departed session immediately. Without this, a player can keep
+      // the spectator's old PeerConnection alive and reuse it when the same user
+      // returns, preventing the fresh receive-only connection from negotiating.
+      if (payload.type === "leave") {
+        removePeer(remotePeerId);
+        return;
+      }
+
       if (payload.type === "ready") {
 
         // Remember whether this peer is a spectator so it never takes a video slot.
@@ -1000,7 +1008,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         console.error("[WebRTC] signal handling error:", err);
       }
     },
-    [userId, createPeerConnection, isSpectator, audioBroadcastOnly, sendOfferTo]
+    [userId, createPeerConnection, isSpectator, audioBroadcastOnly, sendOfferTo, removePeer]
   );
 
   useEffect(() => {
@@ -1205,7 +1213,18 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       if (ownedChannel && channelRef.current === ownedChannel) {
         channelRef.current = null;
       }
-      if (ownedChannel) void supabase.removeChannel(ownedChannel);
+      if (ownedChannel) {
+        const channelToRemove = ownedChannel;
+        // Best-effort departure notice lets players discard this visit's peer
+        // before a later visit with the same user id starts negotiating.
+        void channelToRemove.send({
+          type: "broadcast",
+          event: "webrtc-signal",
+          payload: { type: "leave", senderId: userId },
+        }).finally(() => {
+          void supabase.removeChannel(channelToRemove);
+        });
+      }
     };
   }, [duelId, userId, handleSignal, isSpectator, audioBroadcastOnly, getActiveOutboundStream, sendOfferTo]);
 
