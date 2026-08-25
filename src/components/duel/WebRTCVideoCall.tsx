@@ -1005,6 +1005,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
 
   useEffect(() => {
     let disposed = false;
+    let ownedChannel: ReturnType<typeof supabase.channel> | null = null;
     const peerMap = peersRef.current;
     const spectatorPeerSet = spectatorPeersRef.current;
     const relayOnlyPeerSet = relayOnlyPeersRef.current;
@@ -1140,6 +1141,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       const channel = supabase.channel(`webrtc-signal-${duelId}`, {
         config: { broadcast: { self: false } },
       });
+      ownedChannel = channel;
 
       // Publish the reference before subscribing. A fast targeted response can
       // arrive immediately after SUBSCRIBED; assigning this afterwards caused
@@ -1200,10 +1202,10 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       clearRemoteStreams();
       // Remove only the channel owned by this effect run. An older cleanup must
       // never unsubscribe the replacement channel created during quick re-entry.
-      if (channelRef.current === channel) {
+      if (ownedChannel && channelRef.current === ownedChannel) {
         channelRef.current = null;
       }
-      void supabase.removeChannel(channel);
+      if (ownedChannel) void supabase.removeChannel(ownedChannel);
     };
   }, [duelId, userId, handleSignal, isSpectator, audioBroadcastOnly, getActiveOutboundStream, sendOfferTo]);
 
