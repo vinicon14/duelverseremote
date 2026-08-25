@@ -805,7 +805,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     } finally {
       peer.makingOffer = false;
     }
-  }, [userId, createPeerConnection, canInitiateOffer]);
+  }, [userId, isSpectator, createPeerConnection, canInitiateOffer]);
 
   // Spectator-side: never offer (receive-only). Ask the player to (re)offer until
   // BOTH audio and video are flowing, so spectators always see AND hear everyone.
@@ -835,7 +835,11 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         senderId: userId,
         targetId: playerId,
         isSpectator: true,
-        rebuild: stalled,
+        // A returning spectator has the same user id, so the player's previous
+        // PeerConnection may still look connected for several seconds after the
+        // old tab/route was closed. Force a fresh player-side connection whenever
+        // this mount has no peer yet instead of negotiating against that stale PC.
+        rebuild: !peer || stalled,
       },
     });
   }, [isSpectator, userId, removePeer]);
@@ -861,6 +865,14 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       if (payload.type === "request-offer") {
         if (isSpectator && !audioBroadcastOnly) return;
         void sendOfferTo(remotePeerId, !!payload.rebuild);
+        return;
+      }
+
+      // Remove the departed session immediately. Without this, a player can keep
+      // the spectator's old PeerConnection alive and reuse it when the same user
+      // returns, preventing the fresh receive-only connection from negotiating.
+      if (payload.type === "leave") {
+        removePeer(remotePeerId);
         return;
       }
 
@@ -996,11 +1008,17 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         console.error("[WebRTC] signal handling error:", err);
       }
     },
-    [userId, createPeerConnection, isSpectator, audioBroadcastOnly, sendOfferTo]
+    [userId, createPeerConnection, isSpectator, audioBroadcastOnly, sendOfferTo, removePeer]
   );
 
   useEffect(() => {
     let disposed = false;
+    let ownedChannel: ReturnType<typeof supabase.channel> | null = null;
+    const peerMap = peersRef.current;
+    const spectatorPeerSet = spectatorPeersRef.current;
+    const relayOnlyPeerSet = relayOnlyPeersRef.current;
+    const videoElementMap = remoteVideoRefs.current;
+    const audioElementMap = remoteAudioRefs.current;
 
     const acquireMedia = async (): Promise<MediaStream | null> => {
       // Audio-broadcast spectator (judge): mic only, no camera
@@ -1131,6 +1149,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       const channel = supabase.channel(`webrtc-signal-${duelId}`, {
         config: { broadcast: { self: false } },
       });
+      ownedChannel = channel;
 
       // Publish the reference before subscribing. A fast targeted response can
       // arrive immediately after SUBSCRIBED; assigning this afterwards caused
@@ -1160,12 +1179,51 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       disposed = true;
       localStreamRef.current?.getTracks().forEach((t) => t.stop());
       localStreamRef.current = null;
-      peersRef.current.forEach((peer) => peer.pc.close());
-      peersRef.current.clear();
+      // Detach every delayed callback before closing. Otherwise a late "closed"
+      // event from the previous visit can call removePeer after re-entry and
+      // delete the newly-created connection for the same player id.
+      peerMap.forEach((peer) => {
+        peer.pc.onicecandidate = null;
+        peer.pc.oniceconnectionstatechange = null;
+        peer.pc.onconnectionstatechange = null;
+        peer.pc.ontrack = null;
+        peer.pc.onnegotiationneeded = null;
+        peer.stream?.getTracks().forEach((track) => {
+          track.onended = null;
+          track.onmute = null;
+          track.onunmute = null;
+        });
+        peer.pc.close();
+      });
+      peerMap.clear();
+      spectatorPeerSet.clear();
+      relayOnlyPeerSet.clear();
+      videoElementMap.forEach((element) => {
+        element.srcObject = null;
+      });
+      audioElementMap.forEach((element) => {
+        element.srcObject = null;
+      });
+      setRemoteStreams(new Map());
+      setRemotePeerIds([]);
+      setSpectatorPeerIds([]);
       clearRemoteStreams();
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
+      // Remove only the channel owned by this effect run. An older cleanup must
+      // never unsubscribe the replacement channel created during quick re-entry.
+      if (ownedChannel && channelRef.current === ownedChannel) {
         channelRef.current = null;
+      }
+      if (ownedChannel) {
+        const channelToRemove = ownedChannel;
+        // Best-effort departure notice lets players discard this visit's peer
+        // before a later visit with the same user id starts negotiating.
+        void channelToRemove.send({
+          type: "broadcast",
+          event: "webrtc-signal",
+          payload: { type: "leave", senderId: userId },
+        }).finally(() => {
+          void supabase.removeChannel(channelToRemove);
+        });
       }
     };
   }, [duelId, userId, handleSignal, isSpectator, audioBroadcastOnly, getActiveOutboundStream, sendOfferTo]);
