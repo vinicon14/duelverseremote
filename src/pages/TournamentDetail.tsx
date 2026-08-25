@@ -411,13 +411,16 @@ const TournamentDetail = () => {
     if (tournament.status !== 'active') return false;
     const currentRound = tournament.current_round || 1;
     const totalRounds = tournament.total_rounds || 1;
-    if (currentRound >= totalRounds) return false;
+    const isSwissTop4 = tournament.tournament_type === 'swiss_top4';
+    const lastRound = isSwissTop4 ? totalRounds + 2 : totalRounds;
+    if (currentRound >= lastRound) return false;
     const currentRoundMatches = matches.filter(m => m.round === currentRound);
     if (currentRoundMatches.length === 0) return false;
     const allCompleted = currentRoundMatches.every(m => m.status === 'completed');
     const hasNextAlready = matches.some(m => m.round === currentRound + 1);
     return allCompleted && !hasNextAlready;
   };
+
 
   const generateNextRound = async () => {
     if (!id) return;
