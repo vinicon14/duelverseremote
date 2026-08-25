@@ -20,6 +20,8 @@ import { TournamentWinnerSelector } from "@/components/TournamentWinnerSelector"
 import { TournamentChat } from "@/components/TournamentChat";
 import { PlayerMatchReportModal } from "@/components/tournament/PlayerMatchReportModal";
 import { TournamentDecklistViewer } from "@/components/tournament/TournamentDecklistViewer";
+import { Top4Bracket } from "@/components/tournament/Top4Bracket";
+
 import { useAdmin } from "@/hooks/useAdmin";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -411,13 +413,16 @@ const TournamentDetail = () => {
     if (tournament.status !== 'active') return false;
     const currentRound = tournament.current_round || 1;
     const totalRounds = tournament.total_rounds || 1;
-    if (currentRound >= totalRounds) return false;
+    const isSwissTop4 = tournament.tournament_type === 'swiss_top4';
+    const lastRound = isSwissTop4 ? totalRounds + 2 : totalRounds;
+    if (currentRound >= lastRound) return false;
     const currentRoundMatches = matches.filter(m => m.round === currentRound);
     if (currentRoundMatches.length === 0) return false;
     const allCompleted = currentRoundMatches.every(m => m.status === 'completed');
     const hasNextAlready = matches.some(m => m.round === currentRound + 1);
     return allCompleted && !hasNextAlready;
   };
+
 
   const generateNextRound = async () => {
     if (!id) return;
@@ -781,15 +786,29 @@ const TournamentDetail = () => {
               </div>
             )}
 
+            {tournament.tournament_type === 'swiss_top4' && matches.length > 0 && (
+              <Top4Bracket matches={matches} swissRounds={tournament.total_rounds || 0} />
+            )}
 
 
             {/* Matches Bracket - Pro tournament style */}
             {matches.length > 0 && (() => {
               const allRounds = Array.from(new Set(matches.map(m => m.round))).sort((a, b) => a - b);
               const maxRound = Math.max(...allRounds);
-              const totalRounds = tournament.total_rounds || maxRound;
-              
+              const isSwissTop4 = tournament.tournament_type === 'swiss_top4';
+              const swissRounds = tournament.total_rounds || maxRound;
+              const totalRounds = isSwissTop4 ? swissRounds + 2 : (tournament.total_rounds || maxRound);
+              const currentRound = tournament.current_round || 1;
+              const phaseLabel = isSwissTop4
+                ? (currentRound > swissRounds ? 'FASE 2 — TOP 4 / MATA-MATA' : 'FASE 1 — SISTEMA SUÍÇO')
+                : null;
+
               const getRoundLabel = (round: number) => {
+                if (isSwissTop4) {
+                  if (round === swissRounds + 2) return '🏆 Final (Top 4)';
+                  if (round === swissRounds + 1) return 'Semifinais (Top 4)';
+                  return `Rodada Suíça ${round}`;
+                }
                 if (round === totalRounds) return '🏆 Final';
                 if (round === totalRounds - 1) return 'Semifinal';
                 if (round === totalRounds - 2) return 'Quartas de Final';
@@ -804,9 +823,15 @@ const TournamentDetail = () => {
                         <Trophy className="w-5 h-5 text-primary shrink-0" />
                         <span>Chaveamento</span>
                         <Badge variant="outline" className="text-[10px] sm:text-xs">
-                          R{tournament.current_round || 1}/{totalRounds}
+                          R{currentRound}/{totalRounds}
                         </Badge>
+                        {phaseLabel && (
+                          <Badge className="text-[10px] sm:text-xs bg-primary/20 text-primary border border-primary/40">
+                            {phaseLabel}
+                          </Badge>
+                        )}
                       </CardTitle>
+
                       {tournament.status === 'active' && tournament.created_by === currentUser?.id && (
                         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                           {canGenerateNextRound() && (

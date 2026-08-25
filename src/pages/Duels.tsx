@@ -74,7 +74,16 @@ const Duels = () => {
 
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null;
+    let expiryTimer: ReturnType<typeof setInterval> | null = null;
     let mounted = true;
+
+    const runExpiryCheck = async () => {
+      try {
+        await (supabase.rpc as any)('expire_idle_duel_rooms');
+      } catch (error) {
+        console.error('Erro ao expirar salas ociosas:', error);
+      }
+    };
 
     const initialize = async () => {
       const isAuthenticated = await checkAuth();
@@ -90,6 +99,9 @@ const Duels = () => {
       } catch (error) {
         console.error('Erro ao executar limpeza:', error);
       }
+
+      runExpiryCheck();
+      expiryTimer = setInterval(runExpiryCheck, 60_000);
 
       channel = supabase
         .channel('live_duels_changes')
@@ -111,9 +123,11 @@ const Duels = () => {
 
     return () => {
       mounted = false;
+      if (expiryTimer) clearInterval(expiryTimer);
       if (channel) supabase.removeChannel(channel);
     };
   }, [activeTcg]);
+
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
