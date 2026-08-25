@@ -835,7 +835,11 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         senderId: userId,
         targetId: playerId,
         isSpectator: true,
-        rebuild: stalled,
+        // A returning spectator has the same user id, so the player's previous
+        // PeerConnection may still look connected for several seconds after the
+        // old tab/route was closed. Force a fresh player-side connection whenever
+        // this mount has no peer yet instead of negotiating against that stale PC.
+        rebuild: !peer || stalled,
       },
     });
   }, [isSpectator, userId, removePeer]);
@@ -1160,13 +1164,41 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       disposed = true;
       localStreamRef.current?.getTracks().forEach((t) => t.stop());
       localStreamRef.current = null;
-      peersRef.current.forEach((peer) => peer.pc.close());
+      // Detach every delayed callback before closing. Otherwise a late "closed"
+      // event from the previous visit can call removePeer after re-entry and
+      // delete the newly-created connection for the same player id.
+      peersRef.current.forEach((peer) => {
+        peer.pc.onicecandidate = null;
+        peer.pc.oniceconnectionstatechange = null;
+        peer.pc.onconnectionstatechange = null;
+        peer.pc.ontrack = null;
+        peer.pc.onnegotiationneeded = null;
+        peer.stream?.getTracks().forEach((track) => {
+          track.onended = null;
+          track.onmute = null;
+          track.onunmute = null;
+        });
+        peer.pc.close();
+      });
       peersRef.current.clear();
+      spectatorPeersRef.current.clear();
+      relayOnlyPeersRef.current.clear();
+      remoteVideoRefs.current.forEach((element) => {
+        element.srcObject = null;
+      });
+      remoteAudioRefs.current.forEach((element) => {
+        element.srcObject = null;
+      });
+      setRemoteStreams(new Map());
+      setRemotePeerIds([]);
+      setSpectatorPeerIds([]);
       clearRemoteStreams();
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
+      // Remove only the channel owned by this effect run. An older cleanup must
+      // never unsubscribe the replacement channel created during quick re-entry.
+      if (channelRef.current === channel) {
         channelRef.current = null;
       }
+      void supabase.removeChannel(channel);
     };
   }, [duelId, userId, handleSignal, isSpectator, audioBroadcastOnly, getActiveOutboundStream, sendOfferTo]);
 
