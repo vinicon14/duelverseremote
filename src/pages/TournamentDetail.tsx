@@ -784,6 +784,9 @@ const TournamentDetail = () => {
               </div>
             )}
 
+            {tournament.tournament_type === 'swiss_top4' && matches.length > 0 && (
+              <Top4Bracket matches={matches} swissRounds={tournament.total_rounds || 0} />
+            )}
 
 
             {/* Matches Bracket - Pro tournament style */}
