@@ -37,7 +37,7 @@ const CreateTournament = () => {
   const [maxParticipants, setMaxParticipants] = useState(8);
   const [prizePool, setPrizePool] = useState(0);
   const [entryFee, setEntryFee] = useState(0);
-  const [tournamentType, setTournamentType] = useState<'single_elimination' | 'swiss'>('single_elimination');
+  const [tournamentType, setTournamentType] = useState<'single_elimination' | 'swiss' | 'swiss_top4'>('single_elimination');
   const [requiresDecklist, setRequiresDecklist] = useState(false);
   const [loading, setLoading] = useState(false);
 
