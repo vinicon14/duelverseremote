@@ -805,7 +805,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     } finally {
       peer.makingOffer = false;
     }
-  }, [userId, createPeerConnection, canInitiateOffer]);
+  }, [userId, isSpectator, createPeerConnection, canInitiateOffer]);
 
   // Spectator-side: never offer (receive-only). Ask the player to (re)offer until
   // BOTH audio and video are flowing, so spectators always see AND hear everyone.
@@ -1005,6 +1005,11 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
 
   useEffect(() => {
     let disposed = false;
+    const peerMap = peersRef.current;
+    const spectatorPeerSet = spectatorPeersRef.current;
+    const relayOnlyPeerSet = relayOnlyPeersRef.current;
+    const videoElementMap = remoteVideoRefs.current;
+    const audioElementMap = remoteAudioRefs.current;
 
     const acquireMedia = async (): Promise<MediaStream | null> => {
       // Audio-broadcast spectator (judge): mic only, no camera
@@ -1167,7 +1172,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       // Detach every delayed callback before closing. Otherwise a late "closed"
       // event from the previous visit can call removePeer after re-entry and
       // delete the newly-created connection for the same player id.
-      peersRef.current.forEach((peer) => {
+      peerMap.forEach((peer) => {
         peer.pc.onicecandidate = null;
         peer.pc.oniceconnectionstatechange = null;
         peer.pc.onconnectionstatechange = null;
@@ -1180,13 +1185,13 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         });
         peer.pc.close();
       });
-      peersRef.current.clear();
-      spectatorPeersRef.current.clear();
-      relayOnlyPeersRef.current.clear();
-      remoteVideoRefs.current.forEach((element) => {
+      peerMap.clear();
+      spectatorPeerSet.clear();
+      relayOnlyPeerSet.clear();
+      videoElementMap.forEach((element) => {
         element.srcObject = null;
       });
-      remoteAudioRefs.current.forEach((element) => {
+      audioElementMap.forEach((element) => {
         element.srcObject = null;
       });
       setRemoteStreams(new Map());
