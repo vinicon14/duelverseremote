@@ -39,6 +39,10 @@ export const UniversalNewTabBlocker = () => {
       
       // Convert URL to string if needed
       const urlString = typeof url === 'string' ? url : url?.toString() || '';
+
+      if (window.__duelverseRewardedAdActive && urlString.startsWith('http')) {
+        return window._originalWindowOpen?.(...args) ?? null;
+      }
       
       // UNIVERSAL BLOCK: Block ONLY new tab/popups, NOT banner ad scripts
       // Allow banner ads to load for free users, block only intrusive behaviors
@@ -97,6 +101,8 @@ export const UniversalNewTabBlocker = () => {
         
         if (link && link.target === '_blank') {
           const href = link.href;
+
+          if (window.__duelverseRewardedAdActive && href.startsWith('http')) return;
           
           const blockedLinkPatterns = [
             'pop', 'onclicka', 'vignette', 'adsterra',

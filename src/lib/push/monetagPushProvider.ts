@@ -15,6 +15,7 @@
  * basta implementar as chamadas nos pontos marcados com TODO abaixo.
  */
 import { supabase } from "@/integrations/supabase/client";
+import { markAuthorizedMonetagElement } from "@/utils/monetagAds";
 import type { PushPermission, PushProvider, PushSubscriptionInfo } from "./types";
 
 export const MONETAG_PUSH_KEYS = {
@@ -68,6 +69,7 @@ const injectTag = (config: MonetagPushConfig) => {
         script.setAttribute(attr.name, attr.value);
       }
       script.text = original.text;
+      markAuthorizedMonetagElement(script);
       document.head.appendChild(script);
     });
     injected = true;
@@ -79,6 +81,7 @@ const injectTag = (config: MonetagPushConfig) => {
     script.src = config.tagUrl;
     script.async = true;
     script.setAttribute("data-cfasync", "false");
+    markAuthorizedMonetagElement(script);
     document.head.appendChild(script);
     injected = true;
   }

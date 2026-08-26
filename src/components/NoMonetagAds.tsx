@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { isAuthorizedMonetagElement } from "@/utils/monetagAds";
 
 /**
  * NoMonetagAds - Safe ad cleanup for DuelRoom
@@ -39,11 +40,13 @@ function isAdIframe(src: string): boolean {
 }
 
 function safeCleanup() {
+  if (window.__duelverseRewardedAdActive) return;
   const root = document.getElementById('root');
 
   // Remove ad scripts outside React
   document.querySelectorAll('script').forEach(script => {
     if (root?.contains(script)) return;
+    if (isAuthorizedMonetagElement(script)) return;
     const src = script.getAttribute('src') || '';
     const text = script.textContent || '';
     if (isAdScript(src, text)) script.remove();
@@ -52,6 +55,7 @@ function safeCleanup() {
   // Remove ad iframes outside React
   document.querySelectorAll('iframe').forEach(iframe => {
     if (root?.contains(iframe)) return;
+    if (isAuthorizedMonetagElement(iframe)) return;
     const src = iframe.getAttribute('src') || '';
     if (isAdIframe(src)) iframe.remove();
   });
@@ -60,6 +64,7 @@ function safeCleanup() {
   document.querySelectorAll('body > div, body > section, body > aside').forEach(el => {
     if (root?.contains(el)) return;
     if (el === root) return;
+    if (isAuthorizedMonetagElement(el)) return;
     const id = el.id || '';
     const cn = typeof el.className === 'string' ? el.className : '';
     if (id.includes('monetag') || id.includes('quge5') || cn.includes('monetag') || cn.includes('quge5')) {
@@ -70,12 +75,14 @@ function safeCleanup() {
   // Remove Monetag data-attributed elements
   document.querySelectorAll('[data-quge5], [data-monetag], [data-popunder], [data-onclicka]').forEach(el => {
     if (root?.contains(el)) return;
+    if (isAuthorizedMonetagElement(el)) return;
     el.remove();
   });
 
   // Remove container-* divs outside React (Monetag pattern)
   document.querySelectorAll('div[id^="container-"]').forEach(el => {
     if (root?.contains(el)) return;
+    if (isAuthorizedMonetagElement(el)) return;
     el.remove();
   });
 }
@@ -99,6 +106,7 @@ export const NoMonetagAds = () => {
           if (node.nodeType !== 1) continue;
           const el = node as Element;
           if (root?.contains(el)) continue;
+          if (window.__duelverseRewardedAdActive || isAuthorizedMonetagElement(el)) continue;
 
           if (el.tagName === 'SCRIPT') {
             const src = el.getAttribute('src') || '';
