@@ -42,12 +42,13 @@ export const ProAdCleaner = () => {
       });
 
       document.querySelectorAll('amp-auto-ads').forEach(el => {
+        if (shouldKeepRewardedAd(el)) return;
         if (!isInsideReact(el)) el.remove();
       });
 
       document.querySelectorAll('div[id^="container-"]').forEach(el => {
-        if (!isInsideReact(el)) el.remove();
         if (shouldKeepRewardedAd(el)) return;
+        if (!isInsideReact(el)) el.remove();
       });
 
       document.querySelectorAll('iframe').forEach(iframe => {
@@ -59,12 +60,13 @@ export const ProAdCleaner = () => {
       });
 
       document.querySelectorAll('div[id^="google_ads_"], div.google-auto-placed, div[data-google-query-id]').forEach(el => {
+        if (shouldKeepRewardedAd(el)) return;
         if (!isInsideReact(el)) el.remove();
       });
 
       document.querySelectorAll('[data-quge5], [data-monetag], [data-popunder], [data-onclicka]').forEach(el => {
-        if (!isInsideReact(el)) el.remove();
         if (shouldKeepRewardedAd(el)) return;
+        if (!isInsideReact(el)) el.remove();
       });
     };
 
