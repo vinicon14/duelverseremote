@@ -252,21 +252,22 @@ export const isMonetagAvailable = async () => {
  * Exibe um anúncio recompensado da Monetag.
  * Resolve apenas quando o usuário assiste até o fim.
  */
-export const showMonetagRewardedAd = async (timeoutMs = 60000): Promise<boolean> => {
-  setRewardedAdActive(true, timeoutMs);
+export const showMonetagRewardedAd = async (timeoutMs?: number): Promise<boolean> => {
+  const effectiveTimeoutMs = timeoutMs ?? 60000;
+  setRewardedAdActive(true, effectiveTimeoutMs);
   try {
     const config = await ensureMonetagLoaded();
     if (!config) throw new Error("Anúncios estão desativados no momento.");
 
     const candidates = extractSdkCandidates(config);
     if (candidates.length === 0) {
-      await showManualCompletionShell(config.minSeconds, timeoutMs);
+      await showManualCompletionShell(config.minSeconds, effectiveTimeoutMs);
       return true;
     }
 
     const fn = await waitForAnySdk(candidates).catch(async (error) => {
       if (config.customScript.trim()) {
-        await showManualCompletionShell(config.minSeconds, timeoutMs);
+        await showManualCompletionShell(config.minSeconds, effectiveTimeoutMs);
         return null;
       }
       throw error;
