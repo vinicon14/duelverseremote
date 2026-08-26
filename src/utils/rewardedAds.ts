@@ -603,7 +603,7 @@ export const hasRewardedAdUnit = () => {
 export const showRewardedVideoAd = (timeoutMs = 60000): Promise<RewardedAdResult> => {
   const provider = getRewardedProvider();
   if (provider === "monetag") {
-    return showMonetagRewardedAd(timeoutMs).then(() => ({
+    return showMonetagRewardedAd().then(() => ({
       provider: "monetag",
       sessionId: createAdSessionId(),
       rewarded: true,
@@ -616,7 +616,7 @@ export const showRewardedVideoAd = (timeoutMs = 60000): Promise<RewardedAdResult
   if (provider === "propellerads") return showPropellerAdsRewardedAd(timeoutMs);
   return isMonetagAvailable().then((available) => {
     if (available) {
-      return showMonetagRewardedAd(timeoutMs).then(() => ({
+      return showMonetagRewardedAd().then(() => ({
         provider: "monetag",
         sessionId: createAdSessionId(),
         rewarded: true,
