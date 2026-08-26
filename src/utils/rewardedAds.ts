@@ -1,3 +1,5 @@
+import { isMonetagAvailable, showMonetagRewardedAd } from "@/utils/monetagAds";
+
 declare global {
   interface Window {
     googletag?: GooglePublisherTag;
@@ -6,7 +8,7 @@ declare global {
   }
 }
 
-type RewardedAdProvider = "easyplatform" | "google_ad_manager" | "easyplatform_dev" | "adsense_internal" | "adsterra" | "adsterra_dev" | "propellerads" | "propellerads_dev";
+type RewardedAdProvider = "monetag" | "easyplatform" | "google_ad_manager" | "easyplatform_dev" | "adsense_internal" | "adsterra" | "adsterra_dev" | "propellerads" | "propellerads_dev";
 
 type RewardedAdResult = {
   provider: RewardedAdProvider;
@@ -95,6 +97,7 @@ const EASYPLATFORM_LOGIN_URL = "https://easyplatform.com/login.php";
 
 const getRewardedProvider = (): RewardedAdProvider => {
   const provider = String(import.meta.env.VITE_REWARDED_AD_PROVIDER || "adsense_internal").toLowerCase();
+  if (provider === "monetag") return "monetag";
   if (provider === "google_ad_manager") return "google_ad_manager";
   if (provider === "easyplatform") return "easyplatform";
   if (provider === "adsterra") return "adsterra" as RewardedAdProvider;
@@ -599,11 +602,29 @@ export const hasRewardedAdUnit = () => {
 
 export const showRewardedVideoAd = (timeoutMs = 60000): Promise<RewardedAdResult> => {
   const provider = getRewardedProvider();
+  if (provider === "monetag") {
+    return showMonetagRewardedAd(timeoutMs).then(() => ({
+      provider: "monetag",
+      sessionId: createAdSessionId(),
+      rewarded: true,
+      videoCompleted: true,
+    }));
+  }
   if (provider === "google_ad_manager") return showGoogleRewardedVideoAd(timeoutMs);
   if (provider === "easyplatform") return showEasyPlatformRewardedVideoAd(timeoutMs);
   if (provider === "adsterra") return showAdsterraRewardedAd(timeoutMs);
   if (provider === "propellerads") return showPropellerAdsRewardedAd(timeoutMs);
-  return showAdSenseInternalRewardedAd();
+  return isMonetagAvailable().then((available) => {
+    if (available) {
+      return showMonetagRewardedAd(timeoutMs).then(() => ({
+        provider: "monetag",
+        sessionId: createAdSessionId(),
+        rewarded: true,
+        videoCompleted: true,
+      }));
+    }
+    return showAdSenseInternalRewardedAd();
+  });
 };
 
 export const showGoogleRewardedVideoAd = (timeoutMs = 30000): Promise<RewardedAdResult> => {
