@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { MONETAG_KEYS, clearMonetagConfigCache, fetchMonetagConfig, showMonetagRewardedAd } from "@/utils/monetagAds";
+import { MONETAG_PUSH_KEYS, clearMonetagPushConfigCache, fetchMonetagPushConfig } from "@/lib/push";
 import { Loader2, Megaphone, Save, PlayCircle } from "lucide-react";
 
 export function AdminMonetag() {
@@ -18,6 +19,10 @@ export function AdminMonetag() {
   const [zoneId, setZoneId] = useState("");
   const [sdkDomain, setSdkDomain] = useState("");
   const [customScript, setCustomScript] = useState("");
+  const [minSeconds, setMinSeconds] = useState("15");
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [pushTagUrl, setPushTagUrl] = useState("");
+  const [pushScript, setPushScript] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -25,11 +30,18 @@ export function AdminMonetag() {
 
   useEffect(() => {
     (async () => {
-      const config = await fetchMonetagConfig(true);
+      const [config, pushConfig] = await Promise.all([
+        fetchMonetagConfig(true),
+        fetchMonetagPushConfig(true),
+      ]);
       setEnabled(config.enabled);
       setZoneId(config.zoneId);
       setSdkDomain(config.sdkDomain);
       setCustomScript(config.customScript);
+      setMinSeconds(String(config.minSeconds));
+      setPushEnabled(pushConfig.enabled);
+      setPushTagUrl(pushConfig.tagUrl);
+      setPushScript(pushConfig.script);
       setLoading(false);
     })();
   }, []);
@@ -42,10 +54,15 @@ export function AdminMonetag() {
         { key: MONETAG_KEYS.zoneId, value: zoneId.trim() },
         { key: MONETAG_KEYS.sdkDomain, value: sdkDomain.trim() },
         { key: MONETAG_KEYS.customScript, value: customScript },
+        { key: MONETAG_KEYS.minSeconds, value: String(Math.max(3, Number(minSeconds) || 15)) },
+        { key: MONETAG_PUSH_KEYS.enabled, value: String(pushEnabled) },
+        { key: MONETAG_PUSH_KEYS.tagUrl, value: pushTagUrl.trim() },
+        { key: MONETAG_PUSH_KEYS.script, value: pushScript },
       ];
       const { error } = await supabase.from("system_settings").upsert(rows, { onConflict: "key" });
       if (error) throw error;
       clearMonetagConfigCache();
+      clearMonetagPushConfigCache();
       toast({ title: "Configuração salva", description: "As alterações já valem para novos anúncios." });
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
@@ -99,7 +116,11 @@ export function AdminMonetag() {
           </div>
           <div className="space-y-1">
             <Label>Domínio do SDK</Label>
-            <Input value={sdkDomain} onChange={(e) => setSdkDomain(e.target.value)} placeholder="vemtoutchave.com" />
+            <Input value={sdkDomain} onChange={(e) => setSdkDomain(e.target.value)} placeholder="libtl.com" />
+          </div>
+          <div className="space-y-1">
+            <Label>Tempo mínimo para recompensa</Label>
+            <Input value={minSeconds} onChange={(e) => setMinSeconds(e.target.value)} inputMode="numeric" placeholder="15" />
           </div>
         </div>
 
@@ -115,6 +136,33 @@ export function AdminMonetag() {
           <p className="text-xs text-muted-foreground">
             Cole aqui o código fornecido pela Monetag. Ele é carregado apenas sob demanda, no momento do anúncio.
           </p>
+        </div>
+
+        <div className="rounded-lg border border-border p-4 space-y-4">
+          <div className="flex items-center gap-3">
+            <Switch id="monetag-push-enabled" checked={pushEnabled} onCheckedChange={setPushEnabled} />
+            <Label htmlFor="monetag-push-enabled">Ativar Push Monetag</Label>
+          </div>
+
+          <div className="space-y-1">
+            <Label>URL da tag de Push</Label>
+            <Input
+              value={pushTagUrl}
+              onChange={(e) => setPushTagUrl(e.target.value)}
+              placeholder="https://.../tag.min.js?z=..."
+            />
+          </div>
+
+          <div className="space-y-1">
+            <Label>Script de Push oficial (opcional)</Label>
+            <Textarea
+              value={pushScript}
+              onChange={(e) => setPushScript(e.target.value)}
+              rows={4}
+              placeholder='<script src="https://.../tag.min.js?z=..." data-cfasync="false" async></script>'
+              className="font-mono text-xs"
+            />
+          </div>
         </div>
 
         <div className="flex gap-2 flex-wrap">
