@@ -10,6 +10,8 @@ import { supabase } from "@/integrations/supabase/client";
 declare global {
   interface Window {
     __duelverseMonetagComplete?: () => void;
+    __duelverseRewardedAdActive?: boolean;
+    __duelverseRewardedAdTimer?: number;
   }
 }
 
@@ -36,10 +38,14 @@ let cache: { value: MonetagConfig; at: number } | null = null;
 const CACHE_MS = 60_000;
 
 const cleanSdkDomain = (domain: string) =>
-  domain
+  {
+    const cleaned = domain
     .trim()
     .replace(/^https?:\/\//, "")
-    .replace(/\/.*$/, "") || DEFAULT_SDK_DOMAIN;
+      .replace(/\/.*$/, "");
+    if (!cleaned || cleaned === "ventoutchave.com" || cleaned === "vemtoutchave.com") return DEFAULT_SDK_DOMAIN;
+    return cleaned;
+  };
 
 export const fetchMonetagConfig = async (force = false): Promise<MonetagConfig> => {
   if (!force && cache && Date.now() - cache.at < CACHE_MS) return cache.value;
@@ -116,18 +122,6 @@ export const ensureMonetagLoaded = async (): Promise<MonetagConfig | null> => {
   return config;
 };
 
-const waitForSdk = (fnName: string, timeoutMs = 12000) =>
-  new Promise<(...args: unknown[]) => Promise<unknown>>((resolve, reject) => {
-    const started = Date.now();
-    const tick = () => {
-      const fn = (window as any)[fnName];
-      if (typeof fn === "function") return resolve(fn);
-      if (Date.now() - started > timeoutMs) return reject(new Error("O anúncio não carregou a tempo. Tente novamente."));
-      window.setTimeout(tick, 250);
-    };
-    tick();
-  });
-
 const extractSdkCandidates = (config: MonetagConfig) => {
   const names = new Set<string>();
   if (config.zoneId) names.add(`show_${config.zoneId}`);
@@ -157,6 +151,21 @@ const waitForAnySdk = (names: string[], timeoutMs = 12000) =>
     };
     tick();
   });
+
+const setRewardedAdActive = (active: boolean, ttlMs = 60000) => {
+  if (window.__duelverseRewardedAdTimer) {
+    window.clearTimeout(window.__duelverseRewardedAdTimer);
+    window.__duelverseRewardedAdTimer = undefined;
+  }
+
+  window.__duelverseRewardedAdActive = active;
+  if (active) {
+    window.__duelverseRewardedAdTimer = window.setTimeout(() => {
+      window.__duelverseRewardedAdActive = false;
+      window.__duelverseRewardedAdTimer = undefined;
+    }, ttlMs);
+  }
+};
 
 const showManualCompletionShell = (minSeconds: number, timeoutMs: number) =>
   new Promise<boolean>((resolve, reject) => {
@@ -243,25 +252,30 @@ export const isMonetagAvailable = async () => {
  * Exibe um anúncio recompensado da Monetag.
  * Resolve apenas quando o usuário assiste até o fim.
  */
-export const showMonetagRewardedAd = async (): Promise<boolean> => {
-  const config = await ensureMonetagLoaded();
-  if (!config) throw new Error("Anúncios estão desativados no momento.");
+export const showMonetagRewardedAd = async (timeoutMs = 60000): Promise<boolean> => {
+  setRewardedAdActive(true, timeoutMs);
+  try {
+    const config = await ensureMonetagLoaded();
+    if (!config) throw new Error("Anúncios estão desativados no momento.");
 
-  const candidates = extractSdkCandidates(config);
-  if (candidates.length === 0) {
-    await showManualCompletionShell(config.minSeconds, 60000);
-    return true;
-  }
-
-  const fn = await waitForAnySdk(candidates).catch(async (error) => {
-    if (config.customScript.trim()) {
-      await showManualCompletionShell(config.minSeconds, 60000);
-      return null;
+    const candidates = extractSdkCandidates(config);
+    if (candidates.length === 0) {
+      await showManualCompletionShell(config.minSeconds, timeoutMs);
+      return true;
     }
-    throw error;
-  });
 
-  if (!fn) return true;
-  await fn();
-  return true;
+    const fn = await waitForAnySdk(candidates).catch(async (error) => {
+      if (config.customScript.trim()) {
+        await showManualCompletionShell(config.minSeconds, timeoutMs);
+        return null;
+      }
+      throw error;
+    });
+
+    if (!fn) return true;
+    await fn();
+    return true;
+  } finally {
+    setRewardedAdActive(false);
+  }
 };
