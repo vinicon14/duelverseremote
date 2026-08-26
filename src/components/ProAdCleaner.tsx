@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useAccountType } from "@/hooks/useAccountType";
+import { isAuthorizedMonetagElement } from "@/utils/monetagAds";
 
 /**
  * ProAdCleaner - Remove ALL ad scripts/elements for PRO users
@@ -13,6 +14,7 @@ export const ProAdCleaner = () => {
 
     const root = document.getElementById('root');
     const isInsideReact = (el: Element) => root?.contains(el) || el === root;
+    const shouldKeepRewardedAd = (el: Element) => window.__duelverseRewardedAdActive || isAuthorizedMonetagElement(el);
 
     const AD_PATTERNS = [
       'adsbygoogle', 'pagead2.googlesyndication', 'ampproject.org',
@@ -35,6 +37,7 @@ export const ProAdCleaner = () => {
     const cleanAllAds = () => {
       document.querySelectorAll('script').forEach(script => {
         if (isInsideReact(script)) return;
+        if (shouldKeepRewardedAd(script)) return;
         if (matchesAd(script.getAttribute('src') || '', script.textContent || '')) script.remove();
       });
 
@@ -44,10 +47,12 @@ export const ProAdCleaner = () => {
 
       document.querySelectorAll('div[id^="container-"]').forEach(el => {
         if (!isInsideReact(el)) el.remove();
+        if (shouldKeepRewardedAd(el)) return;
       });
 
       document.querySelectorAll('iframe').forEach(iframe => {
         if (isInsideReact(iframe)) return;
+        if (shouldKeepRewardedAd(iframe)) return;
         const src = iframe.getAttribute('src') || '';
         if (src.includes('duelverse')) return;
         if (!src || AD_PATTERNS.some(p => src.includes(p))) iframe.remove();
@@ -59,6 +64,7 @@ export const ProAdCleaner = () => {
 
       document.querySelectorAll('[data-quge5], [data-monetag], [data-popunder], [data-onclicka]').forEach(el => {
         if (!isInsideReact(el)) el.remove();
+        if (shouldKeepRewardedAd(el)) return;
       });
     };
 
@@ -71,6 +77,7 @@ export const ProAdCleaner = () => {
           if (node.nodeType !== 1) continue;
           const el = node as Element;
           if (isInsideReact(el)) continue;
+          if (shouldKeepRewardedAd(el)) continue;
 
           if (el.tagName === 'SCRIPT') {
             if (matchesAd(el.getAttribute('src') || '', el.textContent || '')) el.remove();
