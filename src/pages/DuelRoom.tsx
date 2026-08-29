@@ -299,9 +299,12 @@ const DuelRoom = () => {
             setPlayer3LP(newP3LP);
             setPlayer4LP(newP4LP);
 
-            // Sincroniza votação de finalização e status
+            // Keep the complete room roster in sync. WebRTC signalling can
+            // discover a player before this row update reaches the spectator;
+            // merging every field prevents a live stream from being omitted.
             setDuel((prev: any) => prev ? {
               ...prev,
+              ...payload.new,
               finalize_votes: (payload.new as any).finalize_votes ?? prev.finalize_votes ?? {},
               finalize_conflict_count: (payload.new as any).finalize_conflict_count ?? prev.finalize_conflict_count ?? 0,
               status: payload.new.status ?? prev.status,
@@ -364,8 +367,26 @@ const DuelRoom = () => {
           }
         }
       )
-      .subscribe((status) => {
+      .subscribe(async (status) => {
         console.log('🔴 [REALTIME] Status da subscrição:', status);
+
+        // Broadcast changes are not replayed. Re-read once after SUBSCRIBED to
+        // close the gap between the initial fetch and listener activation.
+        if (status === 'SUBSCRIBED') {
+          const { data: latestDuel, error } = await supabase
+            .from('live_duels')
+            .select(`
+              *,
+              creator:profiles!live_duels_creator_id_fkey(username, avatar_url, user_id),
+              opponent:profiles!live_duels_opponent_id_fkey(username, avatar_url, user_id)
+            `)
+            .eq('id', id)
+            .maybeSingle();
+
+          if (!error && latestDuel) {
+            setDuel(latestDuel);
+          }
+        }
       });
 
     return () => {

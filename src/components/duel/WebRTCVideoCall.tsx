@@ -1471,11 +1471,15 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     !spectatorPeerIds.includes(pid) &&
     (remoteStreams.get(pid)?.getVideoTracks().some((track) => track.readyState !== "ended") ?? false)
   );
-  // Spectator slots must follow the room roster, not connection arrival order.
-  // Besides keeping Player 1/2 stable, this prevents a duplicated/reconnected
-  // creator stream from being selected for both panels.
+  // Keep the official roster order, but never hide a live player stream just
+  // because the room row has not caught up yet. Signalling and the duel roster
+  // arrive through different realtime channels, so a spectator can receive
+  // player 2's video before opponent_id is visible locally.
   const videoPeerIds = isSpectator && officialPlayerIds.length > 0
-    ? officialPlayerIds.filter((pid) => connectedVideoPeerIds.includes(pid))
+    ? [
+        ...officialPlayerIds.filter((pid) => connectedVideoPeerIds.includes(pid)),
+        ...connectedVideoPeerIds.filter((pid) => !officialPlayerIds.includes(pid)),
+      ]
     : connectedVideoPeerIds;
   const creatorPeerId = isSpectator && creatorId && videoPeerIds.includes(creatorId)
     ? creatorId
