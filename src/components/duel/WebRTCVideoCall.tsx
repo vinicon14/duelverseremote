@@ -443,9 +443,9 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
 
       // 1) Native optical/digital zoom of the device (phones, some webcams)
       if (range && zoomLevel >= 1) {
-        const ratio = (zoomLevel - 1) / (MAX_ZOOM - 1);
-        const target = range.min + (range.max - range.min) * ratio;
-        const ok = await applyNativeZoom(source, target);
+        const ok = await applyNativeZoomSmooth(source, zoomLevel, {
+          shouldCancel: () => cancelled,
+        });
         if (ok && !cancelled) {
           nativeZoomActiveRef.current = true;
           if (zoomPipelineRef.current) {
@@ -456,6 +456,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
           return;
         }
       }
+
 
       // Reset any native zoom before falling back to the software pipeline
       if (nativeZoomActiveRef.current && range) {
