@@ -40,6 +40,62 @@ export const applyNativeZoom = async (track: MediaStreamTrack, zoom: number) => 
   }
 };
 
+/**
+ * Converts the UI zoom factor (1 = no zoom, 2 = twice as close, ...) into the
+ * device's own zoom unit.
+ *
+ * Mapping the UI range linearly onto the whole device range is wrong: cameras
+ * that report huge maximums (e.g. 1..800 in "percent" units) jump straight to
+ * an extreme zoom on the very first step. The device minimum is the neutral
+ * "1x" value, so we simply scale it by the requested factor.
+ */
+export const nativeZoomTargetForFactor = (
+  range: { min: number; max: number; step?: number },
+  factor: number,
+) => {
+  const baseline = range.min > 0 ? range.min : 1;
+  const target = baseline * Math.max(factor, 1);
+  return Math.min(Math.max(target, range.min), range.max);
+};
+
+const currentNativeZoom = (track: MediaStreamTrack, fallback: number) => {
+  try {
+    const value = Number((track.getSettings?.() as any)?.zoom);
+    return isFinite(value) && value > 0 ? value : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+/**
+ * Applies the native zoom gradually so cameras with a wide zoom range don't
+ * snap instantly from one level to another.
+ */
+export const applyNativeZoomSmooth = async (
+  track: MediaStreamTrack,
+  factor: number,
+  options?: { durationMs?: number; shouldCancel?: () => boolean },
+) => {
+  const range = getNativeZoomRange(track);
+  if (!range) return false;
+  const target = nativeZoomTargetForFactor(range, factor);
+  const from = currentNativeZoom(track, range.min);
+  const durationMs = options?.durationMs ?? 220;
+  const steps = Math.min(10, Math.max(1, Math.round(Math.abs(target - from) / Math.max(range.step || 0.1, (range.max - range.min) / 60))));
+
+  if (steps <= 1) return applyNativeZoom(track, target);
+
+  for (let i = 1; i <= steps; i++) {
+    if (options?.shouldCancel?.()) return true;
+    const value = from + ((target - from) * i) / steps;
+    const ok = await applyNativeZoom(track, value);
+    if (!ok) return false;
+    if (i < steps) await new Promise((r) => setTimeout(r, durationMs / steps));
+  }
+  return true;
+};
+
+
 export class CameraZoomPipeline {
   private videoEl: HTMLVideoElement | null = null;
   private canvas: HTMLCanvasElement | null = null;

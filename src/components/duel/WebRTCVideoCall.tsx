@@ -6,7 +6,7 @@ import { Mic, MicOff, Video, VideoOff, Loader2, LayoutGrid, PictureInPicture2, Z
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { usePhoneStream } from "@/contexts/PhoneStreamContext";
 import { registerRemoteStream, unregisterRemoteStream, clearRemoteStreams } from "@/utils/remoteAudioRegistry";
-import { CameraZoomPipeline, applyNativeZoom, getNativeZoomRange } from "@/utils/cameraZoom";
+import { CameraZoomPipeline, applyNativeZoom, applyNativeZoomSmooth, getNativeZoomRange } from "@/utils/cameraZoom";
 
 export type VideoLayout = "side-by-side" | "pip";
 
@@ -443,9 +443,9 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
 
       // 1) Native optical/digital zoom of the device (phones, some webcams)
       if (range && zoomLevel >= 1) {
-        const ratio = (zoomLevel - 1) / (MAX_ZOOM - 1);
-        const target = range.min + (range.max - range.min) * ratio;
-        const ok = await applyNativeZoom(source, target);
+        const ok = await applyNativeZoomSmooth(source, zoomLevel, {
+          shouldCancel: () => cancelled,
+        });
         if (ok && !cancelled) {
           nativeZoomActiveRef.current = true;
           if (zoomPipelineRef.current) {
@@ -456,6 +456,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
           return;
         }
       }
+
 
       // Reset any native zoom before falling back to the software pipeline
       if (nativeZoomActiveRef.current && range) {
