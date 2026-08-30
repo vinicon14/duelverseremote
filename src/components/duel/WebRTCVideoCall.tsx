@@ -445,8 +445,11 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
 
       const range = getNativeZoomRange(source);
 
-      // 1) Native optical/digital zoom of the device (phones, some webcams)
-      if (range && zoomLevel >= 1) {
+      // 1) Native optical/digital zoom of the device (phones, some webcams).
+      // Only applies when the user actually zoomed in (zoomLevel > 1). At the
+      // neutral zoomLevel = 1 we must not touch the track, otherwise cameras
+      // with a native zoom capability auto-frame/zoom on their own.
+      if (range && zoomLevel > 1) {
         const ok = await applyNativeZoomSmooth(source, zoomLevel, {
           shouldCancel: () => cancelled,
         });
