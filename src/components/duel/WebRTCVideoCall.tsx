@@ -207,6 +207,10 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   // otherwise another spectator steals the slot meant for player 2.
   const spectatorPeersRef = useRef<Set<string>>(new Set());
   const [spectatorPeerIds, setSpectatorPeerIds] = useState<string[]>([]);
+  // When a remote video track goes "muted" (frozen feed) we remember since when,
+  // so a long freeze can trigger a peer rebuild.
+  const frozenVideoSinceRef = useRef<Map<string, number>>(new Map());
+
   const playerIdsRef = useRef(new Set(playerIds.filter(Boolean)));
   // Peers whose direct path failed at least once -> retry through TURN only.
   const relayOnlyPeersRef = useRef<Set<string>>(new Set());
@@ -814,19 +818,40 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     if (!isSpectator || playerId === userId) return;
 
     const peer = peersRef.current.get(playerId);
-    const liveVideo = peer?.stream?.getVideoTracks().some((t) => t.readyState === "live") ?? false;
+    const videoTracks = peer?.stream?.getVideoTracks() ?? [];
+    const liveVideo = videoTracks.some((t) => t.readyState === "live");
     const connected = peer?.pc.connectionState === "connected";
-    if (connected && liveVideo) return;
+
+    // A track can stay "live" while the browser reports it as muted (sender
+    // suspended, network stall). The panel freezes with no state change, which is
+    // exactly the "spectator stopped working out of nowhere" symptom. Track how
+    // long it has been muted and rebuild after a grace period.
+    const frozen = liveVideo && videoTracks.every((t) => t.muted);
+    const now = Date.now();
+    if (frozen) {
+      if (!frozenVideoSinceRef.current.has(playerId)) {
+        frozenVideoSinceRef.current.set(playerId, now);
+      }
+    } else {
+      frozenVideoSinceRef.current.delete(playerId);
+    }
+    const frozenSince = frozenVideoSinceRef.current.get(playerId);
+    const frozenTooLong = !!frozenSince && now - frozenSince > 8000;
+
+    if (connected && liveVideo && !frozenTooLong) return;
 
     // Never destroy a healthy video connection just because that player has no
     // microphone track (permission denied, no mic, or video-only fallback). The
     // previous check rebuilt that peer every 10 seconds, making duelists who were
     // spectating each other alternate between video and an infinite loader.
-    const stalled = !!peer && Date.now() - peer.createdAt > 10000 && (!connected || !liveVideo);
+    const stalled =
+      (!!peer && now - peer.createdAt > 10000 && (!connected || !liveVideo)) || frozenTooLong;
     if (stalled) {
       console.warn("[WebRTC] Spectator handshake stalled, resetting peer:", playerId);
+      frozenVideoSinceRef.current.delete(playerId);
       removePeer(playerId);
     }
+
 
     channelRef.current?.send({
       type: "broadcast",
@@ -1015,7 +1040,9 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   useEffect(() => {
     let disposed = false;
     let ownedChannel: ReturnType<typeof supabase.channel> | null = null;
+    let cancelRetry: (() => void) | null = null;
     const peerMap = peersRef.current;
+
     const spectatorPeerSet = spectatorPeersRef.current;
     const relayOnlyPeerSet = relayOnlyPeersRef.current;
     const videoElementMap = remoteVideoRefs.current;
@@ -1147,37 +1174,81 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         console.error("[WebRTC] Could not acquire any media stream");
       }
 
-      const channel = supabase.channel(`webrtc-signal-${duelId}`, {
-        config: { broadcast: { self: false } },
-      });
-      ownedChannel = channel;
+      // Realtime signalling channel. A dropped websocket (sleep, network blip,
+      // long session) used to leave channelRef pointing at a dead channel: every
+      // heartbeat/offer was silently discarded and spectating "stopped working
+      // out of nowhere". Resubscribe with backoff and re-announce on recovery.
+      let retryTimer: number | null = null;
+      let retryAttempt = 0;
 
-      // Publish the reference before subscribing. A fast targeted response can
-      // arrive immediately after SUBSCRIBED; assigning this afterwards caused
-      // answers/ICE candidates to be silently dropped on intermittent joins.
-      channelRef.current = channel;
+      const openChannel = () => {
+        if (disposed) return;
 
-      channel
-        .on("broadcast", { event: "webrtc-signal" }, ({ payload }) => {
-          handleSignal(payload);
-        })
-        .subscribe((status) => {
-          if (status === "SUBSCRIBED") {
-            // Announce ourselves
-            channel.send({
-              type: "broadcast",
-              event: "webrtc-signal",
-              payload: { type: "ready", senderId: userId, isSpectator },
-            });
-          }
+        const channel = supabase.channel(`webrtc-signal-${duelId}`, {
+          config: { broadcast: { self: false } },
         });
+        ownedChannel = channel;
 
+        // Publish the reference before subscribing. A fast targeted response can
+        // arrive immediately after SUBSCRIBED; assigning this afterwards caused
+        // answers/ICE candidates to be silently dropped on intermittent joins.
+        channelRef.current = channel;
+
+        const scheduleReconnect = () => {
+          if (disposed || channelRef.current !== channel) return;
+          if (retryTimer) return;
+          const delay = Math.min(1000 * 2 ** retryAttempt, 10000);
+          retryAttempt += 1;
+          console.warn("[WebRTC] Signalling channel lost; reconnecting in", delay, "ms");
+          retryTimer = window.setTimeout(() => {
+            retryTimer = null;
+            if (disposed || channelRef.current !== channel) return;
+            channelRef.current = null;
+            void supabase.removeChannel(channel);
+            openChannel();
+          }, delay);
+        };
+
+        channel
+          .on("broadcast", { event: "webrtc-signal" }, ({ payload }) => {
+            handleSignal(payload);
+          })
+          .subscribe((status) => {
+            if (status === "SUBSCRIBED") {
+              retryAttempt = 0;
+              // Announce ourselves
+              channel.send({
+                type: "broadcast",
+                event: "webrtc-signal",
+                payload: { type: "ready", senderId: userId, isSpectator },
+              });
+            } else if (
+              status === "CHANNEL_ERROR" ||
+              status === "TIMED_OUT" ||
+              status === "CLOSED"
+            ) {
+              scheduleReconnect();
+            }
+          });
+      };
+
+      openChannel();
+
+      cancelRetry = () => {
+        if (retryTimer) {
+          window.clearTimeout(retryTimer);
+          retryTimer = null;
+        }
+      };
     };
+
 
     init();
 
     return () => {
       disposed = true;
+      cancelRetry?.();
+
       localStreamRef.current?.getTracks().forEach((t) => t.stop());
       localStreamRef.current = null;
       // Detach every delayed callback before closing. Otherwise a late "closed"
