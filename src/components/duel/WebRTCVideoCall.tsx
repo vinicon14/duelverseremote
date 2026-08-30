@@ -207,6 +207,10 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   // otherwise another spectator steals the slot meant for player 2.
   const spectatorPeersRef = useRef<Set<string>>(new Set());
   const [spectatorPeerIds, setSpectatorPeerIds] = useState<string[]>([]);
+  // When a remote video track goes "muted" (frozen feed) we remember since when,
+  // so a long freeze can trigger a peer rebuild.
+  const frozenVideoSinceRef = useRef<Map<string, number>>(new Map());
+
   const playerIdsRef = useRef(new Set(playerIds.filter(Boolean)));
   // Peers whose direct path failed at least once -> retry through TURN only.
   const relayOnlyPeersRef = useRef<Set<string>>(new Set());
