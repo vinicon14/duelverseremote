@@ -1015,7 +1015,9 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   useEffect(() => {
     let disposed = false;
     let ownedChannel: ReturnType<typeof supabase.channel> | null = null;
+    let cancelRetry: (() => void) | null = null;
     const peerMap = peersRef.current;
+
     const spectatorPeerSet = spectatorPeersRef.current;
     const relayOnlyPeerSet = relayOnlyPeersRef.current;
     const videoElementMap = remoteVideoRefs.current;
