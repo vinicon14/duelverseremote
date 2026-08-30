@@ -814,19 +814,40 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     if (!isSpectator || playerId === userId) return;
 
     const peer = peersRef.current.get(playerId);
-    const liveVideo = peer?.stream?.getVideoTracks().some((t) => t.readyState === "live") ?? false;
+    const videoTracks = peer?.stream?.getVideoTracks() ?? [];
+    const liveVideo = videoTracks.some((t) => t.readyState === "live");
     const connected = peer?.pc.connectionState === "connected";
-    if (connected && liveVideo) return;
+
+    // A track can stay "live" while the browser reports it as muted (sender
+    // suspended, network stall). The panel freezes with no state change, which is
+    // exactly the "spectator stopped working out of nowhere" symptom. Track how
+    // long it has been muted and rebuild after a grace period.
+    const frozen = liveVideo && videoTracks.every((t) => t.muted);
+    const now = Date.now();
+    if (frozen) {
+      if (!frozenVideoSinceRef.current.has(playerId)) {
+        frozenVideoSinceRef.current.set(playerId, now);
+      }
+    } else {
+      frozenVideoSinceRef.current.delete(playerId);
+    }
+    const frozenSince = frozenVideoSinceRef.current.get(playerId);
+    const frozenTooLong = !!frozenSince && now - frozenSince > 8000;
+
+    if (connected && liveVideo && !frozenTooLong) return;
 
     // Never destroy a healthy video connection just because that player has no
     // microphone track (permission denied, no mic, or video-only fallback). The
     // previous check rebuilt that peer every 10 seconds, making duelists who were
     // spectating each other alternate between video and an infinite loader.
-    const stalled = !!peer && Date.now() - peer.createdAt > 10000 && (!connected || !liveVideo);
+    const stalled =
+      (!!peer && now - peer.createdAt > 10000 && (!connected || !liveVideo)) || frozenTooLong;
     if (stalled) {
       console.warn("[WebRTC] Spectator handshake stalled, resetting peer:", playerId);
+      frozenVideoSinceRef.current.delete(playerId);
       removePeer(playerId);
     }
+
 
     channelRef.current?.send({
       type: "broadcast",
