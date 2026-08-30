@@ -748,6 +748,9 @@ const DuelRoom = () => {
   const showVoteModal = isFinalizeParticipant && bothPlayersPresent && anyoneRequested && duel?.status !== 'finished';
   const myVote = currentUser ? finalizeVotes[currentUser.id] : undefined;
   const resolvingRef = useRef(false);
+  // Permite que o jogador feche o modal de votação e/ou saia da partida mesmo
+  // sem o voto do oponente, para não ficar preso enquanto o outro não reporta.
+  const [voteModalDismissed, setVoteModalDismissed] = useState(false);
 
   const requestFinalize = async () => {
     if (!id || !currentUser || !duel) return;
@@ -755,6 +758,7 @@ const DuelRoom = () => {
       toast({ title: 'Aguardando oponente', description: 'A partida ainda não tem oponente.', variant: 'destructive' });
       return;
     }
+    setVoteModalDismissed(false);
     const opponentId = currentUser.id === duel.creator_id ? duel.opponent_id : duel.creator_id;
     const votes = { ...finalizeVotes };
     if (!(currentUser.id in votes)) votes[currentUser.id] = null;
@@ -1691,8 +1695,11 @@ const DuelRoom = () => {
       />
 
       {/* Modal de votação do vencedor da partida */}
-      <Dialog open={!!showVoteModal} onOpenChange={() => { /* modal permanece até resolução */ }}>
-        <DialogContent className="max-w-md" onInteractOutside={(e) => e.preventDefault()}>
+      <Dialog
+        open={!!showVoteModal && !voteModalDismissed}
+        onOpenChange={(open) => { if (!open) setVoteModalDismissed(true); }}
+      >
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Trophy className="h-5 w-5 text-primary" />
@@ -1739,6 +1746,29 @@ const DuelRoom = () => {
               Divergências até agora: {(duel as any).finalize_conflict_count}
             </div>
           )}
+
+          <div className="flex flex-col gap-2 pt-2 border-t border-border/60">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setVoteModalDismissed(true)}
+              className="w-full"
+              disabled={!!myVote}
+              title="Feche a janela e vote novamente mais tarde"
+            >
+              Fechar janela
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleLeave}
+              className="w-full"
+              title="Sair da partida sem precisar esperar o oponente votar"
+            >
+              <PhoneOff className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+              Sair da partida
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
