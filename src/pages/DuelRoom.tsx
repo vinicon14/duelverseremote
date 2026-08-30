@@ -310,14 +310,12 @@ const DuelRoom = () => {
               // para que o modo espectador não perca os usernames entre updates.
               creator: payload.new.creator ?? prev.creator,
               opponent: payload.new.opponent ?? prev.opponent,
-              // Nunca apagar slots de jogador por um payload parcial (o timer
-              // atualiza only LP/remaining_seconds a cada ~5s). Se algum slot
-              // sumisse, o isParticipant/isSpectator e o playerIds do espectador
+              // Nunca apagar os slots por um payload parcial (o timer atualiza
+              // only LP/remaining_seconds a cada ~5s). Se algum slot sumisse,
+              // o isParticipant/isSpectator e o playerIds do espectador
               // flutuariam e o modo espectador falharia de forma intermitente.
               creator_id: payload.new.creator_id ?? prev.creator_id,
               opponent_id: payload.new.opponent_id ?? prev.opponent_id,
-              player3_id: payload.new.player3_id ?? prev.player3_id,
-              player4_id: payload.new.player4_id ?? prev.player4_id,
               finalize_votes: (payload.new as any).finalize_votes ?? prev.finalize_votes ?? {},
               finalize_conflict_count: (payload.new as any).finalize_conflict_count ?? prev.finalize_conflict_count ?? 0,
               status: payload.new.status ?? prev.status,
@@ -949,9 +947,7 @@ const DuelRoom = () => {
     try {
       const isCreator = currentUser.id === duel?.creator_id;
       const isOpponent = currentUser.id === duel?.opponent_id;
-      const isPlayer3 = currentUser.id === (duel as any)?.player3_id;
-      const isPlayer4 = currentUser.id === (duel as any)?.player4_id;
-      const isSpectator = !isCreator && !isOpponent && !isPlayer3 && !isPlayer4;
+      const isSpectator = !isCreator && !isOpponent;
 
       if (isSpectator) {
         console.log('[DuelRoom] Espectador saindo, partida continua');
