@@ -1222,6 +1222,8 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
 
     return () => {
       disposed = true;
+      cancelRetry?.();
+
       localStreamRef.current?.getTracks().forEach((t) => t.stop());
       localStreamRef.current = null;
       // Detach every delayed callback before closing. Otherwise a late "closed"
