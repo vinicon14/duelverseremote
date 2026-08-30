@@ -473,6 +473,16 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
 
       // 2) Software pipeline (crop for zoom in, shrink for zoom out)
       if (zoomLevel === 1) {
+        // A câmera nunca deve começar "dada zoom". Se o dispositivo tiver zoom
+        // nativo e estiver fora do mínimo (auto-framing), traz de volta ao
+        // enquadramento original para que o usuário não veja zoom automático.
+        if (range && !cancelled && !nativeZoomActiveRef.current) {
+          const currentNative = Number((source.getSettings?.() as any)?.zoom ?? range.min);
+          if (currentNative !== range.min) {
+            await applyNativeZoom(source, range.min);
+            republishOutbound();
+          }
+        }
         if (zoomPipelineRef.current) {
           zoomPipelineRef.current.stop();
           zoomPipelineRef.current = null;
@@ -1792,7 +1802,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
                   ref={(el) => setRemoteVideoRef(remoteSlots[0]!, el)}
                   autoPlay
                   playsInline
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-contain"
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-black/80">
@@ -1826,7 +1836,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
                     autoPlay
                     playsInline
                     muted
-                    className={`w-full h-full object-cover ${zoomLevel > 1 ? 'cursor-grab active:cursor-grabbing' : ''}`}
+                    className={`w-full h-full object-contain ${zoomLevel > 1 ? 'cursor-grab active:cursor-grabbing' : ''}`}
                     style={{ transform: 'scaleX(-1)' }}
                     onPointerDown={handlePanStart}
                     onPointerMove={handlePanMove}
