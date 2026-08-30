@@ -1147,32 +1147,74 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         console.error("[WebRTC] Could not acquire any media stream");
       }
 
-      const channel = supabase.channel(`webrtc-signal-${duelId}`, {
-        config: { broadcast: { self: false } },
-      });
-      ownedChannel = channel;
+      // Realtime signalling channel. A dropped websocket (sleep, network blip,
+      // long session) used to leave channelRef pointing at a dead channel: every
+      // heartbeat/offer was silently discarded and spectating "stopped working
+      // out of nowhere". Resubscribe with backoff and re-announce on recovery.
+      let retryTimer: number | null = null;
+      let retryAttempt = 0;
 
-      // Publish the reference before subscribing. A fast targeted response can
-      // arrive immediately after SUBSCRIBED; assigning this afterwards caused
-      // answers/ICE candidates to be silently dropped on intermittent joins.
-      channelRef.current = channel;
+      const openChannel = () => {
+        if (disposed) return;
 
-      channel
-        .on("broadcast", { event: "webrtc-signal" }, ({ payload }) => {
-          handleSignal(payload);
-        })
-        .subscribe((status) => {
-          if (status === "SUBSCRIBED") {
-            // Announce ourselves
-            channel.send({
-              type: "broadcast",
-              event: "webrtc-signal",
-              payload: { type: "ready", senderId: userId, isSpectator },
-            });
-          }
+        const channel = supabase.channel(`webrtc-signal-${duelId}`, {
+          config: { broadcast: { self: false } },
         });
+        ownedChannel = channel;
 
+        // Publish the reference before subscribing. A fast targeted response can
+        // arrive immediately after SUBSCRIBED; assigning this afterwards caused
+        // answers/ICE candidates to be silently dropped on intermittent joins.
+        channelRef.current = channel;
+
+        const scheduleReconnect = () => {
+          if (disposed || channelRef.current !== channel) return;
+          if (retryTimer) return;
+          const delay = Math.min(1000 * 2 ** retryAttempt, 10000);
+          retryAttempt += 1;
+          console.warn("[WebRTC] Signalling channel lost; reconnecting in", delay, "ms");
+          retryTimer = window.setTimeout(() => {
+            retryTimer = null;
+            if (disposed || channelRef.current !== channel) return;
+            channelRef.current = null;
+            void supabase.removeChannel(channel);
+            openChannel();
+          }, delay);
+        };
+
+        channel
+          .on("broadcast", { event: "webrtc-signal" }, ({ payload }) => {
+            handleSignal(payload);
+          })
+          .subscribe((status) => {
+            if (status === "SUBSCRIBED") {
+              retryAttempt = 0;
+              // Announce ourselves
+              channel.send({
+                type: "broadcast",
+                event: "webrtc-signal",
+                payload: { type: "ready", senderId: userId, isSpectator },
+              });
+            } else if (
+              status === "CHANNEL_ERROR" ||
+              status === "TIMED_OUT" ||
+              status === "CLOSED"
+            ) {
+              scheduleReconnect();
+            }
+          });
+      };
+
+      openChannel();
+
+      cancelRetry = () => {
+        if (retryTimer) {
+          window.clearTimeout(retryTimer);
+          retryTimer = null;
+        }
+      };
     };
+
 
     init();
 
