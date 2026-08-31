@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { MONETAG_KEYS, clearMonetagConfigCache, fetchMonetagConfig, showMonetagRewardedAd } from "@/utils/monetagAds";
+import { MONETAG_KEYS, clearMonetagConfigCache, fetchMonetagConfig, isMonetagPushTag, showMonetagRewardedAd } from "@/utils/monetagAds";
 import { MONETAG_PUSH_KEYS, clearMonetagPushConfigCache, fetchMonetagPushConfig } from "@/lib/push";
 import { Loader2, Megaphone, Save, PlayCircle } from "lucide-react";
 
@@ -49,21 +49,35 @@ export function AdminMonetag() {
   const save = async () => {
     setSaving(true);
     try {
+      const customScriptIsPush = isMonetagPushTag(customScript);
+      const rewardedScript = customScriptIsPush ? "" : customScript;
+      const nextPushScript = customScriptIsPush && !pushScript.trim() ? customScript : pushScript;
+      const nextPushEnabled = customScriptIsPush ? true : pushEnabled;
       const rows = [
         { key: MONETAG_KEYS.enabled, value: String(enabled) },
         { key: MONETAG_KEYS.zoneId, value: zoneId.trim() },
         { key: MONETAG_KEYS.sdkDomain, value: sdkDomain.trim() },
-        { key: MONETAG_KEYS.customScript, value: customScript },
+        { key: MONETAG_KEYS.customScript, value: rewardedScript },
         { key: MONETAG_KEYS.minSeconds, value: String(Math.max(3, Number(minSeconds) || 15)) },
-        { key: MONETAG_PUSH_KEYS.enabled, value: String(pushEnabled) },
+        { key: MONETAG_PUSH_KEYS.enabled, value: String(nextPushEnabled) },
         { key: MONETAG_PUSH_KEYS.tagUrl, value: pushTagUrl.trim() },
-        { key: MONETAG_PUSH_KEYS.script, value: pushScript },
+        { key: MONETAG_PUSH_KEYS.script, value: nextPushScript },
       ];
       const { error } = await supabase.from("system_settings").upsert(rows, { onConflict: "key" });
       if (error) throw error;
       clearMonetagConfigCache();
       clearMonetagPushConfigCache();
-      toast({ title: "Configuração salva", description: "As alterações já valem para novos anúncios." });
+      if (customScriptIsPush) {
+        setCustomScript("");
+        setPushScript(nextPushScript);
+        setPushEnabled(true);
+      }
+      toast({
+        title: "Configuração salva",
+        description: customScriptIsPush
+          ? "A tag de Push foi movida para a seção correta. O anúncio recompensado usará o Zone ID configurado."
+          : "As alterações já valem para novos anúncios.",
+      });
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
     } finally {
@@ -134,8 +148,13 @@ export function AdminMonetag() {
             className="font-mono text-xs"
           />
           <p className="text-xs text-muted-foreground">
-            Cole aqui o código fornecido pela Monetag. Ele é carregado apenas sob demanda, no momento do anúncio.
+            Cole somente a tag Rewarded/Interstitial que contém data-zone e data-sdk. Tags tag.min.js devem ficar na seção Push abaixo.
           </p>
+          {isMonetagPushTag(customScript) && (
+            <p className="text-sm text-destructive">
+              Esta é uma tag de Push. Ao salvar, ela será movida automaticamente para a seção correta.
+            </p>
+          )}
         </div>
 
         <div className="rounded-lg border border-border p-4 space-y-4">

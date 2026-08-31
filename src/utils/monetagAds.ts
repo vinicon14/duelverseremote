@@ -34,6 +34,23 @@ export const MONETAG_KEYS = {
 const DEFAULT_SDK_DOMAIN = "libtl.com";
 export const DUELVERSE_MONETAG_ATTR = "data-duelverse-authorized-ad";
 
+export const isMonetagPushTag = (raw: string) => {
+  const value = raw.toLowerCase();
+  return value.includes("/act/files/tag.min.js") || value.includes("tag.min.js?z=");
+};
+
+export const isMonetagRewardedScript = (raw: string) => {
+  if (!raw.trim() || isMonetagPushTag(raw)) return false;
+  const template = document.createElement("template");
+  template.innerHTML = raw.trim();
+  return Array.from(template.content.querySelectorAll("script")).some((script) => {
+    const sdk = script.getAttribute("data-sdk") || "";
+    const zone = script.getAttribute("data-zone") || "";
+    const src = script.getAttribute("src") || "";
+    return /^show_[\w-]+$/.test(sdk) || (Boolean(zone) && /\/sdk\.js(?:[?#]|$)/i.test(src));
+  });
+};
+
 let cache: { value: MonetagConfig; at: number } | null = null;
 const CACHE_MS = 60_000;
 
@@ -93,6 +110,10 @@ const injectCustomScript = (raw: string) => {
     Array.from(original.attributes).forEach((attr) => script.setAttribute(attr.name, attr.value));
     script.text = original.textContent || "";
     markAuthorizedMonetagElement(script);
+    script.addEventListener("error", () => {
+      loadedScripts.delete(key);
+      script.remove();
+    }, { once: true });
     document.head.appendChild(script);
   });
   loadedScripts.add(key);
@@ -107,6 +128,10 @@ const injectZoneScript = (config: MonetagConfig) => {
   script.dataset.zone = config.zoneId;
   script.dataset.sdk = fnName;
   markAuthorizedMonetagElement(script);
+  script.addEventListener("error", () => {
+    loadedScripts.delete(fnName);
+    script.remove();
+  }, { once: true });
   document.head.appendChild(script);
   loadedScripts.add(fnName);
 };
@@ -116,7 +141,7 @@ export const ensureMonetagLoaded = async (): Promise<MonetagConfig | null> => {
   const config = await fetchMonetagConfig();
   if (!config.enabled) return null;
 
-  if (config.customScript.trim()) injectCustomScript(config.customScript);
+  if (isMonetagRewardedScript(config.customScript)) injectCustomScript(config.customScript);
   if (config.zoneId) injectZoneScript(config);
 
   return config;
@@ -130,7 +155,7 @@ const extractSdkCandidates = (config: MonetagConfig) => {
   template.innerHTML = config.customScript.trim();
   template.content.querySelectorAll("script").forEach((script) => {
     const sdk = script.getAttribute("data-sdk") || "";
-    const zone = script.getAttribute("data-zone") || new URL(script.getAttribute("src") || window.location.href, window.location.href).searchParams.get("z") || "";
+    const zone = script.getAttribute("data-zone") || "";
     if (sdk) names.add(sdk);
     if (zone) names.add(`show_${zone}`);
   });
@@ -167,85 +192,9 @@ const setRewardedAdActive = (active: boolean, ttlMs = 60000) => {
   }
 };
 
-const showManualCompletionShell = (minSeconds: number, timeoutMs: number) =>
-  new Promise<boolean>((resolve, reject) => {
-    let resolved = false;
-    let secondsLeft = Math.max(minSeconds, 3);
-
-    const overlay = document.createElement("div");
-    overlay.setAttribute("role", "dialog");
-    overlay.setAttribute("aria-modal", "true");
-    overlay.style.cssText = "position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;background:rgba(2,6,23,.84);backdrop-filter:blur(8px);padding:16px;";
-    markAuthorizedMonetagElement(overlay);
-
-    const panel = document.createElement("div");
-    panel.style.cssText = "width:min(720px,100%);min-height:340px;border:1px solid rgba(255,255,255,.16);border-radius:12px;background:#080b14;color:white;box-shadow:0 24px 80px rgba(0,0,0,.45);overflow:hidden;font-family:Arial,sans-serif;";
-
-    const header = document.createElement("div");
-    header.style.cssText = "display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.12);";
-    header.innerHTML = `<strong>Anúncio recompensado</strong><span style="font-size:12px;color:#94a3b8">Monetag</span>`;
-
-    const body = document.createElement("div");
-    body.style.cssText = "min-height:240px;display:flex;align-items:center;justify-content:center;background:#0f172a;text-align:center;padding:24px;color:#cbd5e1;";
-    body.textContent = "Aguardando anúncio...";
-
-    const footer = document.createElement("div");
-    footer.style.cssText = "display:flex;gap:10px;align-items:center;justify-content:space-between;padding:14px 16px;border-top:1px solid rgba(255,255,255,.12);";
-
-    const status = document.createElement("span");
-    status.style.cssText = "font-size:13px;color:#cbd5e1";
-    status.textContent = `Aguarde ${secondsLeft}s para liberar a recompensa...`;
-
-    const complete = document.createElement("button");
-    complete.type = "button";
-    complete.disabled = true;
-    complete.textContent = "Concluir anúncio";
-    complete.style.cssText = "border:0;background:#facc15;color:#111827;border-radius:8px;padding:8px 12px;font-weight:700;cursor:pointer;opacity:.55;";
-
-    const close = document.createElement("button");
-    close.type = "button";
-    close.textContent = "Fechar";
-    close.style.cssText = "border:1px solid rgba(255,255,255,.2);background:transparent;color:white;border-radius:8px;padding:8px 12px;cursor:pointer;";
-
-    footer.append(status, complete, close);
-    panel.append(header, body, footer);
-    overlay.append(panel);
-    document.body.appendChild(overlay);
-
-    const finish = (ok: boolean, error?: Error) => {
-      if (resolved) return;
-      resolved = true;
-      window.clearInterval(tick);
-      window.clearTimeout(timeout);
-      delete window.__duelverseMonetagComplete;
-      overlay.remove();
-      if (ok) resolve(true);
-      else reject(error || new Error("O anúncio foi fechado antes da conclusão."));
-    };
-
-    window.__duelverseMonetagComplete = () => finish(true);
-    const tick = window.setInterval(() => {
-      secondsLeft -= 1;
-      if (secondsLeft > 0) {
-        status.textContent = `Aguarde ${secondsLeft}s para liberar a recompensa...`;
-      } else {
-        window.clearInterval(tick);
-        complete.disabled = false;
-        complete.style.opacity = "1";
-        status.textContent = "Pronto! Confirme para receber a recompensa.";
-      }
-    }, 1000);
-    const timeout = window.setTimeout(() => finish(false, new Error("O anúncio demorou demais para concluir. Tente novamente.")), timeoutMs);
-
-    close.onclick = () => finish(false);
-    complete.onclick = () => {
-      if (!complete.disabled) finish(true);
-    };
-  });
-
 export const isMonetagAvailable = async () => {
   const config = await fetchMonetagConfig();
-  return config.enabled && (!!config.zoneId || !!config.customScript.trim());
+  return config.enabled && (!!config.zoneId || isMonetagRewardedScript(config.customScript));
 };
 
 /**
@@ -261,19 +210,10 @@ export const showMonetagRewardedAd = async (timeoutMs?: number): Promise<boolean
 
     const candidates = extractSdkCandidates(config);
     if (candidates.length === 0) {
-      await showManualCompletionShell(config.minSeconds, effectiveTimeoutMs);
-      return true;
+      throw new Error("Configure uma tag Rewarded/Interstitial válida da Monetag. Tags de Push não exibem anúncios recompensados.");
     }
 
-    const fn = await waitForAnySdk(candidates).catch(async (error) => {
-      if (config.customScript.trim()) {
-        await showManualCompletionShell(config.minSeconds, effectiveTimeoutMs);
-        return null;
-      }
-      throw error;
-    });
-
-    if (!fn) return true;
+    const fn = await waitForAnySdk(candidates);
     await fn();
     return true;
   } finally {
