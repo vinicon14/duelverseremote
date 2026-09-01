@@ -53,6 +53,7 @@ const CreateTournament = lazy(() => import("./pages/CreateTournament"));
 const TournamentDetail = lazy(() => import("./pages/TournamentDetail"));
 const Matchmaking = lazy(() => import("./pages/Matchmaking"));
 const Store = lazy(() => import("./pages/Store"));
+const GoPro = lazy(() => import("./pages/GoPro"));
 const DuelCoins = lazy(() => import("./pages/DuelCoins"));
 const JudgePanel = lazy(() => import("./pages/JudgePanel"));
 const FriendChat = lazy(() => import("./pages/FriendChat"));
@@ -190,6 +191,8 @@ const RouterContent = ({ user }: { user: User | null }) => {
         <Route path="/duelcoins" element={<DuelCoins />} />
         <Route path="/judge-panel" element={<JudgePanel />} />
         <Route path="/store" element={<Store />} />
+        <Route path="/go-pro" element={<GoPro />} />
+        <Route path="/virar-pro" element={<GoPro />} />
         <Route path="/news" element={<News />} />
         <Route path="/gallery" element={<MatchGallery />} />
         <Route path="/video/:id" element={<VideoShare />} />
