@@ -424,3 +424,48 @@ div[id^="google_ads_iframe"] {
   height: 0 !important;
   overflow: hidden !important;
 }
+
+/* ============================================
+   Polimento mobile (<= 768px)
+   ============================================ */
+@media (max-width: 768px) {
+  html, body {
+    overflow-x: hidden;
+    -webkit-text-size-adjust: 100%;
+    overscroll-behavior-y: contain;
+  }
+
+  /* Rolagem suave e com inércia em listas/áreas roláveis */
+  .overflow-y-auto,
+  .overflow-auto,
+  [data-radix-scroll-area-viewport] {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Alvos de toque mínimos (acessibilidade) */
+  button,
+  [role="button"],
+  a.btn,
+  .touch-target {
+    min-height: 40px;
+  }
+
+  /* Evita zoom automático do iOS ao focar inputs */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  /* Respeita as áreas seguras do aparelho */
+  .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .safe-top { padding-top: env(safe-area-inset-top, 0px); }
+
+  /* Diálogos e sheets ocupam melhor a tela pequena */
+  [role="dialog"] {
+    max-height: calc(100dvh - 2rem);
+  }
+
+  /* Tabelas largas rolam em vez de estourar o layout */
+  table { display: block; overflow-x: auto; white-space: nowrap; }
+}
