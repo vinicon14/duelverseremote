@@ -53,6 +53,7 @@ const CreateTournament = lazy(() => import("./pages/CreateTournament"));
 const TournamentDetail = lazy(() => import("./pages/TournamentDetail"));
 const Matchmaking = lazy(() => import("./pages/Matchmaking"));
 const Store = lazy(() => import("./pages/Store"));
+const GoPro = lazy(() => import("./pages/GoPro"));
 const DuelCoins = lazy(() => import("./pages/DuelCoins"));
 const JudgePanel = lazy(() => import("./pages/JudgePanel"));
 const FriendChat = lazy(() => import("./pages/FriendChat"));
