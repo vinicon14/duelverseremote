@@ -191,6 +191,8 @@ const RouterContent = ({ user }: { user: User | null }) => {
         <Route path="/duelcoins" element={<DuelCoins />} />
         <Route path="/judge-panel" element={<JudgePanel />} />
         <Route path="/store" element={<Store />} />
+        <Route path="/go-pro" element={<GoPro />} />
+        <Route path="/virar-pro" element={<GoPro />} />
         <Route path="/news" element={<News />} />
         <Route path="/gallery" element={<MatchGallery />} />
         <Route path="/video/:id" element={<VideoShare />} />
