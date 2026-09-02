@@ -51,7 +51,8 @@ export const ConditionalMonetagLoader = (): null => {
 
     // FREE users: Only notification ads (NO popunder, NO popup/click)
     const excludedPages = [
-      '/duel', '/duelcoins', '/profile', '/friends', '/chat',
+      '/duel', '/duel-room', '/duelroom', '/join-duel', '/matchmaking',
+      '/duelcoins', '/profile', '/friends', '/chat',
       '/admin', '/judge-panel', '/create-', '/tournament-',
       '/deck-builder', '/install'
     ];
