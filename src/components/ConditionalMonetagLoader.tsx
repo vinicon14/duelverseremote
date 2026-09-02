@@ -27,39 +27,27 @@ export const ConditionalMonetagLoader = (): null => {
     // Apply popup blocking
     applyPopupBlocking();
 
-    // Landing pages (incluindo raiz e versões localizadas /:lang) nunca exibem anúncios
+    // Apenas landing pages e duel room não exibem Monetag; as demais páginas FREE podem ter
     const path = location.pathname.replace(/\/+$/, '') || '/';
     const isLandingRoot = path === '/' || /^\/[a-z]{2}(-[A-Za-z]{2})?$/.test(path);
     const isLandingSeo = path.includes('duelverse-yugioh-duelos-online');
-
-    // PRO users: No Monetag
-    if (
-      path.startsWith('/pro/') ||
-      path === '/auth' ||
-      path === '/landing' ||
-      isLandingRoot ||
-      isLandingSeo
-    ) {
-      console.log('Monetag BLOQUEADO - rota PRO/auth/landing:', location.pathname);
-      return;
-    }
 
     if (isPro) {
       console.log('Monetag BLOQUEADO - usuário PRO');
       return;
     }
 
-    // FREE users: Only notification ads (NO popunder, NO popup/click)
-    const excludedPages = [
-      '/duel', '/duel-room', '/duelroom', '/join-duel', '/matchmaking',
-      '/duelcoins', '/profile', '/friends', '/chat',
-      '/admin', '/judge-panel', '/create-', '/tournament-',
-      '/deck-builder', '/install'
-    ];
-
-    const isExcluded = excludedPages.some(page => location.pathname.includes(page));
-    if (isExcluded) {
-      console.log('Monetag BLOQUEADO - página restrita:', location.pathname);
+    if (
+      path === '/auth' ||
+      path === '/landing' ||
+      isLandingRoot ||
+      isLandingSeo ||
+      path.startsWith('/duel') ||
+      path.includes('/duel-room') ||
+      path.includes('/duelroom') ||
+      path.includes('/join-duel')
+    ) {
+      console.log('Monetag BLOQUEADO - landing ou duel room:', location.pathname);
       return;
     }
 
