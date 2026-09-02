@@ -431,8 +431,31 @@ div[id^="google_ads_iframe"] {
 @media (max-width: 768px) {
   html, body {
     overflow-x: hidden;
+    overflow-y: auto;
+    height: auto;
+    min-height: 100%;
     -webkit-text-size-adjust: 100%;
-    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Scrollbar minimalista no mobile */
+  ::-webkit-scrollbar {
+    width: 3px;
+    height: 3px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--primary) / 0.25);
+    border-radius: 9999px;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--primary) / 0.25) transparent;
   }
 
   /* Rolagem suave e com inércia em listas/áreas roláveis */

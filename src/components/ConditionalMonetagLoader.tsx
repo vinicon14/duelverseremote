@@ -27,8 +27,19 @@ export const ConditionalMonetagLoader = (): null => {
     // Apply popup blocking
     applyPopupBlocking();
 
+    // Landing pages (incluindo raiz e versões localizadas /:lang) nunca exibem anúncios
+    const path = location.pathname.replace(/\/+$/, '') || '/';
+    const isLandingRoot = path === '/' || /^\/[a-z]{2}(-[A-Za-z]{2})?$/.test(path);
+    const isLandingSeo = path.includes('duelverse-yugioh-duelos-online');
+
     // PRO users: No Monetag
-    if (location.pathname.startsWith('/pro/') || location.pathname === '/auth' || location.pathname === '/landing') {
+    if (
+      path.startsWith('/pro/') ||
+      path === '/auth' ||
+      path === '/landing' ||
+      isLandingRoot ||
+      isLandingSeo
+    ) {
       console.log('Monetag BLOQUEADO - rota PRO/auth/landing:', location.pathname);
       return;
     }
@@ -40,7 +51,8 @@ export const ConditionalMonetagLoader = (): null => {
 
     // FREE users: Only notification ads (NO popunder, NO popup/click)
     const excludedPages = [
-      '/duel', '/duelcoins', '/profile', '/friends', '/chat',
+      '/duel', '/duel-room', '/duelroom', '/join-duel', '/matchmaking',
+      '/duelcoins', '/profile', '/friends', '/chat',
       '/admin', '/judge-panel', '/create-', '/tournament-',
       '/deck-builder', '/install'
     ];
