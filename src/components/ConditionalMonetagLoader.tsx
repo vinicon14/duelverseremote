@@ -27,8 +27,19 @@ export const ConditionalMonetagLoader = (): null => {
     // Apply popup blocking
     applyPopupBlocking();
 
+    // Landing pages (incluindo raiz e versões localizadas /:lang) nunca exibem anúncios
+    const path = location.pathname.replace(/\/+$/, '') || '/';
+    const isLandingRoot = path === '/' || /^\/[a-z]{2}(-[A-Za-z]{2})?$/.test(path);
+    const isLandingSeo = path.includes('duelverse-yugioh-duelos-online');
+
     // PRO users: No Monetag
-    if (location.pathname.startsWith('/pro/') || location.pathname === '/auth' || location.pathname === '/landing') {
+    if (
+      path.startsWith('/pro/') ||
+      path === '/auth' ||
+      path === '/landing' ||
+      isLandingRoot ||
+      isLandingSeo
+    ) {
       console.log('Monetag BLOQUEADO - rota PRO/auth/landing:', location.pathname);
       return;
     }
