@@ -204,7 +204,9 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(new Map());
+  const remoteStreamsRef = useRef<Map<string, MediaStream>>(new Map());
   const [remotePeerIds, setRemotePeerIds] = useState<string[]>([]);
+
   // Peers that announced themselves as spectators. Their connections are kept for
   // audio (judge spectators broadcast mic) but must NEVER occupy a video slot,
   // otherwise another spectator steals the slot meant for player 2.
