@@ -1409,6 +1409,11 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
 
 
 
+  // Keep a ref mirror so watchdogs/callbacks always read the latest streams.
+  useEffect(() => {
+    remoteStreamsRef.current = remoteStreams;
+  }, [remoteStreams]);
+
   // Attach remote streams to video elements (video is always muted — audio is
   // played by the dedicated <audio> elements below).
   useEffect(() => {
@@ -1422,6 +1427,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       el.play?.().catch(() => {});
     });
   }, [remoteStreams, remotePeerIds]);
+
 
   // Attach remote AUDIO tracks to dedicated audio elements
   const markAudioBlocked = useCallback((peerId: string, blocked: boolean) => {
