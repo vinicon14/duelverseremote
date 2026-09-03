@@ -1419,53 +1419,93 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   }, [remoteStreams, remotePeerIds]);
 
   // Attach remote AUDIO tracks to dedicated audio elements
+  const markAudioBlocked = useCallback((peerId: string, blocked: boolean) => {
+    if (blocked) blockedAudioRef.current.add(peerId);
+    else blockedAudioRef.current.delete(peerId);
+    setAudioBlocked(blockedAudioRef.current.size > 0);
+  }, []);
+
+  const attachRemoteAudio = useCallback((peerId: string, el: HTMLAudioElement) => {
+    const stream = remoteStreamsRef.current.get(peerId);
+    const tracks = stream?.getAudioTracks().filter((t) => t.readyState === "live") ?? [];
+    if (tracks.length === 0) return;
+    const current = el.srcObject as MediaStream | null;
+    const sameTracks =
+      current &&
+      current.getAudioTracks().length === tracks.length &&
+      current.getAudioTracks().every((t, i) => t.id === tracks[i].id);
+    if (!sameTracks) {
+      el.srcObject = new MediaStream(tracks);
+    }
+    el.muted = false;
+    el.volume = 1;
+    el.play?.()
+      .then(() => markAudioBlocked(peerId, false))
+      .catch(() => markAudioBlocked(peerId, true));
+  }, [markAudioBlocked]);
+
   useEffect(() => {
-    remoteStreams.forEach((stream, peerId) => {
+    remoteStreams.forEach((_stream, peerId) => {
       const el = remoteAudioRefs.current.get(peerId);
-      if (!el) return;
-      const tracks = stream.getAudioTracks();
-      if (tracks.length === 0) return;
-      const current = el.srcObject as MediaStream | null;
-      const sameTracks =
-        current &&
-        current.getAudioTracks().length === tracks.length &&
-        current.getAudioTracks().every((t, i) => t.id === tracks[i].id);
-      if (!sameTracks) {
-        el.srcObject = new MediaStream(tracks);
-      }
+      if (el) attachRemoteAudio(peerId, el);
+    });
+  }, [remoteStreams, remotePeerIds, attachRemoteAudio]);
+
+  // Watchdog: re-attach and resume any audio/video element that silently stopped.
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      remoteAudioRefs.current.forEach((el, peerId) => {
+        attachRemoteAudio(peerId, el);
+        if (el.paused) el.play?.().catch(() => markAudioBlocked(peerId, true));
+      });
+      remoteVideoRefs.current.forEach((el, peerId) => {
+        const stream = remoteStreamsRef.current.get(peerId);
+        if (stream && el.srcObject !== stream) el.srcObject = stream;
+        el.muted = true;
+        if (el.paused) el.play?.().catch(() => {});
+      });
+    }, 3000);
+    return () => window.clearInterval(interval);
+  }, [attachRemoteAudio, markAudioBlocked]);
+
+  const enableRemoteAudio = useCallback(() => {
+    remoteAudioRefs.current.forEach((el, peerId) => {
       el.muted = false;
       el.volume = 1;
       el.play?.()
-        .then(() => setAudioBlocked(false))
-        .catch(() => setAudioBlocked(true));
+        .then(() => markAudioBlocked(peerId, false))
+        .catch(() => {});
     });
-  }, [remoteStreams, remotePeerIds]);
-
-  const enableRemoteAudio = useCallback(() => {
-    remoteAudioRefs.current.forEach((el) => {
-      el.muted = false;
-      el.volume = 1;
-      el.play?.().catch(() => {});
-    });
+    blockedAudioRef.current.clear();
     setAudioBlocked(false);
-  }, []);
+  }, [markAudioBlocked]);
+
+  // Any user gesture in the page unlocks blocked autoplay automatically.
+  useEffect(() => {
+    const unlock = () => {
+      if (blockedAudioRef.current.size === 0) return;
+      enableRemoteAudio();
+    };
+    window.addEventListener("pointerdown", unlock);
+    window.addEventListener("keydown", unlock);
+    window.addEventListener("touchstart", unlock);
+    return () => {
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
+      window.removeEventListener("touchstart", unlock);
+    };
+  }, [enableRemoteAudio]);
 
   const setRemoteAudioRef = useCallback((peerId: string, el: HTMLAudioElement | null) => {
     if (!el) {
       remoteAudioRefs.current.delete(peerId);
+      blockedAudioRef.current.delete(peerId);
       return;
     }
     remoteAudioRefs.current.set(peerId, el);
-    const stream = remoteStreams.get(peerId);
-    const tracks = stream?.getAudioTracks() ?? [];
-    if (tracks.length > 0) {
-      el.srcObject = new MediaStream(tracks);
-      el.muted = false;
-      el.play?.()
-        .then(() => setAudioBlocked(false))
-        .catch(() => setAudioBlocked(true));
-    }
-  }, [remoteStreams]);
+    attachRemoteAudio(peerId, el);
+  }, [attachRemoteAudio]);
+
 
 
 
