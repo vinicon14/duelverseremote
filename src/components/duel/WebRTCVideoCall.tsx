@@ -856,7 +856,27 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     const frozenSince = frozenVideoSinceRef.current.get(playerId);
     const frozenTooLong = !!frozenSince && now - frozenSince > 8000;
 
-    if (connected && liveVideo && !frozenTooLong) return;
+    // Audio can be missing while video is perfectly fine (the player published
+    // the mic later, or the first offer had no audio m-line). In that case ask
+    // for a fresh offer WITHOUT tearing down the working video connection.
+    const liveAudio = (peer?.stream?.getAudioTracks() ?? []).some((t) => t.readyState === "live");
+    if (connected && liveVideo && !frozenTooLong) {
+      if (!liveAudio) {
+        channelRef.current?.send({
+          type: "broadcast",
+          event: "webrtc-signal",
+          payload: {
+            type: "request-offer",
+            senderId: userId,
+            targetId: playerId,
+            isSpectator: true,
+            rebuild: false,
+          },
+        });
+      }
+      return;
+    }
+
 
     // Never destroy a healthy video connection just because that player has no
     // microphone track (permission denied, no mic, or video-only fallback). The
