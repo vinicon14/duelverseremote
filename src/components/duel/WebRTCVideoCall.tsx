@@ -194,6 +194,9 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   // even when their <video> is hidden (deck overlay) or unmounted (PiP swap).
   const remoteAudioRefs = useRef<Map<string, HTMLAudioElement>>(new Map());
   const [audioBlocked, setAudioBlocked] = useState(false);
+  // Peers whose audio playback is currently blocked by autoplay policy.
+  const blockedAudioRef = useRef<Set<string>>(new Set());
+
   const peersRef = useRef<Map<string, PeerState>>(new Map());
   const localStreamRef = useRef<MediaStream | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
