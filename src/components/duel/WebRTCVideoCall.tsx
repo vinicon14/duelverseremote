@@ -194,6 +194,9 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   // even when their <video> is hidden (deck overlay) or unmounted (PiP swap).
   const remoteAudioRefs = useRef<Map<string, HTMLAudioElement>>(new Map());
   const [audioBlocked, setAudioBlocked] = useState(false);
+  // Peers whose audio playback is currently blocked by autoplay policy.
+  const blockedAudioRef = useRef<Set<string>>(new Set());
+
   const peersRef = useRef<Map<string, PeerState>>(new Map());
   const localStreamRef = useRef<MediaStream | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
@@ -201,7 +204,9 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(new Map());
+  const remoteStreamsRef = useRef<Map<string, MediaStream>>(new Map());
   const [remotePeerIds, setRemotePeerIds] = useState<string[]>([]);
+
   // Peers that announced themselves as spectators. Their connections are kept for
   // audio (judge spectators broadcast mic) but must NEVER occupy a video slot,
   // otherwise another spectator steals the slot meant for player 2.
@@ -851,7 +856,27 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     const frozenSince = frozenVideoSinceRef.current.get(playerId);
     const frozenTooLong = !!frozenSince && now - frozenSince > 8000;
 
-    if (connected && liveVideo && !frozenTooLong) return;
+    // Audio can be missing while video is perfectly fine (the player published
+    // the mic later, or the first offer had no audio m-line). In that case ask
+    // for a fresh offer WITHOUT tearing down the working video connection.
+    const liveAudio = (peer?.stream?.getAudioTracks() ?? []).some((t) => t.readyState === "live");
+    if (connected && liveVideo && !frozenTooLong) {
+      if (!liveAudio) {
+        channelRef.current?.send({
+          type: "broadcast",
+          event: "webrtc-signal",
+          payload: {
+            type: "request-offer",
+            senderId: userId,
+            targetId: playerId,
+            isSpectator: true,
+            rebuild: false,
+          },
+        });
+      }
+      return;
+    }
+
 
     // Never destroy a healthy video connection just because that player has no
     // microphone track (permission denied, no mic, or video-only fallback). The
@@ -1404,6 +1429,11 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
 
 
 
+  // Keep a ref mirror so watchdogs/callbacks always read the latest streams.
+  useEffect(() => {
+    remoteStreamsRef.current = remoteStreams;
+  }, [remoteStreams]);
+
   // Attach remote streams to video elements (video is always muted — audio is
   // played by the dedicated <audio> elements below).
   useEffect(() => {
@@ -1418,54 +1448,95 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     });
   }, [remoteStreams, remotePeerIds]);
 
+
   // Attach remote AUDIO tracks to dedicated audio elements
+  const markAudioBlocked = useCallback((peerId: string, blocked: boolean) => {
+    if (blocked) blockedAudioRef.current.add(peerId);
+    else blockedAudioRef.current.delete(peerId);
+    setAudioBlocked(blockedAudioRef.current.size > 0);
+  }, []);
+
+  const attachRemoteAudio = useCallback((peerId: string, el: HTMLAudioElement) => {
+    const stream = remoteStreamsRef.current.get(peerId);
+    const tracks = stream?.getAudioTracks().filter((t) => t.readyState === "live") ?? [];
+    if (tracks.length === 0) return;
+    const current = el.srcObject as MediaStream | null;
+    const sameTracks =
+      current &&
+      current.getAudioTracks().length === tracks.length &&
+      current.getAudioTracks().every((t, i) => t.id === tracks[i].id);
+    if (!sameTracks) {
+      el.srcObject = new MediaStream(tracks);
+    }
+    el.muted = false;
+    el.volume = 1;
+    el.play?.()
+      .then(() => markAudioBlocked(peerId, false))
+      .catch(() => markAudioBlocked(peerId, true));
+  }, [markAudioBlocked]);
+
   useEffect(() => {
-    remoteStreams.forEach((stream, peerId) => {
+    remoteStreams.forEach((_stream, peerId) => {
       const el = remoteAudioRefs.current.get(peerId);
-      if (!el) return;
-      const tracks = stream.getAudioTracks();
-      if (tracks.length === 0) return;
-      const current = el.srcObject as MediaStream | null;
-      const sameTracks =
-        current &&
-        current.getAudioTracks().length === tracks.length &&
-        current.getAudioTracks().every((t, i) => t.id === tracks[i].id);
-      if (!sameTracks) {
-        el.srcObject = new MediaStream(tracks);
-      }
+      if (el) attachRemoteAudio(peerId, el);
+    });
+  }, [remoteStreams, remotePeerIds, attachRemoteAudio]);
+
+  // Watchdog: re-attach and resume any audio/video element that silently stopped.
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      remoteAudioRefs.current.forEach((el, peerId) => {
+        attachRemoteAudio(peerId, el);
+        if (el.paused) el.play?.().catch(() => markAudioBlocked(peerId, true));
+      });
+      remoteVideoRefs.current.forEach((el, peerId) => {
+        const stream = remoteStreamsRef.current.get(peerId);
+        if (stream && el.srcObject !== stream) el.srcObject = stream;
+        el.muted = true;
+        if (el.paused) el.play?.().catch(() => {});
+      });
+    }, 3000);
+    return () => window.clearInterval(interval);
+  }, [attachRemoteAudio, markAudioBlocked]);
+
+  const enableRemoteAudio = useCallback(() => {
+    remoteAudioRefs.current.forEach((el, peerId) => {
       el.muted = false;
       el.volume = 1;
       el.play?.()
-        .then(() => setAudioBlocked(false))
-        .catch(() => setAudioBlocked(true));
+        .then(() => markAudioBlocked(peerId, false))
+        .catch(() => {});
     });
-  }, [remoteStreams, remotePeerIds]);
-
-  const enableRemoteAudio = useCallback(() => {
-    remoteAudioRefs.current.forEach((el) => {
-      el.muted = false;
-      el.volume = 1;
-      el.play?.().catch(() => {});
-    });
+    blockedAudioRef.current.clear();
     setAudioBlocked(false);
-  }, []);
+  }, [markAudioBlocked]);
+
+  // Any user gesture in the page unlocks blocked autoplay automatically.
+  useEffect(() => {
+    const unlock = () => {
+      if (blockedAudioRef.current.size === 0) return;
+      enableRemoteAudio();
+    };
+    window.addEventListener("pointerdown", unlock);
+    window.addEventListener("keydown", unlock);
+    window.addEventListener("touchstart", unlock);
+    return () => {
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
+      window.removeEventListener("touchstart", unlock);
+    };
+  }, [enableRemoteAudio]);
 
   const setRemoteAudioRef = useCallback((peerId: string, el: HTMLAudioElement | null) => {
     if (!el) {
       remoteAudioRefs.current.delete(peerId);
+      blockedAudioRef.current.delete(peerId);
       return;
     }
     remoteAudioRefs.current.set(peerId, el);
-    const stream = remoteStreams.get(peerId);
-    const tracks = stream?.getAudioTracks() ?? [];
-    if (tracks.length > 0) {
-      el.srcObject = new MediaStream(tracks);
-      el.muted = false;
-      el.play?.()
-        .then(() => setAudioBlocked(false))
-        .catch(() => setAudioBlocked(true));
-    }
-  }, [remoteStreams]);
+    attachRemoteAudio(peerId, el);
+  }, [attachRemoteAudio]);
+
 
 
 
