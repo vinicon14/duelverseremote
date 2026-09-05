@@ -253,7 +253,6 @@ export const DuelCallNotification = ({ currentUserId }: { currentUserId?: string
               sender: data.sender,
               duel: { tcg_type: tcg },
             });
-            playRingtone(tcg);
           }
         });
       }
@@ -280,7 +279,6 @@ export const DuelCallNotification = ({ currentUserId }: { currentUserId?: string
             sender: data.sender,
             duel: { tcg_type: tcg },
           });
-          playRingtone(tcg);
 
           // Native notification bridge
           try {
