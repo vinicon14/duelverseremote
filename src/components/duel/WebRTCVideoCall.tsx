@@ -575,6 +575,9 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       existing.pc.onconnectionstatechange = null;
       existing.pc.ontrack = null;
       existing.pc.onnegotiationneeded = null;
+      // Also stop the old connection from emitting candidates: they would be
+      // sent to the peer and applied to the NEW connection, breaking ICE.
+      existing.pc.onicecandidate = null;
       existing.pc.close();
       unregisterRemoteStream(remotePeerId);
       setRemoteStreams((prev) => {
