@@ -197,11 +197,15 @@ export const DuelCallNotification = ({ currentUserId }: { currentUserId?: string
     };
 
     const checkPending = async () => {
+      // Only invites from the last 60s are still "ringing". Otherwise the user
+      // gets a full-screen call for a challenge sent hours ago.
+      const since = new Date(Date.now() - 60_000).toISOString();
       const { data: pendingInvites, error } = await supabase
         .from('duel_invites')
         .select('*')
         .eq('receiver_id', currentUserId)
         .eq('status', 'pending')
+        .gte('created_at', since)
         .order('created_at', { ascending: false })
         .limit(1);
 
