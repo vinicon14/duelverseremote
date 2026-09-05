@@ -161,14 +161,16 @@ export const DuelCallNotification = ({ currentUserId }: { currentUserId?: string
     playFallbackTones(tcgType);
   }, [stopAudio, ringtoneUrls, playFallbackTones]);
 
+  // Single source of truth for the ringing sound: starts when an invite shows up
+  // (and switches to the uploaded ringtone as soon as the URLs load) and always
+  // stops when the overlay closes.
   useEffect(() => {
-    if (!invite) return;
-    const tcg = invite.duel?.tcg_type || 'yugioh';
-    const settingsKey = TCG_SETTINGS_KEY[tcg] || 'ringtone_ygo';
-    if (ringtoneUrls[settingsKey]) {
-      playRingtone(tcg);
+    if (!invite) {
+      stopAudio();
+      return;
     }
-  }, [invite, ringtoneUrls, playRingtone]);
+    playRingtone(invite.duel?.tcg_type || 'yugioh');
+  }, [invite, ringtoneUrls, playRingtone, stopAudio]);
 
   useEffect(() => {
     if (!currentUserId) return;
@@ -197,11 +199,15 @@ export const DuelCallNotification = ({ currentUserId }: { currentUserId?: string
     };
 
     const checkPending = async () => {
+      // Only invites from the last 60s are still "ringing". Otherwise the user
+      // gets a full-screen call for a challenge sent hours ago.
+      const since = new Date(Date.now() - 60_000).toISOString();
       const { data: pendingInvites, error } = await supabase
         .from('duel_invites')
         .select('*')
         .eq('receiver_id', currentUserId)
         .eq('status', 'pending')
+        .gte('created_at', since)
         .order('created_at', { ascending: false })
         .limit(1);
 
@@ -223,7 +229,6 @@ export const DuelCallNotification = ({ currentUserId }: { currentUserId?: string
             sender: fullData.sender,
             duel: { tcg_type: tcg },
           });
-          playRingtone(tcg);
         }
       }
     };
@@ -248,7 +253,6 @@ export const DuelCallNotification = ({ currentUserId }: { currentUserId?: string
               sender: data.sender,
               duel: { tcg_type: tcg },
             });
-            playRingtone(tcg);
           }
         });
       }
@@ -275,7 +279,6 @@ export const DuelCallNotification = ({ currentUserId }: { currentUserId?: string
             sender: data.sender,
             duel: { tcg_type: tcg },
           });
-          playRingtone(tcg);
 
           // Native notification bridge
           try {
@@ -296,6 +299,39 @@ export const DuelCallNotification = ({ currentUserId }: { currentUserId?: string
             });
           }
         }
+      })
+      // Sender cancelled / invite answered elsewhere: stop ringing immediately.
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'duel_invites',
+        filter: `receiver_id=eq.${currentUserId}`,
+      }, (payload) => {
+        const row: any = payload.new;
+        if (row?.status && row.status !== 'pending') {
+          setInvite((cur) => {
+            if (cur && cur.id === row.id) {
+              stopAudio();
+              return null;
+            }
+            return cur;
+          });
+        }
+      })
+      .on('postgres_changes', {
+        event: 'DELETE',
+        schema: 'public',
+        table: 'duel_invites',
+      }, (payload) => {
+        const oldId = (payload.old as any)?.id;
+        if (!oldId) return;
+        setInvite((cur) => {
+          if (cur && cur.id === oldId) {
+            stopAudio();
+            return null;
+          }
+          return cur;
+        });
       })
       .subscribe();
 

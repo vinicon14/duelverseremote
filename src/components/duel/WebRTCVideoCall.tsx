@@ -575,6 +575,9 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       existing.pc.onconnectionstatechange = null;
       existing.pc.ontrack = null;
       existing.pc.onnegotiationneeded = null;
+      // Also stop the old connection from emitting candidates: they would be
+      // sent to the peer and applied to the NEW connection, breaking ICE.
+      existing.pc.onicecandidate = null;
       existing.pc.close();
       unregisterRemoteStream(remotePeerId);
       setRemoteStreams((prev) => {
@@ -1031,6 +1034,24 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
 
           peer.ignoreOffer = !polite && offerCollision;
           if (peer.ignoreOffer) return;
+
+          // Perfect Negotiation: the polite side must roll back its own pending
+          // offer before accepting the remote one. Without the rollback,
+          // setRemoteDescription throws in "have-local-offer" and the handshake
+          // dies silently — the classic "spectator sees only one player".
+          if (offerCollision) {
+            try {
+              await pc.setLocalDescription({ type: "rollback" } as RTCSessionDescriptionInit);
+            } catch (err) {
+              console.warn("[WebRTC] rollback failed:", err);
+            }
+            peer.makingOffer = false;
+          }
+
+          // An answer that arrives when we are not waiting for one is stale.
+          if (payload.type === "answer" && pc.signalingState !== "have-local-offer") {
+            return;
+          }
 
           await pc.setRemoteDescription(description);
 
