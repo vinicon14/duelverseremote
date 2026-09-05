@@ -161,14 +161,16 @@ export const DuelCallNotification = ({ currentUserId }: { currentUserId?: string
     playFallbackTones(tcgType);
   }, [stopAudio, ringtoneUrls, playFallbackTones]);
 
+  // Single source of truth for the ringing sound: starts when an invite shows up
+  // (and switches to the uploaded ringtone as soon as the URLs load) and always
+  // stops when the overlay closes.
   useEffect(() => {
-    if (!invite) return;
-    const tcg = invite.duel?.tcg_type || 'yugioh';
-    const settingsKey = TCG_SETTINGS_KEY[tcg] || 'ringtone_ygo';
-    if (ringtoneUrls[settingsKey]) {
-      playRingtone(tcg);
+    if (!invite) {
+      stopAudio();
+      return;
     }
-  }, [invite, ringtoneUrls, playRingtone]);
+    playRingtone(invite.duel?.tcg_type || 'yugioh');
+  }, [invite, ringtoneUrls, playRingtone, stopAudio]);
 
   useEffect(() => {
     if (!currentUserId) return;
