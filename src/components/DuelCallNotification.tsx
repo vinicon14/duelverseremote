@@ -301,6 +301,39 @@ export const DuelCallNotification = ({ currentUserId }: { currentUserId?: string
           }
         }
       })
+      // Sender cancelled / invite answered elsewhere: stop ringing immediately.
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'duel_invites',
+        filter: `receiver_id=eq.${currentUserId}`,
+      }, (payload) => {
+        const row: any = payload.new;
+        if (row?.status && row.status !== 'pending') {
+          setInvite((cur) => {
+            if (cur && cur.id === row.id) {
+              stopAudio();
+              return null;
+            }
+            return cur;
+          });
+        }
+      })
+      .on('postgres_changes', {
+        event: 'DELETE',
+        schema: 'public',
+        table: 'duel_invites',
+      }, (payload) => {
+        const oldId = (payload.old as any)?.id;
+        if (!oldId) return;
+        setInvite((cur) => {
+          if (cur && cur.id === oldId) {
+            stopAudio();
+            return null;
+          }
+          return cur;
+        });
+      })
       .subscribe();
 
     return () => { 
