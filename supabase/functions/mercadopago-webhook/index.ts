@@ -55,6 +55,72 @@ Deno.serve(async (req) => {
 
     const isPaid = payment.status === 'approved';
 
+    // Pedido do marketplace (produto físico pago em dinheiro)
+    if (typeof payment.external_reference === 'string' && payment.external_reference.startsWith('mkt|')) {
+      const purchaseId = payment.external_reference.split('|')[1];
+      const { data: mktOrder } = await supabase
+        .from('marketplace_purchases')
+        .select('*, marketplace_products(name, stock)')
+        .eq('id', purchaseId)
+        .maybeSingle();
+
+      if (!mktOrder) {
+        return new Response(JSON.stringify({ message: 'Marketplace order not found' }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      if (!isPaid) {
+        await supabase
+          .from('marketplace_purchases')
+          .update({ status: payment.status === 'pending' ? 'awaiting_payment' : 'cancelled', external_payment_id: String(paymentId) })
+          .eq('id', mktOrder.id);
+        return new Response(JSON.stringify({ message: 'Marketplace status updated' }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      if (mktOrder.status !== 'pending' && mktOrder.status !== 'awaiting_payment') {
+        return new Response(JSON.stringify({ message: 'Already processed' }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      await supabase
+        .from('marketplace_purchases')
+        .update({
+          status: 'pending',
+          paid_at: new Date().toISOString(),
+          external_payment_id: String(paymentId),
+          payment_provider: 'mercadopago',
+        })
+        .eq('id', mktOrder.id);
+
+      const currentStock = (mktOrder as any).marketplace_products?.stock;
+      if (typeof currentStock === 'number') {
+        await supabase
+          .from('marketplace_products')
+          .update({ stock: Math.max(0, currentStock - (mktOrder.quantity || 1)) })
+          .eq('id', mktOrder.product_id);
+      }
+
+      await supabase.rpc('create_notification', {
+        p_user_id: mktOrder.user_id,
+        p_type: 'purchase',
+        p_title: '📦 Pagamento confirmado!',
+        p_message: `Seu pedido de ${(mktOrder as any).marketplace_products?.name || 'produto'} foi confirmado e será preparado para envio.`,
+        p_data: { purchase_id: mktOrder.id },
+      });
+
+      return new Response(JSON.stringify({ success: true, marketplace: true }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // Try to find order by external_order_id (PIX direct) or by external_reference (Checkout Pro)
     let order = null;
     let orderError = null;
