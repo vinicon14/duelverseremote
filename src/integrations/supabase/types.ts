@@ -996,6 +996,8 @@ export type Database = {
           is_third_party_seller: boolean
           metadata: Json | null
           name: string
+          payment_type: string
+          price_brl: number | null
           price_duelcoins: number
           product_type: string
           seller_id: string | null
@@ -1013,6 +1015,8 @@ export type Database = {
           is_third_party_seller?: boolean
           metadata?: Json | null
           name: string
+          payment_type?: string
+          price_brl?: number | null
           price_duelcoins?: number
           product_type?: string
           seller_id?: string | null
@@ -1030,6 +1034,8 @@ export type Database = {
           is_third_party_seller?: boolean
           metadata?: Json | null
           name?: string
+          payment_type?: string
+          price_brl?: number | null
           price_duelcoins?: number
           product_type?: string
           seller_id?: string | null
@@ -1041,14 +1047,21 @@ export type Database = {
       marketplace_purchases: {
         Row: {
           admin_notes: string | null
+          amount_brl: number | null
+          buyer_email: string | null
           created_at: string
+          external_order_id: string | null
+          external_payment_id: string | null
           id: string
+          paid_at: string | null
+          payment_provider: string | null
           product_id: string
           quantity: number
           shipping_address: string | null
           shipping_city: string | null
           shipping_complement: string | null
           shipping_district: string | null
+          shipping_name: string | null
           shipping_number: string | null
           shipping_phone: string | null
           shipping_state: string | null
@@ -1062,14 +1075,21 @@ export type Database = {
         }
         Insert: {
           admin_notes?: string | null
+          amount_brl?: number | null
+          buyer_email?: string | null
           created_at?: string
+          external_order_id?: string | null
+          external_payment_id?: string | null
           id?: string
+          paid_at?: string | null
+          payment_provider?: string | null
           product_id: string
           quantity?: number
           shipping_address?: string | null
           shipping_city?: string | null
           shipping_complement?: string | null
           shipping_district?: string | null
+          shipping_name?: string | null
           shipping_number?: string | null
           shipping_phone?: string | null
           shipping_state?: string | null
@@ -1083,14 +1103,21 @@ export type Database = {
         }
         Update: {
           admin_notes?: string | null
+          amount_brl?: number | null
+          buyer_email?: string | null
           created_at?: string
+          external_order_id?: string | null
+          external_payment_id?: string | null
           id?: string
+          paid_at?: string | null
+          payment_provider?: string | null
           product_id?: string
           quantity?: number
           shipping_address?: string | null
           shipping_city?: string | null
           shipping_complement?: string | null
           shipping_district?: string | null
+          shipping_name?: string | null
           shipping_number?: string | null
           shipping_phone?: string | null
           shipping_state?: string | null
