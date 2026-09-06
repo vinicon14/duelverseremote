@@ -25,6 +25,8 @@ interface Product {
   name: string;
   description: string | null;
   price_duelcoins: number;
+  price_brl: number | null;
+  payment_type: string;
   image_url: string | null;
   category: string;
   product_type: string;
@@ -64,6 +66,8 @@ const emptyForm = {
   name: "",
   description: "",
   price_duelcoins: 0,
+  price_brl: 0,
+  payment_type: "duelcoins",
   image_url: "",
   category: "digital_item",
   product_type: "one_time",
@@ -280,6 +284,8 @@ export const AdminMarketplace = () => {
       name: product.name,
       description: product.description || "",
       price_duelcoins: product.price_duelcoins,
+      price_brl: Number(product.price_brl ?? 0),
+      payment_type: product.payment_type || "duelcoins",
       image_url: product.image_url || "",
       category: product.category,
       product_type: product.product_type,
@@ -350,10 +356,12 @@ export const AdminMarketplace = () => {
       const payload = {
         name: form.name.trim(),
         description: form.description.trim() || null,
-        price_duelcoins: form.price_duelcoins,
+        price_duelcoins: form.payment_type === 'money' ? 0 : form.price_duelcoins,
+        price_brl: form.payment_type === 'money' ? form.price_brl : null,
+        payment_type: form.payment_type,
+        category: form.payment_type === 'money' ? 'physical' : form.category,
         image_url: form.image_url.trim() || null,
-        category: form.category,
-        product_type: form.product_type,
+        product_type: form.payment_type === 'money' ? 'physical' : form.product_type,
         is_active: form.is_active,
         stock: form.stock,
         metadata,
@@ -520,9 +528,26 @@ export const AdminMarketplace = () => {
                 <Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Descrição do produto" />
               </div>
               <div>
-                <Label>Preço (DuelCoins) *</Label>
-                <Input type="number" min={0} value={form.price_duelcoins} onChange={e => setForm(f => ({ ...f, price_duelcoins: parseInt(e.target.value) || 0 }))} />
+                <Label>Forma de pagamento *</Label>
+                <Select value={form.payment_type} onValueChange={v => setForm(f => ({ ...f, payment_type: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="duelcoins">DuelCoins</SelectItem>
+                    <SelectItem value="money">Dinheiro (R$ - produto físico)</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
+              {form.payment_type === 'money' ? (
+                <div>
+                  <Label>Preço (R$) *</Label>
+                  <Input type="number" min={0} step="0.01" value={form.price_brl} onChange={e => setForm(f => ({ ...f, price_brl: parseFloat(e.target.value) || 0 }))} />
+                </div>
+              ) : (
+                <div>
+                  <Label>Preço (DuelCoins) *</Label>
+                  <Input type="number" min={0} value={form.price_duelcoins} onChange={e => setForm(f => ({ ...f, price_duelcoins: parseInt(e.target.value) || 0 }))} />
+                </div>
+              )}
               <div>
                 <Label>Imagem do Produto</Label>
                 <input
