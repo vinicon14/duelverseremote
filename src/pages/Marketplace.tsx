@@ -192,9 +192,10 @@ export default function Marketplace() {
     }
 
     if (allData) {
-      // Split into official and third-party
-      const official = allData.filter((p) => !p.is_third_party_seller);
-      const thirdParty = allData.filter((p) => p.is_third_party_seller);
+      // Split into official and third-party (produtos físicos pagos em R$
+      // ficam na aba dedicada "Produtos Físicos", não nas abas de DuelCoins)
+      const official = allData.filter((p) => !p.is_third_party_seller && (p as any).payment_type !== "money");
+      const thirdParty = allData.filter((p) => p.is_third_party_seller && (p as any).payment_type !== "money");
       setProducts(official);
       setThirdPartyProducts(thirdParty);
     }
@@ -713,6 +714,10 @@ export default function Marketplace() {
             <TabsTrigger value="third-party" className="gap-1 sm:gap-2 text-xs sm:text-sm flex-1 sm:flex-none">
               <Tag className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               {t('marketplace.tabThirdParty')}
+            </TabsTrigger>
+            <TabsTrigger value="physical" className="gap-1 sm:gap-2 text-xs sm:text-sm flex-1 sm:flex-none">
+              <Truck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              Produtos Físicos
             </TabsTrigger>
             {isPro && (
               <TabsTrigger value="my-products" className="gap-1 sm:gap-2 text-xs sm:text-sm flex-1 sm:flex-none">
