@@ -28,6 +28,8 @@ import { useTranslation } from "react-i18next";
 import { SellerOrders } from "@/components/marketplace/SellerOrders";
 import { ShippingDialog, type ShippingInfo } from "@/components/marketplace/ShippingDialog";
 import { isPhysicalProduct } from "@/hooks/useMarketplacePurchase";
+import { PhysicalStore } from "@/components/marketplace/PhysicalStore";
+import { Truck } from "lucide-react";
 
 
 interface MarketplaceProduct {
@@ -42,6 +44,7 @@ interface MarketplaceProduct {
   is_active: boolean;
   seller_id: string | null;
   is_third_party_seller: boolean;
+  payment_type?: string;
   is_approved: boolean;
   metadata: any;
 }
