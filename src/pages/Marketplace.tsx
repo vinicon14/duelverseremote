@@ -28,6 +28,8 @@ import { useTranslation } from "react-i18next";
 import { SellerOrders } from "@/components/marketplace/SellerOrders";
 import { ShippingDialog, type ShippingInfo } from "@/components/marketplace/ShippingDialog";
 import { isPhysicalProduct } from "@/hooks/useMarketplacePurchase";
+import { PhysicalStore } from "@/components/marketplace/PhysicalStore";
+import { Truck } from "lucide-react";
 
 
 interface MarketplaceProduct {
@@ -42,6 +44,7 @@ interface MarketplaceProduct {
   is_active: boolean;
   seller_id: string | null;
   is_third_party_seller: boolean;
+  payment_type?: string;
   is_approved: boolean;
   metadata: any;
 }
@@ -189,9 +192,10 @@ export default function Marketplace() {
     }
 
     if (allData) {
-      // Split into official and third-party
-      const official = allData.filter((p) => !p.is_third_party_seller);
-      const thirdParty = allData.filter((p) => p.is_third_party_seller);
+      // Split into official and third-party (produtos físicos pagos em R$
+      // ficam na aba dedicada "Produtos Físicos", não nas abas de DuelCoins)
+      const official = allData.filter((p) => !p.is_third_party_seller && (p as any).payment_type !== "money");
+      const thirdParty = allData.filter((p) => p.is_third_party_seller && (p as any).payment_type !== "money");
       setProducts(official);
       setThirdPartyProducts(thirdParty);
     }
@@ -711,6 +715,10 @@ export default function Marketplace() {
               <Tag className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               {t('marketplace.tabThirdParty')}
             </TabsTrigger>
+            <TabsTrigger value="physical" className="gap-1 sm:gap-2 text-xs sm:text-sm flex-1 sm:flex-none">
+              <Truck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              Produtos Físicos
+            </TabsTrigger>
             {isPro && (
               <TabsTrigger value="my-products" className="gap-1 sm:gap-2 text-xs sm:text-sm flex-1 sm:flex-none">
                 <Crown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-500" />
@@ -727,6 +735,11 @@ export default function Marketplace() {
 
           <TabsContent value="seller-orders">
             <SellerOrders />
+          </TabsContent>
+
+          {/* Loja de produtos físicos (pagamento em R$ via Mercado Pago) */}
+          <TabsContent value="physical">
+            <PhysicalStore />
           </TabsContent>
 
 
