@@ -737,6 +737,11 @@ export default function Marketplace() {
             <SellerOrders />
           </TabsContent>
 
+          {/* Loja de produtos físicos (pagamento em R$ via Mercado Pago) */}
+          <TabsContent value="physical">
+            <PhysicalStore />
+          </TabsContent>
+
 
           {/* Official Products Tab */}
           <TabsContent value="official">
