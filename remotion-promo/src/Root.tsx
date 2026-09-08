@@ -1,6 +1,7 @@
 import { Composition } from "remotion";
 import { Video1 } from "./Video1";
 import { PromoVideo, CONFIGS } from "./PromoVideo";
+import { Vertical15 } from "./Vertical15";
 
 export const RemotionRoot: React.FC = () => (
   <>
