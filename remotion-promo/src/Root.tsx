@@ -18,5 +18,6 @@ export const RemotionRoot: React.FC = () => (
         defaultProps={{ cfg: CONFIGS[id] }}
       />
     ))}
+    <Composition id="vertical15" component={Vertical15} durationInFrames={450} fps={30} width={1080} height={1920} />
   </>
 );
