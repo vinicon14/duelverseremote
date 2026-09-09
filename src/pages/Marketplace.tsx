@@ -444,7 +444,8 @@ export default function Marketplace() {
       return;
     }
 
-    if (!newProduct.name || newProduct.price_duelcoins <= 0) {
+    const isMoney = newProduct.payment_type === 'money';
+    if (!newProduct.name || (isMoney ? newProduct.price_brl <= 0 : newProduct.price_duelcoins <= 0)) {
       toast({ title: "Erro", description: "Nome e preço são obrigatórios", variant: "destructive" });
       return;
     }
