@@ -522,7 +522,7 @@ export default function Marketplace() {
 
   const openEditProduct = (product: MarketplaceProduct) => {
     setEditingProduct(product);
-    setNewProduct({ name: product.name, description: product.description || '', price_duelcoins: product.price_duelcoins, category: product.category, product_type: product.product_type, stock: product.stock, image_url: product.image_url || '', item_type: (product.metadata as any)?.item_type || '' });
+    setNewProduct({ name: product.name, description: product.description || '', price_duelcoins: product.price_duelcoins, price_brl: Number((product as any).price_brl ?? 0), payment_type: (product as any).payment_type || 'duelcoins', category: product.category, product_type: product.product_type, stock: product.stock, image_url: product.image_url || '', item_type: (product.metadata as any)?.item_type || '' });
     setImagePreview(product.image_url || null);
     setEditProductDialogOpen(true);
   };
