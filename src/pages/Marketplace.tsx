@@ -1006,7 +1006,32 @@ export default function Marketplace() {
                 />
               </div>
 
+              <div className="space-y-2">
+                <Label>Forma de pagamento *</Label>
+                <Select value={newProduct.payment_type} onValueChange={(value) => setNewProduct({ ...newProduct, payment_type: value })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="duelcoins">DuelCoins (item digital)</SelectItem>
+                    <SelectItem value="money">Dinheiro (R$ - produto físico)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
+                {newProduct.payment_type === 'money' ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="price-brl">Preço (R$) *</Label>
+                    <Input
+                      id="price-brl"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="49.90"
+                      value={newProduct.price_brl || ""}
+                      onChange={(e) => setNewProduct({ ...newProduct, price_brl: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+                ) : (
                 <div className="space-y-2">
                   <Label htmlFor="price">Preço (DuelCoins) *</Label>
                   <Input
@@ -1018,6 +1043,7 @@ export default function Marketplace() {
                     onChange={(e) => setNewProduct({ ...newProduct, price_duelcoins: parseInt(e.target.value) || 0 })}
                   />
                 </div>
+                )}
 
                 <div className="space-y-2">
                   <Label htmlFor="stock">Estoque (opcional)</Label>
