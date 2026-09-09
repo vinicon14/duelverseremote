@@ -152,6 +152,8 @@ export default function Marketplace() {
     name: "",
     description: "",
     price_duelcoins: 0,
+    price_brl: 0,
+    payment_type: "duelcoins",
     category: "digital_item",
     product_type: "one_time",
     stock: null as number | null,
@@ -442,7 +444,8 @@ export default function Marketplace() {
       return;
     }
 
-    if (!newProduct.name || newProduct.price_duelcoins <= 0) {
+    const isMoney = newProduct.payment_type === 'money';
+    if (!newProduct.name || (isMoney ? newProduct.price_brl <= 0 : newProduct.price_duelcoins <= 0)) {
       toast({ title: "Erro", description: "Nome e preço são obrigatórios", variant: "destructive" });
       return;
     }
@@ -460,9 +463,11 @@ export default function Marketplace() {
         .insert({
           name: newProduct.name,
           description: newProduct.description,
-          price_duelcoins: newProduct.price_duelcoins,
-          category: newProduct.category,
-          product_type: newProduct.product_type,
+          price_duelcoins: isMoney ? 0 : newProduct.price_duelcoins,
+          price_brl: isMoney ? newProduct.price_brl : null,
+          payment_type: newProduct.payment_type,
+          category: isMoney ? 'physical' : newProduct.category,
+          product_type: isMoney ? 'physical' : newProduct.product_type,
           stock: newProduct.stock,
           image_url: newProduct.image_url || null,
           seller_id: user?.id,
@@ -483,6 +488,8 @@ export default function Marketplace() {
           name: "",
           description: "",
           price_duelcoins: 0,
+          price_brl: 0,
+          payment_type: "duelcoins",
           category: "digital_item",
           product_type: "one_time",
           stock: null,
@@ -515,7 +522,7 @@ export default function Marketplace() {
 
   const openEditProduct = (product: MarketplaceProduct) => {
     setEditingProduct(product);
-    setNewProduct({ name: product.name, description: product.description || '', price_duelcoins: product.price_duelcoins, category: product.category, product_type: product.product_type, stock: product.stock, image_url: product.image_url || '', item_type: (product.metadata as any)?.item_type || '' });
+    setNewProduct({ name: product.name, description: product.description || '', price_duelcoins: product.price_duelcoins, price_brl: Number((product as any).price_brl ?? 0), payment_type: (product as any).payment_type || 'duelcoins', category: product.category, product_type: product.product_type, stock: product.stock, image_url: product.image_url || '', item_type: (product.metadata as any)?.item_type || '' });
     setImagePreview(product.image_url || null);
     setEditProductDialogOpen(true);
   };
@@ -526,7 +533,8 @@ export default function Marketplace() {
     try {
       const metadata: any = {};
       if (newProduct.category === 'digital_item' && newProduct.item_type) metadata.item_type = newProduct.item_type;
-      const { error } = await supabase.from('marketplace_products').update({ name: newProduct.name, description: newProduct.description, price_duelcoins: newProduct.price_duelcoins, category: newProduct.category, product_type: newProduct.product_type, stock: newProduct.stock, image_url: newProduct.image_url || null, metadata }).eq('id', editingProduct.id);
+      const isMoneyEdit = newProduct.payment_type === 'money';
+      const { error } = await supabase.from('marketplace_products').update({ name: newProduct.name, description: newProduct.description, price_duelcoins: isMoneyEdit ? 0 : newProduct.price_duelcoins, price_brl: isMoneyEdit ? newProduct.price_brl : null, payment_type: newProduct.payment_type, category: isMoneyEdit ? 'physical' : newProduct.category, product_type: isMoneyEdit ? 'physical' : newProduct.product_type, stock: newProduct.stock, image_url: newProduct.image_url || null, metadata }).eq('id', editingProduct.id);
       if (error) throw error;
       toast({ title: 'Produto atualizado! ✅' });
       setEditProductDialogOpen(false);
@@ -998,7 +1006,32 @@ export default function Marketplace() {
                 />
               </div>
 
+              <div className="space-y-2">
+                <Label>Forma de pagamento *</Label>
+                <Select value={newProduct.payment_type} onValueChange={(value) => setNewProduct({ ...newProduct, payment_type: value })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="duelcoins">DuelCoins (item digital)</SelectItem>
+                    <SelectItem value="money">Dinheiro (R$ - produto físico)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
+                {newProduct.payment_type === 'money' ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="price-brl">Preço (R$) *</Label>
+                    <Input
+                      id="price-brl"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="49.90"
+                      value={newProduct.price_brl || ""}
+                      onChange={(e) => setNewProduct({ ...newProduct, price_brl: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+                ) : (
                 <div className="space-y-2">
                   <Label htmlFor="price">Preço (DuelCoins) *</Label>
                   <Input
@@ -1010,6 +1043,7 @@ export default function Marketplace() {
                     onChange={(e) => setNewProduct({ ...newProduct, price_duelcoins: parseInt(e.target.value) || 0 })}
                   />
                 </div>
+                )}
 
                 <div className="space-y-2">
                   <Label htmlFor="stock">Estoque (opcional)</Label>
@@ -1153,8 +1187,17 @@ export default function Marketplace() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
+                  {newProduct.payment_type === 'money' ? (
+                    <>
+                      <Label>Preço (R$) *</Label>
+                      <Input type="number" min="0" step="0.01" value={newProduct.price_brl || ""} onChange={(e) => setNewProduct({ ...newProduct, price_brl: parseFloat(e.target.value) || 0 })} />
+                    </>
+                  ) : (
+                    <>
                   <Label>Preço (DuelCoins) *</Label>
                   <Input type="number" min="1" value={newProduct.price_duelcoins || ""} onChange={(e) => setNewProduct({ ...newProduct, price_duelcoins: parseInt(e.target.value) || 0 })} />
+                    </>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label>Estoque</Label>
