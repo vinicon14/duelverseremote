@@ -533,7 +533,8 @@ export default function Marketplace() {
     try {
       const metadata: any = {};
       if (newProduct.category === 'digital_item' && newProduct.item_type) metadata.item_type = newProduct.item_type;
-      const { error } = await supabase.from('marketplace_products').update({ name: newProduct.name, description: newProduct.description, price_duelcoins: newProduct.price_duelcoins, category: newProduct.category, product_type: newProduct.product_type, stock: newProduct.stock, image_url: newProduct.image_url || null, metadata }).eq('id', editingProduct.id);
+      const isMoneyEdit = newProduct.payment_type === 'money';
+      const { error } = await supabase.from('marketplace_products').update({ name: newProduct.name, description: newProduct.description, price_duelcoins: isMoneyEdit ? 0 : newProduct.price_duelcoins, price_brl: isMoneyEdit ? newProduct.price_brl : null, payment_type: newProduct.payment_type, category: isMoneyEdit ? 'physical' : newProduct.category, product_type: isMoneyEdit ? 'physical' : newProduct.product_type, stock: newProduct.stock, image_url: newProduct.image_url || null, metadata }).eq('id', editingProduct.id);
       if (error) throw error;
       toast({ title: 'Produto atualizado! ✅' });
       setEditProductDialogOpen(false);
