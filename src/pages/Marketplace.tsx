@@ -1187,8 +1187,17 @@ export default function Marketplace() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
+                  {newProduct.payment_type === 'money' ? (
+                    <>
+                      <Label>Preço (R$) *</Label>
+                      <Input type="number" min="0" step="0.01" value={newProduct.price_brl || ""} onChange={(e) => setNewProduct({ ...newProduct, price_brl: parseFloat(e.target.value) || 0 })} />
+                    </>
+                  ) : (
+                    <>
                   <Label>Preço (DuelCoins) *</Label>
                   <Input type="number" min="1" value={newProduct.price_duelcoins || ""} onChange={(e) => setNewProduct({ ...newProduct, price_duelcoins: parseInt(e.target.value) || 0 })} />
+                    </>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label>Estoque</Label>
