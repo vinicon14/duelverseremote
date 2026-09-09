@@ -74,7 +74,7 @@ export function PhysicalStore() {
       .select("id, name, description, price_brl, image_url, stock")
       .eq("is_active", true)
       .eq("payment_type", "money")
-      .eq("is_third_party_seller", false)
+      .eq("is_approved", true)
       .order("created_at", { ascending: false });
 
     if (error) {
