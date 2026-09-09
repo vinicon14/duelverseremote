@@ -348,6 +348,11 @@ export const AdminMarketplace = () => {
       toast({ title: "Nome obrigatório", variant: "destructive" });
       return;
     }
+    const isMoney = form.payment_type === 'money';
+    if (isMoney && (!form.price_brl || form.price_brl <= 0)) {
+      toast({ title: "Informe o preço em R$", variant: "destructive" });
+      return;
+    }
     setSaving(true);
     try {
       const metadata = form.category === 'digital_item' && form.digital_type
@@ -356,12 +361,12 @@ export const AdminMarketplace = () => {
       const payload = {
         name: form.name.trim(),
         description: form.description.trim() || null,
-        price_duelcoins: form.payment_type === 'money' ? 0 : form.price_duelcoins,
-        price_brl: form.payment_type === 'money' ? form.price_brl : null,
+        price_duelcoins: isMoney ? 0 : form.price_duelcoins,
+        price_brl: isMoney ? form.price_brl : null,
         payment_type: form.payment_type,
-        category: form.payment_type === 'money' ? 'physical' : form.category,
+        category: isMoney ? 'physical' : form.category,
         image_url: form.image_url.trim() || null,
-        product_type: form.payment_type === 'money' ? 'physical' : form.product_type,
+        product_type: isMoney ? 'physical' : form.product_type,
         is_active: form.is_active,
         stock: form.stock,
         metadata,
@@ -372,7 +377,9 @@ export const AdminMarketplace = () => {
         if (error) throw error;
         toast({ title: "Produto atualizado ✅" });
       } else {
-        const { error } = await supabase.from("marketplace_products").insert(payload);
+        const { error } = await supabase
+          .from("marketplace_products")
+          .insert({ ...payload, is_approved: true, is_third_party_seller: false });
         if (error) throw error;
         toast({ title: "Produto criado ✅" });
       }
