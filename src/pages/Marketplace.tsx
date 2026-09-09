@@ -152,6 +152,8 @@ export default function Marketplace() {
     name: "",
     description: "",
     price_duelcoins: 0,
+    price_brl: 0,
+    payment_type: "duelcoins",
     category: "digital_item",
     product_type: "one_time",
     stock: null as number | null,
