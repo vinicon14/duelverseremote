@@ -44,6 +44,7 @@ interface MarketplaceProduct {
   is_active: boolean;
   seller_id: string | null;
   is_third_party_seller: boolean;
+  price_brl?: number | null;
   payment_type?: string;
   is_approved: boolean;
   metadata: any;
@@ -1007,16 +1008,17 @@ export default function Marketplace() {
               </div>
 
               <div className="space-y-2">
-                <Label>Forma de pagamento *</Label>
+                <Label>Tipo de produto *</Label>
                 <Select value={newProduct.payment_type} onValueChange={(value) => setNewProduct({ ...newProduct, payment_type: value })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="duelcoins">DuelCoins (item digital)</SelectItem>
-                    <SelectItem value="money">Dinheiro (R$ - produto físico)</SelectItem>
+                    <SelectItem value="duelcoins">Produto digital</SelectItem>
+                    <SelectItem value="money">Produto físico</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
+              {newProduct.payment_type !== 'money' && (
               <div className="grid grid-cols-2 gap-4">
                 {newProduct.payment_type === 'money' ? (
                   <div className="space-y-2">
@@ -1057,6 +1059,7 @@ export default function Marketplace() {
                   />
                 </div>
               </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
