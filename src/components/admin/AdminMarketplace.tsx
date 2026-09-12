@@ -481,10 +481,16 @@ export const AdminMarketplace = () => {
                           <Badge variant="outline">{product.category}</Badge>
                         </TableCell>
                         <TableCell>
-                          <span className="flex items-center gap-1 text-secondary font-medium">
-                            <Coins className="w-4 h-4" />
-                            {product.price_duelcoins}
-                          </span>
+                          {product.payment_type === "money" ? (
+                            <span className="font-medium text-primary">
+                              {Number(product.price_brl || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1 text-secondary font-medium">
+                              <Coins className="w-4 h-4" />
+                              {product.price_duelcoins}
+                            </span>
+                          )}
                         </TableCell>
                         <TableCell className="text-xs">
                           {new Date(product.created_at).toLocaleDateString('pt-BR')}
@@ -705,10 +711,16 @@ export const AdminMarketplace = () => {
                       <Badge variant="outline">{product.category}</Badge>
                     </TableCell>
                     <TableCell>
-                      <span className="flex items-center gap-1 text-secondary font-medium">
-                        <Coins className="w-4 h-4" />
-                        {product.price_duelcoins}
-                      </span>
+                      {product.payment_type === "money" ? (
+                        <span className="font-medium text-primary">
+                          {Number(product.price_brl || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 text-secondary font-medium">
+                          <Coins className="w-4 h-4" />
+                          {product.price_duelcoins}
+                        </span>
+                      )}
                     </TableCell>
                     <TableCell>{product.stock ?? "∞"}</TableCell>
                     <TableCell>
