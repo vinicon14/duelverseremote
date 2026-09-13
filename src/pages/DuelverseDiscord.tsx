@@ -9,7 +9,7 @@ import { SEOHead } from "@/components/SEOHead";
 import { SEOLinksSection } from "@/components/SEOLinksSection";
 import { MessageCircle, Users, Video, Swords, Crown, Globe } from "lucide-react";
 
-const DISCORD_INVITE_URL = "https://discord.gg/36dEAWAAR";
+const DISCORD_INVITE_URL = "https://discord.gg/qTT2bVzVv";
 
 const DuelverseDiscord = () => {
   return (
