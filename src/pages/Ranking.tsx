@@ -85,8 +85,21 @@ const Ranking = () => {
     <div className="min-h-screen bg-transparent">
       <SEOHead tKey="ranking" path="/ranking" />
       <Navbar />
-      
+
       <main className="container mx-auto px-4 pt-20 sm:pt-24 pb-12">
+        <Tabs value={mainTab} onValueChange={handleMainTabChange} className="mb-6">
+          <TabsList className="bg-card/80">
+            <TabsTrigger value="ranking" className="uppercase tracking-[0.15em] text-xs">Ranking</TabsTrigger>
+            <TabsTrigger value="battlepass" className="uppercase tracking-[0.15em] text-xs">
+              Battle Pass{bpLevel ? ` • ${bpLevel}` : ""}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+
+        {mainTab === "battlepass" ? (
+          <BattlePass />
+        ) : (
+        <>
         <div className="mb-6 sm:mb-8 animate-fade-in-up">
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gradient-mystic mb-2 pb-1 leading-normal">
             {t('ranking.title')} — {getTcgDisplayName(selectedTcg)}
