@@ -245,25 +245,67 @@ export const BattlePass = () => {
       </Card>
 
       <div className="space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-muted-foreground">
             Recompensas
           </h2>
-          <div className="flex gap-3 text-[11px] text-muted-foreground">
+          <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
             <span className="flex items-center gap-1"><Lock className="h-3 w-3" /> Bloqueado</span>
             <span className="flex items-center gap-1"><LockOpen className="h-3 w-3" /> Desbloqueado</span>
             <span className="flex items-center gap-1"><Check className="h-3 w-3" /> Resgatado</span>
           </div>
         </div>
 
-        <div className="overflow-x-auto pb-3">
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label="Níveis anteriores"
+            className="h-9 w-9 shrink-0"
+            onClick={() => scrollByPage(-1)}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="h-9 flex-1 gap-1.5 text-xs"
+            onClick={() => scrollToLevel(info.currentLevel)}
+          >
+            <Target className="h-3.5 w-3.5" />
+            Ir para o meu nível ({info.currentLevel})
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label="Próximos níveis"
+            className="h-9 w-9 shrink-0"
+            onClick={() => scrollByPage(1)}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+
+        <div
+          ref={trackRef}
+          className="snap-x snap-mandatory overflow-x-auto overscroll-x-contain pb-3 [-webkit-overflow-scrolling:touch]"
+        >
           <div className="flex min-w-max gap-2">
             {levels.map((lvl) => {
               const unlocked = progress.wins >= lvl.wins_required;
+              const isCurrent = lvl.level === info.currentLevel;
               const free = lvl.rewards.find((r) => r.track === "free");
               const pro = lvl.rewards.find((r) => r.track === "pro");
               return (
-                <div key={lvl.level} className="w-[132px] space-y-2">
+                <div
+                  key={lvl.level}
+                  ref={(el) => {
+                    levelRefs.current[lvl.level] = el;
+                  }}
+                  className={`w-[132px] shrink-0 snap-center space-y-2 rounded-xl p-1 ${
+                    isCurrent ? "bg-primary/10 ring-1 ring-primary/40" : ""
+                  }`}
+                >
                   <div
                     className={`rounded-lg border px-2 py-1.5 text-center ${
                       unlocked ? "border-primary/40 bg-primary/10" : "border-border/60"
@@ -291,7 +333,7 @@ export const BattlePass = () => {
             })}
           </div>
         </div>
-        <div className="flex gap-4 text-[11px] text-muted-foreground">
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
           <span>Linha superior: trilha FREE</span>
           <span>Linha inferior: trilha PRO</span>
         </div>
