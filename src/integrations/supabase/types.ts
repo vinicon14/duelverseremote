@@ -47,6 +47,383 @@ export type Database = {
         }
         Relationships: []
       }
+      battle_pass_levels: {
+        Row: {
+          created_at: string
+          id: string
+          level: number
+          season_id: string
+          updated_at: string
+          wins_required: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          level: number
+          season_id: string
+          updated_at?: string
+          wins_required?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          level?: number
+          season_id?: string
+          updated_at?: string
+          wins_required?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battle_pass_levels_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "battle_pass_seasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      battle_pass_missions: {
+        Row: {
+          created_at: string
+          goal: number
+          id: string
+          is_active: boolean
+          metric: string
+          reward_duelcoins: number
+          scope: string
+          season_id: string
+          sort_order: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          goal?: number
+          id?: string
+          is_active?: boolean
+          metric: string
+          reward_duelcoins?: number
+          scope: string
+          season_id: string
+          sort_order?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          goal?: number
+          id?: string
+          is_active?: boolean
+          metric?: string
+          reward_duelcoins?: number
+          scope?: string
+          season_id?: string
+          sort_order?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battle_pass_missions_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "battle_pass_seasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      battle_pass_purchases: {
+        Row: {
+          created_at: string
+          id: string
+          price_duelcoins: number
+          season_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          price_duelcoins?: number
+          season_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          price_duelcoins?: number
+          season_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battle_pass_purchases_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "battle_pass_seasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      battle_pass_reward_claims: {
+        Row: {
+          claimed_at: string
+          id: string
+          reward_id: string
+          season_id: string
+          user_id: string
+        }
+        Insert: {
+          claimed_at?: string
+          id?: string
+          reward_id: string
+          season_id: string
+          user_id: string
+        }
+        Update: {
+          claimed_at?: string
+          id?: string
+          reward_id?: string
+          season_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battle_pass_reward_claims_reward_id_fkey"
+            columns: ["reward_id"]
+            isOneToOne: false
+            referencedRelation: "battle_pass_rewards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battle_pass_reward_claims_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "battle_pass_seasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      battle_pass_rewards: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          level: number
+          metadata: Json
+          reward_type: string
+          season_id: string
+          title: string
+          track: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          level: number
+          metadata?: Json
+          reward_type?: string
+          season_id: string
+          title: string
+          track: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          level?: number
+          metadata?: Json
+          reward_type?: string
+          season_id?: string
+          title?: string
+          track?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battle_pass_rewards_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "battle_pass_seasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      battle_pass_seasons: {
+        Row: {
+          count_tournament_wins: boolean
+          created_at: string
+          ends_at: string
+          id: string
+          is_active: boolean
+          max_levels: number
+          name: string
+          pro_price_duelcoins: number
+          season_number: number
+          starts_at: string
+          updated_at: string
+        }
+        Insert: {
+          count_tournament_wins?: boolean
+          created_at?: string
+          ends_at?: string
+          id?: string
+          is_active?: boolean
+          max_levels?: number
+          name: string
+          pro_price_duelcoins?: number
+          season_number: number
+          starts_at?: string
+          updated_at?: string
+        }
+        Update: {
+          count_tournament_wins?: boolean
+          created_at?: string
+          ends_at?: string
+          id?: string
+          is_active?: boolean
+          max_levels?: number
+          name?: string
+          pro_price_duelcoins?: number
+          season_number?: number
+          starts_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      battle_pass_user_missions: {
+        Row: {
+          claimed_at: string | null
+          completed_at: string | null
+          created_at: string
+          id: string
+          mission_id: string
+          period_key: string
+          progress: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          claimed_at?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          mission_id: string
+          period_key: string
+          progress?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          claimed_at?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          mission_id?: string
+          period_key?: string
+          progress?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battle_pass_user_missions_mission_id_fkey"
+            columns: ["mission_id"]
+            isOneToOne: false
+            referencedRelation: "battle_pass_missions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      battle_pass_user_progress: {
+        Row: {
+          created_at: string
+          duels_played: number
+          id: string
+          level: number
+          season_id: string
+          tournament_wins: number
+          updated_at: string
+          user_id: string
+          wins: number
+        }
+        Insert: {
+          created_at?: string
+          duels_played?: number
+          id?: string
+          level?: number
+          season_id: string
+          tournament_wins?: number
+          updated_at?: string
+          user_id: string
+          wins?: number
+        }
+        Update: {
+          created_at?: string
+          duels_played?: number
+          id?: string
+          level?: number
+          season_id?: string
+          tournament_wins?: number
+          updated_at?: string
+          user_id?: string
+          wins?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battle_pass_user_progress_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "battle_pass_seasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      battle_pass_win_events: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          season_id: string
+          source: string
+          source_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind?: string
+          season_id: string
+          source: string
+          source_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          season_id?: string
+          source?: string
+          source_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battle_pass_win_events_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "battle_pass_seasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_messages: {
         Row: {
           created_at: string
@@ -2433,6 +2810,38 @@ export type Database = {
       award_xp: {
         Args: { _amount: number; _reason?: string; _tcg_type: string }
         Returns: Json
+      }
+      bp_admin_set_progress: {
+        Args: { p_season_id: string; p_user_id: string; p_wins: number }
+        Returns: Json
+      }
+      bp_bump_missions: {
+        Args: {
+          p_amount: number
+          p_metric: string
+          p_season_id: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
+      bp_claim_mission: { Args: { p_mission_id: string }; Returns: Json }
+      bp_claim_reward: { Args: { p_reward_id: string }; Returns: Json }
+      bp_current_season_id: { Args: never; Returns: string }
+      bp_get_overview: { Args: { p_season_id?: string }; Returns: Json }
+      bp_level_for_wins: {
+        Args: { p_season_id: string; p_wins: number }
+        Returns: number
+      }
+      bp_period_key: { Args: { p_scope: string }; Returns: string }
+      bp_purchase_pro: { Args: { p_season_id: string }; Returns: Json }
+      bp_register_event: {
+        Args: {
+          p_kind: string
+          p_source: string
+          p_source_id: string
+          p_user_id: string
+        }
+        Returns: undefined
       }
       calculate_level_from_points: {
         Args: { p_points: number }

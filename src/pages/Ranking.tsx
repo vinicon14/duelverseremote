@@ -17,6 +17,9 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SEOHead } from "@/components/SEOHead";
 import { useTranslation } from "react-i18next";
 import { getTcgDisplayName } from "@/utils/tcgDisplay";
+import { useSearchParams } from "react-router-dom";
+import { BattlePass } from "@/components/battlepass/BattlePass";
+import { useBattlePass, getNextLevelInfo } from "@/hooks/useBattlePass";
 
 const TCG_OPTIONS = ['yugioh', 'genesis', 'rush_duel'];
 
@@ -24,6 +27,14 @@ const Ranking = () => {
   const { t } = useTranslation();
   const { toast } = useToast();
   const { activeTcg } = useTcg();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const mainTab = searchParams.get('tab') === 'battlepass' ? 'battlepass' : 'ranking';
+  const { levels: bpLevels, progress: bpProgress } = useBattlePass();
+  const bpLevel = bpLevels.length ? getNextLevelInfo(bpLevels, bpProgress.wins).currentLevel : null;
+
+  const handleMainTabChange = (value: string) => {
+    setSearchParams(value === 'ranking' ? {} : { tab: value }, { replace: true });
+  };
   const [selectedTcg, setSelectedTcg] = useState<string>(activeTcg);
   const [rankings, setRankings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -85,8 +96,21 @@ const Ranking = () => {
     <div className="min-h-screen bg-transparent">
       <SEOHead tKey="ranking" path="/ranking" />
       <Navbar />
-      
+
       <main className="container mx-auto px-4 pt-20 sm:pt-24 pb-12">
+        <Tabs value={mainTab} onValueChange={handleMainTabChange} className="mb-6">
+          <TabsList className="bg-card/80">
+            <TabsTrigger value="ranking" className="uppercase tracking-[0.15em] text-xs">Ranking</TabsTrigger>
+            <TabsTrigger value="battlepass" className="uppercase tracking-[0.15em] text-xs">
+              Battle Pass{bpLevel ? ` • ${bpLevel}` : ""}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+
+        {mainTab === "battlepass" ? (
+          <BattlePass />
+        ) : (
+        <>
         <div className="mb-6 sm:mb-8 animate-fade-in-up">
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gradient-mystic mb-2 pb-1 leading-normal">
             {t('ranking.title')} — {getTcgDisplayName(selectedTcg)}
@@ -177,6 +201,8 @@ const Ranking = () => {
               );
             })}
           </div>
+        )}
+        </>
         )}
       </main>
     </div>
