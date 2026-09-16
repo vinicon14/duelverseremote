@@ -207,7 +207,7 @@ export const BattlePass = () => {
                 {seasonEnded && " • Temporada encerrada"}
               </p>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex w-full items-center justify-between gap-4 sm:w-auto sm:justify-end">
               <div className="text-right">
                 <div className="flex items-center justify-end gap-2 text-lg font-semibold">
                   <Trophy className="h-4 w-4 text-secondary" />
