@@ -45,10 +45,19 @@ const RewardCell = ({
             : "border-border/60 opacity-60"
       }`}
     >
-      <div className="flex items-start gap-1">
-        <span className="mt-0.5 text-muted-foreground">
-          {REWARD_ICON[reward.reward_type] ?? <Trophy className="h-3.5 w-3.5" />}
-        </span>
+      <div className="flex items-start gap-1.5">
+        {reward.image_url ? (
+          <img
+            src={reward.image_url}
+            alt={reward.title}
+            loading="lazy"
+            className="h-8 w-8 shrink-0 rounded object-cover"
+          />
+        ) : (
+          <span className="mt-0.5 text-muted-foreground">
+            {REWARD_ICON[reward.reward_type] ?? <Trophy className="h-3.5 w-3.5" />}
+          </span>
+        )}
         <span className="line-clamp-2 text-[11px] leading-tight">{reward.title}</span>
       </div>
       {state === "claimed" ? (
