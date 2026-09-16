@@ -28,6 +28,7 @@ import { AdminVerifications } from "@/components/admin/AdminVerifications";
 import { AdminMetrics } from "@/components/admin/AdminMetrics";
 import { AdminMonetag } from "@/components/admin/AdminMonetag";
 import { AdminRankingReset } from "@/components/admin/AdminRankingReset";
+import { AdminBattlePass } from "@/components/admin/AdminBattlePass";
 import { Shield, Loader2 } from "lucide-react";
 
 export default function Admin() {
