@@ -270,9 +270,13 @@ export const AdminMarketplace = () => {
     setLoading(false);
   };
 
-  const openCreate = () => {
+  const openCreate = (kind: "digital" | "physical" = "digital") => {
     setEditingId(null);
-    setForm(emptyForm);
+    setForm(
+      kind === "physical"
+        ? { ...emptyForm, payment_type: "money", category: "physical", product_type: "physical", stock: 1 }
+        : emptyForm
+    );
     setImagePreview(null);
     setDialogOpen(true);
   };
