@@ -5,7 +5,7 @@
  * Interface administrativa para gerenciar usuários, notícias,
  * anúncios, torneios, juizes e configurações do sistema.
  */
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Navbar } from "@/components/Navbar";
