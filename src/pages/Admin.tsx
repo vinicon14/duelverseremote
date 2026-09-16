@@ -29,12 +29,60 @@ import { AdminMetrics } from "@/components/admin/AdminMetrics";
 import { AdminMonetag } from "@/components/admin/AdminMonetag";
 import { AdminRankingReset } from "@/components/admin/AdminRankingReset";
 import { AdminBattlePass } from "@/components/admin/AdminBattlePass";
-import { Shield, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Shield, Loader2, Search } from "lucide-react";
 
 export default function Admin() {
   const { isAdmin, loading } = useAdmin();
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const [tab, setTab] = useState("metrics");
+  const [query, setQuery] = useState("");
+
+  const groups = [
+    {
+      title: "Visão geral",
+      items: [
+        { value: "metrics", label: "Métricas" },
+        { value: "ranked", label: "Ranqueada" },
+        { value: "battlepass", label: "Battle Pass" },
+      ],
+    },
+    {
+      title: "Conteúdo",
+      items: [
+        { value: "news", label: t("admin.tabs.news") },
+        { value: "ads", label: t("admin.tabs.ads") },
+        { value: "monetag", label: "Monetag" },
+        { value: "discord", label: t("admin.tabs.discord") },
+      ],
+    },
+    {
+      title: "Comunidade",
+      items: [
+        { value: "users", label: t("admin.tabs.users") },
+        { value: "duels", label: t("admin.tabs.duels") },
+        { value: "tournaments", label: t("admin.tabs.tournaments") },
+        { value: "judges", label: t("admin.tabs.judges") },
+        { value: "verifications", label: "Verificações" },
+      ],
+    },
+    {
+      title: "Loja e economia",
+      items: [
+        { value: "marketplace", label: t("admin.tabs.marketplace") },
+        { value: "duelcoins", label: t("admin.tabs.duelcoins") },
+        { value: "packages", label: t("admin.tabs.packages") },
+        { value: "plans", label: t("admin.tabs.plans") },
+        { value: "coupons", label: "Cupons" },
+      ],
+    },
+    {
+      title: "Sistema",
+      items: [{ value: "settings", label: t("admin.tabs.settings") }],
+    },
+  ];
+
 
   useEffect(() => {
     if (!loading && !isAdmin) {
