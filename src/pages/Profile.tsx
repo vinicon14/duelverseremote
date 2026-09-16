@@ -18,6 +18,7 @@ import { AvatarUpload } from "@/components/AvatarUpload";
 import { ChangePasswordForm } from "@/components/ChangePasswordForm";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { DiscordLinkCard } from "@/components/DiscordLinkCard";
+import { BattlePassProfileCard } from "@/components/battlepass/BattlePassProfileCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { formatDistanceToNow } from "date-fns";
@@ -623,6 +624,8 @@ const Profile = () => {
                 </div>
               </CardContent>
             </Card>
+
+            <BattlePassProfileCard />
 
             <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
               <TabsList className="grid h-auto w-full grid-cols-2 rounded-xl bg-card/80 p-1 md:grid-cols-5">

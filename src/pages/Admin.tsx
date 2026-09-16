@@ -78,6 +78,7 @@ export default function Admin() {
             <TabsTrigger value="ads">{t('admin.tabs.ads')}</TabsTrigger>
             <TabsTrigger value="monetag">Monetag</TabsTrigger>
             <TabsTrigger value="ranked">Ranqueada</TabsTrigger>
+            <TabsTrigger value="battlepass">Battle Pass</TabsTrigger>
             <TabsTrigger value="users">{t('admin.tabs.users')}</TabsTrigger>
             <TabsTrigger value="duels">{t('admin.tabs.duels')}</TabsTrigger>
             <TabsTrigger value="tournaments">{t('admin.tabs.tournaments')}</TabsTrigger>
@@ -102,6 +103,10 @@ export default function Admin() {
 
           <TabsContent value="ranked" className="mt-6">
             <AdminRankingReset />
+          </TabsContent>
+
+          <TabsContent value="battlepass" className="mt-6">
+            <AdminBattlePass />
           </TabsContent>
 
           <TabsContent value="news" className="mt-6">
