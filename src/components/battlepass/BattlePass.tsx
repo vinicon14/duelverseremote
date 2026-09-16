@@ -105,6 +105,29 @@ export const BattlePass = () => {
 
   const info = useMemo(() => getNextLevelInfo(levels, progress.wins), [levels, progress.wins]);
 
+  const trackRef = useRef<HTMLDivElement | null>(null);
+  const levelRefs = useRef<Record<number, HTMLDivElement | null>>({});
+  const didAutoScroll = useRef(false);
+
+  const scrollToLevel = (level: number, behavior: ScrollBehavior = "smooth") => {
+    const el = levelRefs.current[level];
+    const track = trackRef.current;
+    if (!el || !track) return;
+    track.scrollTo({ left: el.offsetLeft - track.clientWidth / 2 + el.clientWidth / 2, behavior });
+  };
+
+  const scrollByPage = (dir: 1 | -1) => {
+    const track = trackRef.current;
+    if (!track) return;
+    track.scrollBy({ left: dir * Math.max(track.clientWidth * 0.8, 160), behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    if (didAutoScroll.current || !levels.length) return;
+    didAutoScroll.current = true;
+    requestAnimationFrame(() => scrollToLevel(info.currentLevel, "auto"));
+  }, [levels.length, info.currentLevel]);
+
   const handleClaimReward = async (rewardId: string) => {
     setClaiming(rewardId);
     const { data, error } = await supabase.rpc("bp_claim_reward", { p_reward_id: rewardId } as any);
