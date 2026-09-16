@@ -69,29 +69,38 @@ export default function Admin() {
           </p>
         </div>
 
-        <Tabs defaultValue="news" className="w-full">
-          <div className="overflow-x-auto -mx-4 px-4 pb-2">
-            <TabsList className="flex w-max sm:w-full overflow-x-auto gap-1">
-            <TabsTrigger value="metrics">Métricas</TabsTrigger>
-            <TabsTrigger value="news">{t('admin.tabs.news')}</TabsTrigger>
-              <TabsTrigger value="discord">{t('admin.tabs.discord')}</TabsTrigger>
-            <TabsTrigger value="ads">{t('admin.tabs.ads')}</TabsTrigger>
-            <TabsTrigger value="monetag">Monetag</TabsTrigger>
-            <TabsTrigger value="ranked">Ranqueada</TabsTrigger>
-            <TabsTrigger value="battlepass">Battle Pass</TabsTrigger>
-            <TabsTrigger value="users">{t('admin.tabs.users')}</TabsTrigger>
-            <TabsTrigger value="duels">{t('admin.tabs.duels')}</TabsTrigger>
-            <TabsTrigger value="tournaments">{t('admin.tabs.tournaments')}</TabsTrigger>
-            <TabsTrigger value="duelcoins">{t('admin.tabs.duelcoins')}</TabsTrigger>
-            <TabsTrigger value="packages">{t('admin.tabs.packages')}</TabsTrigger>
-            <TabsTrigger value="judges">{t('admin.tabs.judges')}</TabsTrigger>
-            <TabsTrigger value="plans">{t('admin.tabs.plans')}</TabsTrigger>
-            <TabsTrigger value="marketplace">{t('admin.tabs.marketplace')}</TabsTrigger>
-            <TabsTrigger value="coupons">Cupons</TabsTrigger>
-            <TabsTrigger value="verifications">Verificações</TabsTrigger>
-            <TabsTrigger value="settings">{t('admin.tabs.settings')}</TabsTrigger>
-            </TabsList>
+        <Tabs value={tab} onValueChange={setTab} className="w-full">
+          <div className="space-y-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Buscar seção do painel..."
+                className="pl-9"
+              />
+            </div>
+
+            {groups.map((group) => {
+              const items = group.items.filter((i) =>
+                i.label.toLowerCase().includes(query.trim().toLowerCase())
+              );
+              if (items.length === 0) return null;
+              return (
+                <div key={group.title} className="space-y-1.5">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">{group.title}</p>
+                  <TabsList className="flex flex-wrap h-auto w-full justify-start gap-1 p-1">
+                    {items.map((item) => (
+                      <TabsTrigger key={item.value} value={item.value} className="text-xs sm:text-sm">
+                        {item.label}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                </div>
+              );
+            })}
           </div>
+          
           
           <TabsContent value="metrics" className="mt-6">
             <AdminMetrics />
