@@ -191,6 +191,8 @@ const Ranking = () => {
             })}
           </div>
         )}
+        </>
+        )}
       </main>
     </div>
   );
