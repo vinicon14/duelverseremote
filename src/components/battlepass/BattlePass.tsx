@@ -3,7 +3,7 @@
  *
  * Progressão por temporada baseada em vitórias, com trilhas FREE e PRO.
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +12,18 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useBattlePass, getNextLevelInfo, type BattlePassReward } from "@/hooks/useBattlePass";
 import { BattlePassMissions } from "./BattlePassMissions";
-import { Check, Coins, Crown, Lock, LockOpen, Trophy, Loader2 } from "lucide-react";
+import {
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Coins,
+  Crown,
+  Lock,
+  LockOpen,
+  Target,
+  Trophy,
+  Loader2,
+} from "lucide-react";
 
 const REWARD_ICON: Record<string, JSX.Element> = {
   duelcoins: <Coins className="h-3.5 w-3.5" />,
