@@ -5,7 +5,7 @@
  * Interface administrativa para gerenciar usuários, notícias,
  * anúncios, torneios, juizes e configurações do sistema.
  */
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Navbar } from "@/components/Navbar";
@@ -29,12 +29,60 @@ import { AdminMetrics } from "@/components/admin/AdminMetrics";
 import { AdminMonetag } from "@/components/admin/AdminMonetag";
 import { AdminRankingReset } from "@/components/admin/AdminRankingReset";
 import { AdminBattlePass } from "@/components/admin/AdminBattlePass";
-import { Shield, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Shield, Loader2, Search } from "lucide-react";
 
 export default function Admin() {
   const { isAdmin, loading } = useAdmin();
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const [tab, setTab] = useState("metrics");
+  const [query, setQuery] = useState("");
+
+  const groups = [
+    {
+      title: "Visão geral",
+      items: [
+        { value: "metrics", label: "Métricas" },
+        { value: "ranked", label: "Ranqueada" },
+        { value: "battlepass", label: "Battle Pass" },
+      ],
+    },
+    {
+      title: "Conteúdo",
+      items: [
+        { value: "news", label: t("admin.tabs.news") },
+        { value: "ads", label: t("admin.tabs.ads") },
+        { value: "monetag", label: "Monetag" },
+        { value: "discord", label: t("admin.tabs.discord") },
+      ],
+    },
+    {
+      title: "Comunidade",
+      items: [
+        { value: "users", label: t("admin.tabs.users") },
+        { value: "duels", label: t("admin.tabs.duels") },
+        { value: "tournaments", label: t("admin.tabs.tournaments") },
+        { value: "judges", label: t("admin.tabs.judges") },
+        { value: "verifications", label: "Verificações" },
+      ],
+    },
+    {
+      title: "Loja e economia",
+      items: [
+        { value: "marketplace", label: t("admin.tabs.marketplace") },
+        { value: "duelcoins", label: t("admin.tabs.duelcoins") },
+        { value: "packages", label: t("admin.tabs.packages") },
+        { value: "plans", label: t("admin.tabs.plans") },
+        { value: "coupons", label: "Cupons" },
+      ],
+    },
+    {
+      title: "Sistema",
+      items: [{ value: "settings", label: t("admin.tabs.settings") }],
+    },
+  ];
+
 
   useEffect(() => {
     if (!loading && !isAdmin) {
@@ -69,29 +117,38 @@ export default function Admin() {
           </p>
         </div>
 
-        <Tabs defaultValue="news" className="w-full">
-          <div className="overflow-x-auto -mx-4 px-4 pb-2">
-            <TabsList className="flex w-max sm:w-full overflow-x-auto gap-1">
-            <TabsTrigger value="metrics">Métricas</TabsTrigger>
-            <TabsTrigger value="news">{t('admin.tabs.news')}</TabsTrigger>
-              <TabsTrigger value="discord">{t('admin.tabs.discord')}</TabsTrigger>
-            <TabsTrigger value="ads">{t('admin.tabs.ads')}</TabsTrigger>
-            <TabsTrigger value="monetag">Monetag</TabsTrigger>
-            <TabsTrigger value="ranked">Ranqueada</TabsTrigger>
-            <TabsTrigger value="battlepass">Battle Pass</TabsTrigger>
-            <TabsTrigger value="users">{t('admin.tabs.users')}</TabsTrigger>
-            <TabsTrigger value="duels">{t('admin.tabs.duels')}</TabsTrigger>
-            <TabsTrigger value="tournaments">{t('admin.tabs.tournaments')}</TabsTrigger>
-            <TabsTrigger value="duelcoins">{t('admin.tabs.duelcoins')}</TabsTrigger>
-            <TabsTrigger value="packages">{t('admin.tabs.packages')}</TabsTrigger>
-            <TabsTrigger value="judges">{t('admin.tabs.judges')}</TabsTrigger>
-            <TabsTrigger value="plans">{t('admin.tabs.plans')}</TabsTrigger>
-            <TabsTrigger value="marketplace">{t('admin.tabs.marketplace')}</TabsTrigger>
-            <TabsTrigger value="coupons">Cupons</TabsTrigger>
-            <TabsTrigger value="verifications">Verificações</TabsTrigger>
-            <TabsTrigger value="settings">{t('admin.tabs.settings')}</TabsTrigger>
-            </TabsList>
+        <Tabs value={tab} onValueChange={setTab} className="w-full">
+          <div className="space-y-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Buscar seção do painel..."
+                className="pl-9"
+              />
+            </div>
+
+            {groups.map((group) => {
+              const items = group.items.filter((i) =>
+                i.label.toLowerCase().includes(query.trim().toLowerCase())
+              );
+              if (items.length === 0) return null;
+              return (
+                <div key={group.title} className="space-y-1.5">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">{group.title}</p>
+                  <TabsList className="flex flex-wrap h-auto w-full justify-start gap-1 p-1">
+                    {items.map((item) => (
+                      <TabsTrigger key={item.value} value={item.value} className="text-xs sm:text-sm">
+                        {item.label}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                </div>
+              );
+            })}
           </div>
+          
           
           <TabsContent value="metrics" className="mt-6">
             <AdminMetrics />

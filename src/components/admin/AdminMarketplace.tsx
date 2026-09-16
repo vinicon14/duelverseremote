@@ -270,9 +270,13 @@ export const AdminMarketplace = () => {
     setLoading(false);
   };
 
-  const openCreate = () => {
+  const openCreate = (kind: "digital" | "physical" = "digital") => {
     setEditingId(null);
-    setForm(emptyForm);
+    setForm(
+      kind === "physical"
+        ? { ...emptyForm, payment_type: "money", category: "physical", product_type: "physical", stock: 1 }
+        : emptyForm
+    );
     setImagePreview(null);
     setDialogOpen(true);
   };
@@ -521,12 +525,16 @@ export const AdminMarketplace = () => {
               Marketplace ({products.length})
             </h2>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="btn-mystic" onClick={openCreate}>
+          <div className="flex flex-wrap gap-2">
+            <Button className="btn-mystic" onClick={() => openCreate("digital")}>
               <Plus className="w-4 h-4 mr-2" />
               Novo Produto
             </Button>
-          </DialogTrigger>
+            <Button variant="outline" onClick={() => openCreate("physical")}>
+              <Package className="w-4 h-4 mr-2" />
+              Novo Item Físico
+            </Button>
+          </div>
           <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingId ? "Editar Produto" : "Novo Produto"}</DialogTitle>
