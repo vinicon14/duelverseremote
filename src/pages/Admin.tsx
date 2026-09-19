@@ -63,6 +63,7 @@ export default function Admin() {
         { value: "users", label: t("admin.tabs.users") },
         { value: "duels", label: t("admin.tabs.duels") },
         { value: "tournaments", label: t("admin.tabs.tournaments") },
+        { value: "party", label: "Partys" },
         { value: "judges", label: t("admin.tabs.judges") },
         { value: "verifications", label: "Verificações" },
       ],
