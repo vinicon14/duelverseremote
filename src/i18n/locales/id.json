@@ -465,7 +465,8 @@
     "remove": "Remove",
     "insufficientBalance": "Insufficient balance",
     "purchaseSuccess": "Purchase successful!",
-    "pendingApproval": "Pending approval"
+    "pendingApproval": "Pending approval",
+    "tabPhysical": "Produk Fisik"
   },
   "myItems": {
     "title": "My Items",
@@ -761,7 +762,32 @@
       "judges": "Judges",
       "plans": "Plans",
       "marketplace": "Approvals",
-      "settings": "Settings"
+      "settings": "Settings",
+      "discord": "Discord"
+    },
+    "discord": {
+      "title": "Integrasi Discord",
+      "description": "Kelola server Discord yang terhubung ke DuelVerse",
+      "botStatus": "Status Bot",
+      "botName": "Nama Bot",
+      "inviteLink": "Tautan Undangan",
+      "openInvite": "Buka",
+      "servers": "Server Terhubung",
+      "noServers": "Tidak ada server terhubung",
+      "addServer": "Tambah Server Baru",
+      "serverId": "ID Server",
+      "channelId": "ID Kanal",
+      "add": "Tambah",
+      "remove": "Hapus",
+      "sync": "Sinkronkan",
+      "serverUpdated": "Server berhasil diperbarui",
+      "serverAdded": "Server berhasil ditambahkan",
+      "serverRemoved": "Server berhasil dihapus",
+      "errorUpdating": "Gagal memperbarui server",
+      "errorAdding": "Gagal menambahkan server",
+      "errorRemoving": "Gagal menghapus server",
+      "connectionError": "Kesalahan koneksi",
+      "requireIds": "ID Server dan ID Kanal wajib diisi"
     }
   },
   "judgePanel": {
@@ -910,5 +936,9 @@
     "errorDesc": "Could not get the address.",
     "denied": "Permission denied",
     "deniedDesc": "Fill in the address manually."
+  },
+  "whatsappGroup": {
+    "label": "Grup WhatsApp",
+    "dismissHint": "Klik kanan untuk menyembunyikan"
   }
 }

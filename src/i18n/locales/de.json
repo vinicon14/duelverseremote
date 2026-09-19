@@ -465,7 +465,8 @@
     "remove": "Remove",
     "insufficientBalance": "Insufficient balance",
     "purchaseSuccess": "Purchase successful!",
-    "pendingApproval": "Pending approval"
+    "pendingApproval": "Pending approval",
+    "tabPhysical": "Physische Produkte"
   },
   "myItems": {
     "title": "My Items",
@@ -761,7 +762,32 @@
       "judges": "Judges",
       "plans": "Plans",
       "marketplace": "Approvals",
-      "settings": "Settings"
+      "settings": "Settings",
+      "discord": "Discord"
+    },
+    "discord": {
+      "title": "Discord-Integration",
+      "description": "Mit DuelVerse verbundene Discord-Server verwalten",
+      "botStatus": "Bot-Status",
+      "botName": "Bot-Name",
+      "inviteLink": "Einladungslink",
+      "openInvite": "Öffnen",
+      "servers": "Verbundene Server",
+      "noServers": "Keine Server verbunden",
+      "addServer": "Neuen Server hinzufügen",
+      "serverId": "Server-ID",
+      "channelId": "Kanal-ID",
+      "add": "Hinzufügen",
+      "remove": "Entfernen",
+      "sync": "Synchronisieren",
+      "serverUpdated": "Server erfolgreich aktualisiert",
+      "serverAdded": "Server erfolgreich hinzugefügt",
+      "serverRemoved": "Server erfolgreich entfernt",
+      "errorUpdating": "Fehler beim Aktualisieren des Servers",
+      "errorAdding": "Fehler beim Hinzufügen des Servers",
+      "errorRemoving": "Fehler beim Entfernen des Servers",
+      "connectionError": "Verbindungsfehler",
+      "requireIds": "Server-ID und Kanal-ID sind erforderlich"
     }
   },
   "judgePanel": {
@@ -910,5 +936,9 @@
     "errorDesc": "Adresse konnte nicht ermittelt werden.",
     "denied": "Zugriff verweigert",
     "deniedDesc": "Bitte Adresse manuell eingeben."
+  },
+  "whatsappGroup": {
+    "label": "WhatsApp-Gruppe",
+    "dismissHint": "Rechtsklick zum Ausblenden"
   }
 }

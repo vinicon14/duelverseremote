@@ -465,7 +465,8 @@
     "remove": "Remove",
     "insufficientBalance": "Insufficient balance",
     "purchaseSuccess": "Purchase successful!",
-    "pendingApproval": "Pending approval"
+    "pendingApproval": "Pending approval",
+    "tabPhysical": "Физические товары"
   },
   "myItems": {
     "title": "My Items",
@@ -761,7 +762,32 @@
       "judges": "Judges",
       "plans": "Plans",
       "marketplace": "Approvals",
-      "settings": "Settings"
+      "settings": "Settings",
+      "discord": "Discord"
+    },
+    "discord": {
+      "title": "Интеграция с Discord",
+      "description": "Управление серверами Discord, подключёнными к DuelVerse",
+      "botStatus": "Статус бота",
+      "botName": "Имя бота",
+      "inviteLink": "Ссылка-приглашение",
+      "openInvite": "Открыть",
+      "servers": "Подключённые серверы",
+      "noServers": "Нет подключённых серверов",
+      "addServer": "Добавить сервер",
+      "serverId": "ID сервера",
+      "channelId": "ID канала",
+      "add": "Добавить",
+      "remove": "Удалить",
+      "sync": "Синхронизировать",
+      "serverUpdated": "Сервер успешно обновлён",
+      "serverAdded": "Сервер успешно добавлен",
+      "serverRemoved": "Сервер успешно удалён",
+      "errorUpdating": "Ошибка при обновлении сервера",
+      "errorAdding": "Ошибка при добавлении сервера",
+      "errorRemoving": "Ошибка при удалении сервера",
+      "connectionError": "Ошибка подключения",
+      "requireIds": "Необходимы ID сервера и ID канала"
     }
   },
   "judgePanel": {
@@ -910,5 +936,9 @@
     "errorDesc": "Could not get the address.",
     "denied": "Permission denied",
     "deniedDesc": "Fill in the address manually."
+  },
+  "whatsappGroup": {
+    "label": "Группа WhatsApp",
+    "dismissHint": "Правый клик, чтобы скрыть"
   }
 }

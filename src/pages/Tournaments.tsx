@@ -28,6 +28,7 @@ import { useTcg } from "@/contexts/TcgContext";
 import { DecklistUploadModal } from "@/components/tournament/DecklistUploadModal";
 import { SEOHead } from "@/components/SEOHead";
 import { useTranslation } from "react-i18next";
+import { useUserCountry } from "@/hooks/useUserCountry";
 import { SEOLinksSection } from "@/components/SEOLinksSection";
 
 const Tournaments = () => {
@@ -38,6 +39,7 @@ const Tournaments = () => {
   const { isAdmin } = useAdmin();
   const { isPro } = useAccountType();
   const { activeTcg } = useTcg();
+  const { country: userCountry } = useUserCountry();
   const [tournaments, setTournaments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -59,7 +61,7 @@ const Tournaments = () => {
     };
 
     initialize();
-  }, [activeTcg]);
+  }, [activeTcg, userCountry]);
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -86,10 +88,13 @@ const Tournaments = () => {
 
       if (error) throw error;
 
-      const tournamentsWithCount = data?.map(t => ({
-        ...t,
-        participants: t.tournament_participants?.[0]?.count || 0,
-      })) || [];
+      // Torneios aparecem apenas no país em que foram criados
+      const tournamentsWithCount = (data || [])
+        .filter((t: any) => !userCountry || !t.country_code || t.country_code === userCountry)
+        .map((t: any) => ({
+          ...t,
+          participants: t.tournament_participants?.[0]?.count || 0,
+        }));
 
       setTournaments(tournamentsWithCount);
     } catch (error: any) {

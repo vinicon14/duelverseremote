@@ -465,7 +465,8 @@
     "remove": "Remove",
     "insufficientBalance": "Insufficient balance",
     "purchaseSuccess": "Purchase successful!",
-    "pendingApproval": "Pending approval"
+    "pendingApproval": "Pending approval",
+    "tabPhysical": "المنتجات المادية"
   },
   "myItems": {
     "title": "My Items",
@@ -761,7 +762,32 @@
       "judges": "Judges",
       "plans": "Plans",
       "marketplace": "Approvals",
-      "settings": "Settings"
+      "settings": "Settings",
+      "discord": "ديسكورد"
+    },
+    "discord": {
+      "title": "تكامل ديسكورد",
+      "description": "إدارة خوادم ديسكورد المتصلة بـ DuelVerse",
+      "botStatus": "حالة البوت",
+      "botName": "اسم البوت",
+      "inviteLink": "رابط الدعوة",
+      "openInvite": "فتح",
+      "servers": "الخوادم المتصلة",
+      "noServers": "لا توجد خوادم متصلة",
+      "addServer": "إضافة خادم جديد",
+      "serverId": "معرف الخادم",
+      "channelId": "معرف القناة",
+      "add": "إضافة",
+      "remove": "إزالة",
+      "sync": "مزامنة",
+      "serverUpdated": "تم تحديث الخادم بنجاح",
+      "serverAdded": "تمت إضافة الخادم بنجاح",
+      "serverRemoved": "تمت إزالة الخادم بنجاح",
+      "errorUpdating": "خطأ في تحديث الخادم",
+      "errorAdding": "خطأ في إضافة الخادم",
+      "errorRemoving": "خطأ في إزالة الخادم",
+      "connectionError": "خطأ في الاتصال",
+      "requireIds": "معرف الخادم ومعرف القناة مطلوبان"
     }
   },
   "judgePanel": {
@@ -910,5 +936,9 @@
     "errorDesc": "Could not get the address.",
     "denied": "Permission denied",
     "deniedDesc": "Fill in the address manually."
+  },
+  "whatsappGroup": {
+    "label": "مجموعة واتساب",
+    "dismissHint": "انقر بزر الفأرة الأيمن للإخفاء"
   }
 }

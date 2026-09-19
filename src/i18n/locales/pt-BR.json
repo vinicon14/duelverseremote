@@ -465,7 +465,8 @@
     "remove": "Remover",
     "insufficientBalance": "Saldo insuficiente",
     "purchaseSuccess": "Compra realizada!",
-    "pendingApproval": "Aguardando aprovação"
+    "pendingApproval": "Aguardando aprovação",
+    "tabPhysical": "Produtos Físicos"
   },
   "myItems": {
     "title": "Meus Itens",
@@ -765,28 +766,28 @@
       "discord": "Discord"
     },
     "discord": {
-      "title": "Integração Discord",
-      "description": "Gerencie servidores Discord conectados ao DuelVerse",
-      "botStatus": "Status do Bot",
-      "botName": "Nome do Bot",
-      "inviteLink": "Link de Convite",
-      "openInvite": "Abrir",
-      "servers": "Servidores Conectados",
-      "noServers": "Nenhum servidor conectado",
-      "addServer": "Adicionar Novo Servidor",
-      "serverId": "ID do Servidor",
-      "channelId": "ID do Canal",
-      "add": "Adicionar",
-      "remove": "Remover",
-      "sync": "Sincronizar",
-      "serverUpdated": "Servidor atualizado com sucesso",
-      "serverAdded": "Servidor adicionado com sucesso",
-      "serverRemoved": "Servidor removido com sucesso",
-      "errorUpdating": "Erro ao atualizar servidor",
-      "errorAdding": "Erro ao adicionar servidor",
-      "errorRemoving": "Erro ao remover servidor",
-      "connectionError": "Erro de conexão",
-      "requireIds": "ID do servidor e ID do canal são obrigatórios"
+      "title": "Discord Integration",
+      "description": "Manage Discord servers connected to DuelVerse",
+      "botStatus": "Bot Status",
+      "botName": "Bot Name",
+      "inviteLink": "Invite Link",
+      "openInvite": "Open",
+      "servers": "Connected Servers",
+      "noServers": "No servers connected",
+      "addServer": "Add New Server",
+      "serverId": "Server ID",
+      "channelId": "Channel ID",
+      "add": "Add",
+      "remove": "Remove",
+      "sync": "Sync",
+      "serverUpdated": "Server updated successfully",
+      "serverAdded": "Server added successfully",
+      "serverRemoved": "Server removed successfully",
+      "errorUpdating": "Error updating server",
+      "errorAdding": "Error adding server",
+      "errorRemoving": "Error removing server",
+      "connectionError": "Connection error",
+      "requireIds": "Server ID and Channel ID are required"
     }
   },
   "judgePanel": {
@@ -893,7 +894,7 @@
     "unknownError": "Erro desconhecido"
   },
   "whatsappGroup": {
-    "label": "Grupo WhatsApp",
+    "label": "Grupo do WhatsApp",
     "dismissHint": "Clique com o botão direito para ocultar"
   },
   "orders": {

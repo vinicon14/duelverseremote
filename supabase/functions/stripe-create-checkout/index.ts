@@ -71,7 +71,12 @@ serve(async (req) => {
     const chargeAmount =
       currency === "BRL"
         ? Number(pkg.price_brl)
-        : Math.max(1, Math.ceil(Number(pkg.price_brl) * RATES[currency])) - 0.01;
+        : Math.max(
+            0.5,
+            Number(
+              (Math.ceil(Number(pkg.price_brl) * RATES[currency] * 10) / 10 - 0.01).toFixed(2),
+            ),
+          );
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
 

@@ -465,7 +465,8 @@
     "remove": "Retirer",
     "insufficientBalance": "Solde insuffisant",
     "purchaseSuccess": "Achat réussi !",
-    "pendingApproval": "En attente d'approbation"
+    "pendingApproval": "En attente d'approbation",
+    "tabPhysical": "Produits Physiques"
   },
   "myItems": {
     "title": "Mes Objets",
@@ -761,7 +762,32 @@
       "judges": "Judges",
       "plans": "Plans",
       "marketplace": "Approvals",
-      "settings": "Settings"
+      "settings": "Settings",
+      "discord": "Discord"
+    },
+    "discord": {
+      "title": "Intégration Discord",
+      "description": "Gérer les serveurs Discord connectés à DuelVerse",
+      "botStatus": "Statut du bot",
+      "botName": "Nom du bot",
+      "inviteLink": "Lien d'invitation",
+      "openInvite": "Ouvrir",
+      "servers": "Serveurs connectés",
+      "noServers": "Aucun serveur connecté",
+      "addServer": "Ajouter un serveur",
+      "serverId": "ID du serveur",
+      "channelId": "ID du salon",
+      "add": "Ajouter",
+      "remove": "Supprimer",
+      "sync": "Synchroniser",
+      "serverUpdated": "Serveur mis à jour avec succès",
+      "serverAdded": "Serveur ajouté avec succès",
+      "serverRemoved": "Serveur supprimé avec succès",
+      "errorUpdating": "Erreur lors de la mise à jour du serveur",
+      "errorAdding": "Erreur lors de l'ajout du serveur",
+      "errorRemoving": "Erreur lors de la suppression du serveur",
+      "connectionError": "Erreur de connexion",
+      "requireIds": "L'ID du serveur et l'ID du salon sont obligatoires"
     }
   },
   "judgePanel": {
@@ -910,5 +936,9 @@
     "errorDesc": "Impossible d'obtenir l'adresse.",
     "denied": "Permission refusée",
     "deniedDesc": "Saisissez l'adresse manuellement."
+  },
+  "whatsappGroup": {
+    "label": "Groupe WhatsApp",
+    "dismissHint": "Clic droit pour masquer"
   }
 }

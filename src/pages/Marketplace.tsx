@@ -25,6 +25,7 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTranslation } from "react-i18next";
+import { useUserCountry } from "@/hooks/useUserCountry";
 import { SellerOrders } from "@/components/marketplace/SellerOrders";
 import { ShippingDialog, type ShippingInfo } from "@/components/marketplace/ShippingDialog";
 import { isPhysicalProduct } from "@/hooks/useMarketplacePurchase";
@@ -77,6 +78,7 @@ export default function Marketplace() {
   const { toast } = useToast();
   const { isPro } = useAccountType();
   const { t } = useTranslation();
+  const { isBrazil } = useUserCountry();
   const [createProductDialogOpen, setCreateProductDialogOpen] = useState(false);
   const [editProductDialogOpen, setEditProductDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<MarketplaceProduct | null>(null);
@@ -724,10 +726,12 @@ export default function Marketplace() {
               <Tag className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               {t('marketplace.tabThirdParty')}
             </TabsTrigger>
-            <TabsTrigger value="physical" className="gap-1 sm:gap-2 text-xs sm:text-sm flex-1 sm:flex-none">
-              <Truck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              Produtos Físicos
-            </TabsTrigger>
+            {isBrazil && (
+              <TabsTrigger value="physical" className="gap-1 sm:gap-2 text-xs sm:text-sm flex-1 sm:flex-none">
+                <Truck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                {t('marketplace.tabPhysical')}
+              </TabsTrigger>
+            )}
             {isPro && (
               <TabsTrigger value="my-products" className="gap-1 sm:gap-2 text-xs sm:text-sm flex-1 sm:flex-none">
                 <Crown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-500" />

@@ -2546,6 +2546,7 @@ export type Database = {
       }
       tournaments: {
         Row: {
+          country_code: string | null
           created_at: string
           created_by: string | null
           current_round: number | null
@@ -2572,6 +2573,7 @@ export type Database = {
           type: string | null
         }
         Insert: {
+          country_code?: string | null
           created_at?: string
           created_by?: string | null
           current_round?: number | null
@@ -2598,6 +2600,7 @@ export type Database = {
           type?: string | null
         }
         Update: {
+          country_code?: string | null
           created_at?: string
           created_by?: string | null
           current_round?: number | null

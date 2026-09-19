@@ -38,12 +38,19 @@ export const currencyForLanguage = (language?: string | null): Currency => {
   return LANGUAGE_CURRENCY[language] ?? LANGUAGE_CURRENCY[language.split("-")[0]] ?? "USD";
 };
 
-/** Converte de BRL e arredonda para terminar em .99 (mínimo 0.99). */
+/**
+ * Converte de BRL e arredonda para um valor comercial terminando em 9
+ * (ex.: 0.49, 1.89, 9.49). Mantém pacotes diferentes com preços diferentes
+ * e respeita o valor mínimo aceito pelo checkout internacional (0.50).
+ */
+export const MIN_CHARGE = 0.5;
+
 export const convertFromBRL = (amountBRL: number, currency: Currency): number => {
   if (currency === "BRL") return +Number(amountBRL).toFixed(2);
   const converted = Number(amountBRL) * RATES[currency];
-  const rounded = Math.max(1, Math.ceil(converted));
-  return +(rounded - 0.01).toFixed(2);
+  // arredonda para cima na casa dos 10 centavos e tira 1 centavo
+  const rounded = +(Math.ceil(converted * 10) / 10 - 0.01).toFixed(2);
+  return Math.max(MIN_CHARGE, rounded);
 };
 
 export const formatCurrency = (amount: number, currency: Currency, language?: string): string => {

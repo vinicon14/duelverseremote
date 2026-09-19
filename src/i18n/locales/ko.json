@@ -465,7 +465,8 @@
     "remove": "Remove",
     "insufficientBalance": "Insufficient balance",
     "purchaseSuccess": "Purchase successful!",
-    "pendingApproval": "Pending approval"
+    "pendingApproval": "Pending approval",
+    "tabPhysical": "실물 상품"
   },
   "myItems": {
     "title": "My Items",
@@ -761,7 +762,32 @@
       "judges": "Judges",
       "plans": "Plans",
       "marketplace": "Approvals",
-      "settings": "Settings"
+      "settings": "Settings",
+      "discord": "Discord"
+    },
+    "discord": {
+      "title": "Discord 연동",
+      "description": "DuelVerse에 연결된 Discord 서버 관리",
+      "botStatus": "봇 상태",
+      "botName": "봇 이름",
+      "inviteLink": "초대 링크",
+      "openInvite": "열기",
+      "servers": "연결된 서버",
+      "noServers": "연결된 서버 없음",
+      "addServer": "새 서버 추가",
+      "serverId": "서버 ID",
+      "channelId": "채널 ID",
+      "add": "추가",
+      "remove": "제거",
+      "sync": "동기화",
+      "serverUpdated": "서버를 업데이트했습니다",
+      "serverAdded": "서버를 추가했습니다",
+      "serverRemoved": "서버를 제거했습니다",
+      "errorUpdating": "서버 업데이트 오류",
+      "errorAdding": "서버 추가 오류",
+      "errorRemoving": "서버 제거 오류",
+      "connectionError": "연결 오류",
+      "requireIds": "서버 ID와 채널 ID가 필요합니다"
     }
   },
   "judgePanel": {
@@ -910,5 +936,9 @@
     "errorDesc": "Could not get the address.",
     "denied": "Permission denied",
     "deniedDesc": "Fill in the address manually."
+  },
+  "whatsappGroup": {
+    "label": "WhatsApp 그룹",
+    "dismissHint": "숨기려면 마우스 오른쪽 클릭"
   }
 }

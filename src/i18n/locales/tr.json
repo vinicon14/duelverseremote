@@ -465,7 +465,8 @@
     "remove": "Remove",
     "insufficientBalance": "Insufficient balance",
     "purchaseSuccess": "Purchase successful!",
-    "pendingApproval": "Pending approval"
+    "pendingApproval": "Pending approval",
+    "tabPhysical": "Fiziksel Ürünler"
   },
   "myItems": {
     "title": "My Items",
@@ -761,7 +762,32 @@
       "judges": "Judges",
       "plans": "Plans",
       "marketplace": "Approvals",
-      "settings": "Settings"
+      "settings": "Settings",
+      "discord": "Discord"
+    },
+    "discord": {
+      "title": "Discord Entegrasyonu",
+      "description": "DuelVerse'e bağlı Discord sunucularını yönet",
+      "botStatus": "Bot Durumu",
+      "botName": "Bot Adı",
+      "inviteLink": "Davet Bağlantısı",
+      "openInvite": "Aç",
+      "servers": "Bağlı Sunucular",
+      "noServers": "Bağlı sunucu yok",
+      "addServer": "Yeni Sunucu Ekle",
+      "serverId": "Sunucu Kimliği",
+      "channelId": "Kanal Kimliği",
+      "add": "Ekle",
+      "remove": "Kaldır",
+      "sync": "Eşitle",
+      "serverUpdated": "Sunucu başarıyla güncellendi",
+      "serverAdded": "Sunucu başarıyla eklendi",
+      "serverRemoved": "Sunucu başarıyla kaldırıldı",
+      "errorUpdating": "Sunucu güncellenirken hata oluştu",
+      "errorAdding": "Sunucu eklenirken hata oluştu",
+      "errorRemoving": "Sunucu kaldırılırken hata oluştu",
+      "connectionError": "Bağlantı hatası",
+      "requireIds": "Sunucu Kimliği ve Kanal Kimliği gereklidir"
     }
   },
   "judgePanel": {
@@ -910,5 +936,9 @@
     "errorDesc": "Could not get the address.",
     "denied": "Permission denied",
     "deniedDesc": "Fill in the address manually."
+  },
+  "whatsappGroup": {
+    "label": "WhatsApp Grubu",
+    "dismissHint": "Gizlemek için sağ tıklayın"
   }
 }
