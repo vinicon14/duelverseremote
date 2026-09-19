@@ -66,6 +66,9 @@ export default function PartyRooms() {
   const [joinPassword, setJoinPassword] = useState<Record<string, string>>({});
   const [languageFilter, setLanguageFilter] = useState<string>(defaultLanguage());
 
+  const visibleRooms =
+    languageFilter === "all" ? rooms : rooms.filter((r) => r.language_code === languageFilter);
+
   const fetchRooms = useCallback(async () => {
     // Remove salas vazias há mais de 3 minutos antes de listar
     await supabase.rpc("cleanup_empty_party_rooms");
