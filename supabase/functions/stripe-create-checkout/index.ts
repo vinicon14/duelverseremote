@@ -102,7 +102,7 @@ serve(async (req) => {
               name: pkg.name,
               description: `${pkg.duelcoins_amount} DuelCoins`,
             },
-            unit_amount: Math.round(pkg.price_brl * 100), // Convert to cents
+            unit_amount: Math.round(chargeAmount * 100), // em centavos da moeda escolhida
           },
           quantity: 1,
         },
