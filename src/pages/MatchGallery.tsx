@@ -30,6 +30,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { AddExternalVideoDialog } from "@/components/gallery/AddExternalVideoDialog";
+import { PLATFORM_LABEL, parseExternalVideoUrl } from "@/utils/externalVideo";
 
 interface Recording {
   id: string;
@@ -43,6 +46,8 @@ interface Recording {
   created_at: string;
   views: number;
   is_public: boolean;
+  source_platform?: string | null;
+  external_video_id?: string | null;
   profiles: {
     username: string;
     avatar_url: string | null;
@@ -150,17 +155,21 @@ export default function MatchGallery() {
       const recording = recordings.find(r => r.id === deleteId);
       if (!recording) throw new Error('Gravação não encontrada');
 
-      // Extrair o caminho do arquivo do URL
-      const urlParts = recording.video_url.split('/match-recordings/');
-      const filePath = urlParts[1];
+      // Vídeos externos não têm arquivo no storage
+      const isExternal = !!recording.source_platform && recording.source_platform !== 'internal';
+      if (!isExternal) {
+        // Extrair o caminho do arquivo do URL
+        const urlParts = recording.video_url.split('/match-recordings/');
+        const filePath = urlParts[1];
 
-      // Deletar do storage
-      const { error: storageError } = await supabase.storage
-        .from('match-recordings')
-        .remove([filePath]);
+        // Deletar do storage
+        const { error: storageError } = await supabase.storage
+          .from('match-recordings')
+          .remove([filePath]);
 
-      if (storageError) {
-        console.error('Erro ao deletar arquivo:', storageError);
+        if (storageError) {
+          console.error('Erro ao deletar arquivo:', storageError);
+        }
       }
 
       // Deletar do banco
@@ -250,14 +259,17 @@ export default function MatchGallery() {
       <Navbar />
       
       <main className="container mx-auto px-4 py-8 pt-24">
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <Video className="w-8 h-8 text-primary" />
-            <h1 className="text-4xl font-bold text-gradient-mystic">Galeria de Partidas</h1>
+        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <Video className="w-8 h-8 text-primary" />
+              <h1 className="text-4xl font-bold text-gradient-mystic">Galeria de Partidas</h1>
+            </div>
+            <p className="text-muted-foreground">
+              Assista às melhores partidas gravadas pela comunidade
+            </p>
           </div>
-          <p className="text-muted-foreground">
-            Assista às melhores partidas gravadas pela comunidade
-          </p>
+          <AddExternalVideoDialog onCreated={fetchRecordings} />
         </div>
 
         {recordings.length === 0 ? (
@@ -276,25 +288,66 @@ export default function MatchGallery() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {recordings.map((recording) => (
               <Card key={recording.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                <div 
-                  className="aspect-video bg-muted relative cursor-pointer"
-                  onClick={() => navigate(`/video/${recording.id}`)}
-                >
-                  <video
-                    src={recording.video_url}
-                    className="w-full h-full object-cover"
-                    preload="metadata"
-                  />
-                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                    <Button
-                      size="lg"
-                      className="gap-2"
-                    >
-                      <Eye className="w-5 h-5" />
-                      Assistir
-                    </Button>
+                {recording.source_platform && recording.source_platform !== 'internal' ? (
+                  <div className="aspect-video bg-muted relative">
+                    {playingId === recording.id ? (
+                      <iframe
+                        src={parseExternalVideoUrl(recording.video_url)?.embedUrl ?? ''}
+                        title={recording.title}
+                        className="w-full h-full"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; picture-in-picture"
+                        allowFullScreen
+                      />
+                    ) : (
+                      <div
+                        className="w-full h-full cursor-pointer"
+                        onClick={() => setPlayingId(recording.id)}
+                      >
+                        {recording.thumbnail_url ? (
+                          <img
+                            src={recording.thumbnail_url}
+                            alt={recording.title}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Video className="w-10 h-10 text-muted-foreground" />
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                          <Button size="lg" className="gap-2">
+                            <Eye className="w-5 h-5" />
+                            Assistir
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    <Badge className="absolute top-2 left-2" variant="secondary">
+                      {PLATFORM_LABEL[recording.source_platform] ?? recording.source_platform}
+                    </Badge>
                   </div>
-                </div>
+                ) : (
+                  <div 
+                    className="aspect-video bg-muted relative cursor-pointer"
+                    onClick={() => navigate(`/video/${recording.id}`)}
+                  >
+                    <video
+                      src={recording.video_url}
+                      className="w-full h-full object-cover"
+                      preload="metadata"
+                    />
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                      <Button
+                        size="lg"
+                        className="gap-2"
+                      >
+                        <Eye className="w-5 h-5" />
+                        Assistir
+                      </Button>
+                    </div>
+                  </div>
+                )}
                 
                 <CardHeader>
                   <div className="flex items-start justify-between gap-2">
