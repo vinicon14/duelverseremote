@@ -53,6 +53,9 @@ export default function PartyRooms() {
   const [joinPassword, setJoinPassword] = useState<Record<string, string>>({});
 
   const fetchRooms = useCallback(async () => {
+    // Remove salas vazias há mais de 3 minutos antes de listar
+    await supabase.rpc("cleanup_empty_party_rooms");
+
     const { data, error } = await supabase
       .from("party_rooms")
       .select("id, name, description, language_code, tcg_type, host_id, is_private, created_at")
