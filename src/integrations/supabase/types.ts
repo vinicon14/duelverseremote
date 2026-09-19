@@ -1610,9 +1610,11 @@ export type Database = {
           description: string | null
           duel_id: string | null
           duration: number | null
+          external_video_id: string | null
           file_size: number | null
           id: string
           is_public: boolean
+          source_platform: string
           thumbnail_url: string | null
           title: string
           tournament_id: string | null
@@ -1625,9 +1627,11 @@ export type Database = {
           description?: string | null
           duel_id?: string | null
           duration?: number | null
+          external_video_id?: string | null
           file_size?: number | null
           id?: string
           is_public?: boolean
+          source_platform?: string
           thumbnail_url?: string | null
           title: string
           tournament_id?: string | null
@@ -1640,9 +1644,11 @@ export type Database = {
           description?: string | null
           duel_id?: string | null
           duration?: number | null
+          external_video_id?: string | null
           file_size?: number | null
           id?: string
           is_public?: boolean
+          source_platform?: string
           thumbnail_url?: string | null
           title?: string
           tournament_id?: string | null
@@ -1830,6 +1836,92 @@ export type Database = {
           title?: string
           type?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      party_participants: {
+        Row: {
+          camera_on: boolean
+          force_muted: boolean
+          id: string
+          joined_at: string
+          left_at: string | null
+          mic_on: boolean
+          room_id: string
+          user_id: string
+        }
+        Insert: {
+          camera_on?: boolean
+          force_muted?: boolean
+          id?: string
+          joined_at?: string
+          left_at?: string | null
+          mic_on?: boolean
+          room_id: string
+          user_id: string
+        }
+        Update: {
+          camera_on?: boolean
+          force_muted?: boolean
+          id?: string
+          joined_at?: string
+          left_at?: string | null
+          mic_on?: boolean
+          room_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "party_participants_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "party_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      party_rooms: {
+        Row: {
+          closed_at: string | null
+          created_at: string
+          description: string | null
+          host_id: string
+          id: string
+          is_active: boolean
+          is_private: boolean
+          language_code: string
+          name: string
+          password: string | null
+          tcg_type: string | null
+          updated_at: string
+        }
+        Insert: {
+          closed_at?: string | null
+          created_at?: string
+          description?: string | null
+          host_id: string
+          id?: string
+          is_active?: boolean
+          is_private?: boolean
+          language_code?: string
+          name: string
+          password?: string | null
+          tcg_type?: string | null
+          updated_at?: string
+        }
+        Update: {
+          closed_at?: string | null
+          created_at?: string
+          description?: string | null
+          host_id?: string
+          id?: string
+          is_active?: boolean
+          is_private?: boolean
+          language_code?: string
+          name?: string
+          password?: string | null
+          tcg_type?: string | null
+          updated_at?: string
         }
         Relationships: []
       }

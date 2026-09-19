@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { PhoneOff, Loader2, Scale, Layers, Sparkles, Zap, Clock, Coins, Plus, Trophy } from "lucide-react";
+import { PhoneOff, Loader2, Scale, Layers, Sparkles, Zap, Clock, Coins, Plus, Trophy, Eye } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Navbar } from "@/components/Navbar";
 import { DuelChat } from "@/components/DuelChat";
@@ -34,6 +34,7 @@ import { WebRTCVideoCall, type VideoLayout, type WebRTCVideoCallHandle } from "@
 import { useDuelDeck } from "@/hooks/useDuelDeck";
 import { cleanupDuelDiscordMessages } from "@/utils/announceDuelRoom";
 import { useDuelPresence, useDuelCleanup } from "@/hooks/useDuelPresence";
+import { useSpectatorCount } from "@/hooks/useSpectatorCount";
 import { getDefaultLifePoints, isLegacyMagicTcg, isLegacyPokemonTcg, isYgoStyleTcg } from "@/utils/tcgRules";
 import { DiscordVoiceRoster } from "@/components/duel/DiscordVoiceRoster";
 import { BroadcastDuelToDiscordButton } from "@/components/duel/BroadcastDuelToDiscordButton";
@@ -1157,6 +1158,9 @@ const DuelRoom = () => {
 
   // Hook para gerenciar presença e detecção de desconexão
   useDuelPresence(id, currentUser?.id, isParticipant);
+
+  // Contador de espectadores ao vivo
+  const liveSpectators = useSpectatorCount(id, currentUser?.id, isSpectator);
   
   // Hook para limpeza automática de salas vazias
   useDuelCleanup(id);
@@ -1458,6 +1462,14 @@ const DuelRoom = () => {
                 {isSpectator && !isJudge && (
                   <div className="px-2 sm:px-3 py-1 sm:py-2 rounded-lg backdrop-blur-sm text-xs sm:text-sm font-bold bg-purple-500/95 text-white">
                     {t('duelRoom.spectatorBadge')}
+                  </div>
+                )}
+
+                {/* Contador de espectadores ao vivo */}
+                {liveSpectators > 0 && (
+                  <div className="px-2 sm:px-3 py-1 sm:py-2 rounded-lg backdrop-blur-sm text-xs sm:text-sm font-bold bg-background/80 text-foreground flex items-center gap-1">
+                    <Eye className="h-3.5 w-3.5" />
+                    {liveSpectators}
                   </div>
                 )}
 

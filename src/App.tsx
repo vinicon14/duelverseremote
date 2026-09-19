@@ -42,6 +42,8 @@ const LandingSEO = lazy(() => import("./pages/LandingSEO"));
 const Admin = lazy(() => import("./pages/Admin"));
 const Auth = lazy(() => import("./pages/Auth"));
 const Duels = lazy(() => import("./pages/Duels"));
+const PartyRooms = lazy(() => import("./pages/PartyRooms"));
+const PartyRoom = lazy(() => import("./pages/PartyRoom"));
 const DuelRoom = lazy(() => import("./pages/DuelRoom"));
 const JoinDuel = lazy(() => import("./pages/JoinDuel"));
 const MatchInvite = lazy(() => import("./pages/MatchInvite"));
@@ -176,6 +178,8 @@ const RouterContent = ({ user }: { user: User | null }) => {
         <Route path="/admin" element={<Admin />} />
         <Route path="/auth" element={<Auth />} />
         <Route path="/duels" element={<Duels />} />
+        <Route path="/party" element={<PartyRooms />} />
+        <Route path="/party/:id" element={<PartyRoom />} />
         <Route path="/duel/:id" element={<RequireDesktop featureName="A sala de duelo" allowMobile><DuelRoom /></RequireDesktop>} />
         <Route path="/join/:duelId" element={<RequireDesktop featureName="Entrar em partidas"><JoinDuel /></RequireDesktop>} />
         <Route path="/m/:inviteId" element={<RequireDesktop featureName="Convites de partida"><MatchInvite /></RequireDesktop>} />

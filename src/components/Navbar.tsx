@@ -8,7 +8,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Swords, Trophy, User, LogOut, Menu, Users, Zap, Shield, Store, Newspaper, Coins, Scale, Video, Layers, BarChart3, Crown, Gift, Music, VolumeX } from "lucide-react";
+import { Swords, Trophy, User, LogOut, Menu, Users, Zap, Shield, Store, Newspaper, Coins, Scale, Video, Layers, BarChart3, Crown, Gift, Music, VolumeX, PartyPopper } from "lucide-react";
 import { toggleBgm, getBgmMuted } from "@/components/BackgroundMusic";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -117,6 +117,12 @@ export const Navbar = () => {
           <Button variant="ghost" className={btnClass}>
             <Swords className="mr-2 h-4 w-4" />
             {t('nav.duels')}
+          </Button>
+        </Link>
+        <Link to="/party">
+          <Button variant="ghost" className={btnClass}>
+            <PartyPopper className="mr-2 h-4 w-4" />
+            Party
           </Button>
         </Link>
         {!mobile && (
