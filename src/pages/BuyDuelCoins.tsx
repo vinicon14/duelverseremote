@@ -150,6 +150,11 @@ export default function BuyDuelCoins() {
   const computePrice = (basePrice: number) =>
     appliedCoupon ? Math.max(0.01, +(basePrice * (1 - appliedCoupon.discount / 100)).toFixed(2)) : basePrice;
 
+  // Moeda de cobrança conforme o idioma (BRL, USD ou EUR), com conversão arredondada.
+  const currency = currencyForLanguage(i18n.language);
+  const displayPrice = (amountBRL: number) =>
+    formatCurrency(convertFromBRL(amountBRL, currency), currency, i18n.language);
+
   const handleBuyPix = async (pkg: DuelCoinsPackage) => {
     setBuying(pkg.id);
     try {
