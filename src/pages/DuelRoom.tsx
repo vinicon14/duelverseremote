@@ -1157,6 +1157,9 @@ const DuelRoom = () => {
 
   // Hook para gerenciar presença e detecção de desconexão
   useDuelPresence(id, currentUser?.id, isParticipant);
+
+  // Contador de espectadores ao vivo
+  const liveSpectators = useSpectatorCount(id, currentUser?.id, isSpectator);
   
   // Hook para limpeza automática de salas vazias
   useDuelCleanup(id);
