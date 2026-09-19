@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useBanCheck } from "@/hooks/useBanCheck";
+import { convertFromBRL, currencyForLanguage, formatCurrency } from "@/utils/currency";
 
 interface DuelCoinsPackage {
   id: string;
@@ -150,6 +151,11 @@ export default function BuyDuelCoins() {
   const computePrice = (basePrice: number) =>
     appliedCoupon ? Math.max(0.01, +(basePrice * (1 - appliedCoupon.discount / 100)).toFixed(2)) : basePrice;
 
+  // Moeda de cobrança conforme o idioma (BRL, USD ou EUR), com conversão arredondada.
+  const currency = currencyForLanguage(i18n.language);
+  const displayPrice = (amountBRL: number) =>
+    formatCurrency(convertFromBRL(amountBRL, currency), currency, i18n.language);
+
   const handleBuyPix = async (pkg: DuelCoinsPackage) => {
     setBuying(pkg.id);
     try {
@@ -189,7 +195,7 @@ export default function BuyDuelCoins() {
       if (!isBrazil && !appliedCoupon) {
         const { data: intl, error: intlError } = await supabase.functions.invoke(
           'stripe-create-checkout',
-          { body: { package_id: pkg.id } }
+          { body: { package_id: pkg.id, language: i18n.language } }
         );
         if (!intlError && intl?.url) {
           window.location.href = intl.url;
@@ -344,16 +350,16 @@ export default function BuyDuelCoins() {
                       {appliedCoupon ? (
                         <div>
                           <div className="text-sm text-muted-foreground line-through">
-                            R$ {Number(pkg.price_brl).toFixed(2).replace('.', ',')}
+                            {displayPrice(Number(pkg.price_brl))}
                           </div>
                           <div className="text-2xl font-bold text-green-500">
-                            R$ {computePrice(Number(pkg.price_brl)).toFixed(2).replace('.', ',')}
+                            {displayPrice(computePrice(Number(pkg.price_brl)))}
                           </div>
                           <div className="text-xs text-amber-400 font-semibold">-{appliedCoupon.discount}% com {appliedCoupon.code}</div>
                         </div>
                       ) : (
                         <div className="text-2xl font-bold text-primary">
-                          R$ {Number(pkg.price_brl).toFixed(2).replace('.', ',')}
+                          {displayPrice(Number(pkg.price_brl))}
                         </div>
                       )}
                     </div>
@@ -424,7 +430,7 @@ export default function BuyDuelCoins() {
                             {order.duelcoins_amount} <Coins className="w-3 h-3 inline" />
                           </TableCell>
                           <TableCell>
-                            R$ {Number(order.amount_brl).toFixed(2).replace('.', ',')}
+                            {displayPrice(Number(order.amount_brl))}
                           </TableCell>
                           <TableCell>{getStatusBadge(order.status)}</TableCell>
                         </TableRow>

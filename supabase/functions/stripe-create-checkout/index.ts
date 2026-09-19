@@ -31,7 +31,7 @@ serve(async (req) => {
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
     if (userError || !user) throw new Error("Not authenticated");
 
-    const { package_id } = await req.json();
+    const { package_id, language } = await req.json();
     if (!package_id) throw new Error("package_id is required");
 
     // Get package details
@@ -44,6 +44,34 @@ serve(async (req) => {
       .single();
 
     if (pkgError || !pkg) throw new Error("Package not found");
+
+    // Moeda de cobrança conforme o idioma do usuário (espelha src/utils/currency.ts)
+    const RATES: Record<string, number> = { BRL: 1, USD: 0.19, EUR: 0.17 };
+    const LANGUAGE_CURRENCY: Record<string, string> = {
+      "pt-BR": "BRL",
+      "pt-PT": "EUR",
+      fr: "EUR",
+      de: "EUR",
+      it: "EUR",
+      nl: "EUR",
+      es: "EUR",
+      pl: "EUR",
+      en: "USD",
+      ja: "USD",
+      ko: "USD",
+      zh: "USD",
+      ru: "USD",
+      tr: "USD",
+      ar: "USD",
+      id: "USD",
+    };
+    const lang = String(language || "en");
+    const currency =
+      LANGUAGE_CURRENCY[lang] || LANGUAGE_CURRENCY[lang.split("-")[0]] || "USD";
+    const chargeAmount =
+      currency === "BRL"
+        ? Number(pkg.price_brl)
+        : Math.max(1, Math.ceil(Number(pkg.price_brl) * RATES[currency])) - 0.01;
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
 
@@ -69,12 +97,12 @@ serve(async (req) => {
       line_items: [
         {
           price_data: {
-            currency: "brl",
+            currency: currency.toLowerCase(),
             product_data: {
               name: pkg.name,
               description: `${pkg.duelcoins_amount} DuelCoins`,
             },
-            unit_amount: Math.round(pkg.price_brl * 100), // Convert to cents
+            unit_amount: Math.round(chargeAmount * 100), // em centavos da moeda escolhida
           },
           quantity: 1,
         },
@@ -86,6 +114,8 @@ serve(async (req) => {
         supabase_user_id: user.id,
         package_id: pkg.id,
         duelcoins_amount: String(pkg.duelcoins_amount),
+        currency,
+        charged_amount: String(chargeAmount),
       },
     });
 
