@@ -28,6 +28,7 @@ import { useTcg } from "@/contexts/TcgContext";
 import { DecklistUploadModal } from "@/components/tournament/DecklistUploadModal";
 import { SEOHead } from "@/components/SEOHead";
 import { useTranslation } from "react-i18next";
+import { useUserCountry } from "@/hooks/useUserCountry";
 import { SEOLinksSection } from "@/components/SEOLinksSection";
 
 const Tournaments = () => {
@@ -38,6 +39,7 @@ const Tournaments = () => {
   const { isAdmin } = useAdmin();
   const { isPro } = useAccountType();
   const { activeTcg } = useTcg();
+  const { country: userCountry } = useUserCountry();
   const [tournaments, setTournaments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
