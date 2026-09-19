@@ -34,6 +34,7 @@ import { WebRTCVideoCall, type VideoLayout, type WebRTCVideoCallHandle } from "@
 import { useDuelDeck } from "@/hooks/useDuelDeck";
 import { cleanupDuelDiscordMessages } from "@/utils/announceDuelRoom";
 import { useDuelPresence, useDuelCleanup } from "@/hooks/useDuelPresence";
+import { useSpectatorCount } from "@/hooks/useSpectatorCount";
 import { getDefaultLifePoints, isLegacyMagicTcg, isLegacyPokemonTcg, isYgoStyleTcg } from "@/utils/tcgRules";
 import { DiscordVoiceRoster } from "@/components/duel/DiscordVoiceRoster";
 import { BroadcastDuelToDiscordButton } from "@/components/duel/BroadcastDuelToDiscordButton";
