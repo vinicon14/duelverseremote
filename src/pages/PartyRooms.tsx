@@ -141,7 +141,7 @@ export default function PartyRooms() {
       .insert({
         name: form.name.trim(),
         description: form.description.trim() || null,
-        language_code: localStorage.getItem("userLanguage") || "pt-BR",
+        language_code: form.language,
         tcg_type: activeTcg,
         host_id: userId,
         is_private: form.isPrivate,
