@@ -144,6 +144,17 @@ export default function PartyRooms() {
     navigate(`/party/${data.id}`);
   };
 
+  const deleteRoom = async (room: PartyRoomRow) => {
+    if (!confirm(`Excluir a sala "${room.name}"?`)) return;
+    const { error } = await supabase.rpc("delete_party_room", { _room_id: room.id });
+    if (error) {
+      toast.error("Não foi possível excluir a sala");
+      return;
+    }
+    toast.success("Sala excluída");
+    fetchRooms();
+  };
+
   const enterRoom = async (room: PartyRoomRow) => {
     if (room.is_private && room.host_id !== userId) {
       const typed = joinPassword[room.id] ?? "";
