@@ -86,10 +86,13 @@ const Tournaments = () => {
 
       if (error) throw error;
 
-      const tournamentsWithCount = data?.map(t => ({
-        ...t,
-        participants: t.tournament_participants?.[0]?.count || 0,
-      })) || [];
+      // Torneios aparecem apenas no país em que foram criados
+      const tournamentsWithCount = (data || [])
+        .filter((t: any) => !userCountry || !t.country_code || t.country_code === userCountry)
+        .map((t: any) => ({
+          ...t,
+          participants: t.tournament_participants?.[0]?.count || 0,
+        }));
 
       setTournaments(tournamentsWithCount);
     } catch (error: any) {
