@@ -119,6 +119,12 @@ export const Navbar = () => {
             {t('nav.duels')}
           </Button>
         </Link>
+        <Link to="/party">
+          <Button variant="ghost" className={btnClass}>
+            <PartyPopper className="mr-2 h-4 w-4" />
+            Party
+          </Button>
+        </Link>
         {!mobile && (
           <Link to="/matchmaking">
             <Button variant="ghost" className={btnClass}>
