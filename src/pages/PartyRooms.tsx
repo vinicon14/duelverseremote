@@ -22,10 +22,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, PartyPopper, Plus, Lock, Users, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useBanCheck } from "@/hooks/useBanCheck";
 import { useTcg } from "@/contexts/TcgContext";
+import { SUPPORTED_LANGUAGES } from "@/i18n/countries";
+
+const langInfo = (code: string) =>
+  SUPPORTED_LANGUAGES.find((l) => l.code === code) ?? { code, name: code, flag: "🌐" };
+
+const defaultLanguage = () => localStorage.getItem("userLanguage") || "pt-BR";
 
 interface PartyRoomRow {
   id: string;
