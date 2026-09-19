@@ -29,6 +29,8 @@ import { AdminMetrics } from "@/components/admin/AdminMetrics";
 import { AdminMonetag } from "@/components/admin/AdminMonetag";
 import { AdminRankingReset } from "@/components/admin/AdminRankingReset";
 import { AdminBattlePass } from "@/components/admin/AdminBattlePass";
+import { AdminParty } from "@/components/admin/AdminParty";
+import { AdminCountries } from "@/components/admin/AdminCountries";
 import { Input } from "@/components/ui/input";
 import { Shield, Loader2, Search } from "lucide-react";
 
@@ -63,6 +65,7 @@ export default function Admin() {
         { value: "users", label: t("admin.tabs.users") },
         { value: "duels", label: t("admin.tabs.duels") },
         { value: "tournaments", label: t("admin.tabs.tournaments") },
+        { value: "party", label: "Partys" },
         { value: "judges", label: t("admin.tabs.judges") },
         { value: "verifications", label: "Verificações" },
       ],
@@ -150,8 +153,13 @@ export default function Admin() {
           </div>
           
           
-          <TabsContent value="metrics" className="mt-6">
+          <TabsContent value="metrics" className="mt-6 space-y-6">
             <AdminMetrics />
+            <AdminCountries />
+          </TabsContent>
+
+          <TabsContent value="party" className="mt-6">
+            <AdminParty />
           </TabsContent>
 
           <TabsContent value="monetag" className="mt-6">

@@ -22,10 +22,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, PartyPopper, Plus, Lock, Users, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useBanCheck } from "@/hooks/useBanCheck";
 import { useTcg } from "@/contexts/TcgContext";
+import { SUPPORTED_LANGUAGES } from "@/i18n/countries";
+
+const langInfo = (code: string) =>
+  SUPPORTED_LANGUAGES.find((l) => l.code === code) ?? { code, name: code, flag: "🌐" };
+
+const defaultLanguage = () => localStorage.getItem("userLanguage") || "pt-BR";
 
 interface PartyRoomRow {
   id: string;
@@ -49,8 +56,18 @@ export default function PartyRooms() {
   const [userId, setUserId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [form, setForm] = useState({ name: "", description: "", isPrivate: false, password: "" });
+  const [form, setForm] = useState({
+    name: "",
+    description: "",
+    isPrivate: false,
+    password: "",
+    language: defaultLanguage(),
+  });
   const [joinPassword, setJoinPassword] = useState<Record<string, string>>({});
+  const [languageFilter, setLanguageFilter] = useState<string>(defaultLanguage());
+
+  const visibleRooms =
+    languageFilter === "all" ? rooms : rooms.filter((r) => r.language_code === languageFilter);
 
   const fetchRooms = useCallback(async () => {
     // Remove salas vazias há mais de 3 minutos antes de listar
@@ -127,7 +144,7 @@ export default function PartyRooms() {
       .insert({
         name: form.name.trim(),
         description: form.description.trim() || null,
-        language_code: localStorage.getItem("userLanguage") || "pt-BR",
+        language_code: form.language,
         tcg_type: activeTcg,
         host_id: userId,
         is_private: form.isPrivate,
@@ -218,6 +235,24 @@ export default function PartyRooms() {
                     onChange={(e) => setForm({ ...form, description: e.target.value })}
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label>Idioma da sala</Label>
+                  <Select
+                    value={form.language}
+                    onValueChange={(v) => setForm({ ...form, language: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SUPPORTED_LANGUAGES.map((l) => (
+                        <SelectItem key={l.code} value={l.code}>
+                          {l.flag} {l.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="flex items-center justify-between rounded-lg border p-3">
                   <div>
                     <p className="text-sm font-medium">Sala privada</p>
@@ -249,20 +284,55 @@ export default function PartyRooms() {
           </Dialog>
         </div>
 
+        <div className="mb-5 flex gap-2 overflow-x-auto pb-1">
+          <Button
+            size="sm"
+            variant={languageFilter === "all" ? "default" : "outline"}
+            className="shrink-0"
+            onClick={() => setLanguageFilter("all")}
+          >
+            🌐 Todos ({rooms.length})
+          </Button>
+          {SUPPORTED_LANGUAGES.map((l) => {
+            const count = rooms.filter((r) => r.language_code === l.code).length;
+            if (count === 0 && languageFilter !== l.code) return null;
+            return (
+              <Button
+                key={l.code}
+                size="sm"
+                variant={languageFilter === l.code ? "default" : "outline"}
+                className="shrink-0"
+                onClick={() => setLanguageFilter(l.code)}
+              >
+                {l.flag} {l.name} ({count})
+              </Button>
+            );
+          })}
+        </div>
+
         {loading ? (
           <div className="flex justify-center py-20">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
-        ) : rooms.length === 0 ? (
+        ) : visibleRooms.length === 0 ? (
           <Card>
-            <CardContent className="flex flex-col items-center justify-center py-16">
-              <PartyPopper className="mb-4 h-14 w-14 text-muted-foreground" />
-              <p className="text-muted-foreground">Nenhuma sala Party aberta agora. Crie a primeira!</p>
+            <CardContent className="flex flex-col items-center justify-center gap-3 py-16">
+              <PartyPopper className="h-14 w-14 text-muted-foreground" />
+              <p className="text-muted-foreground">
+                {rooms.length === 0
+                  ? "Nenhuma sala Party aberta agora. Crie a primeira!"
+                  : `Nenhuma sala em ${langInfo(languageFilter).name}. Crie a primeira!`}
+              </p>
+              {rooms.length > 0 && languageFilter !== "all" && (
+                <Button variant="outline" size="sm" onClick={() => setLanguageFilter("all")}>
+                  Ver salas de todos os idiomas
+                </Button>
+              )}
             </CardContent>
           </Card>
         ) : (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {rooms.map((room) => (
+            {visibleRooms.map((room) => (
               <Card key={room.id} className="card-mystic">
                 <CardHeader>
                   <div className="flex items-start justify-between gap-2">
@@ -279,7 +349,9 @@ export default function PartyRooms() {
                     <Badge variant="secondary" className="gap-1">
                       <Users className="h-3 w-3" /> {room.participants ?? 0} na sala
                     </Badge>
-                    <Badge variant="outline">{room.language_code}</Badge>
+                    <Badge variant="outline">
+                      {langInfo(room.language_code).flag} {langInfo(room.language_code).name}
+                    </Badge>
                   </div>
                   {room.is_private && room.host_id !== userId && (
                     <Input

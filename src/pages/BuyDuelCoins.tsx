@@ -184,6 +184,20 @@ export default function BuyDuelCoins() {
   const handleBuyCard = async (pkg: DuelCoinsPackage) => {
     setBuyingCard(pkg.id);
     try {
+      // Fora do Brasil (e sem cupom) usamos o checkout internacional, que aceita
+      // cartões de qualquer país. Se falhar, caímos no checkout padrão.
+      if (!isBrazil && !appliedCoupon) {
+        const { data: intl, error: intlError } = await supabase.functions.invoke(
+          'stripe-create-checkout',
+          { body: { package_id: pkg.id } }
+        );
+        if (!intlError && intl?.url) {
+          window.location.href = intl.url;
+          return;
+        }
+        console.warn('International checkout unavailable, falling back:', intlError || intl?.error);
+      }
+
       const { data, error } = await supabase.functions.invoke('mercadopago-create-checkout', {
         body: { package_id: pkg.id, origin_url: window.location.origin, coupon_code: appliedCoupon?.code },
       });
