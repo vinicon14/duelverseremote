@@ -56,8 +56,15 @@ export default function PartyRooms() {
   const [userId, setUserId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [form, setForm] = useState({ name: "", description: "", isPrivate: false, password: "" });
+  const [form, setForm] = useState({
+    name: "",
+    description: "",
+    isPrivate: false,
+    password: "",
+    language: defaultLanguage(),
+  });
   const [joinPassword, setJoinPassword] = useState<Record<string, string>>({});
+  const [languageFilter, setLanguageFilter] = useState<string>(defaultLanguage());
 
   const fetchRooms = useCallback(async () => {
     // Remove salas vazias há mais de 3 minutos antes de listar
