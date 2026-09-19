@@ -246,6 +246,11 @@ export default function PartyRoom() {
             <Button variant="destructive" size="sm" onClick={leaveRoom}>
               <LogOut className="mr-1 h-4 w-4" /> Sair
             </Button>
+            {room?.host_id === userId && (
+              <Button variant="destructive" size="sm" onClick={deleteRoom}>
+                <Trash2 className="mr-1 h-4 w-4" /> Excluir sala
+              </Button>
+            )}
           </div>
         </div>
 
