@@ -65,6 +65,7 @@ export default function MatchGallery() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [updatingPublic, setUpdatingPublic] = useState<string | null>(null);
+  const [playingId, setPlayingId] = useState<string | null>(null);
 
   useEffect(() => {
     checkAuth();
