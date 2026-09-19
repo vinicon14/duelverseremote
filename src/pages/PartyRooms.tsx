@@ -232,6 +232,24 @@ export default function PartyRooms() {
                     onChange={(e) => setForm({ ...form, description: e.target.value })}
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label>Idioma da sala</Label>
+                  <Select
+                    value={form.language}
+                    onValueChange={(v) => setForm({ ...form, language: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SUPPORTED_LANGUAGES.map((l) => (
+                        <SelectItem key={l.code} value={l.code}>
+                          {l.flag} {l.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="flex items-center justify-between rounded-lg border p-3">
                   <div>
                     <p className="text-sm font-medium">Sala privada</p>
