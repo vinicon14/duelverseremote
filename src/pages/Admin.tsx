@@ -29,6 +29,8 @@ import { AdminMetrics } from "@/components/admin/AdminMetrics";
 import { AdminMonetag } from "@/components/admin/AdminMonetag";
 import { AdminRankingReset } from "@/components/admin/AdminRankingReset";
 import { AdminBattlePass } from "@/components/admin/AdminBattlePass";
+import { AdminParty } from "@/components/admin/AdminParty";
+import { AdminCountries } from "@/components/admin/AdminCountries";
 import { Input } from "@/components/ui/input";
 import { Shield, Loader2, Search } from "lucide-react";
 
