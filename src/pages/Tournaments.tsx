@@ -61,7 +61,7 @@ const Tournaments = () => {
     };
 
     initialize();
-  }, [activeTcg]);
+  }, [activeTcg, userCountry]);
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
