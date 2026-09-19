@@ -161,6 +161,24 @@ export default function PartyRoom() {
     navigate("/party");
   }, [id, navigate, userId]);
 
+  // Marca saída ao fechar a aba/desmontar, para a sala esvaziar corretamente
+  useEffect(() => {
+    if (!id || !userId) return;
+    const markLeft = () => {
+      supabase
+        .from("party_participants")
+        .update({ left_at: new Date().toISOString() })
+        .eq("room_id", id)
+        .eq("user_id", userId)
+        .then(() => undefined);
+    };
+    window.addEventListener("beforeunload", markLeft);
+    return () => {
+      window.removeEventListener("beforeunload", markLeft);
+      markLeft();
+    };
+  }, [id, userId]);
+
   const deleteRoom = useCallback(async () => {
     if (!id) return;
     if (!confirm("Excluir esta sala Party? Todos serão removidos.")) return;
