@@ -465,7 +465,8 @@
     "remove": "Remove",
     "insufficientBalance": "Insufficient balance",
     "purchaseSuccess": "Purchase successful!",
-    "pendingApproval": "Pending approval"
+    "pendingApproval": "Pending approval",
+    "tabPhysical": "实体商品"
   },
   "myItems": {
     "title": "My Items",
@@ -761,7 +762,32 @@
       "judges": "Judges",
       "plans": "Plans",
       "marketplace": "Approvals",
-      "settings": "Settings"
+      "settings": "Settings",
+      "discord": "Discord"
+    },
+    "discord": {
+      "title": "Discord 集成",
+      "description": "管理已连接 DuelVerse 的 Discord 服务器",
+      "botStatus": "机器人状态",
+      "botName": "机器人名称",
+      "inviteLink": "邀请链接",
+      "openInvite": "打开",
+      "servers": "已连接的服务器",
+      "noServers": "暂无已连接的服务器",
+      "addServer": "添加新服务器",
+      "serverId": "服务器 ID",
+      "channelId": "频道 ID",
+      "add": "添加",
+      "remove": "移除",
+      "sync": "同步",
+      "serverUpdated": "服务器更新成功",
+      "serverAdded": "服务器添加成功",
+      "serverRemoved": "服务器移除成功",
+      "errorUpdating": "更新服务器出错",
+      "errorAdding": "添加服务器出错",
+      "errorRemoving": "移除服务器出错",
+      "connectionError": "连接错误",
+      "requireIds": "服务器 ID 和频道 ID 为必填项"
     }
   },
   "judgePanel": {
@@ -910,5 +936,9 @@
     "errorDesc": "Could not get the address.",
     "denied": "Permission denied",
     "deniedDesc": "Fill in the address manually."
+  },
+  "whatsappGroup": {
+    "label": "WhatsApp 群组",
+    "dismissHint": "右键点击以隐藏"
   }
 }

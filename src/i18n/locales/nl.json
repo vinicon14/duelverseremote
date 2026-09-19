@@ -465,7 +465,8 @@
     "remove": "Remove",
     "insufficientBalance": "Insufficient balance",
     "purchaseSuccess": "Purchase successful!",
-    "pendingApproval": "Pending approval"
+    "pendingApproval": "Pending approval",
+    "tabPhysical": "Fysieke Producten"
   },
   "myItems": {
     "title": "My Items",
@@ -761,7 +762,32 @@
       "judges": "Judges",
       "plans": "Plans",
       "marketplace": "Approvals",
-      "settings": "Settings"
+      "settings": "Settings",
+      "discord": "Discord"
+    },
+    "discord": {
+      "title": "Discord-integratie",
+      "description": "Beheer Discord-servers die met DuelVerse zijn verbonden",
+      "botStatus": "Botstatus",
+      "botName": "Botnaam",
+      "inviteLink": "Uitnodigingslink",
+      "openInvite": "Openen",
+      "servers": "Verbonden servers",
+      "noServers": "Geen servers verbonden",
+      "addServer": "Nieuwe server toevoegen",
+      "serverId": "Server-ID",
+      "channelId": "Kanaal-ID",
+      "add": "Toevoegen",
+      "remove": "Verwijderen",
+      "sync": "Synchroniseren",
+      "serverUpdated": "Server succesvol bijgewerkt",
+      "serverAdded": "Server succesvol toegevoegd",
+      "serverRemoved": "Server succesvol verwijderd",
+      "errorUpdating": "Fout bij bijwerken van server",
+      "errorAdding": "Fout bij toevoegen van server",
+      "errorRemoving": "Fout bij verwijderen van server",
+      "connectionError": "Verbindingsfout",
+      "requireIds": "Server-ID en kanaal-ID zijn verplicht"
     }
   },
   "judgePanel": {
@@ -910,5 +936,9 @@
     "errorDesc": "Could not get the address.",
     "denied": "Permission denied",
     "deniedDesc": "Fill in the address manually."
+  },
+  "whatsappGroup": {
+    "label": "WhatsApp-groep",
+    "dismissHint": "Rechtsklik om te verbergen"
   }
 }

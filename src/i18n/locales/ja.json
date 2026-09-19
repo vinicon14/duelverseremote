@@ -465,7 +465,8 @@
     "remove": "Remove",
     "insufficientBalance": "Insufficient balance",
     "purchaseSuccess": "Purchase successful!",
-    "pendingApproval": "Pending approval"
+    "pendingApproval": "Pending approval",
+    "tabPhysical": "物理商品"
   },
   "myItems": {
     "title": "My Items",
@@ -761,7 +762,32 @@
       "judges": "Judges",
       "plans": "Plans",
       "marketplace": "Approvals",
-      "settings": "Settings"
+      "settings": "Settings",
+      "discord": "Discord"
+    },
+    "discord": {
+      "title": "Discord連携",
+      "description": "DuelVerseに接続されたDiscordサーバーを管理",
+      "botStatus": "ボットの状態",
+      "botName": "ボット名",
+      "inviteLink": "招待リンク",
+      "openInvite": "開く",
+      "servers": "接続済みサーバー",
+      "noServers": "接続中のサーバーはありません",
+      "addServer": "新しいサーバーを追加",
+      "serverId": "サーバーID",
+      "channelId": "チャンネルID",
+      "add": "追加",
+      "remove": "削除",
+      "sync": "同期",
+      "serverUpdated": "サーバーを更新しました",
+      "serverAdded": "サーバーを追加しました",
+      "serverRemoved": "サーバーを削除しました",
+      "errorUpdating": "サーバーの更新に失敗しました",
+      "errorAdding": "サーバーの追加に失敗しました",
+      "errorRemoving": "サーバーの削除に失敗しました",
+      "connectionError": "接続エラー",
+      "requireIds": "サーバーIDとチャンネルIDは必須です"
     }
   },
   "judgePanel": {
@@ -910,5 +936,9 @@
     "errorDesc": "Could not get the address.",
     "denied": "Permission denied",
     "deniedDesc": "Fill in the address manually."
+  },
+  "whatsappGroup": {
+    "label": "WhatsAppグループ",
+    "dismissHint": "右クリックで非表示"
   }
 }
