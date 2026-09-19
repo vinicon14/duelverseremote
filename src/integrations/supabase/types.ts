@@ -2961,6 +2961,7 @@ export type Database = {
         }[]
       }
       cleanup_empty_duels: { Args: never; Returns: undefined }
+      cleanup_empty_party_rooms: { Args: never; Returns: number }
       cleanup_expired_matchmaking_queue: { Args: never; Returns: number }
       cleanup_expired_queue_entries: { Args: never; Returns: undefined }
       cleanup_matchmaking_queue: { Args: never; Returns: undefined }
@@ -3011,6 +3012,7 @@ export type Database = {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
       }
+      delete_party_room: { Args: { _room_id: string }; Returns: undefined }
       email_queue_dispatch: { Args: never; Returns: undefined }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
