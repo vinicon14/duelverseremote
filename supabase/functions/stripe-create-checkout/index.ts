@@ -97,7 +97,7 @@ serve(async (req) => {
       line_items: [
         {
           price_data: {
-            currency: "brl",
+            currency: currency.toLowerCase(),
             product_data: {
               name: pkg.name,
               description: `${pkg.duelcoins_amount} DuelCoins`,
