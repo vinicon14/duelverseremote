@@ -281,20 +281,55 @@ export default function PartyRooms() {
           </Dialog>
         </div>
 
+        <div className="mb-5 flex gap-2 overflow-x-auto pb-1">
+          <Button
+            size="sm"
+            variant={languageFilter === "all" ? "default" : "outline"}
+            className="shrink-0"
+            onClick={() => setLanguageFilter("all")}
+          >
+            🌐 Todos ({rooms.length})
+          </Button>
+          {SUPPORTED_LANGUAGES.map((l) => {
+            const count = rooms.filter((r) => r.language_code === l.code).length;
+            if (count === 0 && languageFilter !== l.code) return null;
+            return (
+              <Button
+                key={l.code}
+                size="sm"
+                variant={languageFilter === l.code ? "default" : "outline"}
+                className="shrink-0"
+                onClick={() => setLanguageFilter(l.code)}
+              >
+                {l.flag} {l.name} ({count})
+              </Button>
+            );
+          })}
+        </div>
+
         {loading ? (
           <div className="flex justify-center py-20">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
-        ) : rooms.length === 0 ? (
+        ) : visibleRooms.length === 0 ? (
           <Card>
-            <CardContent className="flex flex-col items-center justify-center py-16">
-              <PartyPopper className="mb-4 h-14 w-14 text-muted-foreground" />
-              <p className="text-muted-foreground">Nenhuma sala Party aberta agora. Crie a primeira!</p>
+            <CardContent className="flex flex-col items-center justify-center gap-3 py-16">
+              <PartyPopper className="h-14 w-14 text-muted-foreground" />
+              <p className="text-muted-foreground">
+                {rooms.length === 0
+                  ? "Nenhuma sala Party aberta agora. Crie a primeira!"
+                  : `Nenhuma sala em ${langInfo(languageFilter).name}. Crie a primeira!`}
+              </p>
+              {rooms.length > 0 && languageFilter !== "all" && (
+                <Button variant="outline" size="sm" onClick={() => setLanguageFilter("all")}>
+                  Ver salas de todos os idiomas
+                </Button>
+              )}
             </CardContent>
           </Card>
         ) : (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {rooms.map((room) => (
+            {visibleRooms.map((room) => (
               <Card key={room.id} className="card-mystic">
                 <CardHeader>
                   <div className="flex items-start justify-between gap-2">
