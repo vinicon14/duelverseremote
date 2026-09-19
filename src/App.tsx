@@ -42,6 +42,8 @@ const LandingSEO = lazy(() => import("./pages/LandingSEO"));
 const Admin = lazy(() => import("./pages/Admin"));
 const Auth = lazy(() => import("./pages/Auth"));
 const Duels = lazy(() => import("./pages/Duels"));
+const PartyRooms = lazy(() => import("./pages/PartyRooms"));
+const PartyRoom = lazy(() => import("./pages/PartyRoom"));
 const DuelRoom = lazy(() => import("./pages/DuelRoom"));
 const JoinDuel = lazy(() => import("./pages/JoinDuel"));
 const MatchInvite = lazy(() => import("./pages/MatchInvite"));
