@@ -430,7 +430,7 @@ export default function BuyDuelCoins() {
                             {order.duelcoins_amount} <Coins className="w-3 h-3 inline" />
                           </TableCell>
                           <TableCell>
-                            R$ {Number(order.amount_brl).toFixed(2).replace('.', ',')}
+                            {displayPrice(Number(order.amount_brl))}
                           </TableCell>
                           <TableCell>{getStatusBadge(order.status)}</TableCell>
                         </TableRow>
