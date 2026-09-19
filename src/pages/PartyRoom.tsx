@@ -161,6 +161,18 @@ export default function PartyRoom() {
     navigate("/party");
   }, [id, navigate, userId]);
 
+  const deleteRoom = useCallback(async () => {
+    if (!id) return;
+    if (!confirm("Excluir esta sala Party? Todos serão removidos.")) return;
+    const { error } = await supabase.rpc("delete_party_room", { _room_id: id });
+    if (error) {
+      toast.error("Não foi possível excluir a sala");
+      return;
+    }
+    toast.success("Sala excluída");
+    navigate("/party");
+  }, [id, navigate]);
+
   const sendChat = () => {
     const text = chatInput.trim();
     if (!text) return;
