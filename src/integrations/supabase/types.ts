@@ -2869,6 +2869,15 @@ export type Database = {
           status: string
         }[]
       }
+      admin_country_metrics: {
+        Args: { p_from?: string; p_to?: string }
+        Returns: {
+          country_code: string
+          new_in_period: number
+          online: number
+          total: number
+        }[]
+      }
       admin_manage_duelcoins: {
         Args: {
           p_amount: number
@@ -2877,6 +2886,23 @@ export type Database = {
           p_user_id: string
         }
         Returns: Json
+      }
+      admin_party_rooms: {
+        Args: { p_include_closed?: boolean }
+        Returns: {
+          closed_at: string
+          created_at: string
+          description: string
+          host_id: string
+          host_username: string
+          id: string
+          is_active: boolean
+          is_private: boolean
+          language_code: string
+          name: string
+          participants: number
+          tcg_type: string
+        }[]
       }
       admin_platform_metrics: { Args: { p_days?: number }; Returns: Json }
       admin_platform_metrics_v2: {
