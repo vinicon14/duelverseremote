@@ -22,7 +22,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Loader2, PartyPopper, Plus, Lock, Users } from "lucide-react";
+import { Loader2, PartyPopper, Plus, Lock, Users, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useBanCheck } from "@/hooks/useBanCheck";
 import { useTcg } from "@/contexts/TcgContext";
