@@ -195,7 +195,7 @@ export default function BuyDuelCoins() {
       if (!isBrazil && !appliedCoupon) {
         const { data: intl, error: intlError } = await supabase.functions.invoke(
           'stripe-create-checkout',
-          { body: { package_id: pkg.id } }
+          { body: { package_id: pkg.id, language: i18n.language } }
         );
         if (!intlError && intl?.url) {
           window.location.href = intl.url;
