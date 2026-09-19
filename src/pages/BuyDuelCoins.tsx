@@ -344,16 +344,16 @@ export default function BuyDuelCoins() {
                       {appliedCoupon ? (
                         <div>
                           <div className="text-sm text-muted-foreground line-through">
-                            R$ {Number(pkg.price_brl).toFixed(2).replace('.', ',')}
+                            {displayPrice(Number(pkg.price_brl))}
                           </div>
                           <div className="text-2xl font-bold text-green-500">
-                            R$ {computePrice(Number(pkg.price_brl)).toFixed(2).replace('.', ',')}
+                            {displayPrice(computePrice(Number(pkg.price_brl)))}
                           </div>
                           <div className="text-xs text-amber-400 font-semibold">-{appliedCoupon.discount}% com {appliedCoupon.code}</div>
                         </div>
                       ) : (
                         <div className="text-2xl font-bold text-primary">
-                          R$ {Number(pkg.price_brl).toFixed(2).replace('.', ',')}
+                          {displayPrice(Number(pkg.price_brl))}
                         </div>
                       )}
                     </div>
