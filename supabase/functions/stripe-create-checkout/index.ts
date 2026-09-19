@@ -31,7 +31,7 @@ serve(async (req) => {
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
     if (userError || !user) throw new Error("Not authenticated");
 
-    const { package_id } = await req.json();
+    const { package_id, language } = await req.json();
     if (!package_id) throw new Error("package_id is required");
 
     // Get package details
