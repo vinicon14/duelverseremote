@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useBanCheck } from "@/hooks/useBanCheck";
+import { convertFromBRL, currencyForLanguage, formatCurrency } from "@/utils/currency";
 
 interface DuelCoinsPackage {
   id: string;
