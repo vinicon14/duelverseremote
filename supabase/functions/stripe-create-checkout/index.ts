@@ -114,6 +114,8 @@ serve(async (req) => {
         supabase_user_id: user.id,
         package_id: pkg.id,
         duelcoins_amount: String(pkg.duelcoins_amount),
+        currency,
+        charged_amount: String(chargeAmount),
       },
     });
 
