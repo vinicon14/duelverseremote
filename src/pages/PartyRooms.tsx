@@ -346,7 +346,9 @@ export default function PartyRooms() {
                     <Badge variant="secondary" className="gap-1">
                       <Users className="h-3 w-3" /> {room.participants ?? 0} na sala
                     </Badge>
-                    <Badge variant="outline">{room.language_code}</Badge>
+                    <Badge variant="outline">
+                      {langInfo(room.language_code).flag} {langInfo(room.language_code).name}
+                    </Badge>
                   </div>
                   {room.is_private && room.host_id !== userId && (
                     <Input
