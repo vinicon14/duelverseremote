@@ -22,7 +22,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Loader2, PartyPopper, Plus, Lock, Users } from "lucide-react";
+import { Loader2, PartyPopper, Plus, Lock, Users, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useBanCheck } from "@/hooks/useBanCheck";
 import { useTcg } from "@/contexts/TcgContext";
@@ -53,6 +53,9 @@ export default function PartyRooms() {
   const [joinPassword, setJoinPassword] = useState<Record<string, string>>({});
 
   const fetchRooms = useCallback(async () => {
+    // Remove salas vazias há mais de 3 minutos antes de listar
+    await supabase.rpc("cleanup_empty_party_rooms");
+
     const { data, error } = await supabase
       .from("party_rooms")
       .select("id, name, description, language_code, tcg_type, host_id, is_private, created_at")
@@ -139,6 +142,17 @@ export default function PartyRooms() {
     }
     setOpen(false);
     navigate(`/party/${data.id}`);
+  };
+
+  const deleteRoom = async (room: PartyRoomRow) => {
+    if (!confirm(`Excluir a sala "${room.name}"?`)) return;
+    const { error } = await supabase.rpc("delete_party_room", { _room_id: room.id });
+    if (error) {
+      toast.error("Não foi possível excluir a sala");
+      return;
+    }
+    toast.success("Sala excluída");
+    fetchRooms();
   };
 
   const enterRoom = async (room: PartyRoomRow) => {
@@ -274,9 +288,21 @@ export default function PartyRooms() {
                       onChange={(e) => setJoinPassword({ ...joinPassword, [room.id]: e.target.value })}
                     />
                   )}
-                  <Button className="w-full btn-mystic" onClick={() => enterRoom(room)}>
-                    Entrar
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button className="flex-1 btn-mystic" onClick={() => enterRoom(room)}>
+                      Entrar
+                    </Button>
+                    {room.host_id === userId && (
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        aria-label="Excluir sala"
+                        onClick={() => deleteRoom(room)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             ))}

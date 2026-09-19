@@ -23,6 +23,7 @@ import {
   Video as VideoIcon,
   VideoOff,
   Volume2,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { usePartyMesh } from "@/hooks/usePartyMesh";
@@ -160,6 +161,36 @@ export default function PartyRoom() {
     navigate("/party");
   }, [id, navigate, userId]);
 
+  // Marca saída ao fechar a aba/desmontar, para a sala esvaziar corretamente
+  useEffect(() => {
+    if (!id || !userId) return;
+    const markLeft = () => {
+      supabase
+        .from("party_participants")
+        .update({ left_at: new Date().toISOString() })
+        .eq("room_id", id)
+        .eq("user_id", userId)
+        .then(() => undefined);
+    };
+    window.addEventListener("beforeunload", markLeft);
+    return () => {
+      window.removeEventListener("beforeunload", markLeft);
+      markLeft();
+    };
+  }, [id, userId]);
+
+  const deleteRoom = useCallback(async () => {
+    if (!id) return;
+    if (!confirm("Excluir esta sala Party? Todos serão removidos.")) return;
+    const { error } = await supabase.rpc("delete_party_room", { _room_id: id });
+    if (error) {
+      toast.error("Não foi possível excluir a sala");
+      return;
+    }
+    toast.success("Sala excluída");
+    navigate("/party");
+  }, [id, navigate]);
+
   const sendChat = () => {
     const text = chatInput.trim();
     if (!text) return;
@@ -233,6 +264,11 @@ export default function PartyRoom() {
             <Button variant="destructive" size="sm" onClick={leaveRoom}>
               <LogOut className="mr-1 h-4 w-4" /> Sair
             </Button>
+            {room?.host_id === userId && (
+              <Button variant="destructive" size="sm" onClick={deleteRoom}>
+                <Trash2 className="mr-1 h-4 w-4" /> Excluir sala
+              </Button>
+            )}
           </div>
         </div>
 
