@@ -45,6 +45,34 @@ serve(async (req) => {
 
     if (pkgError || !pkg) throw new Error("Package not found");
 
+    // Moeda de cobrança conforme o idioma do usuário (espelha src/utils/currency.ts)
+    const RATES: Record<string, number> = { BRL: 1, USD: 0.19, EUR: 0.17 };
+    const LANGUAGE_CURRENCY: Record<string, string> = {
+      "pt-BR": "BRL",
+      "pt-PT": "EUR",
+      fr: "EUR",
+      de: "EUR",
+      it: "EUR",
+      nl: "EUR",
+      es: "EUR",
+      pl: "EUR",
+      en: "USD",
+      ja: "USD",
+      ko: "USD",
+      zh: "USD",
+      ru: "USD",
+      tr: "USD",
+      ar: "USD",
+      id: "USD",
+    };
+    const lang = String(language || "en");
+    const currency =
+      LANGUAGE_CURRENCY[lang] || LANGUAGE_CURRENCY[lang.split("-")[0]] || "USD";
+    const chargeAmount =
+      currency === "BRL"
+        ? Number(pkg.price_brl)
+        : Math.max(1, Math.ceil(Number(pkg.price_brl) * RATES[currency])) - 0.01;
+
     const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
 
     // Find or create Stripe customer
