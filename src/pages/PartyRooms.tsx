@@ -288,9 +288,21 @@ export default function PartyRooms() {
                       onChange={(e) => setJoinPassword({ ...joinPassword, [room.id]: e.target.value })}
                     />
                   )}
-                  <Button className="w-full btn-mystic" onClick={() => enterRoom(room)}>
-                    Entrar
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button className="flex-1 btn-mystic" onClick={() => enterRoom(room)}>
+                      Entrar
+                    </Button>
+                    {room.host_id === userId && (
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        aria-label="Excluir sala"
+                        onClick={() => deleteRoom(room)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             ))}
