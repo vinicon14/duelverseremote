@@ -153,8 +153,13 @@ export default function Admin() {
           </div>
           
           
-          <TabsContent value="metrics" className="mt-6">
+          <TabsContent value="metrics" className="mt-6 space-y-6">
             <AdminMetrics />
+            <AdminCountries />
+          </TabsContent>
+
+          <TabsContent value="party" className="mt-6">
+            <AdminParty />
           </TabsContent>
 
           <TabsContent value="monetag" className="mt-6">
