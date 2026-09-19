@@ -1461,6 +1461,14 @@ const DuelRoom = () => {
                   </div>
                 )}
 
+                {/* Contador de espectadores ao vivo */}
+                {liveSpectators > 0 && (
+                  <div className="px-2 sm:px-3 py-1 sm:py-2 rounded-lg backdrop-blur-sm text-xs sm:text-sm font-bold bg-background/80 text-foreground flex items-center gap-1">
+                    <Eye className="h-3.5 w-3.5" />
+                    {liveSpectators}
+                  </div>
+                )}
+
                 {/* Badge de Tipo de Partida */}
                 {duel && (
                   <div className={`px-2 sm:px-3 py-1 sm:py-2 rounded-lg backdrop-blur-sm text-xs sm:text-sm font-bold ${
