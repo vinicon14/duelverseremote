@@ -14,7 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Swords, Trophy, Users, Video, Zap, Shield,
   Play, Star, TrendingUp, Gamepad2, Crown, ChevronDown,
-  Download, Monitor, Smartphone, Bell } from
+  Download, Monitor, Smartphone, Bell, BookOpen } from
 "lucide-react";
 import { SEOHead } from "@/components/SEOHead";
 import { SEOLinksSection } from "@/components/SEOLinksSection";
@@ -48,6 +48,12 @@ const Landing = () => {
             </div>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+            <Link to="/comece">
+              <Button variant="ghost" size="sm" className="text-foreground hover:text-primary hover:bg-white/5 px-2 sm:px-3 text-xs sm:text-sm h-9" aria-label="Como começar no DuelVerse">
+                <BookOpen className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Como começar</span>
+              </Button>
+            </Link>
             <Link to="/auth">
               <Button variant="ghost" size="sm" className="text-foreground hover:text-primary hover:bg-white/5 px-2 sm:px-4 text-xs sm:text-sm h-9">
                 {t('landing.navLogin')}
