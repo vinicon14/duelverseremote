@@ -20,7 +20,14 @@ const CACHE_FAIL_MS = 30 * 1000;
 
 function normalizeHost(raw: string | undefined): string | null {
   if (!raw) return null;
-  return raw.trim().replace(/^https?:\/\//i, "").replace(/\/+$/, "") || null;
+  const host = raw.trim().replace(/^https?:\/\//i, "").replace(/\/+$/, "");
+  // Guard against misconfigured values (e.g. a token pasted into the domain).
+  const looksLikeHost = /^[a-z0-9.-]+\.[a-z]{2,}$/i.test(host);
+  if (!looksLikeHost) {
+    console.log("[ice] ignoring invalid METERED_DOMAIN value");
+    return null;
+  }
+  return host;
 }
 
 async function meteredServers(): Promise<unknown[]> {
