@@ -39,6 +39,8 @@ export function usePartyMesh({ roomId, userId, username, avatarUrl = null }: Opt
   const localStreamRef = useRef<MediaStream | null>(null);
   const audioElsRef = useRef<Map<string, HTMLAudioElement>>(new Map());
   const profilesRef = useRef<Map<string, { username: string; avatarUrl: string | null }>>(new Map());
+  const pendingOffersRef = useRef<Set<string>>(new Set());
+  const offeringRef = useRef<Set<string>>(new Set());
   const pendingIceRef = useRef<Map<string, RTCIceCandidateInit[]>>(new Map());
 
   const send = useCallback((payload: Record<string, unknown>) => {
@@ -50,7 +52,7 @@ export function usePartyMesh({ roomId, userId, username, avatarUrl = null }: Opt
     if (!el) {
       el = document.createElement("audio");
       el.autoplay = true;
-      (el as any).playsInline = true;
+      (el as HTMLAudioElement & { playsInline: boolean }).playsInline = true;
       el.style.display = "none";
       document.body.appendChild(el);
       audioElsRef.current.set(peerId, el);
@@ -83,6 +85,8 @@ export function usePartyMesh({ roomId, userId, username, avatarUrl = null }: Opt
       audioElsRef.current.delete(peerId);
     }
     pendingIceRef.current.delete(peerId);
+    pendingOffersRef.current.delete(peerId);
+    offeringRef.current.delete(peerId);
     setPeers((prev) => {
       if (!prev[peerId]) return prev;
       const next = { ...prev };
@@ -100,15 +104,10 @@ export function usePartyMesh({ roomId, userId, username, avatarUrl = null }: Opt
       pcsRef.current.set(peerId, pc);
 
       const stream = localStreamRef.current;
-      if (stream && stream.getTracks().length > 0) {
-        stream.getTracks().forEach((track) => pc.addTrack(track, stream));
-      } else {
-        try {
-          pc.addTransceiver("video", { direction: "recvonly" });
-          pc.addTransceiver("audio", { direction: "recvonly" });
-        } catch {
-          /* noop */
-        }
+      for (const kind of ["video", "audio"] as const) {
+        const track = stream?.getTracks().find(t => t.kind === kind);
+        if (track && stream) pc.addTrack(track, stream);
+        else pc.addTransceiver(kind, { direction: "recvonly" });
       }
 
       pc.onicecandidate = (event) => {
@@ -151,14 +150,26 @@ export function usePartyMesh({ roomId, userId, username, avatarUrl = null }: Opt
 
   const offerTo = useCallback(
     async (peerId: string) => {
+      if (userId >= peerId) return;
+      const channel = channelRef.current;
+      if (!channel) return;
       await ensureIceServers();
+      if (channelRef.current !== channel) return;
       const pc = createPeer(peerId);
+      if (offeringRef.current.has(peerId) || pc.signalingState !== "stable") {
+        pendingOffersRef.current.add(peerId);
+        return;
+      }
+      pendingOffersRef.current.delete(peerId);
+      offeringRef.current.add(peerId);
       try {
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
         send({ type: "offer", from: userId, to: peerId, sdp: pc.localDescription });
-      } catch {
-        /* noop */
+      } catch (error) {
+        console.warn("[Party] Offer failed", error);
+      } finally {
+        offeringRef.current.delete(peerId);
       }
     },
     [createPeer, send, userId],
@@ -177,6 +188,8 @@ export function usePartyMesh({ roomId, userId, username, avatarUrl = null }: Opt
         if (sender) {
           try {
             await sender.replaceTrack(track);
+            const transceiver = pc.getTransceivers().find(t => t.sender === sender);
+            if (transceiver) transceiver.direction = track ? "sendrecv" : "recvonly";
           } catch {
             /* noop */
           }
@@ -185,8 +198,9 @@ export function usePartyMesh({ roomId, userId, username, avatarUrl = null }: Opt
         }
       }
       if (userId < peerId) await offerTo(peerId);
+      else send({ type: "request-offer", from: userId, to: peerId });
     }
-  }, [offerTo, userId]);
+  }, [offerTo, send, userId]);
 
   const ensureLocalStream = useCallback(async (wantVideo: boolean, wantAudio: boolean) => {
     if (!wantVideo && !wantAudio) {
@@ -232,6 +246,7 @@ export function usePartyMesh({ roomId, userId, username, avatarUrl = null }: Opt
   useEffect(() => {
     if (!roomId || !userId) return;
     let cancelled = false;
+    const peerMap = pcsRef.current;
     void ensureIceServers();
 
     const channel = supabase.channel(`party-${roomId}`, {
@@ -240,7 +255,7 @@ export function usePartyMesh({ roomId, userId, username, avatarUrl = null }: Opt
     channelRef.current = channel;
 
     channel.on("presence", { event: "sync" }, () => {
-      const state = channel.presenceState() as Record<string, any[]>;
+      const state = channel.presenceState() as Record<string, { username?: string; avatarUrl?: string }[]>;
       const ids = Object.keys(state).filter((id) => id !== userId);
       ids.forEach((id) => {
         const meta = state[id]?.[0];
@@ -278,11 +293,13 @@ export function usePartyMesh({ roomId, userId, username, avatarUrl = null }: Opt
     });
 
     channel.on("broadcast", { event: "party-signal" }, async ({ payload }) => {
-      const data = payload as any;
+      const data = payload as { type: string; from: string; to: string; sdp?: RTCSessionDescriptionInit; candidate?: RTCIceCandidateInit };
       if (!data || data.to !== userId || data.from === userId) return;
       const peerId = data.from as string;
 
-      if (data.type === "offer") {
+      if (data.type === "request-offer") {
+        await offerTo(peerId);
+      } else if (data.type === "offer") {
         const pc = createPeer(peerId);
         try {
           await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
@@ -303,6 +320,7 @@ export function usePartyMesh({ roomId, userId, username, avatarUrl = null }: Opt
           const queued = pendingIceRef.current.get(peerId) ?? [];
           for (const c of queued) await pc.addIceCandidate(new RTCIceCandidate(c)).catch(() => undefined);
           pendingIceRef.current.delete(peerId);
+          if (pendingOffersRef.current.has(peerId)) await offerTo(peerId);
         } catch {
           /* noop */
         }
@@ -333,8 +351,8 @@ export function usePartyMesh({ roomId, userId, username, avatarUrl = null }: Opt
       } catch {
         /* noop */
       }
-      pcsRef.current.forEach((_pc, peerId) => removePeer(peerId));
-      pcsRef.current.clear();
+      peerMap.forEach((_pc, peerId) => removePeer(peerId));
+      peerMap.clear();
       localStreamRef.current?.getTracks().forEach((t) => t.stop());
       localStreamRef.current = null;
       supabase.removeChannel(channel);
