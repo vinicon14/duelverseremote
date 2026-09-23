@@ -1,38 +1,36 @@
 import { useEffect, useRef } from "react";
 import { useAccountType } from "@/hooks/useAccountType";
-import { DEFAULT_ADSENSE_CLIENT } from "@/hooks/useSiteAds";
 
 declare global {
   interface Window {
     adsbygoogle: any[];
-    _adsenseLoaded?: string;
+    _adsenseLoaded?: boolean;
   }
 }
 
 interface GoogleAdProps {
   slot: string;
-  client?: string;
   format?: "auto" | "fluid" | "rectangle" | "vertical" | "horizontal";
   style?: React.CSSProperties;
   className?: string;
 }
 
-const loadAdSenseScript = (client: string) => {
+const loadAdSenseScript = () => {
   if (window._adsenseLoaded) return;
-  window._adsenseLoaded = client;
-  const script = document.createElement("script");
-  script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(client)}`;
+  window._adsenseLoaded = true;
+
+  const script = document.createElement('script');
+  script.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5741796577623184';
   script.async = true;
-  script.crossOrigin = "anonymous";
+  script.crossOrigin = 'anonymous';
   document.head.appendChild(script);
 };
 
-export const GoogleAd = ({
-  slot,
-  client = DEFAULT_ADSENSE_CLIENT,
-  format = "auto",
+export const GoogleAd = ({ 
+  slot, 
+  format = "auto", 
   style = { display: "block" },
-  className = "",
+  className = ""
 }: GoogleAdProps) => {
   const { isPro } = useAccountType();
   const adRef = useRef<HTMLDivElement>(null);
@@ -40,22 +38,25 @@ export const GoogleAd = ({
 
   useEffect(() => {
     if (isPro) return;
-    loadAdSenseScript(client);
+
+    loadAdSenseScript();
+
     const timer = setTimeout(() => {
       try {
         if (!pushed.current && adRef.current) {
-          const ins = adRef.current.querySelector("ins.adsbygoogle");
-          if (ins && !ins.getAttribute("data-ad-status")) {
+          const ins = adRef.current.querySelector('ins.adsbygoogle');
+          if (ins && !ins.getAttribute('data-ad-status')) {
             (window.adsbygoogle = window.adsbygoogle || []).push({});
             pushed.current = true;
           }
         }
-      } catch {
-        // ignora erros de anúncio
+      } catch (error) {
+        // Silently ignore ad errors to prevent crashes
       }
     }, 500);
+
     return () => clearTimeout(timer);
-  }, [isPro, client]);
+  }, [isPro]);
 
   if (isPro) return null;
 
@@ -64,7 +65,7 @@ export const GoogleAd = ({
       <ins
         className="adsbygoogle"
         style={style}
-        data-ad-client={client}
+        data-ad-client="ca-pub-5741796577623184"
         data-ad-slot={slot}
         data-ad-format={format}
         data-full-width-responsive="true"

@@ -2,8 +2,20 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 
-import { ensureIceServers, partyPcConfig } from "@/utils/iceServers";
-import { queueRemoteCandidate, flushRemoteCandidates } from "@/utils/webrtcCandidates";
+const ICE_SERVERS: RTCIceServer[] = [
+  { urls: "stun:stun.l.google.com:19302" },
+  { urls: "stun:global.stun.twilio.com:3478" },
+  {
+    urls: "turn:openrelay.metered.ca:80",
+    username: "openrelayproject",
+    credential: "openrelayproject",
+  },
+  {
+    urls: "turn:openrelay.metered.ca:443",
+    username: "openrelayproject",
+    credential: "openrelayproject",
+  },
+];
 
 export type PairStatus =
   | "idle"
@@ -17,7 +29,6 @@ interface Signal {
   from: "host" | "phone";
   type: "claim" | "ready" | "offer" | "answer" | "ice" | "bye";
   token?: string;
-  attemptId?: string;
   sdp?: RTCSessionDescriptionInit;
   candidate?: RTCIceCandidateInit;
 }
@@ -39,20 +50,19 @@ export function useHostPairing() {
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
-  const attemptRef = useRef<string | undefined>(undefined);
 
   const send = useCallback((signal: Omit<Signal, "from">) => {
     channelRef.current?.send({
       type: "broadcast",
       event: "sig",
-      payload: { ...signal, attemptId: attemptRef.current, from: "host" },
+      payload: { ...signal, from: "host" },
     });
   }, []);
 
   const disconnect = useCallback(() => {
     try {
       send({ type: "bye" });
-    } catch { /* Best-effort departure; the channel may already be closed. */ }
+    } catch {}
     pcRef.current?.close();
     pcRef.current = null;
     if (channelRef.current) supabase.removeChannel(channelRef.current);
@@ -67,29 +77,14 @@ export function useHostPairing() {
     });
     channelRef.current = channel;
 
-    let disposed = false;
-    let disconnectedAt: number | null = null;
-    let pendingCandidates: RTCIceCandidateInit[] = [];
-    const resetPeer = () => {
-      const pc = pcRef.current;
-      pcRef.current = null;
-      pendingCandidates = [];
-      disconnectedAt = null;
-      if (pc) { pc.onconnectionstatechange = null; pc.onicecandidate = null; pc.ontrack = null; pc.close(); }
-      setRemoteStream(null);
-      setStatus("disconnected");
-    };
     const setupPC = () => {
-      const pc = new RTCPeerConnection(partyPcConfig());
+      const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
       pcRef.current = pc;
       const stream = new MediaStream();
       setRemoteStream(stream);
 
       pc.ontrack = (e) => {
-        (e.streams[0]?.getTracks() ?? [e.track]).forEach((t) => {
-          stream.getTracks().filter(old => old.kind === t.kind && old.id !== t.id).forEach(old => stream.removeTrack(old));
-          stream.addTrack(t);
-        });
+        e.streams[0]?.getTracks().forEach((t) => stream.addTrack(t));
         setRemoteStream(new MediaStream(stream.getTracks()));
       };
       pc.onicecandidate = (e) => {
@@ -97,56 +92,43 @@ export function useHostPairing() {
       };
       pc.onconnectionstatechange = () => {
         const s = pc.connectionState;
-        if (s === "connected") { disconnectedAt = null; setStatus("connected"); }
-        else if (s === "failed" || s === "closed") resetPeer();
-        else if (s === "disconnected") disconnectedAt ??= Date.now();
+        if (s === "connected") setStatus("connected");
+        else if (s === "failed" || s === "closed") setStatus("disconnected");
       };
       return pc;
     };
 
-    const handleSignal = async ({ payload }: { payload: Signal }) => {
+    channel.on("broadcast", { event: "sig" }, async ({ payload }) => {
       const msg = payload as Signal;
-      if (!msg || disposed || msg.from !== "phone") return;
-      if (msg.type !== "claim" && msg.attemptId && msg.attemptId !== attemptRef.current) return;
+      if (msg.from !== "phone") return;
 
       if (msg.type === "claim") {
         if (msg.token !== token) return;
-        await ensureIceServers();
-        if (disposed || channelRef.current !== channel) return;
-        if (msg.attemptId && msg.attemptId !== attemptRef.current) resetPeer();
-        attemptRef.current = msg.attemptId;
         setStatus("connecting");
         if (!pcRef.current) setupPC();
         send({ type: "ready" });
       } else if (msg.type === "offer" && pcRef.current && msg.sdp) {
-        const pc = pcRef.current;
-        await pc.setRemoteDescription(msg.sdp);
-        await flushRemoteCandidates(pc, pendingCandidates);
-        if (disposed || pcRef.current !== pc) return;
-        const answer = await pc.createAnswer();
-        await pc.setLocalDescription(answer);
+        await pcRef.current.setRemoteDescription(msg.sdp);
+        const answer = await pcRef.current.createAnswer();
+        await pcRef.current.setLocalDescription(answer);
         send({ type: "answer", sdp: answer });
       } else if (msg.type === "ice" && pcRef.current && msg.candidate) {
-        await queueRemoteCandidate(pcRef.current, msg.candidate, pendingCandidates);
+        try {
+          await pcRef.current.addIceCandidate(msg.candidate);
+        } catch {}
       } else if (msg.type === "bye") {
-        resetPeer();
+        pcRef.current?.close();
+        pcRef.current = null;
+        setRemoteStream(null);
+        setStatus("disconnected");
       }
-    };
-    let signals = Promise.resolve();
-    channel.on("broadcast", { event: "sig" }, (message) => {
-      signals = signals.then(() => handleSignal({ payload: message.payload as Signal })).catch(error => console.warn("[PhonePair] Host signal failed", error));
-      return signals;
     });
-    const watchdog = window.setInterval(() => {
-      if (disconnectedAt !== null && Date.now() - disconnectedAt > 10000) resetPeer();
-    }, 2000);
 
     channel.subscribe();
 
     return () => {
-      disposed = true;
-      window.clearInterval(watchdog);
-      resetPeer();
+      pcRef.current?.close();
+      pcRef.current = null;
       supabase.removeChannel(channel);
       channelRef.current = null;
     };
@@ -175,7 +157,6 @@ export function usePhoneClientPairing(params: {
   const [error, setError] = useState<string | null>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
-  const attemptRef = useRef<string | undefined>(undefined);
   const videoSenderRef = useRef<RTCRtpSender | null>(null);
   const audioSenderRef = useRef<RTCRtpSender | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -186,7 +167,7 @@ export function usePhoneClientPairing(params: {
     channelRef.current?.send({
       type: "broadcast",
       event: "sig",
-      payload: { ...signal, attemptId: attemptRef.current, from: "phone" },
+      payload: { ...signal, from: "phone" },
     });
   }, []);
 
@@ -229,36 +210,15 @@ export function usePhoneClientPairing(params: {
       config: { broadcast: { self: false, ack: false } },
     });
     channelRef.current = channel;
-    let disposed = false;
-    let pendingCandidates: RTCIceCandidateInit[] = [];
-    let startedAt = Date.now();
-    let disconnectedAt: number | null = null;
-    attemptRef.current = crypto.randomUUID();
-    const resetPeer = () => {
-      const pc = pcRef.current;
-      pcRef.current = null;
-      videoSenderRef.current = null;
-      audioSenderRef.current = null;
-      pendingCandidates = [];
-      disconnectedAt = null;
-      if (pc) { pc.onconnectionstatechange = null; pc.onicecandidate = null; pc.close(); }
-      attemptRef.current = crypto.randomUUID();
-      setStatus("disconnected");
-    };
 
-    const handleSignal = async ({ payload }: { payload: Signal }) => {
+    channel.on("broadcast", { event: "sig" }, async ({ payload }) => {
       const msg = payload as Signal;
-      if (!msg || disposed || msg.from !== "host") return;
-      if (msg.attemptId && msg.attemptId !== attemptRef.current) return;
+      if (msg.from !== "host") return;
 
       if (msg.type === "ready") {
         if (pcRef.current) return;
-        await ensureIceServers();
-        if (disposed || channelRef.current !== channel || pcRef.current) return;
         setStatus("connecting");
-        setError(null);
-        startedAt = Date.now();
-        const pc = new RTCPeerConnection(partyPcConfig());
+        const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
         pcRef.current = pc;
         pc.onicecandidate = (e) => {
           if (e.candidate) send({ type: "ice", candidate: e.candidate.toJSON() });
@@ -266,9 +226,7 @@ export function usePhoneClientPairing(params: {
         pc.onconnectionstatechange = () => {
           const s = pc.connectionState;
           if (s === "connected") setStatus("connected");
-          else if (s === "failed" || s === "closed") resetPeer();
-          else if (s === "disconnected") disconnectedAt ??= Date.now();
-          if (s === "connected") disconnectedAt = null;
+          else if (s === "failed" || s === "closed") setStatus("disconnected");
         };
 
         // Wait briefly for stream if not yet available
@@ -277,7 +235,6 @@ export function usePhoneClientPairing(params: {
           await new Promise((r) => setTimeout(r, 100));
           attempts++;
         }
-        if (disposed || pcRef.current !== pc) return;
         const stream = streamRef.current;
         const videoTrack = stream?.getVideoTracks()[0];
         const audioTrack = stream?.getAudioTracks()[0];
@@ -294,53 +251,43 @@ export function usePhoneClientPairing(params: {
 
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
-        if (!disposed && pcRef.current === pc) send({ type: "offer", sdp: offer });
+        send({ type: "offer", sdp: offer });
       } else if (msg.type === "answer" && pcRef.current && msg.sdp) {
-        const pc = pcRef.current;
-        if (pc.signalingState !== "have-local-offer") return;
-        await pc.setRemoteDescription(msg.sdp);
-        await flushRemoteCandidates(pc, pendingCandidates);
+        await pcRef.current.setRemoteDescription(msg.sdp);
       } else if (msg.type === "ice" && pcRef.current && msg.candidate) {
-        await queueRemoteCandidate(pcRef.current, msg.candidate, pendingCandidates);
+        try {
+          await pcRef.current.addIceCandidate(msg.candidate);
+        } catch {}
       } else if (msg.type === "bye") {
-        resetPeer();
+        pcRef.current?.close();
+        pcRef.current = null;
+        setStatus("disconnected");
       }
-    };
-    let signals = Promise.resolve();
-    channel.on("broadcast", { event: "sig" }, (message) => {
-      signals = signals.then(() => handleSignal({ payload: message.payload as Signal })).catch(error => {
-        if (!disposed) { resetPeer(); setError("Conexão interrompida. Tentando novamente…"); }
-        console.warn("[PhonePair] Signal failed", error);
-      });
-      return signals;
     });
 
     let claimTimer: number | null = null;
 
     channel.subscribe((s) => {
       if (s === "SUBSCRIBED") {
-        if (claimTimer) window.clearInterval(claimTimer);
-        if (!pcRef.current) setStatus("waiting");
+        setStatus("waiting");
         send({ type: "claim", token });
         claimTimer = window.setInterval(() => {
-          const pc = pcRef.current;
-          const stalled = pc && pc.connectionState !== "connected" && Date.now() - startedAt > 20000;
-          if (stalled || (disconnectedAt !== null && Date.now() - disconnectedAt > 10000)) resetPeer();
-          if (!disposed && !pcRef.current) send({ type: "claim", token });
+          if (!pcRef.current) send({ type: "claim", token });
         }, 1200);
       }
     });
 
     return () => {
-      disposed = true;
       try {
-        channel.send({ type: "broadcast", event: "sig", payload: { from: "phone", type: "bye", attemptId: attemptRef.current } });
-      } catch { /* Best-effort departure; the channel may already be closed. */ }
+        channel.send({ type: "broadcast", event: "sig", payload: { from: "phone", type: "bye" } });
+      } catch {}
       if (claimTimer) window.clearInterval(claimTimer);
-      resetPeer();
+      pcRef.current?.close();
+      pcRef.current = null;
       supabase.removeChannel(channel);
       channelRef.current = null;
-      // The phone page owns capture; reconnecting must not stop its tracks.
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
     };
   }, [sessionId, token, send]);
 

@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState, useCallback, useImperativeHandle, forwardRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ensureIceServers, buildPcConfig, getIceServers } from "@/utils/iceServers";
-import { queueRemoteCandidate, flushRemoteCandidates } from "@/utils/webrtcCandidates";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Mic, MicOff, Video, VideoOff, Loader2, LayoutGrid, PictureInPicture2, ZoomIn, ZoomOut, Settings, Smartphone, Volume2 } from "lucide-react";
@@ -52,6 +50,90 @@ interface WebRTCVideoCallProps {
   mobileArenaMode?: boolean;
 }
 
+// Baseline STUN servers. TURN relays (needed on 4G / symmetric NAT / VPN, where
+// the opponent camera never arrives on a direct path) are fetched at runtime
+// from the backend so credentials can be rotated without a deploy.
+const STUN_SERVERS: RTCIceServer[] = [
+  { urls: "stun:stun.l.google.com:19302" },
+  { urls: "stun:stun1.l.google.com:19302" },
+  { urls: "stun:stun2.l.google.com:19302" },
+  { urls: "stun:stun.cloudflare.com:3478" },
+];
+
+// Best-effort public relay used only until the backend list arrives. It is NOT
+// considered a verified relay: forcing `iceTransportPolicy: "relay"` on a dead
+// TURN server blocks even the peers that would connect directly.
+const FALLBACK_TURN: RTCIceServer[] = [
+  {
+    urls: [
+      "turn:global.relay.metered.ca:80",
+      "turn:global.relay.metered.ca:443",
+      "turn:global.relay.metered.ca:443?transport=tcp",
+    ],
+    username: "openrelayproject",
+    credential: "openrelayproject",
+  },
+];
+
+let runtimeIceServers: RTCIceServer[] = [...STUN_SERVERS, ...FALLBACK_TURN];
+// True only when the backend confirmed real (configured) TURN credentials.
+let verifiedTurn = false;
+let iceServersPromise: Promise<void> | null = null;
+
+const hasTurnIn = (servers: RTCIceServer[]) =>
+  servers.some((s) => {
+    const urls = Array.isArray(s.urls) ? s.urls : [s.urls];
+    return urls.some((u) => typeof u === "string" && u.startsWith("turn"));
+  });
+
+/** Fetch TURN credentials once per page load (cached module-wide).
+ *  Never blocks the handshake for more than 3s: a slow/failed backend must not
+ *  delay (or prevent) the peer connections. */
+const ensureIceServers = () => {
+  if (iceServersPromise) return iceServersPromise;
+  const load = (async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke("get-ice-servers");
+      const servers = (data as any)?.iceServers;
+      if (!error && Array.isArray(servers) && servers.length > 0) {
+        const list = servers as RTCIceServer[];
+        // Always keep a relay path available.
+        runtimeIceServers = hasTurnIn(list) ? list : [...list, ...FALLBACK_TURN];
+        verifiedTurn = Boolean((data as any)?.hasTurn);
+        console.log(
+          "[WebRTC] ICE servers loaded:",
+          runtimeIceServers.length,
+          "verifiedTurn:",
+          verifiedTurn,
+        );
+      }
+    } catch (err) {
+      console.warn("[WebRTC] Falling back to default ICE servers:", err);
+    }
+  })();
+  iceServersPromise = Promise.race([
+    load,
+    new Promise<void>((resolve) => setTimeout(resolve, 3000)),
+  ]);
+  return iceServersPromise;
+};
+
+
+const basePcConfig = (): RTCConfiguration => ({
+  iceServers: runtimeIceServers,
+  iceCandidatePoolSize: 4,
+  bundlePolicy: "max-bundle",
+  rtcpMuxPolicy: "require",
+});
+
+/** Peers whose direct (host/srflx) path already failed: force TURN relay only.
+ *  The normal connection already exhausted direct candidates, so rebuilding it
+ *  with relay-only avoids repeating the same failed route indefinitely. */
+const buildPcConfig = (forceRelay: boolean): RTCConfiguration => {
+  const config = basePcConfig();
+  return forceRelay ? { ...config, iceTransportPolicy: "relay" } : config;
+};
+
 const isVirtualCamera = (label?: string) => /droidcam|obs virtual|virtual camera|iriun|epoccam/i.test(label ?? "");
 
 /** Virtual cameras often expose formats that Chromium renders as a green frame
@@ -74,16 +156,6 @@ const stabilizeVideoTrack = async (track?: MediaStreamTrack) => {
 
 
 
-
-interface DuelSignal {
-  type: "ready" | "request-offer" | "leave" | "offer" | "answer" | "ice-candidate";
-  senderId: string;
-  targetId?: string;
-  isSpectator?: boolean;
-  rebuild?: boolean;
-  sdp?: RTCSessionDescriptionInit;
-  candidate?: RTCIceCandidateInit;
-}
 
 interface PeerState {
   pc: RTCPeerConnection;
@@ -131,11 +203,6 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
 
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
-  const [cameraError, setCameraError] = useState<string | null>(null);
-  const [cameraAcquiring, setCameraAcquiring] = useState(false);
-  const captureBusyRef = useRef(false);
-  const captureGenerationRef = useRef(0);
-  const videoActionRef = useRef<(enabled: boolean) => Promise<void>>(async () => {});
   const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(new Map());
   const remoteStreamsRef = useRef<Map<string, MediaStream>>(new Map());
   const [remotePeerIds, setRemotePeerIds] = useState<string[]>([]);
@@ -150,7 +217,8 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   const frozenVideoSinceRef = useRef<Map<string, number>>(new Map());
 
   const playerIdsRef = useRef(new Set(playerIds.filter(Boolean)));
-
+  // Peers whose direct path failed at least once -> retry through TURN only.
+  const relayOnlyPeersRef = useRef<Set<string>>(new Set());
 
   const [pipSwapped, setPipSwapped] = useState(false);
 
@@ -267,7 +335,15 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   }, [isMuted, isVideoOff, enumerateDevices, videoDevices]);
 
   useImperativeHandle(ref, () => ({
-    setVideoEnabled: (enabled: boolean) => { void videoActionRef.current(enabled); },
+    setVideoEnabled: (enabled: boolean) => {
+      const stream = localStreamRef.current;
+      if (!stream) return;
+      const videoTrack = stream.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.enabled = enabled;
+        setIsVideoOff(!enabled);
+      }
+    },
     isVideoOff,
   }), [isVideoOff]);
 
@@ -321,35 +397,27 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   }, []);
 
   /** Push the current outbound stream (already zoom-processed) to every peer. */
-  const republishOutbound = useCallback(async () => {
+  const republishOutbound = useCallback(() => {
     const outboundStream = getActiveOutboundStream();
     const activeVideo = outboundStream?.getVideoTracks()[0] ?? null;
     const activeAudio = outboundStream?.getAudioTracks()[0] ?? null;
 
-    await Promise.all(Array.from(peersRef.current.entries()).map(async ([peerId, { pc }]) => {
-      let needsNegotiation = false;
-      for (const [kind, track] of [["video", activeVideo], ["audio", activeAudio]] as const) {
-        const transceiver = pc.getTransceivers().find(t => t.receiver.track.kind === kind);
-        if (transceiver) {
-          await transceiver.sender.replaceTrack(track);
-          if (track && transceiver.direction === "recvonly") {
-            transceiver.direction = "sendrecv";
-            needsNegotiation = true;
-          }
-        } else if (track && outboundStream) {
-          pc.addTrack(track, outboundStream);
-          needsNegotiation = true;
-        }
+    // Replace tracks on all peer senders
+    peersRef.current.forEach(({ pc }) => {
+      const senders = pc.getSenders();
+      const vs = senders.find((s) => s.track?.kind === "video");
+      if (vs) {
+        vs.replaceTrack(activeVideo).catch(() => {});
+      } else if (activeVideo && outboundStream) {
+        pc.addTrack(activeVideo, outboundStream);
       }
-      // The elected offerer handles negotiationneeded. If this side is the
-      // answerer, ask the other player to renegotiate its receiving directions.
-      if (needsNegotiation && userId > peerId && !spectatorPeersRef.current.has(peerId)) {
-        channelRef.current?.send({ type: "broadcast", event: "webrtc-signal",
-          payload: { type: "request-offer", senderId: userId, targetId: peerId } });
+
+      const as = senders.find((s) => s.track?.kind === "audio");
+      if (as) {
+        as.replaceTrack(activeAudio).catch(() => {});
+      } else if (activeAudio && outboundStream) {
+        pc.addTrack(activeAudio, outboundStream);
       }
-    })).catch(error => {
-      console.warn("[WebRTC] Track publication failed", error);
-      setCameraError("Não foi possível transmitir a câmera. Tente ligá-la novamente.");
     });
 
     // Update local preview
@@ -357,77 +425,12 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       localVideoRef.current.srcObject = outboundStream;
       localVideoRef.current.play?.().catch(() => {});
     }
-  }, [getActiveOutboundStream, userId]);
+  }, [getActiveOutboundStream]);
 
   useEffect(() => {
     if (isSpectator) return;
     republishOutbound();
   }, [phoneStream, isSpectator, republishOutbound]);
-
-  const setCameraEnabled = useCallback(async (enabled: boolean) => {
-    if (isSpectator || captureBusyRef.current) return;
-    const active = getActiveOutboundStream()?.getVideoTracks()[0];
-    if (!enabled || active?.readyState === "live") {
-      if (active) active.enabled = enabled;
-      const source = phoneStreamRef.current?.getVideoTracks()[0] ?? localStreamRef.current?.getVideoTracks()[0];
-      if (source) source.enabled = enabled;
-      isVideoOffRef.current = !enabled;
-      setIsVideoOff(!enabled);
-      zoomPipelineRef.current?.syncEnabled();
-      return;
-    }
-    captureBusyRef.current = true;
-    setCameraAcquiring(true);
-    setCameraError(null);
-    const generation = captureGenerationRef.current;
-    try {
-      let fresh: MediaStream;
-      try {
-        fresh = await navigator.mediaDevices.getUserMedia({
-          video: selectedVideoId ? { deviceId: { exact: selectedVideoId } } : true,
-          audio: false,
-        });
-      } catch (error) {
-        if (!selectedVideoId) throw error;
-        fresh = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-      }
-      if (generation !== captureGenerationRef.current) {
-        fresh.getTracks().forEach(t => t.stop());
-        return;
-      }
-      const track = fresh.getVideoTracks()[0];
-      if (!track) throw new Error("A câmera não forneceu vídeo");
-      await stabilizeVideoTrack(track);
-      if (generation !== captureGenerationRef.current) {
-        fresh.getTracks().forEach(t => t.stop());
-        return;
-      }
-      const previous = localStreamRef.current;
-      localStreamRef.current = new MediaStream([
-        ...(previous?.getAudioTracks().filter(t => t.readyState === "live") ?? []), track,
-      ]);
-      track.onended = () => { isVideoOffRef.current = true; setIsVideoOff(true); };
-      isVideoOffRef.current = false;
-      setIsVideoOff(false);
-      setSelectedVideoId(track.getSettings().deviceId ?? "");
-      await republishOutbound();
-      previous?.getVideoTracks().forEach(t => t.stop());
-      await enumerateDevices();
-    } catch (error) {
-      if (generation === captureGenerationRef.current) {
-        isVideoOffRef.current = true;
-        setIsVideoOff(true);
-        setCameraError("Não foi possível abrir a câmera. Verifique a conexão e a permissão e tente novamente.");
-        console.warn("[WebRTC] Camera recovery failed", error);
-      }
-    } finally {
-      if (generation === captureGenerationRef.current) {
-        captureBusyRef.current = false;
-        setCameraAcquiring(false);
-      }
-    }
-  }, [isSpectator, getActiveOutboundStream, selectedVideoId, republishOutbound, enumerateDevices]);
-  videoActionRef.current = setCameraEnabled;
 
   // ==== Real camera zoom ====
   // Applies the zoom to the captured video itself (native track zoom when the
@@ -479,7 +482,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         // nativo e estiver fora do mínimo (auto-framing), traz de volta ao
         // enquadramento original para que o usuário não veja zoom automático.
         if (range && !cancelled && !nativeZoomActiveRef.current) {
-          const currentNative = Number((source.getSettings?.() as MediaTrackSettings & { zoom?: number })?.zoom ?? range.min);
+          const currentNative = Number((source.getSettings?.() as any)?.zoom ?? range.min);
           if (currentNative !== range.min) {
             await applyNativeZoom(source, range.min);
             republishOutbound();
@@ -535,11 +538,6 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   const removePeer = useCallback((peerId: string) => {
     const peer = peersRef.current.get(peerId);
     if (peer) {
-      peer.pc.onicecandidate = null;
-      peer.pc.oniceconnectionstatechange = null;
-      peer.pc.onconnectionstatechange = null;
-      peer.pc.ontrack = null;
-      peer.pc.onnegotiationneeded = null;
       peer.pc.close();
       peersRef.current.delete(peerId);
     }
@@ -590,7 +588,9 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       setRemotePeerIds((prev) => prev.filter((id) => id !== remotePeerId));
     }
 
-    const pc = new RTCPeerConnection(buildPcConfig());
+    const forceRelay = relayOnlyPeersRef.current.has(remotePeerId);
+    if (forceRelay) console.warn("[WebRTC] Using relay-only path for:", remotePeerId);
+    const pc = new RTCPeerConnection(buildPcConfig(forceRelay));
 
     const peerState: PeerState = {
       pc,
@@ -649,7 +649,6 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     const attemptIceRestart = () => {
       if (!canInitiateOffer(remotePeerId) || peerState.makingOffer) return;
       try {
-        pc.setConfiguration({ ...pc.getConfiguration(), iceServers: getIceServers(), iceTransportPolicy: "all" });
         pc.restartIce();
         if (pc.signalingState === "stable") {
           peerState.makingOffer = true;
@@ -686,24 +685,26 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         // Opera/Brave and VPN setups often fail the first ICE pass; always try a
         // restart (relay candidates included) before dropping the peer.
         console.warn(`[WebRTC] ICE ${state}, attempting restart for:`, remotePeerId);
-        void ensureIceServers().then(() => {
-          if (peersRef.current.get(remotePeerId) === peerState) attemptIceRestart();
-        });
+        if (state === 'failed') relayOnlyPeersRef.current.add(remotePeerId);
+        attemptIceRestart();
         setTimeout(() => {
-          if (peersRef.current.get(remotePeerId) === peerState && pc.iceConnectionState === 'failed') {
+          if (pc.iceConnectionState === 'failed') {
             console.warn("[WebRTC] Second restart attempt for:", remotePeerId);
+            relayOnlyPeersRef.current.add(remotePeerId);
             attemptIceRestart();
           }
         }, 5000);
         setTimeout(() => {
-          if (peersRef.current.get(remotePeerId) === peerState && (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed')) {
-            // Rebuild with fresh ICE servers while preserving direct candidates.
+          if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed') {
+            // Drop it: the reconnection heartbeat rebuilds the peer, this time
+            // pinned to TURN relay so symmetric NAT / carrier networks work.
             console.warn("[WebRTC] Peer lost after restart attempts:", remotePeerId);
+            relayOnlyPeersRef.current.add(remotePeerId);
             removePeer(remotePeerId);
           }
         }, 15000);
       } else if (state === 'connected' || state === 'completed') {
-        // Connectivity restored; no permanent transport restriction is applied.
+        // Keep the relay pin for this session only if it was actually needed.
       } else if (state === 'closed') {
 
         removePeer(remotePeerId);
@@ -794,10 +795,6 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     if (!canInitiateOffer(remotePeerId)) return;
     if (remotePeerId === userId) return;
 
-    const channel = channelRef.current;
-    if (!channel) return;
-    await ensureIceServers();
-    if (channelRef.current !== channel) return;
     let peer = peersRef.current.get(remotePeerId);
     const isDead =
       !!peer && ["failed", "closed", "disconnected"].includes(peer.pc.connectionState);
@@ -815,7 +812,6 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
 
     try {
       peer.makingOffer = true;
-      peer.pc.setConfiguration({ ...peer.pc.getConfiguration(), iceServers: getIceServers(), iceTransportPolicy: "all" });
       const offer = await peer.pc.createOffer();
       await peer.pc.setLocalDescription(offer);
       await channelRef.current?.send({
@@ -917,20 +913,12 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
 
 
   const handleSignal = useCallback(
-    async (payload: DuelSignal) => {
-      if (!payload) return;
+    async (payload: any) => {
       if (payload.senderId === userId) return;
       // If signal has a targetId and it's not for us, ignore
       if (payload.targetId && payload.targetId !== userId) return;
 
       const remotePeerId = payload.senderId;
-      if (typeof remotePeerId !== "string") return;
-      if (["ready", "offer", "request-offer"].includes(payload.type)) {
-        const channel = channelRef.current;
-        if (!channel) return;
-        await ensureIceServers();
-        if (channelRef.current !== channel) return;
-      }
 
       // Offers/candidates also carry the role. Mark it before constructing the
       // peer so the player's negotiationneeded handler cannot race the
@@ -943,7 +931,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       // A spectator asked us (a player) to (re)send our offer.
       if (payload.type === "request-offer") {
         if (isSpectator && !audioBroadcastOnly) return;
-        await sendOfferTo(remotePeerId, !!payload.rebuild);
+        void sendOfferTo(remotePeerId, !!payload.rebuild);
         return;
       }
 
@@ -1065,15 +1053,15 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
             return;
           }
 
-          pc.setConfiguration({ ...pc.getConfiguration(), iceServers: getIceServers(), iceTransportPolicy: "all" });
           await pc.setRemoteDescription(description);
 
           if (peer.pendingCandidates.length > 0) {
             const queuedCandidates = peer.pendingCandidates.splice(0);
-            await flushRemoteCandidates(pc, queuedCandidates);
+            for (const candidate of queuedCandidates) {
+              await pc.addIceCandidate(new RTCIceCandidate(candidate));
+            }
           }
 
-          if (peersRef.current.get(remotePeerId) !== peer) return;
           if (payload.type === "offer") {
             const answer = await pc.createAnswer();
             await pc.setLocalDescription(answer);
@@ -1089,8 +1077,16 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
             });
           }
         } else if (payload.type === "ice-candidate") {
-          if (!peer.ignoreOffer && payload.candidate) {
-            await queueRemoteCandidate(pc, payload.candidate, peer.pendingCandidates);
+          if (!pc.remoteDescription) {
+            peer.pendingCandidates.push(payload.candidate);
+            return;
+          }
+          try {
+            await pc.addIceCandidate(new RTCIceCandidate(payload.candidate));
+          } catch (err) {
+            if (!peer.ignoreOffer) {
+              console.error("[WebRTC] ICE candidate error:", err);
+            }
           }
         }
       } catch (err) {
@@ -1107,6 +1103,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     const peerMap = peersRef.current;
 
     const spectatorPeerSet = spectatorPeersRef.current;
+    const relayOnlyPeerSet = relayOnlyPeersRef.current;
     const videoElementMap = remoteVideoRefs.current;
     const audioElementMap = remoteAudioRefs.current;
 
@@ -1174,19 +1171,13 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       // Load TURN credentials before any PeerConnection is created, otherwise
       // the first handshake gathers STUN-only candidates and the opponent's
       // camera never arrives on restrictive networks (4G, VPN, symmetric NAT).
-      captureBusyRef.current = true;
-      setCameraAcquiring(true);
       await ensureIceServers();
-      if (disposed) return;
       const stream = await acquireMedia();
       if (disposed) {
         stream?.getTracks().forEach((t) => t.stop());
         return;
       }
-      captureBusyRef.current = false;
-      setCameraAcquiring(false);
       if (stream) {
-        setCameraError(null);
         localStreamRef.current = stream;
         if (localVideoRef.current) {
           localVideoRef.current.srcObject = stream;
@@ -1204,7 +1195,6 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
           track.onended = () => {
             console.warn(`[WebRTC] Local ${track.kind} track ended:`, track.label);
             if (track.kind === 'video') {
-              isVideoOffRef.current = true;
               setIsVideoOff(true);
             } else if (track.kind === 'audio') {
               setIsMuted(true);
@@ -1240,9 +1230,6 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
 
 
       } else if (!isSpectator) {
-        isVideoOffRef.current = true;
-        setIsVideoOff(true);
-        setCameraError("Câmera indisponível. Verifique a permissão e use o botão de câmera para tentar novamente.");
         console.error("[WebRTC] Could not acquire any media stream");
       }
 
@@ -1281,20 +1268,9 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
           }, delay);
         };
 
-        const signalQueues = new Map<string, Promise<void>>();
         channel
           .on("broadcast", { event: "webrtc-signal" }, ({ payload }) => {
-            const sender = payload?.senderId;
-            if (typeof sender !== "string") return;
-            const previous = signalQueues.get(sender) ?? Promise.resolve();
-            const next = previous.then(async () => {
-              if (!disposed && channelRef.current === channel) await handleSignal(payload as DuelSignal);
-            }).catch((error) => console.warn("[WebRTC] Signal failed", error));
-            signalQueues.set(sender, next);
-            void next.finally(() => {
-              if (signalQueues.get(sender) === next) signalQueues.delete(sender);
-            });
-            return next;
+            handleSignal(payload);
           })
           .subscribe((status) => {
             if (status === "SUBSCRIBED") {
@@ -1330,8 +1306,6 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
 
     return () => {
       disposed = true;
-      captureGenerationRef.current += 1;
-      captureBusyRef.current = false;
       cancelRetry?.();
 
       localStreamRef.current?.getTracks().forEach((t) => t.stop());
@@ -1354,6 +1328,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       });
       peerMap.clear();
       spectatorPeerSet.clear();
+      relayOnlyPeerSet.clear();
       videoElementMap.forEach((element) => {
         element.srcObject = null;
       });
@@ -1382,7 +1357,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         });
       }
     };
-  }, [duelId, userId, handleSignal, isSpectator, audioBroadcastOnly, getActiveOutboundStream, sendOfferTo, enumerateDevices]);
+  }, [duelId, userId, handleSignal, isSpectator, audioBroadcastOnly, getActiveOutboundStream, sendOfferTo]);
 
   // Handshake heartbeat: while we still expect more player streams than we have,
   // re-announce ourselves periodically. A single "ready" at subscribe time can be
@@ -1596,9 +1571,15 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     }
   };
 
-  const toggleVideo = async () => {
-    const track = getActiveOutboundStream()?.getVideoTracks()[0];
-    await setCameraEnabled(!track || track.readyState !== "live" || !track.enabled);
+  const toggleVideo = () => {
+    const stream = phoneStream || localStreamRef.current;
+    if (!stream) return;
+    const videoTrack = stream.getVideoTracks()[0];
+    if (videoTrack) {
+      videoTrack.enabled = !videoTrack.enabled;
+      zoomPipelineRef.current?.syncEnabled();
+      setIsVideoOff(!videoTrack.enabled);
+    }
   };
 
   const zoomIn = () => setZoomLevel(prev => Math.min(prev + ZOOM_STEP, MAX_ZOOM));
@@ -1988,9 +1969,6 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         </Button>
       )}
 
-      {cameraError && !isSpectator && (
-        <p role="alert" className="absolute top-2 left-2 right-2 z-30 rounded bg-destructive p-2 text-sm text-destructive-foreground">{cameraError}</p>
-      )}
       {/* Controls bar — hidden for pure receive-only spectators */}
       {(!isSpectator || audioBroadcastOnly) && (
         <div className="absolute bottom-1.5 sm:bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 sm:gap-2 z-20">
@@ -2009,8 +1987,6 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
             variant="outline"
             size="icon"
             onClick={toggleVideo}
-            disabled={cameraAcquiring}
-            title={isVideoOff ? "Ativar câmera / tentar novamente" : "Desligar câmera"}
             className={`rounded-full w-8 h-8 sm:w-10 sm:h-10 backdrop-blur-sm ${isVideoOff ? "bg-destructive/80 text-destructive-foreground" : "bg-card/80"}`}
           >
             {isVideoOff ? <VideoOff className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Video className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
