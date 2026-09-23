@@ -7,6 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
+import { AdminAdSense } from "./AdminAdSense";
+import { clearSiteAdsCache } from "@/hooks/useSiteAds";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Trash2, Edit, Eye, EyeOff, Upload, X } from "lucide-react";
 
 export const AdminAds = () => {
@@ -19,7 +22,8 @@ export const AdminAds = () => {
     image_url: '',
     link_url: '',
     is_active: true,
-    expires_at: ''
+    expires_at: '',
+    placement: 'top'
   });
   const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [mediaPreview, setMediaPreview] = useState<string>('');
@@ -100,7 +104,7 @@ export const AdminAds = () => {
     };
 
     if (editingAd) {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('advertisements')
         .update(adData)
         .eq('id', editingAd.id);
@@ -111,7 +115,7 @@ export const AdminAds = () => {
         toast({ title: "Anúncio atualizado com sucesso!" });
       }
     } else {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('advertisements')
         .insert(adData);
       
@@ -122,9 +126,10 @@ export const AdminAds = () => {
       }
     }
 
+    clearSiteAdsCache();
     setOpen(false);
     setEditingAd(null);
-    setFormData({ title: '', content: '', image_url: '', link_url: '', is_active: true, expires_at: '' });
+    setFormData({ title: '', content: '', image_url: '', link_url: '', is_active: true, expires_at: '', placement: 'top' });
     setMediaFile(null);
     setMediaPreview('');
     fetchAds();
@@ -151,7 +156,8 @@ export const AdminAds = () => {
       image_url: item.image_url || '',
       link_url: item.link_url || '',
       is_active: item.is_active,
-      expires_at: item.expires_at ? item.expires_at.split('T')[0] : ''
+      expires_at: item.expires_at ? item.expires_at.split('T')[0] : '',
+      placement: item.placement || 'top'
     });
     setMediaPreview(item.image_url || '');
     setMediaFile(null);
@@ -160,13 +166,14 @@ export const AdminAds = () => {
 
   return (
     <div className="space-y-4">
+      <AdminAdSense />
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Gerenciar Anúncios</h2>
         <Dialog open={open} onOpenChange={(isOpen) => {
           setOpen(isOpen);
           if (!isOpen) {
             setEditingAd(null);
-            setFormData({ title: '', content: '', image_url: '', link_url: '', is_active: true, expires_at: '' });
+            setFormData({ title: '', content: '', image_url: '', link_url: '', is_active: true, expires_at: '', placement: 'top' });
             setMediaFile(null);
             setMediaPreview('');
           }
@@ -248,6 +255,17 @@ export const AdminAds = () => {
                 />
               </div>
               <div>
+                <Label>Onde aparece</Label>
+                <Select value={formData.placement} onValueChange={(v) => setFormData({...formData, placement: v})}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="top">Topo das páginas (banner horizontal)</SelectItem>
+                    <SelectItem value="inline">Entre itens (Marketplace e torneios)</SelectItem>
+                    <SelectItem value="popup">Pop-up</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
                 <Label>Data de Expiração (opcional)</Label>
                 <Input 
                   type="date"
@@ -285,7 +303,7 @@ export const AdminAds = () => {
                 <div className="flex-1">
                   <CardTitle className="text-lg">{item.title}</CardTitle>
                   <p className="text-sm text-muted-foreground mt-1">
-                    {item.expires_at ? `Expira em: ${new Date(item.expires_at).toLocaleDateString('pt-BR')}` : 'Sem expiração'}
+                    {({top:'Topo',inline:'Entre itens',popup:'Pop-up'} as any)[item.placement || 'top']} • {item.expires_at ? `Expira em: ${new Date(item.expires_at).toLocaleDateString('pt-BR')}` : 'Sem expiração'}
                   </p>
                 </div>
                 <div className="flex gap-2">
