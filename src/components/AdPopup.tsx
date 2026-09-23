@@ -35,6 +35,7 @@ export const AdPopup = ({ onClose }: AdPopupProps) => {
         .from('advertisements')
         .select('*')
         .eq('is_active', true)
+        .eq('placement' as any, 'popup')
         .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
         .limit(10);
 
