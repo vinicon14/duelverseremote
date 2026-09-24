@@ -186,7 +186,7 @@ export default function PartyRooms() {
         return;
       }
     }
-    navigate(`/party/${room.id}`);
+    navigate(`/party/${room.id}`, { state: { verified: true } });
   };
 
   return (

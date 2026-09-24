@@ -3,7 +3,7 @@
  * Grade de vídeos sem limite de participantes, com chat da sala.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -25,6 +25,7 @@ import {
   VideoOff,
   Volume2,
   Trash2,
+  Share2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { usePartyMesh } from "@/hooks/usePartyMesh";
@@ -100,6 +101,7 @@ const VideoTile = ({
 export default function PartyRoom() {
   useBanCheck();
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
   const navigate = useNavigate();
   const [userId, setUserId] = useState<string | null>(null);
   const [username, setUsername] = useState("Jogador");
@@ -122,14 +124,14 @@ export default function PartyRoom() {
     const init = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        navigate("/auth");
+        navigate("/auth", { state: { returnTo: `/party/${id}` } });
         return;
       }
       setUserId(session.user.id);
 
       const [{ data: profile }, { data: roomData }] = await Promise.all([
         supabase.from("profiles").select("username, avatar_url").eq("user_id", session.user.id).maybeSingle(),
-        supabase.from("party_rooms").select("name, description, host_id, is_active").eq("id", id).maybeSingle(),
+        supabase.from("party_rooms").select("name, description, host_id, is_active, is_private").eq("id", id).maybeSingle(),
       ]);
 
       if (profile) {
@@ -138,6 +140,11 @@ export default function PartyRoom() {
       }
       if (!roomData || !roomData.is_active) {
         toast.error("Esta sala não está mais disponível");
+        navigate("/party");
+        return;
+      }
+      if ((roomData as any).is_private && roomData.host_id !== session.user.id && !(location.state as any)?.verified) {
+        toast.error("Sala privada: entre pela lista informando a senha");
         navigate("/party");
         return;
       }
@@ -280,6 +287,25 @@ export default function PartyRoom() {
               onClick={() => mesh.toggleMic().catch(() => toast.error("Não foi possível acessar o microfone"))}
             >
               {mesh.micOn ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                const url = `${window.location.origin}/party/${id}`;
+                try {
+                  if (navigator.share) {
+                    await navigator.share({ title: room?.name || "Party DuelVerse", url });
+                  } else {
+                    await navigator.clipboard.writeText(url);
+                    toast.success("Link copiado!");
+                  }
+                } catch {
+                  try { await navigator.clipboard.writeText(url); toast.success("Link copiado!"); } catch {}
+                }
+              }}
+            >
+              <Share2 className="mr-1 h-4 w-4" /> Compartilhar
             </Button>
             <Button variant="destructive" size="sm" onClick={leaveRoom}>
               <LogOut className="mr-1 h-4 w-4" /> Sair
