@@ -31,7 +31,7 @@ export const AdPopup = ({ onClose }: AdPopupProps) => {
         return;
       }
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('advertisements')
         .select('*')
         .eq('is_active', true)
