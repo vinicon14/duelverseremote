@@ -32,6 +32,7 @@ import { isPhysicalProduct } from "@/hooks/useMarketplacePurchase";
 import { PhysicalStore } from "@/components/marketplace/PhysicalStore";
 import { Truck, ArrowUpDown } from "lucide-react";
 import { SiteAdSlot } from "@/components/ads/SiteAdSlot";
+import { SessionAdPopup } from "@/components/AdPopup";
 import { Fragment } from "react";
 
 
@@ -582,6 +583,7 @@ export default function Marketplace() {
       <Navbar />
       <main className="container mx-auto px-4 py-8 pt-24">
         <SiteAdSlot placement="top" className="mb-5" />
+        <SessionAdPopup />
         {/* Tab Navigation */}
         <div className="flex gap-2 mb-6 flex-wrap">
           <Button variant="outline" onClick={() => navigate('/store')}>

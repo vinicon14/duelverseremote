@@ -11,6 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/Navbar";
 import { SiteAdSlot } from "@/components/ads/SiteAdSlot";
+import { SessionAdPopup } from "@/components/AdPopup";
 import { TournamentCard } from "@/components/TournamentCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -263,6 +264,7 @@ const Tournaments = () => {
       
       <main className="container mx-auto px-4 pt-20 sm:pt-24 pb-12">
         <SiteAdSlot placement="top" className="mb-5" />
+        <SessionAdPopup />
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8 animate-fade-in-up">
           <div>
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gradient-mystic mb-2">
