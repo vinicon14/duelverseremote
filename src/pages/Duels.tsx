@@ -829,6 +829,7 @@ const Duels = () => {
             <GlobalChat />
           </div>
         </div>
+        <SiteAdSlot placement="inline" force className="mt-6" />
       </main>
 
       {/* Prompt de senha para sala privada */}
