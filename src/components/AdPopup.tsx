@@ -1,3 +1,4 @@
+import { openTrusted } from '@/utils/openTrusted';
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -60,7 +61,7 @@ export const AdPopup = ({ onClose }: AdPopupProps) => {
 
   const handleAdClick = () => {
     if (ad?.link_url) {
-      window.open(ad.link_url, '_blank');
+      openTrusted(ad.link_url);
     }
   };
 

@@ -1,3 +1,4 @@
+import { openTrusted } from '@/utils/openTrusted';
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Share2, Copy, Check } from "lucide-react";
@@ -50,22 +51,22 @@ export const ShareVideoButton = ({
 
   const shareToWhatsApp = () => {
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(fullShareText)}`;
-    window.open(whatsappUrl, '_blank');
+    openTrusted(whatsappUrl);
   };
 
   const shareToTwitter = () => {
     const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareMessage)}&url=${encodeURIComponent(shareUrl)}`;
-    window.open(twitterUrl, '_blank');
+    openTrusted(twitterUrl);
   };
 
   const shareToFacebook = () => {
     const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
-    window.open(facebookUrl, '_blank');
+    openTrusted(facebookUrl);
   };
 
   const shareToTelegram = () => {
     const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareMessage)}`;
-    window.open(telegramUrl, '_blank');
+    openTrusted(telegramUrl);
   };
 
   const shareNative = async () => {
