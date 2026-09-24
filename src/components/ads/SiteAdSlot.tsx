@@ -31,9 +31,11 @@ interface Props {
   className?: string;
   /** Usado para variar o anúncio próprio entre vários espaços na mesma página. */
   seed?: number;
+  /** Ignora o bloqueio por rota (ex.: landing e página de duelos, liberadas pelo dono). PRO continua sem anúncios. */
+  force?: boolean;
 }
 
-export const SiteAdSlot = ({ placement, className, seed = 0 }: Props) => {
+export const SiteAdSlot = ({ placement, className, seed = 0, force = false }: Props) => {
   const { isPro, loading } = useAccountType();
   const { pathname } = useLocation();
   const config = useSiteAds();
