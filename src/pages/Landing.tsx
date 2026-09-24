@@ -18,6 +18,7 @@ import {
 "lucide-react";
 import { SEOHead } from "@/components/SEOHead";
 import { SEOLinksSection } from "@/components/SEOLinksSection";
+import { SiteAdSlot } from "@/components/ads/SiteAdSlot";
 
 const Landing = () => {
   const { t } = useTranslation();

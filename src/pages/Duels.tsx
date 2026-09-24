@@ -29,6 +29,7 @@ import { RANKED_XP_DIFFICULTIES, getRankedDifficulty, getRankedDifficultyStorage
 import { useTranslation } from "react-i18next";
 import { SEOHead } from "@/components/SEOHead";
 import { SEOLinksSection } from "@/components/SEOLinksSection";
+import { SiteAdSlot } from "@/components/ads/SiteAdSlot";
 
 const Duels = () => {
   useBanCheck();
