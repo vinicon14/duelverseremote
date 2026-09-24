@@ -47,7 +47,7 @@ export const SiteAdSlot = ({ placement, className, seed = 0, force = false }: Pr
     return list[(base + seed) % list.length];
   }, [config, placement, seed]);
 
-  if (loading || isPro || !config || isBlockedPath(pathname)) return null;
+  if (loading || isPro || !config || (!force && isBlockedPath(pathname))) return null;
 
   if (ownAd) {
     const isVideo = !!ownAd.image_url && /\.(mp4|webm)(\?|$)/i.test(ownAd.image_url);
