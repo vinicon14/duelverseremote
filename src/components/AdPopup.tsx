@@ -113,3 +113,19 @@ export const AdPopup = ({ onClose }: AdPopupProps) => {
     </Dialog>
   );
 };
+
+/** Mostra o pop-up de anúncio no máximo uma vez por sessão. */
+export const SessionAdPopup = () => {
+  const [show, setShow] = useState(() => {
+    try { return sessionStorage.getItem('dv_ad_popup_seen') !== '1'; } catch { return false; }
+  });
+  if (!show) return null;
+  return (
+    <AdPopup
+      onClose={() => {
+        try { sessionStorage.setItem('dv_ad_popup_seen', '1'); } catch { /* ignore */ }
+        setShow(false);
+      }}
+    />
+  );
+};
