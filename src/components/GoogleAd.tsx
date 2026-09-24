@@ -19,6 +19,11 @@ interface GoogleAdProps {
 
 const loadAdSenseScript = (client: string) => {
   if (window._adsenseLoaded) return;
+  // O script do AdSense já está no <head> do index.html (mesmo client); não injetar de novo.
+  if (document.querySelector('script[src*="pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"]')) {
+    window._adsenseLoaded = client;
+    return;
+  }
   window._adsenseLoaded = client;
   const script = document.createElement("script");
   script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(client)}`;
