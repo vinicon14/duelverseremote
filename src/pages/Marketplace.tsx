@@ -30,7 +30,9 @@ import { SellerOrders } from "@/components/marketplace/SellerOrders";
 import { ShippingDialog, type ShippingInfo } from "@/components/marketplace/ShippingDialog";
 import { isPhysicalProduct } from "@/hooks/useMarketplacePurchase";
 import { PhysicalStore } from "@/components/marketplace/PhysicalStore";
-import { Truck } from "lucide-react";
+import { Truck, ArrowUpDown } from "lucide-react";
+import { SiteAdSlot } from "@/components/ads/SiteAdSlot";
+import { Fragment } from "react";
 
 
 interface MarketplaceProduct {
@@ -75,6 +77,7 @@ export default function Marketplace() {
   const [purchaseSuccess, setPurchaseSuccess] = useState(false);
   const [filter, setFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<"recent" | "price_asc" | "price_desc" | "name">("recent");
   const { toast } = useToast();
   const { isPro } = useAccountType();
   const { t } = useTranslation();
@@ -553,17 +556,24 @@ export default function Marketplace() {
     }
   }, [isPro, user]);
 
+  const sortProducts = (a: any, b: any) => {
+    if (sortBy === "price_asc") return a.price_duelcoins - b.price_duelcoins;
+    if (sortBy === "price_desc") return b.price_duelcoins - a.price_duelcoins;
+    if (sortBy === "name") return a.name.localeCompare(b.name);
+    return String(b.created_at || "").localeCompare(String(a.created_at || ""));
+  };
+
   const filteredProducts = products.filter(p => {
     const matchesFilter = filter === "all" || p.category === filter;
     const matchesSearch = !searchQuery.trim() || p.name.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesFilter && matchesSearch;
-  });
+  }).sort((a, b) => sortProducts(a, b));
 
   const filteredThirdParty = thirdPartyProducts.filter(p => {
     const matchesFilter = filter === "all" || p.category === filter;
     const matchesSearch = !searchQuery.trim() || p.name.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesFilter && matchesSearch && p.is_approved;
-  });
+  }).sort((a, b) => sortProducts(a, b));
 
   const categories = ["all", ...Array.from(new Set(products.map(p => p.category)))];
 
@@ -571,6 +581,7 @@ export default function Marketplace() {
     <div className="min-h-screen bg-transparent">
       <Navbar />
       <main className="container mx-auto px-4 py-8 pt-24">
+        <SiteAdSlot placement="top" className="mb-5" />
         {/* Tab Navigation */}
         <div className="flex gap-2 mb-6 flex-wrap">
           <Button variant="outline" onClick={() => navigate('/store')}>
@@ -705,14 +716,34 @@ export default function Marketplace() {
 
 
         {/* Search Bar */}
-        <div className="relative mb-6">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder={t('marketplace.searchPlaceholder')}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 w-full sm:max-w-md"
-          />
+        <div className="flex flex-col sm:flex-row gap-2 sm:items-center mb-6 p-3 rounded-xl border border-border bg-card/60 backdrop-blur-sm">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder={t('marketplace.searchPlaceholder')}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 pr-9 w-full"
+              aria-label={t('marketplace.searchPlaceholder')}
+            />
+            {searchQuery && (
+              <button type="button" aria-label="Limpar busca" onClick={() => setSearchQuery("")} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground">
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+          <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
+            <SelectTrigger className="w-full sm:w-52" aria-label="Ordenar">
+              <ArrowUpDown className="w-4 h-4 mr-2 text-muted-foreground" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="recent">Mais recentes</SelectItem>
+              <SelectItem value="price_asc">Menor preço</SelectItem>
+              <SelectItem value="price_desc">Maior preço</SelectItem>
+              <SelectItem value="name">Nome (A–Z)</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Tabs for Marketplace */}
@@ -759,14 +790,14 @@ export default function Marketplace() {
           {/* Official Products Tab */}
           <TabsContent value="official">
             {/* Category Filters */}
-            <div className="flex gap-2 mb-6 flex-wrap">
+            <div className="flex gap-2 mb-4 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap snap-x">
               {categories.map(cat => (
                 <Button
                   key={cat}
                   variant={filter === cat ? "default" : "outline"}
                   size="sm"
                   onClick={() => setFilter(cat)}
-                  className={filter === cat ? "btn-mystic" : ""}
+                  className={`shrink-0 snap-start rounded-full ${filter === cat ? "btn-mystic" : ""}`}
                 >
                   {cat === "all" ? "Todos" : categoryLabels[cat]?.label || cat}
                 </Button>
@@ -784,11 +815,14 @@ export default function Marketplace() {
                 <p className="text-lg">{t('marketplace.noProducts')}</p>
               </div>
             ) : (
+              <>
+              <p className="text-xs text-muted-foreground mb-3">{filteredProducts.length} {filteredProducts.length === 1 ? "item" : "itens"}</p>
               <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
-                {filteredProducts.map(product => {
+                {filteredProducts.map((product, idx) => {
                   const catInfo = categoryLabels[product.category] || categoryLabels.digital_item;
                   return (
-                    <Card key={product.id} className="group bg-card border-border hover:border-primary/40 transition-all duration-300 hover:shadow-[0_0_30px_-5px_hsl(var(--primary)/0.3)] overflow-hidden">
+                    <Fragment key={product.id}>
+                    <Card className="group bg-card border-border hover:border-primary/40 transition-all duration-300 hover:shadow-[0_0_30px_-5px_hsl(var(--primary)/0.3)] overflow-hidden">
                       <div className="aspect-square relative overflow-hidden bg-muted">
                         {product.image_url ? (
                           <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
@@ -814,7 +848,7 @@ export default function Marketplace() {
                       </div>
 
                       <CardHeader className="p-2 sm:p-4 pb-1 sm:pb-2">
-                        <CardTitle className="text-sm sm:text-lg line-clamp-1">{product.name}</CardTitle>
+                        <CardTitle className="text-sm sm:text-base leading-snug line-clamp-2 min-h-[2.5em]" title={product.name}>{product.name}</CardTitle>
                       </CardHeader>
 
                       <CardFooter className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-2 sm:p-4 pt-0 gap-1.5 sm:gap-0">
@@ -832,23 +866,26 @@ export default function Marketplace() {
                         </div>
                       </CardFooter>
                     </Card>
+                    {(idx + 1) % 8 === 0 && <SiteAdSlot placement="inline" seed={idx} className="col-span-2 sm:col-span-1" />}
+                    </Fragment>
                   );
                 })}
               </div>
+              </>
             )}
           </TabsContent>
 
           {/* Third Party Products Tab */}
           <TabsContent value="third-party">
             {/* Category Filters for Third Party */}
-            <div className="flex gap-2 mb-6 flex-wrap">
+            <div className="flex gap-2 mb-4 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap snap-x">
               {categories.map(cat => (
                 <Button
                   key={`tp-${cat}`}
                   variant={filter === cat ? "default" : "outline"}
                   size="sm"
                   onClick={() => setFilter(cat)}
-                  className={filter === cat ? "btn-mystic" : ""}
+                  className={`shrink-0 snap-start rounded-full ${filter === cat ? "btn-mystic" : ""}`}
                 >
                   {cat === "all" ? "Todos" : categoryLabels[cat]?.label || cat}
                 </Button>
@@ -861,11 +898,14 @@ export default function Marketplace() {
                 <p className="text-lg">{t('marketplace.noProducts')}</p>
               </div>
             ) : (
+              <>
+              <p className="text-xs text-muted-foreground mb-3">{filteredThirdParty.length} {filteredThirdParty.length === 1 ? "item" : "itens"}</p>
               <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
-                {filteredThirdParty.map(product => {
+                {filteredThirdParty.map((product, idx) => {
                   const catInfo = categoryLabels[product.category] || categoryLabels.digital_item;
                   return (
-                    <Card key={product.id} className="group bg-card border-border hover:border-primary/40 transition-all duration-300 hover:shadow-[0_0_30px_-5px_hsl(var(--primary)/0.3)] overflow-hidden">
+                    <Fragment key={product.id}>
+                    <Card className="group bg-card border-border hover:border-primary/40 transition-all duration-300 hover:shadow-[0_0_30px_-5px_hsl(var(--primary)/0.3)] overflow-hidden">
                       <div className="aspect-square relative overflow-hidden bg-muted">
                         {product.image_url ? (
                           <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
@@ -885,7 +925,7 @@ export default function Marketplace() {
                       </div>
 
                       <CardHeader className="p-2 sm:p-4 pb-1 sm:pb-2">
-                        <CardTitle className="text-sm sm:text-lg line-clamp-1">{product.name}</CardTitle>
+                        <CardTitle className="text-sm sm:text-base leading-snug line-clamp-2 min-h-[2.5em]" title={product.name}>{product.name}</CardTitle>
                       </CardHeader>
 
                       <CardFooter className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-2 sm:p-4 pt-0 gap-1.5 sm:gap-0">
@@ -903,9 +943,12 @@ export default function Marketplace() {
                         </div>
                       </CardFooter>
                     </Card>
+                    {(idx + 1) % 8 === 0 && <SiteAdSlot placement="inline" seed={idx} className="col-span-2 sm:col-span-1" />}
+                    </Fragment>
                   );
                 })}
               </div>
+              </>
             )}
           </TabsContent>
 
@@ -954,7 +997,7 @@ export default function Marketplace() {
                         </div>
 
                         <CardHeader className="p-2 sm:p-4 pb-1 sm:pb-2">
-                          <CardTitle className="text-sm sm:text-lg line-clamp-1">{product.name}</CardTitle>
+                          <CardTitle className="text-sm sm:text-base leading-snug line-clamp-2 min-h-[2.5em]" title={product.name}>{product.name}</CardTitle>
                         </CardHeader>
 
                         <CardFooter className="flex items-center justify-between p-2 sm:p-4 pt-0 gap-1 flex-wrap">
