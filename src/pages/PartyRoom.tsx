@@ -16,6 +16,7 @@ import {
   ChevronRight,
   Loader2,
   LogOut,
+  Maximize,
   Mic,
   MicOff,
   Send,
@@ -49,6 +50,7 @@ const VideoTile = ({
   avatarUrl?: string | null;
 }) => {
   const ref = useRef<HTMLVideoElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const hasVideo = Boolean(stream?.getVideoTracks().some((t) => t.readyState === "live"));
 
   useEffect(() => {
@@ -58,8 +60,18 @@ const VideoTile = ({
     }
   }, [stream]);
 
+  const goFullscreen = () => {
+    const el = wrapperRef.current;
+    if (!el) return;
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => undefined);
+    } else {
+      el.requestFullscreen?.().catch(() => toast.error("Tela cheia não disponível neste dispositivo"));
+    }
+  };
+
   return (
-    <div className="relative aspect-video overflow-hidden rounded-lg border border-border bg-muted/40">
+    <div ref={wrapperRef} className="group relative aspect-video overflow-hidden rounded-lg border border-border bg-muted/40 fullscreen:aspect-auto fullscreen:rounded-none fullscreen:border-0">
       {hasVideo ? (
         <video ref={ref} autoPlay playsInline muted={muted} className="h-full w-full object-contain" />
       ) : (
@@ -73,6 +85,14 @@ const VideoTile = ({
       <span className="absolute bottom-2 left-2 rounded bg-background/80 px-2 py-0.5 text-xs font-medium">
         {label}
       </span>
+      <button
+        type="button"
+        onClick={goFullscreen}
+        aria-label="Tela cheia"
+        className="absolute right-2 top-2 rounded bg-background/80 p-1.5 text-foreground opacity-80 transition-opacity hover:opacity-100 sm:opacity-0 sm:group-hover:opacity-90"
+      >
+        <Maximize className="h-4 w-4" />
+      </button>
     </div>
   );
 };
