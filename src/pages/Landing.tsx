@@ -282,6 +282,10 @@ const Landing = () => {
 
       <SEOLinksSection />
 
+      <div className="container mx-auto px-4 py-6">
+        <SiteAdSlot placement="inline" force />
+      </div>
+
       {/* Footer */}
       <footer className="border-t border-white/10 py-10 px-4 bg-black/40 backdrop-blur-md">
         <div className="container mx-auto">
