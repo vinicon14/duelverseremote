@@ -29,6 +29,7 @@ import { RANKED_XP_DIFFICULTIES, getRankedDifficulty, getRankedDifficultyStorage
 import { useTranslation } from "react-i18next";
 import { SEOHead } from "@/components/SEOHead";
 import { SEOLinksSection } from "@/components/SEOLinksSection";
+import { SiteAdSlot } from "@/components/ads/SiteAdSlot";
 
 const Duels = () => {
   useBanCheck();
@@ -508,6 +509,7 @@ const Duels = () => {
       <Navbar />
       
       <main className="container mx-auto px-4 pt-20 sm:pt-24 pb-12">
+        <SiteAdSlot placement="inline" force className="mb-6" />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
           <div className="lg:col-span-2">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8 animate-fade-in-up">
