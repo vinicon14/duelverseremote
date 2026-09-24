@@ -1,0 +1,3 @@
+ALTER TABLE public.advertisements ADD COLUMN IF NOT EXISTS placement text NOT NULL DEFAULT 'top';
+DROP POLICY IF EXISTS "Public settings allowlist" ON public.system_settings;
+CREATE POLICY "Public settings allowlist" ON public.system_settings FOR SELECT USING (key = ANY (ARRAY['monetag_enabled','monetag_zone_id','monetag_sdk_domain','monetag_custom_script','monetag_push_enabled','monetag_push_script','landing_video_url','bgm_video_url','android_download_url','windows_download_url','discord_stats_cache','store_url','support_email','ad_publisher_signup_url','adsense_enabled','adsense_client','adsense_slot_top','adsense_slot_inline']));
