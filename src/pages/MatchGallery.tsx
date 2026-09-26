@@ -31,6 +31,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
+import { UploadVideoDialog } from "@/components/gallery/UploadVideoDialog";
 import { AddExternalVideoDialog } from "@/components/gallery/AddExternalVideoDialog";
 import { PLATFORM_LABEL, parseExternalVideoUrl } from "@/utils/externalVideo";
 
@@ -270,6 +271,7 @@ export default function MatchGallery() {
               Assista às melhores partidas gravadas pela comunidade
             </p>
           </div>
+          <UploadVideoDialog onCreated={fetchRecordings} />
           <AddExternalVideoDialog onCreated={fetchRecordings} />
         </div>
 
