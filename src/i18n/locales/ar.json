@@ -39,7 +39,13 @@
     "duelcoins": "DuelCoins",
     "myItems": "My Items",
     "admin": "Admin",
-    "judge": "Judge"
+    "judge": "Judge",
+    "party": "الحفلة",
+    "more": "المزيد",
+    "musicOn": "تشغيل الموسيقى",
+    "musicOff": "كتم الموسيقى",
+    "deckShort": "المجموعة",
+    "mainMenu": "القائمة الرئيسية"
   },
   "landing": {
     "tagline": "مبارزات TCG مباشرة بمكالمة فيديو",
@@ -466,7 +472,12 @@
     "insufficientBalance": "Insufficient balance",
     "purchaseSuccess": "Purchase successful!",
     "pendingApproval": "Pending approval",
-    "tabPhysical": "المنتجات المادية"
+    "tabPhysical": "المنتجات المادية",
+    "left": "متبقي {{count}}",
+    "soldOut": "نفدت الكمية",
+    "all": "الكل",
+    "item": "عنصر",
+    "items": "عناصر"
   },
   "myItems": {
     "title": "My Items",
@@ -940,5 +951,31 @@
   "whatsappGroup": {
     "label": "مجموعة واتساب",
     "dismissHint": "انقر بزر الفأرة الأيمن للإخفاء"
+  },
+  "pro": {
+    "becomePro": "اشترك في PRO",
+    "upsellTitle": "العب بدون إعلانات مع PRO",
+    "upsellText": "اطّلع على الخطط وفعّلها فورًا.",
+    "upsellCta": "عرض خطط PRO"
+  },
+  "gallery": {
+    "title": "معرض المباريات",
+    "subtitle": "شاهد أفضل المباريات المسجلة من المجتمع",
+    "upload": {
+      "button": "رفع فيديو",
+      "hint": "مقاطع من جهازك، حتى 100 ميغابايت.",
+      "file": "الملف",
+      "title": "العنوان",
+      "description": "الوصف (اختياري)",
+      "public": "عام",
+      "send": "رفع",
+      "sending": "جارٍ الرفع...",
+      "success": "تم رفع الفيديو إلى المعرض",
+      "error": "تعذر رفع الفيديو",
+      "notVideo": "اختر ملف فيديو",
+      "tooBig": "الفيديو أكبر من 100 ميغابايت",
+      "chooseFile": "اختر فيديو",
+      "needTitle": "أضف عنوانًا للفيديو"
+    }
   }
 }

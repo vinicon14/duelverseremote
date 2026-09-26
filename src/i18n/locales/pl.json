@@ -39,7 +39,13 @@
     "duelcoins": "DuelCoins",
     "myItems": "My Items",
     "admin": "Admin",
-    "judge": "Judge"
+    "judge": "Judge",
+    "party": "Party",
+    "more": "Więcej",
+    "musicOn": "Włącz muzykę",
+    "musicOff": "Wycisz muzykę",
+    "deckShort": "Talia",
+    "mainMenu": "Menu główne"
   },
   "landing": {
     "tagline": "Pojedynki TCG na żywo z rozmową wideo",
@@ -466,7 +472,12 @@
     "insufficientBalance": "Insufficient balance",
     "purchaseSuccess": "Purchase successful!",
     "pendingApproval": "Pending approval",
-    "tabPhysical": "Produkty Fizyczne"
+    "tabPhysical": "Produkty Fizyczne",
+    "left": "Zostało {{count}}",
+    "soldOut": "Wyprzedane",
+    "all": "Wszystkie",
+    "item": "przedmiot",
+    "items": "przedmioty"
   },
   "myItems": {
     "title": "My Items",
@@ -940,5 +951,31 @@
   "whatsappGroup": {
     "label": "Grupa WhatsApp",
     "dismissHint": "Kliknij prawym, aby ukryć"
+  },
+  "pro": {
+    "becomePro": "Zostań PRO",
+    "upsellTitle": "Graj bez reklam z PRO",
+    "upsellText": "Zobacz plany i aktywuj od razu.",
+    "upsellCta": "Zobacz plany PRO"
+  },
+  "gallery": {
+    "title": "Galeria meczów",
+    "subtitle": "Oglądaj najlepsze mecze nagrane przez społeczność",
+    "upload": {
+      "button": "Prześlij wideo",
+      "hint": "Filmy z urządzenia, do 100MB.",
+      "file": "Plik",
+      "title": "Tytuł",
+      "description": "Opis (opcjonalnie)",
+      "public": "Publiczne",
+      "send": "Prześlij",
+      "sending": "Przesyłanie...",
+      "success": "Wideo dodane do galerii",
+      "error": "Nie udało się przesłać wideo",
+      "notVideo": "Wybierz plik wideo",
+      "tooBig": "Wideo przekracza 100MB",
+      "chooseFile": "Wybierz wideo",
+      "needTitle": "Nadaj tytuł wideo"
+    }
   }
 }

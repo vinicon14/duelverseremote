@@ -39,7 +39,13 @@
     "duelcoins": "DuelCoins",
     "myItems": "My Items",
     "admin": "Admin",
-    "judge": "Judge"
+    "judge": "Judge",
+    "party": "派对",
+    "more": "更多",
+    "musicOn": "开启音乐",
+    "musicOff": "静音音乐",
+    "deckShort": "卡组",
+    "mainMenu": "主菜单"
   },
   "landing": {
     "tagline": "带视频通话的实时 TCG 决斗",
@@ -466,7 +472,12 @@
     "insufficientBalance": "Insufficient balance",
     "purchaseSuccess": "Purchase successful!",
     "pendingApproval": "Pending approval",
-    "tabPhysical": "实体商品"
+    "tabPhysical": "实体商品",
+    "left": "剩余 {{count}}",
+    "soldOut": "已售罄",
+    "all": "全部",
+    "item": "件",
+    "items": "件"
   },
   "myItems": {
     "title": "My Items",
@@ -940,5 +951,31 @@
   "whatsappGroup": {
     "label": "WhatsApp 群组",
     "dismissHint": "右键点击以隐藏"
+  },
+  "pro": {
+    "becomePro": "成为 PRO",
+    "upsellTitle": "使用 PRO 无广告畅玩",
+    "upsellText": "查看套餐并立即激活。",
+    "upsellCta": "查看 PRO 套餐"
+  },
+  "gallery": {
+    "title": "对战画廊",
+    "subtitle": "观看社区录制的精彩对战",
+    "upload": {
+      "button": "上传视频",
+      "hint": "来自设备的视频，最大 100MB。",
+      "file": "文件",
+      "title": "标题",
+      "description": "描述（可选）",
+      "public": "公开",
+      "send": "上传",
+      "sending": "上传中...",
+      "success": "视频已上传到画廊",
+      "error": "无法上传视频",
+      "notVideo": "请选择视频文件",
+      "tooBig": "视频超过 100MB",
+      "chooseFile": "请选择视频",
+      "needTitle": "请为视频添加标题"
+    }
   }
 }

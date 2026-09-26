@@ -39,7 +39,13 @@
     "duelcoins": "DuelCoins",
     "myItems": "Meus Itens",
     "admin": "Admin",
-    "judge": "Juiz"
+    "judge": "Juiz",
+    "party": "Party",
+    "more": "Mais",
+    "musicOn": "Ativar música",
+    "musicOff": "Silenciar música",
+    "deckShort": "Deck",
+    "mainMenu": "Menu principal"
   },
   "landing": {
     "tagline": "Duelos de TCG ao vivo com chat de vídeo",
@@ -466,7 +472,12 @@
     "insufficientBalance": "Saldo insuficiente",
     "purchaseSuccess": "Compra realizada!",
     "pendingApproval": "Aguardando aprovação",
-    "tabPhysical": "Produtos Físicos"
+    "tabPhysical": "Produtos Físicos",
+    "left": "Restam {{count}}",
+    "soldOut": "Esgotado",
+    "all": "Todos",
+    "item": "item",
+    "items": "itens"
   },
   "myItems": {
     "title": "Meus Itens",
@@ -940,5 +951,31 @@
     "errorDesc": "Não foi possível obter o endereço.",
     "denied": "Permissão negada",
     "deniedDesc": "Preencha o endereço manualmente."
+  },
+  "pro": {
+    "becomePro": "Seja PRO",
+    "upsellTitle": "Jogue sem anúncios com o PRO",
+    "upsellText": "Veja os planos e ative na hora.",
+    "upsellCta": "Ver planos PRO"
+  },
+  "gallery": {
+    "title": "Galeria de Partidas",
+    "subtitle": "Assista às melhores partidas gravadas pela comunidade",
+    "upload": {
+      "button": "Enviar vídeo",
+      "hint": "Vídeos do seu aparelho, até 100MB.",
+      "file": "Arquivo",
+      "title": "Título",
+      "description": "Descrição (opcional)",
+      "public": "Público",
+      "send": "Enviar",
+      "sending": "Enviando...",
+      "success": "Vídeo enviado para a galeria",
+      "error": "Não foi possível enviar o vídeo",
+      "notVideo": "Escolha um arquivo de vídeo",
+      "tooBig": "O vídeo passa de 100MB",
+      "chooseFile": "Escolha um vídeo",
+      "needTitle": "Dê um título ao vídeo"
+    }
   }
 }

@@ -39,7 +39,13 @@
     "duelcoins": "DuelCoins",
     "myItems": "My Items",
     "admin": "Admin",
-    "judge": "Judge"
+    "judge": "Judge",
+    "party": "Party",
+    "more": "More",
+    "musicOn": "Turn music on",
+    "musicOff": "Mute music",
+    "deckShort": "Deck",
+    "mainMenu": "Main menu"
   },
   "landing": {
     "tagline": "Live TCG duels with video chat",
@@ -466,7 +472,12 @@
     "insufficientBalance": "Insufficient balance",
     "purchaseSuccess": "Purchase successful!",
     "pendingApproval": "Pending approval",
-    "tabPhysical": "Physical Products"
+    "tabPhysical": "Physical Products",
+    "left": "{{count}} left",
+    "soldOut": "Sold out",
+    "all": "All",
+    "item": "item",
+    "items": "items"
   },
   "myItems": {
     "title": "My Items",
@@ -940,5 +951,31 @@
     "errorDesc": "Could not get the address.",
     "denied": "Permission denied",
     "deniedDesc": "Fill in the address manually."
+  },
+  "pro": {
+    "becomePro": "Go PRO",
+    "upsellTitle": "Play ad-free with PRO",
+    "upsellText": "See the plans and activate instantly.",
+    "upsellCta": "See PRO plans"
+  },
+  "gallery": {
+    "title": "Match Gallery",
+    "subtitle": "Watch the best matches recorded by the community",
+    "upload": {
+      "button": "Upload video",
+      "hint": "Videos from your device, up to 100MB.",
+      "file": "File",
+      "title": "Title",
+      "description": "Description (optional)",
+      "public": "Public",
+      "send": "Upload",
+      "sending": "Uploading...",
+      "success": "Video uploaded to the gallery",
+      "error": "Could not upload the video",
+      "notVideo": "Choose a video file",
+      "tooBig": "The video is larger than 100MB",
+      "chooseFile": "Choose a video",
+      "needTitle": "Give the video a title"
+    }
   }
 }

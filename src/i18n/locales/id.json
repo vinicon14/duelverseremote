@@ -39,7 +39,13 @@
     "duelcoins": "DuelCoins",
     "myItems": "My Items",
     "admin": "Admin",
-    "judge": "Judge"
+    "judge": "Judge",
+    "party": "Party",
+    "more": "Lainnya",
+    "musicOn": "Nyalakan musik",
+    "musicOff": "Matikan musik",
+    "deckShort": "Dek",
+    "mainMenu": "Menu utama"
   },
   "landing": {
     "tagline": "Duel TCG langsung dengan panggilan video",
@@ -466,7 +472,12 @@
     "insufficientBalance": "Insufficient balance",
     "purchaseSuccess": "Purchase successful!",
     "pendingApproval": "Pending approval",
-    "tabPhysical": "Produk Fisik"
+    "tabPhysical": "Produk Fisik",
+    "left": "Sisa {{count}}",
+    "soldOut": "Habis",
+    "all": "Semua",
+    "item": "item",
+    "items": "item"
   },
   "myItems": {
     "title": "My Items",
@@ -940,5 +951,31 @@
   "whatsappGroup": {
     "label": "Grup WhatsApp",
     "dismissHint": "Klik kanan untuk menyembunyikan"
+  },
+  "pro": {
+    "becomePro": "Jadi PRO",
+    "upsellTitle": "Main tanpa iklan dengan PRO",
+    "upsellText": "Lihat paket dan aktifkan langsung.",
+    "upsellCta": "Lihat paket PRO"
+  },
+  "gallery": {
+    "title": "Galeri Pertandingan",
+    "subtitle": "Tonton pertandingan terbaik dari komunitas",
+    "upload": {
+      "button": "Unggah video",
+      "hint": "Video dari perangkatmu, hingga 100MB.",
+      "file": "File",
+      "title": "Judul",
+      "description": "Deskripsi (opsional)",
+      "public": "Publik",
+      "send": "Unggah",
+      "sending": "Mengunggah...",
+      "success": "Video diunggah ke galeri",
+      "error": "Gagal mengunggah video",
+      "notVideo": "Pilih file video",
+      "tooBig": "Video lebih dari 100MB",
+      "chooseFile": "Pilih video",
+      "needTitle": "Beri judul video"
+    }
   }
 }

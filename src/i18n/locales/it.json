@@ -39,7 +39,13 @@
     "duelcoins": "DuelCoins",
     "myItems": "My Items",
     "admin": "Admin",
-    "judge": "Judge"
+    "judge": "Judge",
+    "party": "Party",
+    "more": "Altro",
+    "musicOn": "Attiva musica",
+    "musicOff": "Disattiva musica",
+    "deckShort": "Mazzo",
+    "mainMenu": "Menu principale"
   },
   "landing": {
     "tagline": "Duelli TCG in diretta con videochiamata",
@@ -466,7 +472,12 @@
     "insufficientBalance": "Insufficient balance",
     "purchaseSuccess": "Purchase successful!",
     "pendingApproval": "Pending approval",
-    "tabPhysical": "Prodotti Fisici"
+    "tabPhysical": "Prodotti Fisici",
+    "left": "Ne restano {{count}}",
+    "soldOut": "Esaurito",
+    "all": "Tutti",
+    "item": "articolo",
+    "items": "articoli"
   },
   "myItems": {
     "title": "My Items",
@@ -940,5 +951,31 @@
   "whatsappGroup": {
     "label": "Gruppo WhatsApp",
     "dismissHint": "Clic destro per nascondere"
+  },
+  "pro": {
+    "becomePro": "Diventa PRO",
+    "upsellTitle": "Gioca senza pubblicità con PRO",
+    "upsellText": "Scopri i piani e attivali subito.",
+    "upsellCta": "Vedi piani PRO"
+  },
+  "gallery": {
+    "title": "Galleria partite",
+    "subtitle": "Guarda le migliori partite registrate dalla community",
+    "upload": {
+      "button": "Carica video",
+      "hint": "Video dal tuo dispositivo, fino a 100MB.",
+      "file": "File",
+      "title": "Titolo",
+      "description": "Descrizione (facoltativa)",
+      "public": "Pubblico",
+      "send": "Carica",
+      "sending": "Caricamento...",
+      "success": "Video caricato nella galleria",
+      "error": "Impossibile caricare il video",
+      "notVideo": "Scegli un file video",
+      "tooBig": "Il video supera 100MB",
+      "chooseFile": "Scegli un video",
+      "needTitle": "Dai un titolo al video"
+    }
   }
 }

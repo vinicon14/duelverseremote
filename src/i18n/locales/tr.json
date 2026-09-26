@@ -39,7 +39,13 @@
     "duelcoins": "DuelCoins",
     "myItems": "My Items",
     "admin": "Admin",
-    "judge": "Judge"
+    "judge": "Judge",
+    "party": "Parti",
+    "more": "Daha fazla",
+    "musicOn": "Müziği aç",
+    "musicOff": "Müziği kapat",
+    "deckShort": "Deste",
+    "mainMenu": "Ana menü"
   },
   "landing": {
     "tagline": "Görüntülü görüşmeli canlı TCG düelloları",
@@ -466,7 +472,12 @@
     "insufficientBalance": "Insufficient balance",
     "purchaseSuccess": "Purchase successful!",
     "pendingApproval": "Pending approval",
-    "tabPhysical": "Fiziksel Ürünler"
+    "tabPhysical": "Fiziksel Ürünler",
+    "left": "{{count}} kaldı",
+    "soldOut": "Tükendi",
+    "all": "Tümü",
+    "item": "ürün",
+    "items": "ürün"
   },
   "myItems": {
     "title": "My Items",
@@ -940,5 +951,31 @@
   "whatsappGroup": {
     "label": "WhatsApp Grubu",
     "dismissHint": "Gizlemek için sağ tıklayın"
+  },
+  "pro": {
+    "becomePro": "PRO ol",
+    "upsellTitle": "PRO ile reklamsız oyna",
+    "upsellText": "Planları gör ve hemen etkinleştir.",
+    "upsellCta": "PRO planlarını gör"
+  },
+  "gallery": {
+    "title": "Maç Galerisi",
+    "subtitle": "Topluluğun kaydettiği en iyi maçları izle",
+    "upload": {
+      "button": "Video yükle",
+      "hint": "Cihazından videolar, 100MB'a kadar.",
+      "file": "Dosya",
+      "title": "Başlık",
+      "description": "Açıklama (isteğe bağlı)",
+      "public": "Herkese açık",
+      "send": "Yükle",
+      "sending": "Yükleniyor...",
+      "success": "Video galeriye yüklendi",
+      "error": "Video yüklenemedi",
+      "notVideo": "Bir video dosyası seç",
+      "tooBig": "Video 100MB'tan büyük",
+      "chooseFile": "Bir video seç",
+      "needTitle": "Videoya bir başlık ver"
+    }
   }
 }

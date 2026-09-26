@@ -39,7 +39,13 @@
     "duelcoins": "DuelCoins",
     "myItems": "Mes Articles",
     "admin": "Admin",
-    "judge": "Juge"
+    "judge": "Juge",
+    "party": "Party",
+    "more": "Plus",
+    "musicOn": "Activer la musique",
+    "musicOff": "Couper la musique",
+    "deckShort": "Deck",
+    "mainMenu": "Menu principal"
   },
   "landing": {
     "tagline": "Duels TCG en direct avec appel vidéo",
@@ -466,7 +472,12 @@
     "insufficientBalance": "Solde insuffisant",
     "purchaseSuccess": "Achat réussi !",
     "pendingApproval": "En attente d'approbation",
-    "tabPhysical": "Produits Physiques"
+    "tabPhysical": "Produits Physiques",
+    "left": "Plus que {{count}}",
+    "soldOut": "Épuisé",
+    "all": "Tous",
+    "item": "article",
+    "items": "articles"
   },
   "myItems": {
     "title": "Mes Objets",
@@ -940,5 +951,31 @@
   "whatsappGroup": {
     "label": "Groupe WhatsApp",
     "dismissHint": "Clic droit pour masquer"
+  },
+  "pro": {
+    "becomePro": "Passer PRO",
+    "upsellTitle": "Jouez sans pub avec PRO",
+    "upsellText": "Découvrez les offres et activez-les tout de suite.",
+    "upsellCta": "Voir les offres PRO"
+  },
+  "gallery": {
+    "title": "Galerie des matchs",
+    "subtitle": "Regardez les meilleurs matchs enregistrés par la communauté",
+    "upload": {
+      "button": "Envoyer une vidéo",
+      "hint": "Vidéos de votre appareil, jusqu'à 100 Mo.",
+      "file": "Fichier",
+      "title": "Titre",
+      "description": "Description (facultatif)",
+      "public": "Public",
+      "send": "Envoyer",
+      "sending": "Envoi...",
+      "success": "Vidéo ajoutée à la galerie",
+      "error": "Impossible d'envoyer la vidéo",
+      "notVideo": "Choisissez un fichier vidéo",
+      "tooBig": "La vidéo dépasse 100 Mo",
+      "chooseFile": "Choisissez une vidéo",
+      "needTitle": "Donnez un titre à la vidéo"
+    }
   }
 }
