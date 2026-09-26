@@ -1687,7 +1687,7 @@ const DuelRoom = () => {
 
       {/* Audio controls — sempre disponíveis na sala de duelo (música global). */}
       {!hideControls && (
-        <div className="fixed top-2 left-2 z-[60] sm:hidden">
+        <div className="fixed top-16 left-2 z-[60] sm:hidden">
           <DuelRoomAudioControls compact />
         </div>
       )}
