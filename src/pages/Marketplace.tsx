@@ -77,6 +77,8 @@ export default function Marketplace() {
   const [user, setUser] = useState<any>(null);
   const [purchaseSuccess, setPurchaseSuccess] = useState(false);
   const [filter, setFilter] = useState<string>("all");
+  const [view, setView] = useState<"shop" | "physical" | "my-products" | "seller-orders">("shop");
+  const [origin, setOrigin] = useState<"all" | "official" | "third-party">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"recent" | "price_asc" | "price_desc" | "name">("recent");
   const { toast } = useToast();
@@ -576,7 +578,13 @@ export default function Marketplace() {
     return matchesFilter && matchesSearch && p.is_approved;
   }).sort((a, b) => sortProducts(a, b));
 
-  const categories = ["all", ...Array.from(new Set(products.map(p => p.category)))];
+  // Lista unificada: produtos oficiais + de vendedores em uma só grade
+  const combinedProducts = [
+    ...filteredProducts.map(p => ({ product: p, isThirdParty: false })),
+    ...filteredThirdParty.map(p => ({ product: p, isThirdParty: true })),
+  ].filter(x => origin === "all" || (origin === "official" ? !x.isThirdParty : x.isThirdParty));
+
+  const categories = ["all", ...Array.from(new Set([...products, ...thirdPartyProducts].map(p => p.category)))];
 
   return (
     <div className="min-h-screen bg-transparent">
