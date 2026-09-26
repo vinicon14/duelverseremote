@@ -109,12 +109,12 @@ export const Navbar = () => {
 
   const allLinks = [
     { to: "/duels", icon: Swords, label: t('nav.duels'), main: true },
+    { to: "/party", icon: PartyPopper, label: t('nav.party', 'Party'), main: true },
     { to: "/tournaments", icon: Trophy, label: t('nav.tournaments'), main: true },
     { to: "/deck-builder", icon: Layers, label: t('nav.deckBuilder'), main: true },
     { to: "/ranking", icon: BarChart3, label: t('nav.ranking'), main: true },
     { to: "/store", icon: Store, label: t('nav.store'), main: true },
     { to: "/gallery", icon: Video, label: t('nav.gallery'), main: true },
-    { to: "/party", icon: PartyPopper, label: t('nav.party', 'Party') },
     { to: "/matchmaking", icon: Zap, label: t('nav.matchmaking'), desktopOnly: true },
     { to: "/friends", icon: Users, label: t('nav.friends') },
     { to: "/news", icon: Newspaper, label: t('nav.news') },
