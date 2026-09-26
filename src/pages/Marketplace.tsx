@@ -751,28 +751,28 @@ export default function Marketplace() {
         {/* Tabs for Marketplace */}
         <Tabs defaultValue="official" className="w-full">
           <TabsList className="mb-6 w-full sm:w-auto flex overflow-x-auto">
-            <TabsTrigger value="official" className="gap-1 sm:gap-2 text-xs sm:text-sm flex-1 sm:flex-none">
+            <TabsTrigger value="official" className="gap-1 sm:gap-2 text-xs flex-1">
               <StoreIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               {t('marketplace.tabOfficial')}
             </TabsTrigger>
-            <TabsTrigger value="third-party" className="gap-1 sm:gap-2 text-xs sm:text-sm flex-1 sm:flex-none">
+            <TabsTrigger value="third-party" className="gap-1 sm:gap-2 text-xs flex-1">
               <Tag className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               {t('marketplace.tabThirdParty')}
             </TabsTrigger>
             {isBrazil && (
-              <TabsTrigger value="physical" className="gap-1 sm:gap-2 text-xs sm:text-sm flex-1 sm:flex-none">
+              <TabsTrigger value="physical" className="gap-1 sm:gap-2 text-xs flex-1">
                 <Truck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 {t('marketplace.tabPhysical')}
               </TabsTrigger>
             )}
             {isPro && (
-              <TabsTrigger value="my-products" className="gap-1 sm:gap-2 text-xs sm:text-sm flex-1 sm:flex-none">
+              <TabsTrigger value="my-products" className="gap-1 sm:gap-2 text-xs flex-1">
                 <Crown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-500" />
                 {t('marketplace.tabMyProducts')}
               </TabsTrigger>
             )}
             {isPro && (
-              <TabsTrigger value="seller-orders" className="gap-1 sm:gap-2 text-xs sm:text-sm flex-1 sm:flex-none">
+              <TabsTrigger value="seller-orders" className="gap-1 sm:gap-2 text-xs flex-1">
                 <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 Pedidos recebidos
               </TabsTrigger>
@@ -853,16 +853,16 @@ export default function Marketplace() {
                         <CardTitle className="text-xs sm:text-sm font-semibold leading-snug line-clamp-2 min-h-[2.5em]" title={product.name}>{product.name}</CardTitle>
                       </CardHeader>
 
-                      <CardFooter className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-2 pt-0 gap-1.5 sm:gap-1">
+                      <CardFooter className="flex flex-col items-stretch justify-between p-2 pt-0 gap-1.5 sm:gap-1">
                         <div className="flex items-center gap-1 text-secondary font-bold text-sm sm:text-base">
                           <Coins className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
                           {product.price_duelcoins.toLocaleString()}
                         </div>
-                        <div className="flex gap-1 sm:gap-2 w-full sm:w-auto">
-                          <Button size="sm" variant="outline" onClick={() => addToCart(product)} disabled={product.stock !== null && product.stock <= 0} className="h-7 sm:h-9 px-2 sm:px-3">
+                        <div className="flex gap-1 w-full">
+                          <Button size="sm" variant="outline" onClick={() => addToCart(product)} disabled={product.stock !== null && product.stock <= 0} className="h-8 px-2">
                             <ShoppingCart className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                           </Button>
-                          <Button size="sm" className="btn-mystic h-7 sm:h-9 px-2 sm:px-3 text-xs sm:text-sm flex-1 sm:flex-none" onClick={() => handleBuyDirect(product)} disabled={purchasing || (product.stock !== null && product.stock <= 0)}>
+                          <Button size="sm" className="btn-mystic h-8 px-2 text-xs flex-1" onClick={() => handleBuyDirect(product)} disabled={purchasing || (product.stock !== null && product.stock <= 0)}>
                             {t('marketplace.buy')}
                           </Button>
                         </div>
@@ -930,16 +930,16 @@ export default function Marketplace() {
                         <CardTitle className="text-xs sm:text-sm font-semibold leading-snug line-clamp-2 min-h-[2.5em]" title={product.name}>{product.name}</CardTitle>
                       </CardHeader>
 
-                      <CardFooter className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-2 pt-0 gap-1.5 sm:gap-1">
+                      <CardFooter className="flex flex-col items-stretch justify-between p-2 pt-0 gap-1.5 sm:gap-1">
                         <div className="flex items-center gap-1 text-secondary font-bold text-sm sm:text-base">
                           <Coins className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
                           {product.price_duelcoins.toLocaleString()}
                         </div>
-                        <div className="flex gap-1 sm:gap-2 w-full sm:w-auto">
-                          <Button size="sm" variant="outline" onClick={() => addToCart(product)} disabled={product.stock !== null && product.stock <= 0} className="h-7 sm:h-9 px-2 sm:px-3">
+                        <div className="flex gap-1 w-full">
+                          <Button size="sm" variant="outline" onClick={() => addToCart(product)} disabled={product.stock !== null && product.stock <= 0} className="h-8 px-2">
                             <ShoppingCart className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                           </Button>
-                          <Button size="sm" className="btn-mystic h-7 sm:h-9 px-2 sm:px-3 text-xs sm:text-sm flex-1 sm:flex-none" onClick={() => handleBuyDirect(product)} disabled={purchasing || (product.stock !== null && product.stock <= 0)}>
+                          <Button size="sm" className="btn-mystic h-8 px-2 text-xs flex-1" onClick={() => handleBuyDirect(product)} disabled={purchasing || (product.stock !== null && product.stock <= 0)}>
                             {t('marketplace.buy')}
                           </Button>
                         </div>
