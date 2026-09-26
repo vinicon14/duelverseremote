@@ -95,7 +95,7 @@ export const NotificationPrompt = () => {
     handleDismiss();
   };
 
-  if (!showPrompt) return null;
+  if (!showPrompt || blockedRoute) return null;
 
   return (
     <div className="fixed bottom-4 right-4 z-50 max-w-sm animate-slide-up">
