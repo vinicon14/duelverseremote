@@ -23,7 +23,6 @@ import { ShoppingCart, Coins, Package, Sparkles, Zap, Minus, Plus, X, Loader2, S
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTranslation } from "react-i18next";
 import { useUserCountry } from "@/hooks/useUserCountry";
 import { SellerOrders } from "@/components/marketplace/SellerOrders";
@@ -77,6 +76,8 @@ export default function Marketplace() {
   const [user, setUser] = useState<any>(null);
   const [purchaseSuccess, setPurchaseSuccess] = useState(false);
   const [filter, setFilter] = useState<string>("all");
+  const [view, setView] = useState<"shop" | "physical" | "my-products" | "seller-orders">("shop");
+  const [origin, setOrigin] = useState<"all" | "official" | "third-party">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"recent" | "price_asc" | "price_desc" | "name">("recent");
   const { toast } = useToast();
@@ -576,7 +577,13 @@ export default function Marketplace() {
     return matchesFilter && matchesSearch && p.is_approved;
   }).sort((a, b) => sortProducts(a, b));
 
-  const categories = ["all", ...Array.from(new Set(products.map(p => p.category)))];
+  // Lista unificada: produtos oficiais + de vendedores em uma só grade
+  const combinedProducts = [
+    ...filteredProducts.map(p => ({ product: p, isThirdParty: false })),
+    ...filteredThirdParty.map(p => ({ product: p, isThirdParty: true })),
+  ].filter(x => origin === "all" || (origin === "official" ? !x.isThirdParty : x.isThirdParty));
+
+  const categories = ["all", ...Array.from(new Set([...products, ...thirdPartyProducts].map(p => p.category)))];
 
   return (
     <div className="min-h-screen bg-transparent">
@@ -748,49 +755,75 @@ export default function Marketplace() {
           </Select>
         </div>
 
-        {/* Tabs for Marketplace */}
-        <Tabs defaultValue="official" className="w-full">
-          <TabsList className="mb-6 w-full sm:w-auto flex overflow-x-auto">
-            <TabsTrigger value="official" className="gap-1 sm:gap-2 text-xs flex-1">
-              <StoreIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              {t('marketplace.tabOfficial')}
-            </TabsTrigger>
-            <TabsTrigger value="third-party" className="gap-1 sm:gap-2 text-xs flex-1">
-              <Tag className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              {t('marketplace.tabThirdParty')}
-            </TabsTrigger>
-            {isBrazil && (
-              <TabsTrigger value="physical" className="gap-1 sm:gap-2 text-xs flex-1">
-                <Truck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                {t('marketplace.tabPhysical')}
-              </TabsTrigger>
-            )}
-            {isPro && (
-              <TabsTrigger value="my-products" className="gap-1 sm:gap-2 text-xs flex-1">
-                <Crown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-500" />
-                {t('marketplace.tabMyProducts')}
-              </TabsTrigger>
-            )}
-            {isPro && (
-              <TabsTrigger value="seller-orders" className="gap-1 sm:gap-2 text-xs flex-1">
-                <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                Pedidos recebidos
-              </TabsTrigger>
-            )}
-          </TabsList>
+        {/* Filtro principal: tudo em uma só lista */}
+        <div className="flex gap-2 mb-5 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap snap-x">
+          <Button
+            variant={view === "shop" && origin === "all" ? "default" : "outline"}
+            size="sm"
+            onClick={() => { setView("shop"); setOrigin("all"); }}
+            className={`shrink-0 snap-start rounded-full gap-1.5 ${view === "shop" && origin === "all" ? "btn-mystic" : ""}`}
+          >
+            <ShoppingBag className="w-3.5 h-3.5" />
+            {t("marketplace.all", "Todos")}
+          </Button>
+          <Button
+            variant={view === "shop" && origin === "official" ? "default" : "outline"}
+            size="sm"
+            onClick={() => { setView("shop"); setOrigin("official"); }}
+            className={`shrink-0 snap-start rounded-full gap-1.5 ${view === "shop" && origin === "official" ? "btn-mystic" : ""}`}
+          >
+            <StoreIcon className="w-3.5 h-3.5" />
+            {t('marketplace.tabOfficial')}
+          </Button>
+          <Button
+            variant={view === "shop" && origin === "third-party" ? "default" : "outline"}
+            size="sm"
+            onClick={() => { setView("shop"); setOrigin("third-party"); }}
+            className={`shrink-0 snap-start rounded-full gap-1.5 ${view === "shop" && origin === "third-party" ? "btn-mystic" : ""}`}
+          >
+            <Tag className="w-3.5 h-3.5" />
+            {t('marketplace.tabThirdParty')}
+          </Button>
+          {isBrazil && (
+            <Button
+              variant={view === "physical" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setView("physical")}
+              className={`shrink-0 snap-start rounded-full gap-1.5 ${view === "physical" ? "btn-mystic" : ""}`}
+            >
+              <Truck className="w-3.5 h-3.5" />
+              {t('marketplace.tabPhysical')}
+            </Button>
+          )}
+          {isPro && (
+            <Button
+              variant={view === "my-products" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setView("my-products")}
+              className={`shrink-0 snap-start rounded-full gap-1.5 ${view === "my-products" ? "btn-mystic" : ""}`}
+            >
+              <Crown className="w-3.5 h-3.5 text-yellow-500" />
+              {t('marketplace.tabMyProducts')}
+            </Button>
+          )}
+          {isPro && (
+            <Button
+              variant={view === "seller-orders" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setView("seller-orders")}
+              className={`shrink-0 snap-start rounded-full gap-1.5 ${view === "seller-orders" ? "btn-mystic" : ""}`}
+            >
+              <Package className="w-3.5 h-3.5" />
+              Pedidos recebidos
+            </Button>
+          )}
+        </div>
 
-          <TabsContent value="seller-orders">
-            <SellerOrders />
-          </TabsContent>
+        {view === "seller-orders" && <SellerOrders />}
+        {view === "physical" && <PhysicalStore />}
 
-          {/* Loja de produtos físicos (pagamento em R$ via Mercado Pago) */}
-          <TabsContent value="physical">
-            <PhysicalStore />
-          </TabsContent>
-
-
-          {/* Official Products Tab */}
-          <TabsContent value="official">
+        {view === "shop" && (
+          <>
             {/* Category Filters */}
             <div className="flex gap-2 mb-4 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap snap-x">
               {categories.map(cat => (
@@ -806,21 +839,21 @@ export default function Marketplace() {
               ))}
             </div>
 
-            {/* Products Grid */}
+            {/* Products Grid (oficiais + vendedores juntos) */}
             {loading ? (
               <div className="flex items-center justify-center h-64">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
               </div>
-            ) : filteredProducts.length === 0 ? (
+            ) : combinedProducts.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
                 <ShoppingBag className="w-16 h-16 mb-4 opacity-30" />
                 <p className="text-lg">{t('marketplace.noProducts')}</p>
               </div>
             ) : (
               <>
-              <p className="text-xs text-muted-foreground mb-3">{filteredProducts.length} {filteredProducts.length === 1 ? t("marketplace.item", "item") : t("marketplace.items", "itens")}</p>
+              <p className="text-xs text-muted-foreground mb-3">{combinedProducts.length} {combinedProducts.length === 1 ? t("marketplace.item", "item") : t("marketplace.items", "itens")}</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3">
-                {filteredProducts.map((product, idx) => {
+                {combinedProducts.map(({ product, isThirdParty }, idx) => {
                   const catInfo = categoryLabels[product.category] || categoryLabels.digital_item;
                   return (
                     <Fragment key={product.id}>
@@ -837,7 +870,13 @@ export default function Marketplace() {
                           <span className="hidden sm:inline">{catInfo.icon}</span>
                           {catInfo.label}
                         </Badge>
-                        {product.stock !== null && product.stock <= 5 && product.stock > 0 && (
+                        {isThirdParty && (
+                          <Badge className="absolute top-2 right-2 sm:top-3 sm:right-3 bg-yellow-500/90 text-yellow-foreground border-0 gap-1 text-[10px] sm:text-xs">
+                            <Tag className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                            Terceiro
+                          </Badge>
+                        )}
+                        {!isThirdParty && product.stock !== null && product.stock <= 5 && product.stock > 0 && (
                           <Badge className="absolute top-2 right-2 sm:top-3 sm:right-3 bg-destructive/90 text-destructive-foreground border-0 text-[10px] sm:text-xs">
                             Restam {product.stock}
                           </Badge>
@@ -875,158 +914,81 @@ export default function Marketplace() {
               </div>
               </>
             )}
-          </TabsContent>
+          </>
+        )}
 
-          {/* Third Party Products Tab */}
-          <TabsContent value="third-party">
-            {/* Category Filters for Third Party */}
-            <div className="flex gap-2 mb-4 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap snap-x">
-              {categories.map(cat => (
-                <Button
-                  key={`tp-${cat}`}
-                  variant={filter === cat ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setFilter(cat)}
-                  className={`shrink-0 snap-start rounded-full ${filter === cat ? "btn-mystic" : ""}`}
-                >
-                  {cat === "all" ? t("marketplace.all", "Todos") : categoryLabels[cat]?.label || cat}
-                </Button>
-              ))}
+        {/* Meus Produtos (PRO) */}
+        {view === "my-products" && isPro && (
+          <div>
+            <div className="flex justify-between items-center mb-4 sm:mb-6">
+              <h2 className="text-xl sm:text-2xl font-bold">{t('marketplace.tabMyProducts')}</h2>
+              <Button className="btn-mystic text-xs sm:text-sm" size="sm" onClick={() => setCreateProductDialogOpen(true)}>
+                <PlusCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                {t('marketplace.sellProduct')}
+              </Button>
             </div>
 
-            {filteredThirdParty.length === 0 ? (
+            {myProducts.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
-                <Tag className="w-16 h-16 mb-4 opacity-30" />
+                <Package className="w-16 h-16 mb-4 opacity-30" />
                 <p className="text-lg">{t('marketplace.noProducts')}</p>
               </div>
             ) : (
-              <>
-              <p className="text-xs text-muted-foreground mb-3">{filteredThirdParty.length} {filteredThirdParty.length === 1 ? t("marketplace.item", "item") : t("marketplace.items", "itens")}</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3">
-                {filteredThirdParty.map((product, idx) => {
+                {myProducts.map(product => {
                   const catInfo = categoryLabels[product.category] || categoryLabels.digital_item;
                   return (
-                    <Fragment key={product.id}>
-                    <Card className="group bg-card border-border hover:border-primary/40 transition-all duration-300 hover:shadow-[0_0_30px_-5px_hsl(var(--primary)/0.3)] overflow-hidden">
+                    <Card key={product.id} className="group bg-card border-border hover:border-primary/40 transition-all duration-300 overflow-hidden">
                       <div className="aspect-[4/3] relative overflow-hidden bg-muted">
                         {product.image_url ? (
-                          <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                          <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
-                            <Package className="w-10 h-10 sm:w-16 sm:h-16 text-muted-foreground/30" />
+                            <Package className="w-16 h-16 text-muted-foreground/30" />
                           </div>
                         )}
                         <Badge className={`absolute top-2 left-2 sm:top-3 sm:left-3 ${catInfo.color} border-0 gap-1 text-[10px] sm:text-xs`}>
                           <span className="hidden sm:inline">{catInfo.icon}</span>
                           {catInfo.label}
                         </Badge>
-                        <Badge className="absolute top-2 right-2 sm:top-3 sm:right-3 bg-yellow-500/90 text-yellow-foreground border-0 gap-1 text-[10px] sm:text-xs">
-                          <Tag className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                          Terceiro
+                        <Badge className={`absolute top-2 right-2 sm:top-3 sm:right-3 ${product.is_active ? 'bg-green-500/90' : 'bg-red-500/90'} text-white border-0 text-[10px] sm:text-xs`}>
+                          {product.is_active ? 'Ativo' : 'Inativo'}
                         </Badge>
+                        {!(product as any).is_approved && (
+                          <Badge className="absolute bottom-2 left-2 sm:bottom-3 sm:left-3 bg-yellow-600 text-white border-0 text-[10px] sm:text-xs">
+                            Aguardando aprovação
+                          </Badge>
+                        )}
                       </div>
 
                       <CardHeader className="p-2 pb-1">
                         <CardTitle className="text-xs sm:text-sm font-semibold leading-snug line-clamp-2 min-h-[2.5em]" title={product.name}>{product.name}</CardTitle>
                       </CardHeader>
 
-                      <CardFooter className="flex flex-col items-stretch justify-between p-2 pt-0 gap-1.5 sm:gap-1">
-                        <div className="flex items-center gap-1 text-secondary font-bold text-sm sm:text-base">
-                          <Coins className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
+                      <CardFooter className="flex items-center justify-between p-2 pt-0 gap-1 flex-wrap">
+                        <div className="flex items-center gap-1 text-secondary font-bold text-xs sm:text-base">
+                          <Coins className="w-3 h-3 sm:w-4 sm:h-4" />
                           {product.price_duelcoins.toLocaleString()}
                         </div>
-                        <div className="flex gap-1 w-full">
-                          <Button size="sm" variant="outline" onClick={() => addToCart(product)} disabled={product.stock !== null && product.stock <= 0} className="h-8 px-2">
-                            <ShoppingCart className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        <div className="flex gap-1">
+                          <Button size="icon" variant="ghost" className="h-7 w-7 sm:h-8 sm:w-8" onClick={() => openEditProduct(product)}>
+                            <Edit className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                           </Button>
-                          <Button size="sm" className="btn-mystic h-8 px-2 text-xs flex-1" onClick={() => handleBuyDirect(product)} disabled={purchasing || (product.stock !== null && product.stock <= 0)}>
-                            {t('marketplace.buy')}
+                          <Button size="icon" variant="ghost" className="h-7 w-7 sm:h-8 sm:w-8" onClick={() => handleToggleMyProduct(product)}>
+                            {product.is_active ? <ToggleRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-500" /> : <ToggleLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-7 w-7 sm:h-8 sm:w-8 text-destructive" onClick={() => handleDeleteMyProduct(product)}>
+                            <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                           </Button>
                         </div>
                       </CardFooter>
                     </Card>
-                    {(idx + 1) % 8 === 0 && <SiteAdSlot placement="inline" seed={idx} className="col-span-2 sm:col-span-1" />}
-                    </Fragment>
                   );
                 })}
               </div>
-              </>
             )}
-          </TabsContent>
-
-          {/* My Products Tab (PRO only) */}
-          {isPro && (
-            <TabsContent value="my-products">
-              <div className="flex justify-between items-center mb-4 sm:mb-6">
-                <h2 className="text-xl sm:text-2xl font-bold">{t('marketplace.tabMyProducts')}</h2>
-                <Button className="btn-mystic text-xs sm:text-sm" size="sm" onClick={() => setCreateProductDialogOpen(true)}>
-                  <PlusCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                  {t('marketplace.sellProduct')}
-                </Button>
-              </div>
-
-              {myProducts.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
-                  <Package className="w-16 h-16 mb-4 opacity-30" />
-                  <p className="text-lg">{t('marketplace.noProducts')}</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3">
-                  {myProducts.map(product => {
-                    const catInfo = categoryLabels[product.category] || categoryLabels.digital_item;
-                    return (
-                      <Card key={product.id} className="group bg-card border-border hover:border-primary/40 transition-all duration-300 overflow-hidden">
-                        <div className="aspect-[4/3] relative overflow-hidden bg-muted">
-                          {product.image_url ? (
-                            <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <Package className="w-16 h-16 text-muted-foreground/30" />
-                            </div>
-                          )}
-                          <Badge className={`absolute top-2 left-2 sm:top-3 sm:left-3 ${catInfo.color} border-0 gap-1 text-[10px] sm:text-xs`}>
-                            <span className="hidden sm:inline">{catInfo.icon}</span>
-                            {catInfo.label}
-                          </Badge>
-                          <Badge className={`absolute top-2 right-2 sm:top-3 sm:right-3 ${product.is_active ? 'bg-green-500/90' : 'bg-red-500/90'} text-white border-0 text-[10px] sm:text-xs`}>
-                            {product.is_active ? 'Ativo' : 'Inativo'}
-                          </Badge>
-                          {!(product as any).is_approved && (
-                            <Badge className="absolute bottom-2 left-2 sm:bottom-3 sm:left-3 bg-yellow-600 text-white border-0 text-[10px] sm:text-xs">
-                              Aguardando aprovação
-                            </Badge>
-                          )}
-                        </div>
-
-                        <CardHeader className="p-2 pb-1">
-                          <CardTitle className="text-xs sm:text-sm font-semibold leading-snug line-clamp-2 min-h-[2.5em]" title={product.name}>{product.name}</CardTitle>
-                        </CardHeader>
-
-                        <CardFooter className="flex items-center justify-between p-2 pt-0 gap-1 flex-wrap">
-                          <div className="flex items-center gap-1 text-secondary font-bold text-xs sm:text-base">
-                            <Coins className="w-3 h-3 sm:w-4 sm:h-4" />
-                            {product.price_duelcoins.toLocaleString()}
-                          </div>
-                          <div className="flex gap-1">
-                            <Button size="icon" variant="ghost" className="h-7 w-7 sm:h-8 sm:w-8" onClick={() => openEditProduct(product)}>
-                              <Edit className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                            </Button>
-                            <Button size="icon" variant="ghost" className="h-7 w-7 sm:h-8 sm:w-8" onClick={() => handleToggleMyProduct(product)}>
-                              {product.is_active ? <ToggleRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-500" /> : <ToggleLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-                            </Button>
-                            <Button size="icon" variant="ghost" className="h-7 w-7 sm:h-8 sm:w-8 text-destructive" onClick={() => handleDeleteMyProduct(product)}>
-                              <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                            </Button>
-                          </div>
-                        </CardFooter>
-                      </Card>
-                    );
-                  })}
-                </div>
-              )}
-            </TabsContent>
-          )}
-        </Tabs>
+          </div>
+        )}
 
         {/* Create Product Dialog */}
         <Dialog open={createProductDialogOpen} onOpenChange={setCreateProductDialogOpen}>
