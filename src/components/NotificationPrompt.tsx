@@ -12,6 +12,9 @@ export const NotificationPrompt = () => {
   const [isInstalled, setIsInstalled] = useState(false);
   const { isSupported, hasPermission, loading, requestPermission } = useBrowserNotifications();
   const navigate = useNavigate();
+  const location = useLocation();
+  // Nunca exibir dentro de salas (duelo, party) ou na autenticação
+  const blockedRoute = ["/duel", "/party", "/auth"].some((p) => location.pathname.startsWith(p));
 
   useEffect(() => {
     // Check authentication status
