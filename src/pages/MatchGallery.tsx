@@ -6,6 +6,7 @@
  * Usuários podem compartilhar e visualizar recordings.
  */
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Navbar } from "@/components/Navbar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
@@ -57,6 +58,7 @@ interface Recording {
 
 export default function MatchGallery() {
   useBanCheck();
+  const { t } = useTranslation();
   const isMobile = useIsMobile();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -265,14 +267,16 @@ export default function MatchGallery() {
           <div>
             <div className="flex items-center gap-3 mb-2">
               <Video className="w-8 h-8 text-primary" />
-              <h1 className="text-4xl font-bold text-gradient-mystic">Galeria de Partidas</h1>
+              <h1 className="text-4xl font-bold text-gradient-mystic">{t("gallery.title", "Galeria de Partidas")}</h1>
             </div>
             <p className="text-muted-foreground">
-              Assista às melhores partidas gravadas pela comunidade
+              {t("gallery.subtitle", "Assista às melhores partidas gravadas pela comunidade")}
             </p>
           </div>
-          <UploadVideoDialog onCreated={fetchRecordings} />
-          <AddExternalVideoDialog onCreated={fetchRecordings} />
+          <div className="flex flex-wrap gap-2">
+            <UploadVideoDialog onCreated={fetchRecordings} />
+            <AddExternalVideoDialog onCreated={fetchRecordings} />
+          </div>
         </div>
 
         {recordings.length === 0 ? (
