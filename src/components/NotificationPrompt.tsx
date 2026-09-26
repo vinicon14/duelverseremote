@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bell, X, Download } from "lucide-react";
 import { useBrowserNotifications } from "@/hooks/useBrowserNotifications";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
 export const NotificationPrompt = () => {
@@ -12,6 +12,9 @@ export const NotificationPrompt = () => {
   const [isInstalled, setIsInstalled] = useState(false);
   const { isSupported, hasPermission, loading, requestPermission } = useBrowserNotifications();
   const navigate = useNavigate();
+  const location = useLocation();
+  // Nunca exibir dentro de salas (duelo, party) ou na autenticação
+  const blockedRoute = ["/duel", "/party", "/auth"].some((p) => location.pathname.startsWith(p));
 
   useEffect(() => {
     // Check authentication status
@@ -92,7 +95,7 @@ export const NotificationPrompt = () => {
     handleDismiss();
   };
 
-  if (!showPrompt) return null;
+  if (!showPrompt || blockedRoute) return null;
 
   return (
     <div className="fixed bottom-4 right-4 z-50 max-w-sm animate-slide-up">
