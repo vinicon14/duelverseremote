@@ -107,102 +107,47 @@ export const Navbar = () => {
     navigate('/auth');
   };
 
+  const allLinks = [
+    { to: "/duels", icon: Swords, label: t('nav.duels'), main: true },
+    { to: "/tournaments", icon: Trophy, label: t('nav.tournaments'), main: true },
+    { to: "/deck-builder", icon: Layers, label: t('nav.deckBuilder'), main: true },
+    { to: "/ranking", icon: BarChart3, label: t('nav.ranking'), main: true },
+    { to: "/store", icon: Store, label: t('nav.store'), main: true },
+    { to: "/gallery", icon: Video, label: t('nav.gallery'), main: true },
+    { to: "/party", icon: PartyPopper, label: t('nav.party', 'Party') },
+    { to: "/matchmaking", icon: Zap, label: t('nav.matchmaking'), desktopOnly: true },
+    { to: "/friends", icon: Users, label: t('nav.friends') },
+    { to: "/news", icon: Newspaper, label: t('nav.news') },
+    { to: "/duelcoins", icon: Coins, label: t('nav.duelcoins') },
+    { to: "/my-items", icon: Gift, label: t('nav.myItems') },
+    ...(isAdmin ? [{ to: "/admin", icon: Shield, label: t('nav.admin') }] : []),
+    ...(isJudge ? [{ to: "/judge-panel", icon: Scale, label: t('nav.judge') }] : []),
+  ] as { to: string; icon: any; label: string; main?: boolean; desktopOnly?: boolean }[];
+
   const NavLinks = ({ mobile = false }: { mobile?: boolean }) => {
     const btnClass = mobile 
       ? "text-foreground hover:text-primary w-full justify-start h-11 text-base"
       : "text-foreground hover:text-primary";
+    const renderLink = (l: typeof allLinks[number]) => (
+      <Link key={l.to} to={l.to}>
+        <Button variant="ghost" className={btnClass}>
+          <l.icon className="mr-2 h-4 w-4" />
+          {l.label}
+        </Button>
+      </Link>
+    );
+    if (!mobile) return <>{allLinks.map(renderLink)}</>;
+    const main = allLinks.filter(l => l.main);
+    const more = allLinks.filter(l => !l.main && !l.desktopOnly);
     return (
       <>
-        <Link to="/duels">
-          <Button variant="ghost" className={btnClass}>
-            <Swords className="mr-2 h-4 w-4" />
-            {t('nav.duels')}
-          </Button>
-        </Link>
-        <Link to="/party">
-          <Button variant="ghost" className={btnClass}>
-            <PartyPopper className="mr-2 h-4 w-4" />
-            Party
-          </Button>
-        </Link>
-        {!mobile && (
-          <Link to="/matchmaking">
-            <Button variant="ghost" className={btnClass}>
-              <Zap className="mr-2 h-4 w-4" />
-              {t('nav.matchmaking')}
-            </Button>
-          </Link>
-        )}
-        <Link to="/tournaments">
-          <Button variant="ghost" className={btnClass}>
-            <Trophy className="mr-2 h-4 w-4" />
-            {t('nav.tournaments')}
-          </Button>
-        </Link>
-        <Link to="/friends">
-          <Button variant="ghost" className={btnClass}>
-            <Users className="mr-2 h-4 w-4" />
-            {t('nav.friends')}
-          </Button>
-        </Link>
-        <Link to="/ranking">
-          <Button variant="ghost" className={btnClass}>
-            <BarChart3 className="mr-2 h-4 w-4" />
-            {t('nav.ranking')}
-          </Button>
-        </Link>
-        <Link to="/news">
-          <Button variant="ghost" className={btnClass}>
-            <Newspaper className="mr-2 h-4 w-4" />
-            {t('nav.news')}
-          </Button>
-        </Link>
-        <Link to="/gallery">
-          <Button variant="ghost" className={btnClass}>
-            <Video className="mr-2 h-4 w-4" />
-            {t('nav.gallery')}
-          </Button>
-        </Link>
-        <Link to="/deck-builder">
-          <Button variant="ghost" className={btnClass}>
-            <Layers className="mr-2 h-4 w-4" />
-            {t('nav.deckBuilder')}
-          </Button>
-        </Link>
-        <Link to="/duelcoins">
-          <Button variant="ghost" className={btnClass}>
-            <Coins className="mr-2 h-4 w-4" />
-            {t('nav.duelcoins')}
-          </Button>
-        </Link>
-        <Link to="/store">
-          <Button variant="ghost" className={btnClass}>
-            <Store className="mr-2 h-4 w-4" />
-            {t('nav.store')}
-          </Button>
-        </Link>
-        <Link to="/my-items">
-          <Button variant="ghost" className={btnClass}>
-            <Gift className="mr-2 h-4 w-4" />
-            {t('nav.myItems')}
-          </Button>
-        </Link>
-        {isAdmin && (
-          <Link to="/admin">
-            <Button variant="ghost" className={btnClass}>
-              <Shield className="mr-2 h-4 w-4" />
-              {t('nav.admin')}
-            </Button>
-          </Link>
-        )}
-        {isJudge && (
-          <Link to="/judge-panel">
-            <Button variant="ghost" className={btnClass}>
-              <Scale className="mr-2 h-4 w-4" />
-              {t('nav.judge')}
-            </Button>
-          </Link>
-        )}
+        {main.map(renderLink)}
+        <details className="group">
+          <summary className="list-none cursor-pointer h-11 flex items-center px-4 text-sm text-muted-foreground">
+            {t('nav.more', 'Mais')} <span className="ml-auto transition-transform group-open:rotate-180">▾</span>
+          </summary>
+          <div className="flex flex-col space-y-1">{more.map(renderLink)}</div>
+        </details>
       </>
     );
   };
@@ -350,6 +295,13 @@ export const Navbar = () => {
         
         <div className="hidden md:flex items-center space-x-2 shrink-0">
           {isAdmin && <TcgSwitcher />}
+          {user && !isPro && (
+            <Link to="/go-pro">
+              <Button size="sm" variant="outline" className="gap-1 border-primary/50 text-primary">
+                <Crown className="h-4 w-4" /> {t('pro.becomePro', 'Seja PRO')}
+              </Button>
+            </Link>
+          )}
           <OnlineUsersCounter />
           
           {user && <NotificationBell userId={user.id} />}
