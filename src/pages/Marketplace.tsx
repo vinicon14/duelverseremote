@@ -801,7 +801,7 @@ export default function Marketplace() {
                   onClick={() => setFilter(cat)}
                   className={`shrink-0 snap-start rounded-full ${filter === cat ? "btn-mystic" : ""}`}
                 >
-                  {cat === "all" ? "Todos" : categoryLabels[cat]?.label || cat}
+                  {cat === "all" ? t("marketplace.all", "Todos") : categoryLabels[cat]?.label || cat}
                 </Button>
               ))}
             </div>
@@ -818,14 +818,14 @@ export default function Marketplace() {
               </div>
             ) : (
               <>
-              <p className="text-xs text-muted-foreground mb-3">{filteredProducts.length} {filteredProducts.length === 1 ? "item" : "itens"}</p>
-              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
+              <p className="text-xs text-muted-foreground mb-3">{filteredProducts.length} {filteredProducts.length === 1 ? t("marketplace.item", "item") : t("marketplace.items", "itens")}</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3">
                 {filteredProducts.map((product, idx) => {
                   const catInfo = categoryLabels[product.category] || categoryLabels.digital_item;
                   return (
                     <Fragment key={product.id}>
                     <Card className="group bg-card border-border hover:border-primary/40 transition-all duration-300 hover:shadow-[0_0_30px_-5px_hsl(var(--primary)/0.3)] overflow-hidden">
-                      <div className="aspect-square relative overflow-hidden bg-muted">
+                      <div className="aspect-[4/3] relative overflow-hidden bg-muted">
                         {product.image_url ? (
                           <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                         ) : (
@@ -844,17 +844,17 @@ export default function Marketplace() {
                         )}
                         {product.stock !== null && product.stock <= 0 && (
                           <div className="absolute inset-0 bg-background/70 flex items-center justify-center">
-                            <span className="text-xl font-bold text-destructive">Esgotado</span>
+                            <span className="text-xl font-bold text-destructive">{t("marketplace.soldOut", "Esgotado")}</span>
                           </div>
                         )}
                       </div>
 
-                      <CardHeader className="p-2 sm:p-4 pb-1 sm:pb-2">
-                        <CardTitle className="text-sm sm:text-base leading-snug line-clamp-2 min-h-[2.5em]" title={product.name}>{product.name}</CardTitle>
+                      <CardHeader className="p-2 pb-1">
+                        <CardTitle className="text-xs sm:text-sm font-semibold leading-snug line-clamp-2 min-h-[2.5em]" title={product.name}>{product.name}</CardTitle>
                       </CardHeader>
 
-                      <CardFooter className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-2 sm:p-4 pt-0 gap-1.5 sm:gap-0">
-                        <div className="flex items-center gap-1 text-secondary font-bold text-sm sm:text-lg">
+                      <CardFooter className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-2 pt-0 gap-1.5 sm:gap-1">
+                        <div className="flex items-center gap-1 text-secondary font-bold text-sm sm:text-base">
                           <Coins className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
                           {product.price_duelcoins.toLocaleString()}
                         </div>
@@ -889,7 +889,7 @@ export default function Marketplace() {
                   onClick={() => setFilter(cat)}
                   className={`shrink-0 snap-start rounded-full ${filter === cat ? "btn-mystic" : ""}`}
                 >
-                  {cat === "all" ? "Todos" : categoryLabels[cat]?.label || cat}
+                  {cat === "all" ? t("marketplace.all", "Todos") : categoryLabels[cat]?.label || cat}
                 </Button>
               ))}
             </div>
@@ -901,14 +901,14 @@ export default function Marketplace() {
               </div>
             ) : (
               <>
-              <p className="text-xs text-muted-foreground mb-3">{filteredThirdParty.length} {filteredThirdParty.length === 1 ? "item" : "itens"}</p>
-              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
+              <p className="text-xs text-muted-foreground mb-3">{filteredThirdParty.length} {filteredThirdParty.length === 1 ? t("marketplace.item", "item") : t("marketplace.items", "itens")}</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3">
                 {filteredThirdParty.map((product, idx) => {
                   const catInfo = categoryLabels[product.category] || categoryLabels.digital_item;
                   return (
                     <Fragment key={product.id}>
                     <Card className="group bg-card border-border hover:border-primary/40 transition-all duration-300 hover:shadow-[0_0_30px_-5px_hsl(var(--primary)/0.3)] overflow-hidden">
-                      <div className="aspect-square relative overflow-hidden bg-muted">
+                      <div className="aspect-[4/3] relative overflow-hidden bg-muted">
                         {product.image_url ? (
                           <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                         ) : (
@@ -926,12 +926,12 @@ export default function Marketplace() {
                         </Badge>
                       </div>
 
-                      <CardHeader className="p-2 sm:p-4 pb-1 sm:pb-2">
-                        <CardTitle className="text-sm sm:text-base leading-snug line-clamp-2 min-h-[2.5em]" title={product.name}>{product.name}</CardTitle>
+                      <CardHeader className="p-2 pb-1">
+                        <CardTitle className="text-xs sm:text-sm font-semibold leading-snug line-clamp-2 min-h-[2.5em]" title={product.name}>{product.name}</CardTitle>
                       </CardHeader>
 
-                      <CardFooter className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-2 sm:p-4 pt-0 gap-1.5 sm:gap-0">
-                        <div className="flex items-center gap-1 text-secondary font-bold text-sm sm:text-lg">
+                      <CardFooter className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-2 pt-0 gap-1.5 sm:gap-1">
+                        <div className="flex items-center gap-1 text-secondary font-bold text-sm sm:text-base">
                           <Coins className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
                           {product.price_duelcoins.toLocaleString()}
                         </div>
@@ -971,12 +971,12 @@ export default function Marketplace() {
                   <p className="text-lg">{t('marketplace.noProducts')}</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3">
                   {myProducts.map(product => {
                     const catInfo = categoryLabels[product.category] || categoryLabels.digital_item;
                     return (
                       <Card key={product.id} className="group bg-card border-border hover:border-primary/40 transition-all duration-300 overflow-hidden">
-                        <div className="aspect-square relative overflow-hidden bg-muted">
+                        <div className="aspect-[4/3] relative overflow-hidden bg-muted">
                           {product.image_url ? (
                             <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
                           ) : (
@@ -998,11 +998,11 @@ export default function Marketplace() {
                           )}
                         </div>
 
-                        <CardHeader className="p-2 sm:p-4 pb-1 sm:pb-2">
-                          <CardTitle className="text-sm sm:text-base leading-snug line-clamp-2 min-h-[2.5em]" title={product.name}>{product.name}</CardTitle>
+                        <CardHeader className="p-2 pb-1">
+                          <CardTitle className="text-xs sm:text-sm font-semibold leading-snug line-clamp-2 min-h-[2.5em]" title={product.name}>{product.name}</CardTitle>
                         </CardHeader>
 
-                        <CardFooter className="flex items-center justify-between p-2 sm:p-4 pt-0 gap-1 flex-wrap">
+                        <CardFooter className="flex items-center justify-between p-2 pt-0 gap-1 flex-wrap">
                           <div className="flex items-center gap-1 text-secondary font-bold text-xs sm:text-base">
                             <Coins className="w-3 h-3 sm:w-4 sm:h-4" />
                             {product.price_duelcoins.toLocaleString()}
