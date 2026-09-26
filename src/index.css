@@ -492,3 +492,13 @@ div[id^="google_ads_iframe"] {
   /* Tabelas largas rolam em vez de estourar o layout */
   table { display: block; overflow-x: auto; white-space: nowrap; }
 }
+
+/* Mobile: lighter rendering + space for bottom nav */
+@media (max-width: 767px) {
+  body.has-mobile-bottom-nav { padding-bottom: calc(3.5rem + env(safe-area-inset-bottom)); }
+  .floating-elements { display: none !important; }
+  nav.backdrop-blur-xl { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; background-color: hsl(var(--background) / 0.96) !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .floating-elements { display: none !important; }
+}
