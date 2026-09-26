@@ -1434,7 +1434,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
 
       if (connectedPlayerVideos >= expectedPlayers) return;
       announceReady();
-    }, 4000);
+    }, isSpectator ? 2000 : 4000);
 
     // Do not wait four seconds on mount/player-roster updates.
     const initialAnnouncement = window.setTimeout(announceReady, 250);
@@ -1461,7 +1461,10 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     };
 
 
-    const interval = window.setInterval(recoverMissingVideo, 6000);
+    // Run once immediately so a spectator who joins mid-match does not wait a
+    // full interval for the first recovery pass.
+    recoverMissingVideo();
+    const interval = window.setInterval(recoverMissingVideo, 3000);
     const handleVisibility = () => {
       if (document.visibilityState === "visible") recoverMissingVideo();
     };
