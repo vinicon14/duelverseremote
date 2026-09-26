@@ -39,7 +39,13 @@
     "duelcoins": "DuelCoins",
     "myItems": "My Items",
     "admin": "Admin",
-    "judge": "Judge"
+    "judge": "Judge",
+    "party": "パーティー",
+    "more": "その他",
+    "musicOn": "音楽をオン",
+    "musicOff": "音楽をミュート",
+    "deckShort": "デッキ",
+    "mainMenu": "メインメニュー"
   },
   "landing": {
     "tagline": "ビデオ通話付きライブTCGデュエル",
@@ -466,7 +472,12 @@
     "insufficientBalance": "Insufficient balance",
     "purchaseSuccess": "Purchase successful!",
     "pendingApproval": "Pending approval",
-    "tabPhysical": "物理商品"
+    "tabPhysical": "物理商品",
+    "left": "残り{{count}}",
+    "soldOut": "売り切れ",
+    "all": "すべて",
+    "item": "件",
+    "items": "件"
   },
   "myItems": {
     "title": "My Items",
@@ -940,5 +951,31 @@
   "whatsappGroup": {
     "label": "WhatsAppグループ",
     "dismissHint": "右クリックで非表示"
+  },
+  "pro": {
+    "becomePro": "PROになる",
+    "upsellTitle": "PROで広告なしでプレイ",
+    "upsellText": "プランを見てすぐに有効化。",
+    "upsellCta": "PROプランを見る"
+  },
+  "gallery": {
+    "title": "対戦ギャラリー",
+    "subtitle": "コミュニティが録画したベストマッチを観よう",
+    "upload": {
+      "button": "動画をアップロード",
+      "hint": "端末の動画、100MBまで。",
+      "file": "ファイル",
+      "title": "タイトル",
+      "description": "説明（任意）",
+      "public": "公開",
+      "send": "アップロード",
+      "sending": "アップロード中...",
+      "success": "動画をギャラリーに追加しました",
+      "error": "動画をアップロードできませんでした",
+      "notVideo": "動画ファイルを選んでください",
+      "tooBig": "動画が100MBを超えています",
+      "chooseFile": "動画を選んでください",
+      "needTitle": "動画にタイトルを付けてください"
+    }
   }
 }

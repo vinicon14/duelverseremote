@@ -39,7 +39,13 @@
     "duelcoins": "DuelCoins",
     "myItems": "My Items",
     "admin": "Admin",
-    "judge": "Judge"
+    "judge": "Judge",
+    "party": "Пати",
+    "more": "Ещё",
+    "musicOn": "Включить музыку",
+    "musicOff": "Выключить музыку",
+    "deckShort": "Колода",
+    "mainMenu": "Главное меню"
   },
   "landing": {
     "tagline": "Живые TCG-дуэли с видеозвонком",
@@ -466,7 +472,12 @@
     "insufficientBalance": "Insufficient balance",
     "purchaseSuccess": "Purchase successful!",
     "pendingApproval": "Pending approval",
-    "tabPhysical": "Физические товары"
+    "tabPhysical": "Физические товары",
+    "left": "Осталось {{count}}",
+    "soldOut": "Нет в наличии",
+    "all": "Все",
+    "item": "товар",
+    "items": "товаров"
   },
   "myItems": {
     "title": "My Items",
@@ -940,5 +951,31 @@
   "whatsappGroup": {
     "label": "Группа WhatsApp",
     "dismissHint": "Правый клик, чтобы скрыть"
+  },
+  "pro": {
+    "becomePro": "Стать PRO",
+    "upsellTitle": "Играйте без рекламы с PRO",
+    "upsellText": "Посмотрите тарифы и активируйте сразу.",
+    "upsellCta": "Тарифы PRO"
+  },
+  "gallery": {
+    "title": "Галерея матчей",
+    "subtitle": "Смотрите лучшие матчи сообщества",
+    "upload": {
+      "button": "Загрузить видео",
+      "hint": "Видео с устройства, до 100 МБ.",
+      "file": "Файл",
+      "title": "Название",
+      "description": "Описание (необязательно)",
+      "public": "Публичное",
+      "send": "Загрузить",
+      "sending": "Загрузка...",
+      "success": "Видео добавлено в галерею",
+      "error": "Не удалось загрузить видео",
+      "notVideo": "Выберите видеофайл",
+      "tooBig": "Видео больше 100 МБ",
+      "chooseFile": "Выберите видео",
+      "needTitle": "Укажите название видео"
+    }
   }
 }

@@ -39,7 +39,13 @@
     "duelcoins": "DuelCoins",
     "myItems": "My Items",
     "admin": "Admin",
-    "judge": "Judge"
+    "judge": "Judge",
+    "party": "Party",
+    "more": "Meer",
+    "musicOn": "Muziek aan",
+    "musicOff": "Muziek uit",
+    "deckShort": "Deck",
+    "mainMenu": "Hoofdmenu"
   },
   "landing": {
     "tagline": "Live TCG-duels met videogesprek",
@@ -466,7 +472,12 @@
     "insufficientBalance": "Insufficient balance",
     "purchaseSuccess": "Purchase successful!",
     "pendingApproval": "Pending approval",
-    "tabPhysical": "Fysieke Producten"
+    "tabPhysical": "Fysieke Producten",
+    "left": "Nog {{count}}",
+    "soldOut": "Uitverkocht",
+    "all": "Alle",
+    "item": "item",
+    "items": "items"
   },
   "myItems": {
     "title": "My Items",
@@ -940,5 +951,31 @@
   "whatsappGroup": {
     "label": "WhatsApp-groep",
     "dismissHint": "Rechtsklik om te verbergen"
+  },
+  "pro": {
+    "becomePro": "Word PRO",
+    "upsellTitle": "Speel zonder advertenties met PRO",
+    "upsellText": "Bekijk de abonnementen en activeer direct.",
+    "upsellCta": "PRO-abonnementen bekijken"
+  },
+  "gallery": {
+    "title": "Wedstrijdgalerij",
+    "subtitle": "Bekijk de beste wedstrijden van de community",
+    "upload": {
+      "button": "Video uploaden",
+      "hint": "Video's van je apparaat, tot 100MB.",
+      "file": "Bestand",
+      "title": "Titel",
+      "description": "Beschrijving (optioneel)",
+      "public": "Openbaar",
+      "send": "Uploaden",
+      "sending": "Bezig met uploaden...",
+      "success": "Video toegevoegd aan de galerij",
+      "error": "Video uploaden mislukt",
+      "notVideo": "Kies een videobestand",
+      "tooBig": "De video is groter dan 100MB",
+      "chooseFile": "Kies een video",
+      "needTitle": "Geef de video een titel"
+    }
   }
 }

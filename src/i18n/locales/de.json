@@ -39,7 +39,13 @@
     "duelcoins": "DuelCoins",
     "myItems": "My Items",
     "admin": "Admin",
-    "judge": "Judge"
+    "judge": "Judge",
+    "party": "Party",
+    "more": "Mehr",
+    "musicOn": "Musik an",
+    "musicOff": "Musik aus",
+    "deckShort": "Deck",
+    "mainMenu": "Hauptmenü"
   },
   "landing": {
     "tagline": "Live-TCG-Duelle mit Videoanruf",
@@ -466,7 +472,12 @@
     "insufficientBalance": "Insufficient balance",
     "purchaseSuccess": "Purchase successful!",
     "pendingApproval": "Pending approval",
-    "tabPhysical": "Physische Produkte"
+    "tabPhysical": "Physische Produkte",
+    "left": "Noch {{count}}",
+    "soldOut": "Ausverkauft",
+    "all": "Alle",
+    "item": "Artikel",
+    "items": "Artikel"
   },
   "myItems": {
     "title": "My Items",
@@ -940,5 +951,31 @@
   "whatsappGroup": {
     "label": "WhatsApp-Gruppe",
     "dismissHint": "Rechtsklick zum Ausblenden"
+  },
+  "pro": {
+    "becomePro": "PRO werden",
+    "upsellTitle": "Werbefrei spielen mit PRO",
+    "upsellText": "Pläne ansehen und sofort aktivieren.",
+    "upsellCta": "PRO-Pläne ansehen"
+  },
+  "gallery": {
+    "title": "Match-Galerie",
+    "subtitle": "Sieh dir die besten Matches der Community an",
+    "upload": {
+      "button": "Video hochladen",
+      "hint": "Videos von deinem Gerät, bis 100 MB.",
+      "file": "Datei",
+      "title": "Titel",
+      "description": "Beschreibung (optional)",
+      "public": "Öffentlich",
+      "send": "Hochladen",
+      "sending": "Wird hochgeladen...",
+      "success": "Video zur Galerie hinzugefügt",
+      "error": "Video konnte nicht hochgeladen werden",
+      "notVideo": "Wähle eine Videodatei",
+      "tooBig": "Das Video ist größer als 100 MB",
+      "chooseFile": "Wähle ein Video",
+      "needTitle": "Gib dem Video einen Titel"
+    }
   }
 }
