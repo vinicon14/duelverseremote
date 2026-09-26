@@ -192,21 +192,21 @@ export default function PartyRooms() {
   return (
     <div className="min-h-screen bg-transparent">
       <Navbar />
-      <main className="container mx-auto px-4 pt-24 pb-12">
+      <main className="container mx-auto px-3 sm:px-4 pt-20 sm:pt-24 pb-12">
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center gap-3">
               <PartyPopper className="h-7 w-7 text-primary" />
-              <h1 className="text-3xl font-bold gradient-text">Modo Party</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold gradient-text">Modo Party</h1>
             </div>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-sm text-muted-foreground mt-1 max-w-xl leading-relaxed">
               Salas abertas, sem limite de pessoas. Todos podem ligar câmera e microfone.
             </p>
           </div>
 
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button className="btn-mystic">
+              <Button className="btn-mystic w-full sm:w-auto">
                 <Plus className="mr-2 h-4 w-4" /> Criar sala Party
               </Button>
             </DialogTrigger>
@@ -284,11 +284,11 @@ export default function PartyRooms() {
           </Dialog>
         </div>
 
-        <div className="mb-5 flex gap-2 overflow-x-auto pb-1">
+        <div className="scrollbar-none -mx-3 mb-5 flex snap-x gap-2 overflow-x-auto px-3 pb-2 sm:mx-0 sm:px-0">
           <Button
             size="sm"
             variant={languageFilter === "all" ? "default" : "outline"}
-            className="shrink-0"
+            className="shrink-0 snap-start"
             onClick={() => setLanguageFilter("all")}
           >
             🌐 Todos ({rooms.length})
@@ -301,7 +301,7 @@ export default function PartyRooms() {
                 key={l.code}
                 size="sm"
                 variant={languageFilter === l.code ? "default" : "outline"}
-                className="shrink-0"
+                className="shrink-0 snap-start"
                 onClick={() => setLanguageFilter(l.code)}
               >
                 {l.flag} {l.name} ({count})
@@ -331,21 +331,21 @@ export default function PartyRooms() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
             {visibleRooms.map((room) => (
-              <Card key={room.id} className="card-mystic">
-                <CardHeader>
+              <Card key={room.id} className="card-mystic border-border/80">
+                <CardHeader className="p-4 pb-2 sm:p-6 sm:pb-3">
                   <div className="flex items-start justify-between gap-2">
                     <CardTitle className="truncate text-lg">{room.name}</CardTitle>
                     {room.is_private && <Lock className="h-4 w-4 shrink-0 text-muted-foreground" />}
                   </div>
                   <CardDescription className="truncate">por {room.hostName}</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-3">
+                <CardContent className="space-y-3 p-4 pt-2 sm:p-6 sm:pt-3">
                   {room.description && (
                     <p className="line-clamp-2 text-sm text-muted-foreground">{room.description}</p>
                   )}
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Badge variant="secondary" className="gap-1">
                       <Users className="h-3 w-3" /> {room.participants ?? 0} na sala
                     </Badge>
@@ -361,7 +361,7 @@ export default function PartyRooms() {
                     />
                   )}
                   <div className="flex gap-2">
-                    <Button className="flex-1 btn-mystic" onClick={() => enterRoom(room)}>
+                     <Button className="flex-1 min-h-11 btn-mystic" onClick={() => enterRoom(room)}>
                       Entrar
                     </Button>
                     {room.host_id === userId && (
