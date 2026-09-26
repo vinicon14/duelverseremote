@@ -80,6 +80,8 @@ import { PhonePairFab } from "./components/desktop/PhonePairFab";
 import { MobileConnectFab } from "./components/MobileConnectFab";
 import { WhatsAppButton } from "./components/WhatsAppButton";
 import { FloatingCardSearchMount } from "./components/duel/FloatingCardSearchMount";
+import { MobileBottomNav } from "./components/MobileBottomNav";
+import { ProUpsellBanner } from "./components/ProUpsellBanner";
 
 const DeckBuilder = lazy(() => import("./pages/DeckBuilder"));
 const GenesisDeckBuilder = lazy(() => import("./pages/GenesisDeckBuilder"));
@@ -323,17 +325,21 @@ const MainAppContent = () => {
       <NativePermissionPrompt userId={user?.id} />
       <OnboardingTutorial userId={user?.id} />
       <AnimatedBackground />
-      <PageNavigationArrows />
+      <div className="hidden md:block">
+        <PageNavigationArrows />
+        <WhatsAppButton />
+      </div>
       <UnifiedPageLoader />
       <BackgroundMusic />
       <SoundEffectsProvider />
       <PhonePairFab />
       <MobileConnectFab />
-      <WhatsAppButton />
       <FloatingCardSearchMount />
       <div className="router-view-animate">
         <RouterContent user={user} />
       </div>
+      <ProUpsellBanner />
+      <MobileBottomNav />
     </BrowserRouter>
   );
 };
