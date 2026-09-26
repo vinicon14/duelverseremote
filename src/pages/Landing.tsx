@@ -40,28 +40,28 @@ const Landing = () => {
       <SEOHead tKey="home" path="/" />
       
       {/* Navbar simples */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
-        <div className="container mx-auto px-3 sm:px-4 h-16 flex items-center justify-between gap-2">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-background/95 sm:bg-background/80 backdrop-blur-md border-b border-border safe-top">
+        <div className="container mx-auto px-3 sm:px-4 h-14 sm:h-16 flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 shrink">
-            <div className="text-xl font-black text-primary tracking-[0.2em] flex items-center gap-2">
-              <div className="w-2 h-6 bg-primary rounded-sm" />
+            <div className="text-sm min-[390px]:text-base sm:text-xl font-black text-primary tracking-[0.12em] sm:tracking-[0.2em] flex items-center gap-1.5 sm:gap-2">
+              <div className="w-1.5 sm:w-2 h-5 sm:h-6 bg-primary rounded-sm" />
               DUELVERSE
             </div>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
-            <Link to="/comece">
+            <Link to="/comece" className="hidden sm:block">
               <Button variant="ghost" size="sm" className="text-foreground hover:text-primary hover:bg-white/5 px-2 sm:px-3 text-xs sm:text-sm h-9" aria-label="Como começar no DuelVerse">
                 <BookOpen className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Como começar</span>
               </Button>
             </Link>
             <Link to="/auth">
-              <Button variant="ghost" size="sm" className="text-foreground hover:text-primary hover:bg-white/5 px-2 sm:px-4 text-xs sm:text-sm h-9">
+              <Button variant="ghost" size="sm" className="text-foreground hover:text-primary hover:bg-foreground/5 px-2 text-xs sm:text-sm h-9">
                 {t('landing.navLogin')}
               </Button>
             </Link>
             <Link to="/auth">
-              <Button size="sm" className="btn-mystic text-primary-foreground px-2.5 sm:px-4 text-xs sm:text-sm h-9">
+              <Button size="sm" className="btn-mystic text-primary-foreground px-2.5 sm:px-4 text-[11px] sm:text-sm h-9">
                 {t('landing.navSignup')}
               </Button>
             </Link>
@@ -70,21 +70,21 @@ const Landing = () => {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative pt-24 pb-16 sm:pt-32 sm:pb-24 px-4 overflow-hidden bg-transparent">
+      <section className="relative min-h-[calc(100svh-1rem)] flex items-center pt-20 pb-10 sm:block sm:min-h-0 sm:pt-32 sm:pb-24 px-4 overflow-hidden bg-transparent">
         {/* Fundo sólido para visual estável */}
-        <div className="absolute top-20 left-10 w-48 sm:w-72 h-48 sm:h-72 bg-primary/10 rounded-full blur-3xl animate-float" />
-        <div className="absolute bottom-10 right-10 w-64 sm:w-96 h-64 sm:h-96 bg-accent/10 rounded-full blur-3xl animate-float" style={{ animationDelay: '1.5s' }} />
+        <div className="hidden sm:block absolute top-20 left-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl animate-float" />
+        <div className="hidden sm:block absolute bottom-10 right-10 w-96 h-96 bg-accent/10 rounded-full blur-3xl animate-float" style={{ animationDelay: '1.5s' }} />
         
         <div className="container mx-auto relative z-10">
-          <div className="max-w-4xl mx-auto text-center space-y-6 sm:space-y-8">
+          <div className="max-w-4xl mx-auto text-center space-y-5 sm:space-y-8">
             
-            <h1 className="text-3xl sm:text-5xl md:text-7xl font-extrabold leading-tight animate-fade-in-up delay-100">
+            <h1 className="text-[2rem] min-[390px]:text-4xl sm:text-5xl md:text-7xl font-extrabold leading-[1.08] animate-fade-in-up delay-100">
               <span className="text-primary">{t('landing.heroTitle1')}</span>
               <br />
               <span className="text-foreground">{t('landing.heroTitle2')}</span>
             </h1>
             
-            <p className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed px-2 animate-fade-in-up delay-200">
+            <p className="text-sm min-[390px]:text-base sm:text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed px-1 sm:px-2 animate-fade-in-up delay-200">
               {t('landing.heroDesc')}
             </p>
             
@@ -105,22 +105,22 @@ const Landing = () => {
               }
             </div>
 
-            <div className="grid grid-cols-3 gap-4 sm:gap-8 max-w-xl mx-auto mt-10 sm:mt-16">
-              <div className="text-center">
+            <div className="grid grid-cols-3 gap-1 sm:gap-8 max-w-xl mx-auto mt-7 sm:mt-16 border-y border-border/70 py-4 sm:border-0 sm:py-0">
+              <div className="text-center min-w-0 px-1">
                 <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-primary mb-1">1000+</div>
                 <div className="text-xs sm:text-sm text-foreground/80">{t('landing.statsActive')}</div>
               </div>
-              <div className="text-center">
+              <div className="text-center min-w-0 px-1 border-x border-border/70 sm:border-0">
                 <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-primary mb-1">500+</div>
                 <div className="text-xs sm:text-sm text-foreground/80">{t('landing.statsDaily')}</div>
               </div>
-              <div className="text-center">
+              <div className="text-center min-w-0 px-1">
                 <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-primary mb-1">50+</div>
                 <div className="text-xs sm:text-sm text-foreground/80">{t('landing.statsTournaments')}</div>
               </div>
             </div>
 
-            <div className="pt-6 sm:pt-8">
+            <div className="pt-1 sm:pt-8">
               <a href="#features" aria-label="Ver recursos do Duelverse">
                 <span className="sr-only">Ver recursos do Duelverse</span>
                 <ChevronDown className="w-7 h-7 sm:w-8 sm:h-8 text-muted-foreground mx-auto animate-bounce" />
@@ -175,9 +175,9 @@ const Landing = () => {
       }
 
       {/* Features Section */}
-      <section id="features" className="py-20 px-4">
+      <section id="features" className="py-14 sm:py-20 px-4">
         <div className="container mx-auto">
-          <div className="text-center mb-14">
+          <div className="text-center mb-9 sm:mb-14">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
               <span className="text-primary">{t('landing.featuresTitle')}</span>
             </h2>
@@ -212,7 +212,7 @@ const Landing = () => {
       </section>
 
       {/* How it works */}
-      <section className="py-20 px-4 bg-transparent">
+      <section className="py-14 sm:py-20 px-4 bg-transparent">
         <div className="container mx-auto max-w-4xl">
           <div className="text-center mb-14">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
@@ -239,9 +239,9 @@ const Landing = () => {
       </section>
 
       {/* Pro Section */}
-      <section className="py-20 px-4">
+      <section className="py-14 sm:py-20 px-4">
         <div className="container mx-auto max-w-4xl">
-          <Card className="p-10 md:p-14 relative overflow-hidden border-primary/20 bg-card">
+          <Card className="p-6 sm:p-10 md:p-14 relative overflow-hidden border-primary/20 bg-card">
             <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-accent/5" />
             <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
             <div className="relative z-10 text-center space-y-6">
@@ -264,9 +264,9 @@ const Landing = () => {
       </section>
 
       {/* CTA Final */}
-      <section className="py-16 sm:py-24 px-4 bg-transparent border-t border-white/5">
+      <section className="py-14 sm:py-24 px-4 bg-transparent border-t border-border/50">
         <div className="container mx-auto text-center space-y-6 sm:space-y-8">
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-foreground">
             {t('landing.ctaTitle')}
           </h2>
           <p className="text-foreground/80 text-base sm:text-lg max-w-xl mx-auto px-2 font-medium">
@@ -288,7 +288,7 @@ const Landing = () => {
       </div>
 
       {/* Footer */}
-      <footer className="border-t border-white/10 py-10 px-4 bg-black/40 backdrop-blur-md">
+      <footer className="border-t border-border py-10 px-4 bg-card/40 backdrop-blur-md">
         <div className="container mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
             <div className="space-y-3">
@@ -301,7 +301,7 @@ const Landing = () => {
               </p>
             </div>
             <div className="space-y-3">
-              <h4 className="font-semibold text-white tracking-widest text-sm uppercase">{t('landing.footerDownload')}</h4>
+               <h4 className="font-semibold text-foreground tracking-widest text-sm uppercase">{t('landing.footerDownload')}</h4>
               <div className="space-y-2">
                 <Link to="/install-app" className="flex items-center gap-2 text-sm text-foreground/80 hover:text-primary hover:font-semibold transition-colors">
                   <Monitor className="w-4 h-4" /> Windows / Desktop
@@ -312,7 +312,7 @@ const Landing = () => {
               </div>
             </div>
             <div className="space-y-3">
-              <h4 className="font-semibold text-white tracking-widest text-sm uppercase">{t('landing.footerLinks')}</h4>
+               <h4 className="font-semibold text-foreground tracking-widest text-sm uppercase">{t('landing.footerLinks')}</h4>
               <div className="space-y-2">
                 <Link to="/auth" className="block text-sm text-foreground/80 hover:text-primary hover:font-semibold transition-colors">{t('landing.footerSignIn')}</Link>
                 <Link to="/install-app" className="block text-sm text-foreground/80 hover:text-primary hover:font-semibold transition-colors">{t('landing.footerPwa')}</Link>
