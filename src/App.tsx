@@ -259,6 +259,7 @@ const RouterContent = ({ user }: { user: User | null }) => {
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>
+    </>
   );
 };
 
