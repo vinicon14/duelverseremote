@@ -49,7 +49,7 @@ export const ensureIceServers = (): Promise<RTCIceServer[]> => {
     timer = setTimeout(() => {
       controller.abort();
       reject(new Error("ICE configuration timed out"));
-    }, 3000);
+    }, 8000);
   });
   promise = (async () => {
     try {
