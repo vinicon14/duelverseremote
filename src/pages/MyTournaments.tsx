@@ -1,3 +1,4 @@
+import { getFreshUserId } from "@/utils/freshAuth";
 /**
  * DuelVerse - Meus Torneios
  * Desenvolvido por Vinícius
@@ -166,7 +167,7 @@ const MyTournaments = () => {
       const { data: duelData, error: duelError } = await supabase
         .from('live_duels')
         .insert({
-          creator_id: userId,
+          creator_id: await getFreshUserId(),
           status: 'waiting',
           is_ranked: false,
           tcg_type: duelTcg,

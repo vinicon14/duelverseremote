@@ -1,3 +1,4 @@
+import { getFreshUserId } from "@/utils/freshAuth";
 /**
  * DuelVerse - Amigos
  * Desenvolvido por Vinícius
@@ -232,7 +233,7 @@ const Friends = () => {
       const { data: duelData, error: duelError } = await supabase
         .from('live_duels')
         .insert({
-          creator_id: currentUser.id,
+          creator_id: await getFreshUserId(),
           status: 'waiting',
           is_ranked: false,
           tcg_type: tcgType,
