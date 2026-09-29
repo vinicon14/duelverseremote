@@ -54,6 +54,7 @@ const Friends = lazy(() => import("./pages/Friends"));
 const Tournaments = lazy(() => import("./pages/Tournaments"));
 const CreateTournament = lazy(() => import("./pages/CreateTournament"));
 const TournamentDetail = lazy(() => import("./pages/TournamentDetail"));
+const TournamentLobby = lazy(() => import("./pages/TournamentLobby"));
 const Matchmaking = lazy(() => import("./pages/Matchmaking"));
 const Store = lazy(() => import("./pages/Store"));
 const GoPro = lazy(() => import("./pages/GoPro"));
@@ -215,6 +216,7 @@ const RouterContent = ({ user }: { user: User | null }) => {
         <Route path="/tournaments" element={<Tournaments />} />
         <Route path="/create-tournament" element={<CreateTournament />} />
         <Route path="/tournaments/:id" element={<TournamentDetail />} />
+        <Route path="/tournaments/:id/lobby" element={<TournamentLobby />} />
         <Route path="/matchmaking" element={<RequireDesktop featureName="O matchmaking"><Matchmaking /></RequireDesktop>} />
         <Route path="/duelcoins" element={<DuelCoins />} />
         <Route path="/judge-panel" element={<JudgePanel />} />
