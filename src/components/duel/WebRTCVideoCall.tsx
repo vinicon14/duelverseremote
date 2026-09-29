@@ -157,7 +157,9 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   // In 1v1 duels spectators no longer connect to every player camera. A single
   // player (the room creator; the other player if the creator is gone) transmits
   // BOTH cameras + audio to each spectator over one receive-only connection.
-  const relayMode = maxPlayers === 2 && !!creatorId && !audioBroadcastOnly;
+  // Relay (single-broadcaster) mode disabled: it broke spectator video in real duels.
+  // Spectators connect receive-only to each player directly (stable path).
+  const relayMode = false && maxPlayers === 2 && !!creatorId && !audioBroadcastOnly;
   const relayModeRef = useRef(relayMode);
   relayModeRef.current = relayMode;
   const relayMapRef = useRef<Map<string, string>>(new Map()); // spectator: streamId -> playerId
