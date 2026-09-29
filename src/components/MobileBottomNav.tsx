@@ -7,12 +7,18 @@ import { Link, useLocation } from "react-router-dom";
 import { Swords, Trophy, Layers, Store, User } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-const HIDDEN_PREFIXES = ["/duel/", "/duel-room", "/duelroom", "/join-duel", "/party/", "/auth", "/comece", "/go-pro"];
+const HIDDEN_PREFIXES = [
+  "/duel/", "/duel-room", "/duelroom", "/join-duel", "/join/", "/party/", "/auth", "/comece", "/go-pro",
+  "/phone-camera", "/phone-connect", "/arena", "/spectate",
+];
 
 export function MobileBottomNav() {
   const { t } = useTranslation();
   const { pathname } = useLocation();
-  const hidden = pathname === "/" || HIDDEN_PREFIXES.some((p) => pathname.startsWith(p));
+  const hidden =
+    pathname === "/" ||
+    HIDDEN_PREFIXES.some((p) => pathname.startsWith(p)) ||
+    /^\/tournaments\/[^/]+\/lobby/.test(pathname);
 
   useEffect(() => {
     document.body.classList.toggle("has-mobile-bottom-nav", !hidden);
