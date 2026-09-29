@@ -2374,6 +2374,67 @@ export type Database = {
           },
         ]
       }
+      tournament_lobby_presence: {
+        Row: {
+          last_seen: string
+          tournament_id: string
+          user_id: string
+        }
+        Insert: {
+          last_seen?: string
+          tournament_id: string
+          user_id: string
+        }
+        Update: {
+          last_seen?: string
+          tournament_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournament_lobby_presence_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tournament_lobby_state: {
+        Row: {
+          countdown_ends_at: string | null
+          is_paused: boolean
+          paused_remaining: number | null
+          round: number
+          tournament_id: string
+          updated_at: string
+        }
+        Insert: {
+          countdown_ends_at?: string | null
+          is_paused?: boolean
+          paused_remaining?: number | null
+          round?: number
+          tournament_id: string
+          updated_at?: string
+        }
+        Update: {
+          countdown_ends_at?: string | null
+          is_paused?: boolean
+          paused_remaining?: number | null
+          round?: number
+          tournament_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournament_lobby_state_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: true
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tournament_match_reports: {
         Row: {
           created_at: string
@@ -2410,6 +2471,7 @@ export type Database = {
         Row: {
           conflict_count: number | null
           created_at: string | null
+          duel_id: string | null
           id: string
           match_deadline: string | null
           player1_id: string | null
@@ -2421,12 +2483,14 @@ export type Database = {
           round: number
           scheduled_at: string | null
           status: string | null
+          table_number: number | null
           tournament_id: string
           winner_id: string | null
         }
         Insert: {
           conflict_count?: number | null
           created_at?: string | null
+          duel_id?: string | null
           id?: string
           match_deadline?: string | null
           player1_id?: string | null
@@ -2438,12 +2502,14 @@ export type Database = {
           round: number
           scheduled_at?: string | null
           status?: string | null
+          table_number?: number | null
           tournament_id: string
           winner_id?: string | null
         }
         Update: {
           conflict_count?: number | null
           created_at?: string | null
+          duel_id?: string | null
           id?: string
           match_deadline?: string | null
           player1_id?: string | null
@@ -2455,6 +2521,7 @@ export type Database = {
           round?: number
           scheduled_at?: string | null
           status?: string | null
+          table_number?: number | null
           tournament_id?: string
           winner_id?: string | null
         }
@@ -3169,6 +3236,12 @@ export type Database = {
         Args: { p_tournament_id: string }
         Returns: Json
       }
+      lobby_can_access: { Args: { p_t: string; p_u: string }; Returns: boolean }
+      lobby_set_paused: {
+        Args: { p_paused: boolean; p_tournament_id: string }
+        Returns: Json
+      }
+      lobby_tick: { Args: { p_tournament_id: string }; Returns: Json }
       matchmake: {
         Args: {
           p_language_code?: string

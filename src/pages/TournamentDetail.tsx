@@ -583,6 +583,19 @@ const TournamentDetail = () => {
           Voltar
         </Button>
 
+        {tournament.status === 'active' && currentUser &&
+          (tournament.created_by === currentUser.id || participants.some((p: any) => p.user_id === currentUser.id)) && (
+          <Card className="mb-4 border-primary/50">
+            <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div>
+                <p className="font-semibold">Lobby do Torneio</p>
+                <p className="text-sm text-muted-foreground">Entre no lobby: quando todos estiverem presentes, a contagem de 3 minutos começa e as mesas são criadas automaticamente.</p>
+              </div>
+              <Button onClick={() => navigate(`/tournaments/${id}/lobby`)}>Entrar no Lobby</Button>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Pending Match Notification Banner */}
         {tournament.status === 'active' && currentUser && (() => {
           const pendingMatch = matches.find(m => 
