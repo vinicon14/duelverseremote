@@ -143,9 +143,29 @@ const ActiveDeckBuilderRoute = () => {
   return <DeckBuilder />;
 };
 
+// Navegação pedida pelo service worker (clique em notificação) na MESMA aba
+const SWNavigateListener = () => {
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (!("serviceWorker" in navigator)) return;
+    const onMsg = (e: MessageEvent) => {
+      if (e.data?.type !== "NAVIGATE" || typeof e.data.url !== "string") return;
+      try {
+        const u = new URL(e.data.url, window.location.origin);
+        if (u.origin === window.location.origin) navigate(u.pathname + u.search + u.hash);
+      } catch { /* ignore */ }
+    };
+    navigator.serviceWorker.addEventListener("message", onMsg);
+    return () => navigator.serviceWorker.removeEventListener("message", onMsg);
+  }, [navigate]);
+  return null;
+};
+
 // Componente interno que fica dentro do Router para usar useNavigate
 const RouterContent = ({ user }: { user: User | null }) => {
   return (
+    <>
+    <SWNavigateListener />
     <Suspense fallback={
       <div className="flex-1 w-full flex items-center justify-center min-h-screen">
         <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
