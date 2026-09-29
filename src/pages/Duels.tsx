@@ -1,3 +1,4 @@
+import { getFreshUserId } from "@/utils/freshAuth";
 /**
  * DuelVerse - Lista de Duelos
  * Desenvolvido por Vinícius
@@ -217,7 +218,7 @@ const Duels = () => {
       const { data, error } = await supabase
         .from('live_duels')
         .insert({
-          creator_id: user.id,
+          creator_id: await getFreshUserId(),
           room_name: roomName,
           is_ranked: isRanked,
           duration_minutes: durationMinutes,

@@ -173,6 +173,12 @@ self.addEventListener('notificationclick', (event) => {
             return client.focus();
           }
         }
+        // Reaproveita qualquer aba já aberta do DuelVerse (mesma aba, sem abrir outra)
+        const existing = windowClients.find((c) => 'focus' in c);
+        if (existing) {
+          existing.postMessage({ type: 'NAVIGATE', url: urlToOpen });
+          return existing.focus();
+        }
         if (self.clients.openWindow) {
           return self.clients.openWindow(urlToOpen);
         }

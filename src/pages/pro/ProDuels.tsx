@@ -1,3 +1,4 @@
+import { getFreshUserId } from "@/utils/freshAuth";
 /**
  * DuelVerse - Duelos Pro
  * Desenvolvido por Vinícius
@@ -68,7 +69,7 @@ export default function ProDuels() {
       const { data, error } = await supabase
         .from('live_duels')
         .insert({
-          creator_id: currentUser.id,
+          creator_id: await getFreshUserId(),
           room_name: roomName,
           status: 'waiting',
           is_ranked: true,
