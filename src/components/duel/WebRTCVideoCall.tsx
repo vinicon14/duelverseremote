@@ -81,6 +81,8 @@ interface DuelSignal {
   targetId?: string;
   isSpectator?: boolean;
   rebuild?: boolean;
+  /** Broadcaster → spectator: which relayed stream id belongs to which player */
+  relayMap?: Record<string, string>;
   sdp?: RTCSessionDescriptionInit;
   candidate?: RTCIceCandidateInit;
 }
@@ -150,6 +152,49 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   const frozenVideoSinceRef = useRef<Map<string, number>>(new Map());
 
   const playerIdsRef = useRef(new Set(playerIds.filter(Boolean)));
+
+  // ===== Spectator transmission (relay) =====
+  // In 1v1 duels spectators no longer connect to every player camera. A single
+  // player (the room creator; the other player if the creator is gone) transmits
+  // BOTH cameras + audio to each spectator over one receive-only connection.
+  const relayMode = maxPlayers === 2 && !!creatorId && !audioBroadcastOnly;
+  const relayModeRef = useRef(relayMode);
+  relayModeRef.current = relayMode;
+  const relayMapRef = useRef<Map<string, string>>(new Map()); // spectator: streamId -> playerId
+  const relayedByPeerRef = useRef<Map<string, Set<string>>>(new Map()); // spectator: broadcaster -> relayed player ids
+  const lastSeenRef = useRef<Map<string, number>>(new Map());
+  const lastRelayRequestRef = useRef(0);
+  const sendOfferToRef = useRef<((id: string, rebuild?: boolean) => Promise<void>) | null>(null);
+  const relayRebuildTimerRef = useRef<number | null>(null);
+
+  // Player side: am I the one transmitting to spectators?
+  const amBroadcaster = useCallback(() => {
+    if (isSpectator || !relayModeRef.current) return true;
+    if (userId === creatorId) return true;
+    const c = creatorId ? peersRef.current.get(creatorId) : undefined;
+    return !c || c.pc.connectionState !== "connected";
+  }, [isSpectator, userId, creatorId]);
+
+  // Spectator side: which player should transmit to me?
+  const pickBroadcaster = useCallback((): string | null => {
+    const now = Date.now();
+    const seen = (id: string) =>
+      now - (lastSeenRef.current.get(id) ?? 0) < 15000 ||
+      peersRef.current.get(id)?.pc.connectionState === "connected";
+    if (creatorId && seen(creatorId)) return creatorId;
+    const other = Array.from(playerIdsRef.current).find((id) => id !== creatorId && id !== userId && seen(id));
+    return other ?? creatorId ?? null;
+  }, [creatorId, userId]);
+
+  // Broadcaster: stream-id → player-id map of the tracks being relayed
+  const buildRelayMap = useCallback((): Record<string, string> => {
+    const map: Record<string, string> = {};
+    peersRef.current.forEach((p, pid) => {
+      if (spectatorPeersRef.current.has(pid) || !p.stream) return;
+      map[p.stream.id] = pid;
+    });
+    return map;
+  }, []);
 
 
   const [pipSwapped, setPipSwapped] = useState(false);
@@ -551,6 +596,20 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       return next;
     });
     setRemotePeerIds(prev => prev.filter(id => id !== peerId));
+    const relayed = relayedByPeerRef.current.get(peerId);
+    if (relayed) {
+      relayed.forEach((rid) => {
+        remoteVideoRefs.current.delete(rid);
+        unregisterRemoteStream(rid);
+      });
+      setRemoteStreams(prev => {
+        const next = new Map(prev);
+        relayed.forEach((rid) => next.delete(rid));
+        return next;
+      });
+      setRemotePeerIds(prev => prev.filter(id => !relayed.has(id)));
+      relayedByPeerRef.current.delete(peerId);
+    }
     spectatorPeersRef.current.delete(peerId);
     setSpectatorPeerIds(prev => prev.filter(id => id !== peerId));
 
@@ -609,6 +668,15 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       localStream.getTracks().forEach((track) => {
         pc.addTrack(track, localStream);
       });
+      // Broadcaster → spectator: also forward the other player's camera/audio.
+      if (!isSpectator && relayModeRef.current && spectatorPeersRef.current.has(remotePeerId)) {
+        peersRef.current.forEach((p, pid) => {
+          if (pid === remotePeerId || spectatorPeersRef.current.has(pid) || !p.stream) return;
+          p.stream.getTracks().forEach((t) => {
+            if (t.readyState === "live") pc.addTrack(t, p.stream!);
+          });
+        });
+      }
       // Judge spectator (audio-only broadcaster) still needs a recvonly video
       // transceiver so the SDP includes a video m-line to receive players' video.
       if (isSpectator && audioBroadcastOnly) {
@@ -720,6 +788,28 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       // without an associated stream. Keep a per-peer stream and accumulate tracks
       // so the opponent's camera always ends up in the same MediaStream.
       const incoming = event.streams[0];
+      const relayPid = isSpectator && incoming ? relayMapRef.current.get(incoming.id) : undefined;
+      if (relayPid && relayPid !== remotePeerId) {
+        const set = relayedByPeerRef.current.get(remotePeerId) ?? new Set<string>();
+        set.add(relayPid);
+        relayedByPeerRef.current.set(remotePeerId, set);
+        registerRemoteStream(relayPid, incoming);
+        setRemoteStreams((prev) => {
+          const next = new Map(prev);
+          next.set(relayPid, incoming);
+          return next;
+        });
+        setRemotePeerIds((prev) => (prev.includes(relayPid) ? prev : [...prev, relayPid]));
+        return;
+      }
+      // Broadcaster: a player's track changed → refresh spectator transmissions.
+      if (!isSpectator && relayModeRef.current && !spectatorPeersRef.current.has(remotePeerId) && spectatorPeersRef.current.size > 0) {
+        if (relayRebuildTimerRef.current) window.clearTimeout(relayRebuildTimerRef.current);
+        relayRebuildTimerRef.current = window.setTimeout(() => {
+          if (!amBroadcaster()) return;
+          spectatorPeersRef.current.forEach((sid) => void sendOfferToRef.current?.(sid, true));
+        }, 1200);
+      }
       let stream = peerState.stream;
       if (incoming) {
         stream = incoming;
@@ -775,6 +865,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
             sdp: pc.localDescription,
             senderId: userId,
             targetId: remotePeerId,
+            relayMap: spectatorPeersRef.current.has(remotePeerId) ? buildRelayMap() : undefined,
           },
         });
       } catch (err) {
@@ -785,7 +876,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     };
 
     return pc;
-  }, [userId, isSpectator, audioBroadcastOnly, getActiveOutboundStream, canInitiateOffer, removePeer]);
+  }, [userId, isSpectator, audioBroadcastOnly, getActiveOutboundStream, canInitiateOffer, removePeer, amBroadcaster, buildRelayMap]);
 
   // Player-side: build/refresh a connection toward a peer and send an offer.
   // Only peers that actually have media (the duelists) create offers — this
@@ -827,6 +918,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
           senderId: userId,
           targetId: remotePeerId,
           isSpectator,
+          relayMap: spectatorPeersRef.current.has(remotePeerId) ? buildRelayMap() : undefined,
         },
       });
       console.log("[WebRTC] Offer sent to:", remotePeerId);
@@ -835,7 +927,8 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     } finally {
       peer.makingOffer = false;
     }
-  }, [userId, isSpectator, createPeerConnection, canInitiateOffer]);
+  }, [userId, isSpectator, createPeerConnection, canInitiateOffer, buildRelayMap]);
+  sendOfferToRef.current = sendOfferTo;
 
   // Spectator-side: never offer (receive-only). Ask the player to (re)offer until
   // BOTH audio and video are flowing, so spectators always see AND hear everyone.
@@ -867,6 +960,22 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     // the mic later, or the first offer had no audio m-line). In that case ask
     // for a fresh offer WITHOUT tearing down the working video connection.
     const liveAudio = (peer?.stream?.getAudioTracks() ?? []).some((t) => t.readyState === "live");
+    if (connected && liveVideo && !frozenTooLong && relayModeRef.current) {
+      // Transmission mode: ask the broadcaster to refresh if the other
+      // player's relayed camera is still missing.
+      const expectedOthers = Array.from(playerIdsRef.current).filter((id) => id !== playerId && id !== userId);
+      const relayed = relayedByPeerRef.current.get(playerId) ?? new Set<string>();
+      const missing = expectedOthers.some((id) => !relayed.has(id) && now - (lastSeenRef.current.get(id) ?? 0) < 15000);
+      if ((missing || !liveAudio) && now - lastRelayRequestRef.current > 6000) {
+        lastRelayRequestRef.current = now;
+        channelRef.current?.send({
+          type: "broadcast",
+          event: "webrtc-signal",
+          payload: { type: "request-offer", senderId: userId, targetId: playerId, isSpectator: true, rebuild: false },
+        });
+      }
+      return;
+    }
     if (connected && liveVideo && !frozenTooLong) {
       if (!liveAudio) {
         channelRef.current?.send({
@@ -939,11 +1048,26 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         spectatorPeersRef.current.add(remotePeerId);
         setSpectatorPeerIds((prev) => (prev.includes(remotePeerId) ? prev : [...prev, remotePeerId]));
       }
+      if (!payload.isSpectator) lastSeenRef.current.set(remotePeerId, Date.now());
+      if (isSpectator && payload.type === "offer" && payload.relayMap) {
+        Object.entries(payload.relayMap).forEach(([sid, pid]) => relayMapRef.current.set(sid, pid));
+      }
 
       // A spectator asked us (a player) to (re)send our offer.
       if (payload.type === "request-offer") {
         if (isSpectator && !audioBroadcastOnly) return;
-        await sendOfferTo(remotePeerId, !!payload.rebuild);
+        let rebuild = !!payload.rebuild;
+        if (!isSpectator && relayModeRef.current && payload.isSpectator) {
+          if (!amBroadcaster()) return;
+          // Rebuild when the relayed track set is out of date.
+          const pc = peersRef.current.get(remotePeerId)?.pc;
+          const sent = new Set(pc?.getSenders().map((x) => x.track?.id).filter(Boolean) ?? []);
+          peersRef.current.forEach((p, pid) => {
+            if (pid === remotePeerId || spectatorPeersRef.current.has(pid)) return;
+            p.stream?.getTracks().forEach((t) => { if (t.readyState === "live" && !sent.has(t.id)) rebuild = true; });
+          });
+        }
+        await sendOfferTo(remotePeerId, rebuild);
         return;
       }
 
@@ -966,10 +1090,14 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
           // Spectator <-> spectator connections are useless (neither sends video)
           // and only waste slots/bandwidth. Skip them entirely.
           if (isSpectator && !audioBroadcastOnly) return;
+          // Transmission mode: only the broadcasting player serves spectators.
+          if (!isSpectator && relayModeRef.current && !amBroadcaster()) return;
         } else if (spectatorPeersRef.current.has(remotePeerId)) {
           spectatorPeersRef.current.delete(remotePeerId);
           setSpectatorPeerIds((prev) => prev.filter((id) => id !== remotePeerId));
         }
+        // Spectator in transmission mode connects only to the broadcaster.
+        if (isSpectator && !audioBroadcastOnly && relayModeRef.current && !payload.isSpectator && remotePeerId !== pickBroadcaster()) return;
 
         // Recreate the connection when it is missing OR stuck in a dead state.
         // Re-announcements (heartbeat below) then heal peers whose handshake was
@@ -1404,7 +1532,10 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       // one room-wide broadcast is fragile when a player's tab is throttled or
       // reconnecting and could leave both reserved panels without streams.
       if (isSpectator) {
-        playerIdsRef.current.forEach((playerId) => {
+        const targets = relayModeRef.current
+          ? [pickBroadcaster()].filter(Boolean) as string[]
+          : Array.from(playerIdsRef.current);
+        targets.forEach((playerId) => {
           if (playerId === userId) return;
           channel.send({
             type: "broadcast",
@@ -1422,6 +1553,15 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     };
 
     const interval = setInterval(() => {
+      if (isSpectator && relayModeRef.current) {
+        const b = pickBroadcaster();
+        const bp = b ? peersRef.current.get(b) : undefined;
+        const ok = bp?.pc.connectionState === "connected" &&
+          (bp.stream?.getVideoTracks().some((t) => t.readyState === "live") ?? false);
+        if (!ok) announceReady();
+        else if (b) void createSpectatorOffer(b);
+        return;
+      }
       const connectedPlayerVideos = Array.from(peersRef.current.entries()).filter(([peerId, peer]) => {
         if (spectatorPeersRef.current.has(peerId)) return false;
         if (isSpectator && playerIdsRef.current.size > 0 && !playerIdsRef.current.has(peerId)) return false;
@@ -1442,7 +1582,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       clearInterval(interval);
       window.clearTimeout(initialAnnouncement);
     };
-  }, [userId, isSpectator, maxPlayers, remotePeerIds, createSpectatorOffer]);
+  }, [userId, isSpectator, maxPlayers, remotePeerIds, createSpectatorOffer, pickBroadcaster]);
 
   // A live MediaStreamTrack may end after a successful handshake without moving
   // RTCPeerConnection to "failed" (camera replacement, mobile backgrounding,
@@ -1452,6 +1592,15 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     if (!isSpectator) return;
 
     const recoverMissingVideo = () => {
+      if (relayModeRef.current && !audioBroadcastOnly) {
+        const b = pickBroadcaster();
+        // Drop direct connections to a player that is no longer the broadcaster.
+        peersRef.current.forEach((_p, pid) => {
+          if (pid !== b && playerIdsRef.current.has(pid)) removePeer(pid);
+        });
+        if (b && b !== userId) void createSpectatorOffer(b);
+        return;
+      }
       playerIdsRef.current.forEach((playerId) => {
         if (playerId === userId) return;
         // createSpectatorOffer self-guards: it only re-requests when video OR
@@ -1474,7 +1623,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       window.clearInterval(interval);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [isSpectator, userId, createSpectatorOffer]);
+  }, [isSpectator, userId, createSpectatorOffer, pickBroadcaster, removePeer, audioBroadcastOnly]);
 
 
 
