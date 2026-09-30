@@ -329,21 +329,32 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     await Promise.all(Array.from(peersRef.current.entries()).map(async ([peerId, { pc }]) => {
       let needsNegotiation = false;
       for (const [kind, track] of [["video", activeVideo], ["audio", activeAudio]] as const) {
-        const transceiver = pc.getTransceivers().find(t => t.receiver.track.kind === kind);
+        const all = pc.getTransceivers().filter(
+          (t) => t.receiver.track.kind === kind && t.currentDirection !== "stopped",
+        );
+        // Prefer the transceiver actually negotiated with the peer (has a mid).
+        // Transceivers created via addTransceiver before the remote offer are
+        // never associated, and replacing a track there sends nothing — the
+        // opponent kept seeing a black/waiting panel after a camera change.
+        const transceiver = all.find((t) => t.mid !== null) ?? all[0];
         if (transceiver) {
+          const hadTrack = !!transceiver.sender.track;
           await transceiver.sender.replaceTrack(track);
-          if (track && transceiver.direction === "recvonly") {
+          if (track && (transceiver.direction === "recvonly" || transceiver.direction === "inactive")) {
             transceiver.direction = "sendrecv";
             needsNegotiation = true;
           }
+          if (track && (!hadTrack || transceiver.mid === null)) needsNegotiation = true;
         } else if (track && outboundStream) {
           pc.addTrack(track, outboundStream);
           needsNegotiation = true;
         }
       }
-      // The elected offerer handles negotiationneeded. If this side is the
-      // answerer, ask the other player to renegotiate its receiving directions.
-      if (needsNegotiation && userId > peerId && !spectatorPeersRef.current.has(peerId)) {
+      if (!needsNegotiation) return;
+      const iAmOfferer = spectatorPeersRef.current.has(peerId) || userId < peerId;
+      if (iAmOfferer) {
+        void sendOfferRef.current(peerId);
+      } else {
         channelRef.current?.send({ type: "broadcast", event: "webrtc-signal",
           payload: { type: "request-offer", senderId: userId, targetId: peerId } });
       }
@@ -358,6 +369,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       localVideoRef.current.play?.().catch(() => {});
     }
   }, [getActiveOutboundStream, userId]);
+  republishRef.current = republishOutbound;
 
   useEffect(() => {
     if (isSpectator) return;
