@@ -292,14 +292,20 @@ const Auth = () => {
     setLoading(true);
 
     const formData = new FormData(e.currentTarget);
-    const email = formData.get("signin-email") as string;
-    const password = formData.get("signin-password") as string;
+    // Normalize: Windows autofill/keyboards often add spaces or capital letters.
+    const email = ((formData.get("signin-email") as string) || "").trim().toLowerCase();
+    const password = ((formData.get("signin-password") as string) || "").replace(/[\r\n]+$/g, "");
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
+      if (error && /invalid login credentials/i.test(error.message)) {
+        throw new Error(
+          "E-mail ou senha incorretos. Se você criou a conta com o Google, use o botão \"Entrar com Google\" ou redefina a senha em \"Esqueci minha senha\"."
+        );
+      }
 
       if (error) throw error;
 
