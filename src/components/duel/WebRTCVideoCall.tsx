@@ -178,6 +178,8 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   const [selectedAudioId, setSelectedAudioId] = useState<string>("");
   const [selectedVideoId, setSelectedVideoId] = useState<string>("");
   const [showDeviceMenu, setShowDeviceMenu] = useState(false);
+  const republishRef = useRef<() => Promise<void>>(async () => {});
+  const sendOfferRef = useRef<(peerId: string) => Promise<void>>(async () => {});
 
   // Enumerate available devices
   const enumerateDevices = useCallback(async () => {
@@ -222,29 +224,16 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
 
       const previousStream = localStreamRef.current;
       localStreamRef.current = newStream;
-
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = newStream;
-        localVideoRef.current.play?.().catch(() => {});
+      const newVideo = newStream.getVideoTracks()[0];
+      if (newVideo) {
+        isVideoOffRef.current = false;
+        setIsVideoOff(false);
+        newVideo.onended = () => { isVideoOffRef.current = true; setIsVideoOff(true); };
       }
 
-      // Replace tracks in all peer connections
-      const trackReplacements: Promise<void>[] = [];
-      peersRef.current.forEach((peerState) => {
-        const senders = peerState.pc.getSenders();
-        newStream.getTracks().forEach(newTrack => {
-          const sender = senders.find(s => s.track?.kind === newTrack.kind);
-          if (sender) {
-            trackReplacements.push(sender.replaceTrack(newTrack));
-          } else {
-            peerState.pc.addTrack(newTrack, newStream);
-          }
-        });
-      });
-
-      // Stop the former capture only after every sender points at the new tracks.
-      // Stopping first can leave Chromium/Android encoders on a green frame.
-      await Promise.allSettled(trackReplacements);
+      // Publish to every peer (handles zoom/phone overrides and renegotiates
+      // when the peer was not receiving video yet), then stop the old capture.
+      await republishRef.current();
       previousStream?.getTracks().forEach((track) => track.stop());
 
       // Re-enumerate to get labels (available after permission grant)
@@ -329,21 +318,32 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     await Promise.all(Array.from(peersRef.current.entries()).map(async ([peerId, { pc }]) => {
       let needsNegotiation = false;
       for (const [kind, track] of [["video", activeVideo], ["audio", activeAudio]] as const) {
-        const transceiver = pc.getTransceivers().find(t => t.receiver.track.kind === kind);
+        const all = pc.getTransceivers().filter(
+          (t) => t.receiver.track.kind === kind && t.currentDirection !== "stopped",
+        );
+        // Prefer the transceiver actually negotiated with the peer (has a mid).
+        // Transceivers created via addTransceiver before the remote offer are
+        // never associated, and replacing a track there sends nothing — the
+        // opponent kept seeing a black/waiting panel after a camera change.
+        const transceiver = all.find((t) => t.mid !== null) ?? all[0];
         if (transceiver) {
+          const hadTrack = !!transceiver.sender.track;
           await transceiver.sender.replaceTrack(track);
-          if (track && transceiver.direction === "recvonly") {
+          if (track && (transceiver.direction === "recvonly" || transceiver.direction === "inactive")) {
             transceiver.direction = "sendrecv";
             needsNegotiation = true;
           }
+          if (track && (!hadTrack || transceiver.mid === null)) needsNegotiation = true;
         } else if (track && outboundStream) {
           pc.addTrack(track, outboundStream);
           needsNegotiation = true;
         }
       }
-      // The elected offerer handles negotiationneeded. If this side is the
-      // answerer, ask the other player to renegotiate its receiving directions.
-      if (needsNegotiation && userId > peerId && !spectatorPeersRef.current.has(peerId)) {
+      if (!needsNegotiation) return;
+      const iAmOfferer = spectatorPeersRef.current.has(peerId) || userId < peerId;
+      if (iAmOfferer) {
+        void sendOfferRef.current(peerId);
+      } else {
         channelRef.current?.send({ type: "broadcast", event: "webrtc-signal",
           payload: { type: "request-offer", senderId: userId, targetId: peerId } });
       }
@@ -358,6 +358,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       localVideoRef.current.play?.().catch(() => {});
     }
   }, [getActiveOutboundStream, userId]);
+  republishRef.current = republishOutbound;
 
   useEffect(() => {
     if (isSpectator) return;
@@ -836,6 +837,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       peer.makingOffer = false;
     }
   }, [userId, isSpectator, createPeerConnection, canInitiateOffer]);
+  sendOfferRef.current = (peerId: string) => sendOfferTo(peerId);
 
   // Spectator-side: never offer (receive-only). Ask the player to (re)offer until
   // BOTH audio and video are flowing, so spectators always see AND hear everyone.
@@ -1242,25 +1244,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         // attach tracks to all existing peers now. Peers created without media
         // already have recvonly transceivers (senders with a null track), so we
         // must replaceTrack on them instead of only checking for zero senders.
-        peersRef.current.forEach((peerState, peerId) => {
-          const outboundStream = getActiveOutboundStream() ?? stream;
-          outboundStream.getTracks().forEach((track) => {
-            const transceiver = peerState.pc.getTransceivers().find((t) => {
-              const kind = t.receiver?.track?.kind ?? t.sender?.track?.kind;
-              return kind === track.kind && !t.sender.track;
-            });
-            if (transceiver) {
-              console.log("[WebRTC] Replacing late track on peer:", peerId, track.kind);
-              transceiver.sender.replaceTrack(track).catch(() => {});
-              if (transceiver.direction === "recvonly") transceiver.direction = "sendrecv";
-            } else if (!peerState.pc.getSenders().some((s) => s.track?.kind === track.kind)) {
-              console.log("[WebRTC] Adding late track to peer:", peerId, track.kind);
-              peerState.pc.addTrack(track, outboundStream);
-            }
-          });
-          // Changing a recvonly transceiver to sendrecv requires a fresh SDP.
-          void sendOfferTo(peerId);
-        });
+        if (peersRef.current.size > 0) void republishRef.current();
 
 
       } else if (!isSpectator) {
