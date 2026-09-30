@@ -178,6 +178,8 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   const [selectedAudioId, setSelectedAudioId] = useState<string>("");
   const [selectedVideoId, setSelectedVideoId] = useState<string>("");
   const [showDeviceMenu, setShowDeviceMenu] = useState(false);
+  const republishRef = useRef<() => Promise<void>>(async () => {});
+  const sendOfferRef = useRef<(peerId: string) => Promise<void>>(async () => {});
 
   // Enumerate available devices
   const enumerateDevices = useCallback(async () => {
@@ -222,29 +224,16 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
 
       const previousStream = localStreamRef.current;
       localStreamRef.current = newStream;
-
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = newStream;
-        localVideoRef.current.play?.().catch(() => {});
+      const newVideo = newStream.getVideoTracks()[0];
+      if (newVideo) {
+        isVideoOffRef.current = false;
+        setIsVideoOff(false);
+        newVideo.onended = () => { isVideoOffRef.current = true; setIsVideoOff(true); };
       }
 
-      // Replace tracks in all peer connections
-      const trackReplacements: Promise<void>[] = [];
-      peersRef.current.forEach((peerState) => {
-        const senders = peerState.pc.getSenders();
-        newStream.getTracks().forEach(newTrack => {
-          const sender = senders.find(s => s.track?.kind === newTrack.kind);
-          if (sender) {
-            trackReplacements.push(sender.replaceTrack(newTrack));
-          } else {
-            peerState.pc.addTrack(newTrack, newStream);
-          }
-        });
-      });
-
-      // Stop the former capture only after every sender points at the new tracks.
-      // Stopping first can leave Chromium/Android encoders on a green frame.
-      await Promise.allSettled(trackReplacements);
+      // Publish to every peer (handles zoom/phone overrides and renegotiates
+      // when the peer was not receiving video yet), then stop the old capture.
+      await republishRef.current();
       previousStream?.getTracks().forEach((track) => track.stop());
 
       // Re-enumerate to get labels (available after permission grant)
