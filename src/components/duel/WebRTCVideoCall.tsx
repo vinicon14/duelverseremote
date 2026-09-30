@@ -837,6 +837,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       peer.makingOffer = false;
     }
   }, [userId, isSpectator, createPeerConnection, canInitiateOffer]);
+  sendOfferRef.current = (peerId: string) => sendOfferTo(peerId);
 
   // Spectator-side: never offer (receive-only). Ask the player to (re)offer until
   // BOTH audio and video are flowing, so spectators always see AND hear everyone.
