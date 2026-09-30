@@ -1244,25 +1244,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         // attach tracks to all existing peers now. Peers created without media
         // already have recvonly transceivers (senders with a null track), so we
         // must replaceTrack on them instead of only checking for zero senders.
-        peersRef.current.forEach((peerState, peerId) => {
-          const outboundStream = getActiveOutboundStream() ?? stream;
-          outboundStream.getTracks().forEach((track) => {
-            const transceiver = peerState.pc.getTransceivers().find((t) => {
-              const kind = t.receiver?.track?.kind ?? t.sender?.track?.kind;
-              return kind === track.kind && !t.sender.track;
-            });
-            if (transceiver) {
-              console.log("[WebRTC] Replacing late track on peer:", peerId, track.kind);
-              transceiver.sender.replaceTrack(track).catch(() => {});
-              if (transceiver.direction === "recvonly") transceiver.direction = "sendrecv";
-            } else if (!peerState.pc.getSenders().some((s) => s.track?.kind === track.kind)) {
-              console.log("[WebRTC] Adding late track to peer:", peerId, track.kind);
-              peerState.pc.addTrack(track, outboundStream);
-            }
-          });
-          // Changing a recvonly transceiver to sendrecv requires a fresh SDP.
-          void sendOfferTo(peerId);
-        });
+        if (peersRef.current.size > 0) void republishRef.current();
 
 
       } else if (!isSpectator) {
