@@ -1015,7 +1015,14 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
 
         // Player side: proactively offer to whoever announced itself, so a
         // spectator never waits on a negotiationneeded event that may not fire.
-        if (!isSpectator || audioBroadcastOnly) {
+        // Skip while a just-negotiated connection is still finishing ICE: the
+        // 4s heartbeat used to re-offer mid-handshake over slow 4G/TURN links.
+        const stillHandshaking =
+          peer === existingPeer &&
+          !!peer.pc.remoteDescription &&
+          ["new", "connecting"].includes(peer.pc.connectionState) &&
+          Date.now() - peer.createdAt < 15000;
+        if ((!isSpectator || audioBroadcastOnly) && !stillHandshaking) {
           void sendOfferTo(remotePeerId);
         }
 
