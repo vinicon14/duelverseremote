@@ -40,6 +40,7 @@ import { DiscordVoiceRoster } from "@/components/duel/DiscordVoiceRoster";
 import { BroadcastDuelToDiscordButton } from "@/components/duel/BroadcastDuelToDiscordButton";
 import { MobileArenaLayout } from "@/components/duel/mobile/MobileArenaLayout";
 import { DuelRoomAudioControls } from "@/components/duel/DuelRoomAudioControls";
+import { CoinFlip } from "@/components/duel/CoinFlip";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const DuelRoom = () => {
