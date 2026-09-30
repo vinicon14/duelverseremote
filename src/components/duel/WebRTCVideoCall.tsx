@@ -843,6 +843,16 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     if (!isSpectator || playerId === userId) return;
 
     const peer = peersRef.current.get(playerId);
+    // No connection yet: the targeted "ready" heartbeat already asks the player
+    // to build one. Sending a rebuild request at the same time made the player
+    // create two PeerConnections back to back, and the spectator kept answering
+    // the discarded one — the panel stayed on "Aguardando jogador" forever.
+    if (!peer) return;
+    // Give TURN/4G handshakes time to finish before interfering.
+    const handshaking =
+      ["new", "connecting"].includes(peer.pc.connectionState) &&
+      Date.now() - peer.createdAt < 20000;
+    if (handshaking) return;
     const videoTracks = peer?.stream?.getVideoTracks() ?? [];
     const liveVideo = videoTracks.some((t) => t.readyState === "live");
     const connected = peer?.pc.connectionState === "connected";
@@ -890,7 +900,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     // previous check rebuilt that peer every 10 seconds, making duelists who were
     // spectating each other alternate between video and an infinite loader.
     const stalled =
-      (!!peer && now - peer.createdAt > 10000 && (!connected || !liveVideo)) || frozenTooLong;
+      (!!peer && now - peer.createdAt > 20000 && (!connected || !liveVideo)) || frozenTooLong;
     if (stalled) {
       console.warn("[WebRTC] Spectator handshake stalled, resetting peer:", playerId);
       frozenVideoSinceRef.current.delete(playerId);
@@ -943,7 +953,14 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       // A spectator asked us (a player) to (re)send our offer.
       if (payload.type === "request-offer") {
         if (isSpectator && !audioBroadcastOnly) return;
-        await sendOfferTo(remotePeerId, !!payload.rebuild);
+        const current = peersRef.current.get(remotePeerId);
+        // Ignore rebuild requests for a connection that was just created and is
+        // still negotiating; rebuilding it again only restarts the handshake.
+        const fresh =
+          !!current &&
+          Date.now() - current.createdAt < 8000 &&
+          !["failed", "closed"].includes(current.pc.connectionState);
+        await sendOfferTo(remotePeerId, !!payload.rebuild && !fresh);
         return;
       }
 
@@ -998,7 +1015,14 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
 
         // Player side: proactively offer to whoever announced itself, so a
         // spectator never waits on a negotiationneeded event that may not fire.
-        if (!isSpectator || audioBroadcastOnly) {
+        // Skip while a just-negotiated connection is still finishing ICE: the
+        // 4s heartbeat used to re-offer mid-handshake over slow 4G/TURN links.
+        const stillHandshaking =
+          peer === existingPeer &&
+          !!peer.pc.remoteDescription &&
+          ["new", "connecting"].includes(peer.pc.connectionState) &&
+          Date.now() - peer.createdAt < 15000;
+        if ((!isSpectator || audioBroadcastOnly) && !stillHandshaking) {
           void sendOfferTo(remotePeerId);
         }
 
