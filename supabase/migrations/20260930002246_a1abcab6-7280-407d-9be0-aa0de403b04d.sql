@@ -1,0 +1,1 @@
+ALTER TABLE public.live_duels ADD COLUMN IF NOT EXISTS coin_flip jsonb;

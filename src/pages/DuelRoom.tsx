@@ -40,6 +40,7 @@ import { DiscordVoiceRoster } from "@/components/duel/DiscordVoiceRoster";
 import { BroadcastDuelToDiscordButton } from "@/components/duel/BroadcastDuelToDiscordButton";
 import { MobileArenaLayout } from "@/components/duel/mobile/MobileArenaLayout";
 import { DuelRoomAudioControls } from "@/components/duel/DuelRoomAudioControls";
+import { CoinFlip } from "@/components/duel/CoinFlip";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const DuelRoom = () => {
@@ -1586,6 +1587,16 @@ const DuelRoom = () => {
                                 ? duel?.opponent?.username
                                 : duel?.creator?.username
                             }
+                          />
+                          <CoinFlip
+                            duelId={id!}
+                            coinFlip={(duel as any)?.coin_flip ?? null}
+                            creatorId={duel?.creator_id}
+                            creatorName={duel?.creator?.username}
+                            opponentId={duel?.opponent_id}
+                            opponentName={duel?.opponent?.username}
+                            currentUserId={currentUser?.id}
+                            canFlip={isParticipant && !isJudge}
                           />
                           <Button
                             onClick={callJudge}
