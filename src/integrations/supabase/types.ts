@@ -1188,6 +1188,7 @@ export type Database = {
         Row: {
           bet_amount: number
           closed_reason: string | null
+          coin_flip: Json | null
           created_at: string
           creator_id: string
           custom_counters: Json
@@ -1221,6 +1222,7 @@ export type Database = {
         Insert: {
           bet_amount?: number
           closed_reason?: string | null
+          coin_flip?: Json | null
           created_at?: string
           creator_id: string
           custom_counters?: Json
@@ -1254,6 +1256,7 @@ export type Database = {
         Update: {
           bet_amount?: number
           closed_reason?: string | null
+          coin_flip?: Json | null
           created_at?: string
           creator_id?: string
           custom_counters?: Json
