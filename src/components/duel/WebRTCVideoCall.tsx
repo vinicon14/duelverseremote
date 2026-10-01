@@ -365,6 +365,17 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     republishOutbound();
   }, [phoneStream, isSpectator, republishOutbound]);
 
+  // When the OS/browser suspends the camera (sleep, driver reset, another app),
+  // the track ends and the opponent sees black. Reopen it automatically unless
+  // the player turned the camera off on purpose.
+  const setCameraEnabledRef = useRef<((enabled: boolean) => Promise<void>) | null>(null);
+  const autoRecoverCamera = () => {
+    if (isVideoOffRef.current) return;
+    isVideoOffRef.current = true;
+    setIsVideoOff(true);
+    window.setTimeout(() => { void setCameraEnabledRef.current?.(true); }, 1000);
+  };
+
   const setCameraEnabled = useCallback(async (enabled: boolean) => {
     if (isSpectator || captureBusyRef.current) return;
     const active = getActiveOutboundStream()?.getVideoTracks()[0];
@@ -407,7 +418,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       localStreamRef.current = new MediaStream([
         ...(previous?.getAudioTracks().filter(t => t.readyState === "live") ?? []), track,
       ]);
-      track.onended = () => { isVideoOffRef.current = true; setIsVideoOff(true); };
+      track.onended = () => autoRecoverCamera();
       isVideoOffRef.current = false;
       setIsVideoOff(false);
       setSelectedVideoId(track.getSettings().deviceId ?? "");
@@ -428,6 +439,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       }
     }
   }, [isSpectator, getActiveOutboundStream, selectedVideoId, republishOutbound, enumerateDevices]);
+  setCameraEnabledRef.current = setCameraEnabled;
   videoActionRef.current = setCameraEnabled;
 
   // ==== Real camera zoom ====
@@ -1230,8 +1242,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
           track.onended = () => {
             console.warn(`[WebRTC] Local ${track.kind} track ended:`, track.label);
             if (track.kind === 'video') {
-              isVideoOffRef.current = true;
-              setIsVideoOff(true);
+              autoRecoverCamera();
             } else if (track.kind === 'audio') {
               setIsMuted(true);
             }
@@ -1430,6 +1441,25 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     };
 
     const interval = setInterval(() => {
+      // Player side: an opponent feed that stays "muted" (no frames) for a long
+      // time turns black while the connection still looks healthy. Rebuild it.
+      if (!isSpectator) {
+        const now = Date.now();
+        peersRef.current.forEach((peer, peerId) => {
+          if (spectatorPeersRef.current.has(peerId)) return;
+          const vids = peer.stream?.getVideoTracks() ?? [];
+          const frozen = vids.length > 0 && vids.every((t) => t.readyState === "live" && t.muted);
+          const key = `p:${peerId}`;
+          if (!frozen) { frozenVideoSinceRef.current.delete(key); return; }
+          const since = frozenVideoSinceRef.current.get(key);
+          if (!since) { frozenVideoSinceRef.current.set(key, now); return; }
+          if (now - since > 12000 && now - peer.createdAt > 20000) {
+            console.warn("[WebRTC] Opponent video frozen, rebuilding peer:", peerId);
+            frozenVideoSinceRef.current.delete(key);
+            removePeer(peerId);
+          }
+        });
+      }
       const connectedPlayerVideos = Array.from(peersRef.current.entries()).filter(([peerId, peer]) => {
         if (spectatorPeersRef.current.has(peerId)) return false;
         if (isSpectator && playerIdsRef.current.size > 0 && !playerIdsRef.current.has(peerId)) return false;
