@@ -2,9 +2,11 @@
  * Testes de segurança para auth-email-hook
  */
 import { assertEquals } from "https://deno.land/std@0.192.0/testing/asserts.ts";
-import { handler } from "./index.ts";
+import { handler, verifyStandardWebhookSignature } from "./index.ts";
+import { Webhook } from "https://esm.sh/standardwebhooks@1.0.0";
 
-const mockDeps = (overrides: any = {}) => ({
+// deno-lint-ignore no-explicit-any
+const mockDeps = (overrides: any = {}): any => ({
   supabase: {
     from: () => ({
       insert: () => Promise.resolve({ error: null }),
@@ -236,4 +238,59 @@ Deno.test("email faltando retorna 400", async () => {
   assertEquals(res.status, 400);
   const body = await res.json();
   assertEquals(body.error.includes("Missing email type or recipient"), true);
+});
+
+// ---------------------------------------------------------------------------
+// Interop with the reference `standardwebhooks` library (what Supabase Auth uses)
+// ---------------------------------------------------------------------------
+const randomKey = () => btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32))));
+const rawKey = randomKey();
+const supabaseSecret = `v1,whsec_${rawKey}`; // format shown in the Supabase dashboard
+const interopBody = JSON.stringify(validPayload);
+const msgId = "msg_2KWPBgLlAfxdpx2AI54pPJ85f4W";
+const signedAt = new Date();
+const signedTs = Math.floor(signedAt.getTime() / 1000).toString();
+const libSign = (key: string) => new Webhook(key).sign(msgId, signedAt, interopBody);
+
+Deno.test("interop: assinatura da lib standardwebhooks é aceita (v1,whsec_)", async () => {
+  assertEquals(await verifyStandardWebhookSignature(supabaseSecret, msgId, signedTs, interopBody, libSign(rawKey)), true);
+});
+
+Deno.test("interop: secret com prefixo whsec_ também funciona", async () => {
+  assertEquals(await verifyStandardWebhookSignature(`whsec_${rawKey}`, msgId, signedTs, interopBody, libSign(rawKey)), true);
+});
+
+Deno.test("interop: header com várias assinaturas separadas por espaço (rotação de chave)", async () => {
+  const header = `${libSign(randomKey())} ${libSign(rawKey)}`;
+  // a lib de referência aceita este header
+  new Webhook(rawKey).verify(interopBody, { "webhook-id": msgId, "webhook-timestamp": signedTs, "webhook-signature": header });
+  assertEquals(await verifyStandardWebhookSignature(supabaseSecret, msgId, signedTs, interopBody, header), true);
+  assertEquals(await verifyStandardWebhookSignature(supabaseSecret, msgId, signedTs, interopBody, `${libSign(rawKey)} ${libSign(randomKey())}`), true);
+});
+
+Deno.test("interop: corpo adulterado / secret errado / versão errada são rejeitados", async () => {
+  assertEquals(await verifyStandardWebhookSignature(supabaseSecret, msgId, signedTs, interopBody + " ", libSign(rawKey)), false);
+  assertEquals(await verifyStandardWebhookSignature(`v1,whsec_${randomKey()}`, msgId, signedTs, interopBody, libSign(rawKey)), false);
+  assertEquals(await verifyStandardWebhookSignature(supabaseSecret, msgId, signedTs, interopBody, libSign(rawKey).replace(/^v1,/, "v2,")), false);
+  assertEquals(await verifyStandardWebhookSignature(supabaseSecret, msgId, signedTs, interopBody, "garbage"), false);
+});
+
+Deno.test("e2e: handler + verificador real + assinatura da lib => 200", async () => {
+  const req = new Request("http://localhost/auth-email-hook", {
+    method: "POST",
+    headers: { "webhook-id": msgId, "webhook-timestamp": signedTs, "webhook-signature": libSign(rawKey) },
+    body: interopBody,
+  });
+  const res = await handler(req, mockDeps({ hookSecret: supabaseSecret, verifySignature: verifyStandardWebhookSignature }));
+  assertEquals(res.status, 200);
+});
+
+Deno.test("e2e: timestamp não numérico retorna 401", async () => {
+  const req = new Request("http://localhost/auth-email-hook", {
+    method: "POST",
+    headers: { "webhook-id": msgId, "webhook-timestamp": "abc", "webhook-signature": libSign(rawKey) },
+    body: interopBody,
+  });
+  const res = await handler(req, mockDeps({ hookSecret: supabaseSecret, verifySignature: verifyStandardWebhookSignature }));
+  assertEquals(res.status, 401);
 });

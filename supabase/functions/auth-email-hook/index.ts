@@ -66,11 +66,29 @@ interface Dependencies {
 }
 
 /**
- * Verify Standard Webhooks signature
- * Format: whsec_... or v1,whsec_...
- * Signature: v1,base64(hmac-sha256(msg_id || timestamp || payload))
+ * Constant-time comparison of two byte arrays.
  */
-async function verifyStandardWebhookSignature(
+function timingSafeEqual(a: Uint8Array, b: Uint8Array): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
+  return diff === 0;
+}
+
+function base64ToBytes(b64: string): Uint8Array<ArrayBuffer> {
+  return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+}
+
+/**
+ * Verify Standard Webhooks signature (https://www.standardwebhooks.com/),
+ * compatible with the `standardwebhooks` npm package used by Supabase Auth Hooks.
+ *
+ * - secret: "v1,whsec_<base64>" (Supabase dashboard format), "whsec_<base64>" or raw base64
+ * - signed content: `${webhook-id}.${webhook-timestamp}.${body}` -> HMAC-SHA256 -> base64
+ * - header: one or more space-separated "v1,<base64sig>" entries (key rotation)
+ * - comparison is constant-time
+ */
+export async function verifyStandardWebhookSignature(
   secret: string,
   webhookId: string,
   timestamp: string,
@@ -78,16 +96,9 @@ async function verifyStandardWebhookSignature(
   signature: string
 ): Promise<boolean> {
   try {
-    // Remove prefix (whsec_ or v1,whsec_) and decode base64 secret
-    const secretClean = secret.replace(/^(v1,)?whsec_/, '');
-    const secretBytes = Uint8Array.from(atob(secretClean), c => c.charCodeAt(0));
+    const secretClean = secret.trim().replace(/^(v1,)?whsec_/, '');
+    const secretBytes = base64ToBytes(secretClean);
 
-    // Build signed content: webhook-id.timestamp.payload
-    const signedContent = `${webhookId}.${timestamp}.${payload}`;
-    const encoder = new TextEncoder();
-    const data = encoder.encode(signedContent);
-
-    // Import HMAC key
     const key = await crypto.subtle.importKey(
       'raw',
       secretBytes,
@@ -95,24 +106,29 @@ async function verifyStandardWebhookSignature(
       false,
       ['sign']
     );
+    const expected = new Uint8Array(
+      await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`${webhookId}.${timestamp}.${payload}`))
+    );
 
-    // Compute HMAC
-    const hmac = await crypto.subtle.sign('HMAC', key, data);
-    const expectedSignature = btoa(String.fromCharCode(...new Uint8Array(hmac)));
-
-    // Extract signature from header (format: v1,base64signature,v1,base64signature,...)
-    const signatures = signature.split(',').filter((_, i) => i % 2 === 1); // Get base64 parts only
-
-    // Constant-time compare (timing-safe)
-    for (const sig of signatures) {
-      if (sig === expectedSignature) {
-        return true;
+    let valid = false;
+    for (const entry of signature.trim().split(/\s+/)) {
+      const comma = entry.indexOf(',');
+      if (comma === -1) continue;
+      const version = entry.slice(0, comma);
+      const sig = entry.slice(comma + 1);
+      if (version !== 'v1' || !sig) continue;
+      let sigBytes: Uint8Array;
+      try {
+        sigBytes = base64ToBytes(sig);
+      } catch {
+        continue;
       }
+      // no early return: check every entry
+      if (timingSafeEqual(sigBytes, expected)) valid = true;
     }
-
-    return false;
+    return valid;
   } catch (err) {
-    console.error('Signature verification error:', err);
+    console.error('Signature verification error:', err instanceof Error ? err.message : 'unknown');
     return false;
   }
 }
@@ -160,13 +176,6 @@ export async function handler(req: Request, deps: Dependencies): Promise<Respons
 
   try {
     const rawBody = await req.text();
-    const payload = JSON.parse(rawBody);
-    
-    // DO NOT LOG FULL PAYLOAD (may contain tokens)
-    console.log('Auth hook received', { 
-      type: payload.type || payload.email_data?.email_action_type,
-      email: payload.user?.email || payload.email,
-    });
 
     // SECURITY: Verify Standard Webhooks signature if secret is set
     const hookSecret = deps.getEnv('SEND_EMAIL_HOOK_SECRET');
@@ -183,11 +192,11 @@ export async function handler(req: Request, deps: Dependencies): Promise<Respons
         );
       }
 
-      const timestampMs = parseInt(webhookTimestamp, 10) * 1000;
+      const timestampMs = /^\d+$/.test(webhookTimestamp) ? Number(webhookTimestamp) * 1000 : NaN;
       const now = Date.now();
       const tolerance = 5 * 60 * 1000; // 5 minutes
 
-      if (Math.abs(now - timestampMs) > tolerance) {
+      if (!Number.isFinite(timestampMs) || Math.abs(now - timestampMs) > tolerance) {
         console.error('Webhook timestamp expired', { timestampMs, now, diff: now - timestampMs });
         return new Response(
           JSON.stringify({ error: 'Timestamp out of tolerance' }),
@@ -215,6 +224,22 @@ export async function handler(req: Request, deps: Dependencies): Promise<Respons
     } else {
       console.warn('⚠️  SEND_EMAIL_HOOK_SECRET not set - skipping signature verification (not recommended for production)');
     }
+
+    let payload: any;
+    try {
+      payload = JSON.parse(rawBody);
+    } catch {
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // DO NOT LOG FULL PAYLOAD (may contain tokens)
+    console.log('Auth hook received', {
+      type: payload.type || payload.email_data?.email_action_type,
+      email: payload.user?.email || payload.email,
+    });
 
     // Extract fields (Supabase Auth Hook format varies by version)
     const emailType = payload.type || payload.email_data?.email_action_type || payload.email_data?.type || payload.data?.action_type
