@@ -1,268 +1,174 @@
 -- =====================================================================
--- QUERIES DE RECONCILIAÇÃO - Identificar Compras Não Creditadas
+-- RECONCILIAÇÃO: pedidos de DuelCoins pagos e NÃO creditados
 -- =====================================================================
--- Execute estas queries APÓS aplicar a migração de segurança
--- para identificar pedidos que possam ter sido pagos mas não creditados
+-- Contexto: até o PR #98, os webhooks (Mercado Pago, Stripe, CartPanda) chamavam
+-- admin_manage_duelcoins com a service role. Essa função exige is_admin(auth.uid())
+-- e a service role não tem auth.uid(), então ela devolvia {success:false} SEM erro;
+-- o webhook seguia e marcava o pedido como 'paid' sem creditar nada.
+--
+-- Rodar no SQL Editor do Supabase DEPOIS que o merge do PR #98 for publicado
+-- (precisa da função public.service_credit_duelcoins e do tipo 'purchase').
+--
+-- Como um crédito pode ter sido registrado:
+--   * 'purchase'  com descrição 'Compra - Pedido #<uuid do pedido>' (função nova)
+--   * 'admin_add' 'Compra aprovada manualmente - Pedido #<8 primeiros chars>' (botão do painel admin)
+--   * 'admin_add' 'Compra via MercadoPago (...) - Pagamento #<id do pagamento>' (webhook antigo, se tiver funcionado)
+--   * 'admin_add' com o uuid do pedido na descrição (CartPanda antigo)
+--   * 'admin_add' manual com outro texto: só dá para detectar por heurística
+--     (mesmo usuário + mesmo valor perto da data) -> classificado como REVISAR.
 -- =====================================================================
--- NOTA IMPORTANTE: Antes da migração, webhooks usavam admin_manage_duelcoins
--- com service_role, que FALHAVA (is_admin retorna false para service_role).
--- Resultado: pedidos marcados 'paid' sem transação correspondente.
--- =====================================================================
 
--- =====================================================================
--- 1. PEDIDOS PAGOS SEM TRANSAÇÃO CORRESPONDENTE (CRÍTICO)
--- =====================================================================
--- Identifica pedidos marcados como 'paid' mas sem transação registrada
--- Antes da migração: webhooks falhavam ao chamar admin_manage_duelcoins
--- Procura por transações 'admin_add' próximas ao paid_at OU com order_id na descrição
-
-SELECT 
-  o.id AS order_id,
-  o.user_id,
-  p.username,
-  o.duelcoins_amount,
-  o.amount_brl,
-  o.status,
-  o.paid_at,
-  o.external_order_id,
-  o.external_payment_id,
-  o.payment_method,
-  CASE 
-    WHEN EXISTS (
-      SELECT 1 FROM duelcoins_transactions t
-      WHERE t.receiver_id = o.user_id
-        AND t.transaction_type IN ('admin_add', 'purchase')
-        AND t.amount = o.duelcoins_amount
-        AND (
-          -- Transação próxima ao paid_at (±10 minutos)
-          (t.created_at >= o.paid_at - interval '10 minutes'
-           AND t.created_at <= o.paid_at + interval '10 minutes')
-          -- OU descrição menciona o order_id
-          OR t.description ILIKE '%' || o.id::text || '%'
-        )
-    ) THEN 'HAS_TRANSACTION'
-    ELSE '⚠️ MISSING_TRANSACTION'
-  END AS credit_status
-FROM duelcoins_orders o
-JOIN profiles p ON p.user_id = o.user_id
-WHERE o.status = 'paid'
-ORDER BY 
-  CASE WHEN NOT EXISTS (
-    SELECT 1 FROM duelcoins_transactions t
-    WHERE t.receiver_id = o.user_id
-      AND t.transaction_type IN ('admin_add', 'purchase')
-      AND t.amount = o.duelcoins_amount
-      AND (
-        (t.created_at >= o.paid_at - interval '10 minutes'
-         AND t.created_at <= o.paid_at + interval '10 minutes')
-        OR t.description ILIKE '%' || o.id::text || '%'
-      )
-  ) THEN 0 ELSE 1 END,
-  o.paid_at DESC;
-
--- =====================================================================
--- 2. PEDIDOS PENDENTES HÁ MAIS DE 24 HORAS
--- =====================================================================
--- Estes podem ser pagamentos que falharam ou webhooks que não chegaram
-
-SELECT 
-  o.id AS order_id,
-  o.user_id,
-  p.username,
-  o.duelcoins_amount,
-  o.amount_brl,
-  o.status,
-  o.created_at,
-  o.external_order_id,
-  o.payment_method,
-  now() - o.created_at AS age
-FROM duelcoins_orders o
-JOIN profiles p ON p.user_id = o.user_id
-WHERE o.status = 'pending'
-  AND o.created_at < now() - interval '24 hours'
-ORDER BY o.created_at DESC;
-
--- =====================================================================
--- 3. VERIFICAÇÃO MANUAL POR EXTERNAL_PAYMENT_ID
--- =====================================================================
--- Para verificar um pagamento específico do MercadoPago/CartPanda,
--- substitua 'PAYMENT_ID_AQUI' pelo ID do pagamento externo
-
-SELECT 
-  o.id AS order_id,
-  o.user_id,
-  p.username,
-  o.duelcoins_amount,
-  o.amount_brl,
-  o.status,
-  o.paid_at,
-  o.external_order_id,
-  o.external_payment_id,
-  o.payment_method,
-  (
-    SELECT json_agg(json_build_object(
-      'transaction_id', t.id,
-      'amount', t.amount,
-      'type', t.transaction_type,
-      'description', t.description,
-      'created_at', t.created_at
-    ))
-    FROM duelcoins_transactions t
-    WHERE t.receiver_id = o.user_id
-      AND t.transaction_type IN ('admin_add', 'purchase')
-      AND t.created_at >= o.created_at - interval '1 hour'
-      AND t.created_at <= COALESCE(o.paid_at, now()) + interval '1 hour'
-  ) AS related_transactions
-FROM duelcoins_orders o
-JOIN profiles p ON p.user_id = o.user_id
-WHERE o.external_payment_id = 'PAYMENT_ID_AQUI'
-   OR o.external_order_id = 'PAYMENT_ID_AQUI';
-
--- =====================================================================
--- 4. CREDITAR MANUALMENTE UM PEDIDO PAGO NÃO CREDITADO
--- =====================================================================
--- ⚠️ NUNCA chame service_credit_duelcoins em pedido já 'paid'
--- Ele retorna already_paid=true e NÃO credita
--- 
--- Para creditar pedidos que foram marcados 'paid' mas não creditados:
--- Opção 1: Usar painel admin (se houver interface)
--- Opção 2: Criar função temporária para creditar pedidos já pagos:
-
-CREATE OR REPLACE FUNCTION public.admin_credit_paid_order(p_order_id UUID)
-RETURNS JSON
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  v_order RECORD;
-  v_username TEXT;
-  v_existing_tx UUID;
-BEGIN
-  -- Apenas admins podem executar
-  IF NOT public.is_admin(auth.uid()) THEN
-    RETURN json_build_object('success', false, 'message', 'Acesso negado');
-  END IF;
-
-  -- Buscar pedido
-  SELECT * INTO v_order FROM public.duelcoins_orders WHERE id = p_order_id;
-  IF NOT FOUND THEN
-    RETURN json_build_object('success', false, 'message', 'Pedido não encontrado');
-  END IF;
-
-  -- Verificar se já existe transação para este pedido
-  SELECT id INTO v_existing_tx 
-  FROM duelcoins_transactions 
-  WHERE receiver_id = v_order.user_id
-    AND transaction_type IN ('admin_add', 'purchase')
-    AND amount = v_order.duelcoins_amount
-    AND (
-      description ILIKE '%' || p_order_id::text || '%'
-      OR (created_at >= v_order.paid_at - interval '10 minutes'
-          AND created_at <= v_order.paid_at + interval '10 minutes')
-    )
-  LIMIT 1;
-
-  IF v_existing_tx IS NOT NULL THEN
-    RETURN json_build_object('success', false, 'message', 'Transação já existe', 'transaction_id', v_existing_tx);
-  END IF;
-
-  -- Creditar DuelCoins
-  UPDATE public.profiles
-  SET duelcoins_balance = duelcoins_balance + v_order.duelcoins_amount
-  WHERE user_id = v_order.user_id;
-
-  -- Registrar transação
-  INSERT INTO public.duelcoins_transactions (
-    sender_id, receiver_id, amount, transaction_type, description
-  ) VALUES (
-    NULL,
-    v_order.user_id,
-    v_order.duelcoins_amount,
-    'admin_add',
-    format('Reconciliação manual - Pedido #%s (pago mas não creditado)', p_order_id)
-  );
-
-  SELECT username INTO v_username FROM public.profiles WHERE user_id = v_order.user_id;
-
-  RETURN json_build_object(
-    'success', true,
-    'message', format('Creditados %s DuelCoins para %s', v_order.duelcoins_amount, v_username),
-    'order_id', p_order_id,
-    'user_id', v_order.user_id,
-    'amount', v_order.duelcoins_amount
-  );
-END;
-$$;
-
--- Exemplo de uso (apenas admins):
--- SELECT admin_credit_paid_order('order-uuid-aqui'::uuid);
-
--- =====================================================================
--- 5. AUDITORIA COMPLETA: COMPARAR SALDO vs. TRANSAÇÕES
--- =====================================================================
--- Verifica se o saldo de cada usuário bate com suas transações registradas
-
-WITH user_transaction_summary AS (
-  SELECT 
-    COALESCE(t.receiver_id, t.sender_id) AS user_id,
-    SUM(CASE WHEN t.receiver_id IS NOT NULL THEN t.amount ELSE 0 END) AS total_received,
-    SUM(CASE WHEN t.sender_id IS NOT NULL THEN t.amount ELSE 0 END) AS total_sent,
-    SUM(CASE WHEN t.receiver_id IS NOT NULL THEN t.amount ELSE -t.amount END) AS net_balance
-  FROM duelcoins_transactions t
-  GROUP BY COALESCE(t.receiver_id, t.sender_id)
+-- ---------------------------------------------------------------------
+-- PASSO 1 (somente leitura): classificar os pedidos pagos
+--   CREDITADO      -> já tem crédito identificado pelo texto; nada a fazer
+--   REVISAR        -> há admin_add de mesmo valor ao mesmo usuário em até 30 dias;
+--                     pode ser crédito manual: conferir antes de creditar
+--   NAO_CREDITADO  -> nenhum crédito encontrado; creditar no passo 2
+-- ---------------------------------------------------------------------
+WITH pagos AS (
+  SELECT o.*,
+         EXISTS (
+           SELECT 1 FROM public.duelcoins_transactions t
+           WHERE t.receiver_id = o.user_id
+             AND (
+               (t.transaction_type = 'purchase'  AND t.description LIKE '%' || o.id::text || '%')
+               OR (t.transaction_type = 'admin_add' AND (
+                     t.description LIKE '%' || o.id::text || '%'
+                  OR t.description LIKE '%Pedido #' || left(o.id::text, 8) || '%'
+                  OR (o.external_payment_id IS NOT NULL AND o.external_payment_id <> ''
+                      AND t.description LIKE '%Pagamento #' || o.external_payment_id || '%')))
+             )
+         ) AS credito_por_texto,
+         (
+           SELECT string_agg(to_char(t.created_at AT TIME ZONE 'America/Sao_Paulo', 'YYYY-MM-DD HH24:MI')
+                             || ' ' || coalesce(t.description, ''), ' | ' ORDER BY t.created_at)
+           FROM public.duelcoins_transactions t
+           WHERE t.receiver_id = o.user_id
+             AND t.transaction_type = 'admin_add'
+             AND t.amount = o.duelcoins_amount
+             AND t.created_at BETWEEN o.created_at - interval '1 day'
+                                  AND coalesce(o.paid_at, o.created_at) + interval '30 days'
+         ) AS admin_add_suspeitos
+  FROM public.duelcoins_orders o
+  WHERE o.status = 'paid'
 )
-SELECT 
+SELECT
+  CASE WHEN credito_por_texto THEN 'CREDITADO'
+       WHEN admin_add_suspeitos IS NOT NULL THEN 'REVISAR'
+       ELSE 'NAO_CREDITADO' END                    AS situacao,
+  p.id                                             AS order_id,
   p.user_id,
-  p.username,
-  p.duelcoins_balance AS current_balance,
-  COALESCE(uts.net_balance, 0) AS calculated_balance,
-  p.duelcoins_balance - COALESCE(uts.net_balance, 0) AS difference,
-  CASE 
-    WHEN p.duelcoins_balance = COALESCE(uts.net_balance, 0) THEN '✓ OK'
-    WHEN p.duelcoins_balance > COALESCE(uts.net_balance, 0) THEN '⚠ EXTRA_BALANCE (user has more than transactions show)'
-    ELSE '⚠ MISSING_BALANCE (user has less than transactions show)'
-  END AS status
-FROM profiles p
-LEFT JOIN user_transaction_summary uts ON uts.user_id = p.user_id
-WHERE p.duelcoins_balance <> COALESCE(uts.net_balance, 0)
-  OR p.duelcoins_balance > 0 -- Include all users with balance
-ORDER BY ABS(p.duelcoins_balance - COALESCE(uts.net_balance, 0)) DESC;
+  pr.username,
+  p.duelcoins_amount,
+  p.amount_brl,
+  p.payment_method,
+  p.external_order_id,
+  p.external_payment_id,
+  p.paid_at AT TIME ZONE 'America/Sao_Paulo'       AS paid_at_brt,
+  pr.duelcoins_balance                             AS saldo_atual,
+  p.admin_add_suspeitos
+FROM pagos p
+LEFT JOIN public.profiles pr ON pr.user_id = p.user_id
+ORDER BY 1 DESC, p.paid_at;
 
--- =====================================================================
--- 6. SUMÁRIO DE RECEITA vs. CRÉDITOS
--- =====================================================================
--- Verifica se o total de dinheiro recebido corresponde aos créditos dados
+-- Resumo
+-- SELECT situacao, count(*), sum(duelcoins_amount) FROM (<consulta acima>) s GROUP BY 1;
 
-SELECT 
-  COUNT(*) FILTER (WHERE status = 'paid') AS total_paid_orders,
-  SUM(amount_brl) FILTER (WHERE status = 'paid') AS total_revenue_brl,
-  SUM(duelcoins_amount) FILTER (WHERE status = 'paid') AS total_duelcoins_sold,
-  (
-    SELECT COUNT(*) 
-    FROM duelcoins_transactions 
-    WHERE transaction_type IN ('admin_add', 'purchase')
-  ) AS total_credit_transactions,
-  (
-    SELECT SUM(amount)
-    FROM duelcoins_transactions 
-    WHERE transaction_type IN ('admin_add', 'purchase')
-  ) AS total_duelcoins_credited,
-  SUM(duelcoins_amount) FILTER (WHERE status = 'paid') - (
-    SELECT COALESCE(SUM(amount), 0)
-    FROM duelcoins_transactions 
-    WHERE transaction_type IN ('admin_add', 'purchase')
-  ) AS duelcoins_difference
-FROM duelcoins_orders;
 
--- =====================================================================
--- NOTAS IMPORTANTES:
--- =====================================================================
--- 
--- 1. Execute a query #1 para ver pedidos pagos sem transação (CRÍTICO)
--- 2. Para cada pedido sem transação, use admin_credit_paid_order (query #4)
--- 3. Execute a query #5 para verificar integridade geral dos saldos
--- 4. A query #6 mostra um resumo financeiro geral
--- 5. NUNCA use service_credit_duelcoins em pedidos já 'paid'
--- 
--- =====================================================================
+-- ---------------------------------------------------------------------
+-- PASSO 2: creditar UM pedido (troque o uuid). Seguro rodar mais de uma vez.
+-- service_credit_duelcoins só credita pedido com status <> 'paid'; por isso o
+-- pedido é colocado em 'reconciling' e creditado na MESMA transação, e o paid_at
+-- original é restaurado (dashboards de receita não mudam). Se já existir crédito
+-- 'purchase' para o pedido, nada acontece.
+-- ---------------------------------------------------------------------
+DO $$
+DECLARE
+  v_order_id uuid := '00000000-0000-0000-0000-000000000000';  -- <<< order_id aqui
+  v_o record;
+  v_res json;
+BEGIN
+  PERFORM set_config('request.jwt.claims', '{"role":"service_role"}', true);
+  PERFORM set_config('request.jwt.claim.role', 'service_role', true);
+  SELECT * INTO v_o FROM public.duelcoins_orders WHERE id = v_order_id FOR UPDATE;
+  IF NOT FOUND THEN RAISE NOTICE 'Pedido % não encontrado', v_order_id; RETURN; END IF;
+  IF v_o.status <> 'paid' THEN
+    RAISE NOTICE 'Pedido % não está pago (status=%); nada feito', v_order_id, v_o.status; RETURN;
+  END IF;
+  IF EXISTS (SELECT 1 FROM public.duelcoins_transactions
+             WHERE transaction_type = 'purchase' AND description LIKE '%' || v_order_id::text || '%') THEN
+    RAISE NOTICE 'Pedido % já tem crédito purchase; nada feito', v_order_id; RETURN;
+  END IF;
+  UPDATE public.duelcoins_orders SET status = 'reconciling' WHERE id = v_order_id;
+  v_res := public.service_credit_duelcoins(v_order_id, v_o.external_payment_id, v_o.payment_method);
+  IF coalesce((v_res->>'success')::boolean, false) IS NOT TRUE OR (v_res->>'already_paid')::boolean THEN
+    RAISE EXCEPTION 'Falha ao creditar %: %', v_order_id, v_res;  -- desfaz tudo
+  END IF;
+  UPDATE public.duelcoins_orders SET paid_at = v_o.paid_at WHERE id = v_order_id;
+  BEGIN  -- notificação é opcional; falha aqui não desfaz o crédito
+    PERFORM public.create_notification(p_user_id => v_o.user_id, p_type => 'purchase',
+            p_title => '💰 DuelCoins Creditados!',
+            p_message => format('Sua compra de %s DuelCoins foi confirmada!', v_o.duelcoins_amount),
+            p_data => jsonb_build_object('order_id', v_order_id, 'amount', v_o.duelcoins_amount));
+  EXCEPTION WHEN OTHERS THEN RAISE NOTICE 'notificação não enviada: %', SQLERRM; END;
+  RAISE NOTICE 'OK: %', v_res;
+END $$;
+
+
+-- ---------------------------------------------------------------------
+-- PASSO 3 (lote): creditar TODOS os pedidos classificados como NAO_CREDITADO.
+-- Não toca nos REVISAR (decida um a um com o passo 2). Tudo numa transação:
+-- se qualquer crédito falhar, nada é aplicado. Re-executar é seguro.
+-- ---------------------------------------------------------------------
+DO $$
+DECLARE
+  v_id uuid;
+  v_o record;
+  v_res json;
+  v_n int := 0;
+  v_total bigint := 0;
+BEGIN
+  PERFORM set_config('request.jwt.claims', '{"role":"service_role"}', true);
+  PERFORM set_config('request.jwt.claim.role', 'service_role', true);
+  FOR v_id IN
+    SELECT o.id FROM public.duelcoins_orders o
+    WHERE o.status = 'paid'
+      AND NOT EXISTS (
+        SELECT 1 FROM public.duelcoins_transactions t
+        WHERE t.receiver_id = o.user_id
+          AND (
+            (t.transaction_type = 'purchase'  AND t.description LIKE '%' || o.id::text || '%')
+            OR (t.transaction_type = 'admin_add' AND (
+                  t.description LIKE '%' || o.id::text || '%'
+               OR t.description LIKE '%Pedido #' || left(o.id::text, 8) || '%'
+               OR (o.external_payment_id IS NOT NULL AND o.external_payment_id <> ''
+                   AND t.description LIKE '%Pagamento #' || o.external_payment_id || '%')))
+            -- heurística REVISAR: admin_add de mesmo valor em até 30 dias
+            OR (t.transaction_type = 'admin_add' AND t.amount = o.duelcoins_amount
+                AND t.created_at BETWEEN o.created_at - interval '1 day'
+                                     AND coalesce(o.paid_at, o.created_at) + interval '30 days')
+          ))
+    ORDER BY o.paid_at
+  LOOP
+    -- trava o pedido e re-confere com snapshot novo (protege contra execução concorrente)
+    SELECT * INTO v_o FROM public.duelcoins_orders WHERE id = v_id FOR UPDATE;
+    CONTINUE WHEN v_o.status <> 'paid';
+    CONTINUE WHEN EXISTS (SELECT 1 FROM public.duelcoins_transactions
+                          WHERE transaction_type = 'purchase' AND description LIKE '%' || v_id::text || '%');
+    UPDATE public.duelcoins_orders SET status = 'reconciling' WHERE id = v_id;
+    v_res := public.service_credit_duelcoins(v_id, v_o.external_payment_id, v_o.payment_method);
+    IF coalesce((v_res->>'success')::boolean, false) IS NOT TRUE OR (v_res->>'already_paid')::boolean THEN
+      RAISE EXCEPTION 'Falha ao creditar %: %', v_id, v_res;
+    END IF;
+    UPDATE public.duelcoins_orders SET paid_at = v_o.paid_at WHERE id = v_id;
+    BEGIN  -- notificação é opcional; falha aqui não desfaz o crédito
+      PERFORM public.create_notification(p_user_id => v_o.user_id, p_type => 'purchase',
+              p_title => '💰 DuelCoins Creditados!',
+              p_message => format('Sua compra de %s DuelCoins foi confirmada!', v_o.duelcoins_amount),
+              p_data => jsonb_build_object('order_id', v_id, 'amount', v_o.duelcoins_amount));
+    EXCEPTION WHEN OTHERS THEN RAISE NOTICE 'notificação não enviada: %', SQLERRM; END;
+    v_n := v_n + 1; v_total := v_total + v_o.duelcoins_amount;
+    RAISE NOTICE 'creditado pedido % (% DC para %)', v_id, v_o.duelcoins_amount, v_o.user_id;
+  END LOOP;
+  RAISE NOTICE 'Total: % pedidos, % DuelCoins', v_n, v_total;
+END $$;
