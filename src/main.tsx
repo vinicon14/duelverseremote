@@ -8,6 +8,10 @@ import App from "./App.tsx";
 import "./index.css";
 import i18n, { setLanguageFromGeo } from "./i18n";
 import { installGoogleTranslateCompat } from "./utils/googleTranslateCompat";
+import { captureAttribution } from "./utils/attribution";
+
+// Capturar atribuição (UTM/ref) ANTES de qualquer redirect
+captureAttribution();
 
 // Tolerar manipulação do DOM pelo Google Translate / Chrome Mobile Translate
 installGoogleTranslateCompat();

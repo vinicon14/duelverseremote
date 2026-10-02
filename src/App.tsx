@@ -36,6 +36,7 @@ import { useSubscriptionExpirationCheck } from "@/hooks/useSubscriptionExpiratio
 import { useDiscordPresence } from "@/hooks/useDiscordPresence";
 import { isRunningInsideDiscord } from "@/hooks/useDiscordActivity";
 import { TcgProvider, normalizeTcgType, useTcg } from "./contexts/TcgContext";
+import { recordSignupAttribution } from "./utils/attribution";
 const Home = lazy(() => import("./pages/Home"));
 const Landing = lazy(() => import("./pages/Landing"));
 const GetStarted = lazy(() => import("./pages/GetStarted"));
@@ -318,6 +319,14 @@ const MainAppContent = () => {
         }
 
         syncNativeAuth(session);
+
+        // Registrar atribuição de cadastro (first-touch) quando a sessão for estabelecida
+        if (session?.user) {
+          const signupMethod = session.user.app_metadata?.provider === 'google' ? 'google' : 'email';
+          recordSignupAttribution(supabase, signupMethod).catch(() => {
+            // Falha silenciosa, não bloqueia o fluxo
+          });
+        }
       }
     );
 
@@ -329,6 +338,14 @@ const MainAppContent = () => {
       }
 
       syncNativeAuth(session);
+
+      // Registrar atribuição de cadastro (first-touch) quando a sessão for estabelecida
+      if (session?.user) {
+        const signupMethod = session.user.app_metadata?.provider === 'google' ? 'google' : 'email';
+        recordSignupAttribution(supabase, signupMethod).catch(() => {
+          // Falha silenciosa, não bloqueia o fluxo
+        });
+      }
     });
 
     return () => {
