@@ -320,13 +320,9 @@ const MainAppContent = () => {
 
         syncNativeAuth(session);
 
-        // Registrar atribuição de cadastro (first-touch) quando a sessão for estabelecida
-        if (session?.user) {
-          const signupMethod = session.user.app_metadata?.provider === 'google' ? 'google' : 'email';
-          recordSignupAttribution(supabase, signupMethod).catch(() => {
-            // Falha silenciosa, não bloqueia o fluxo
-          });
-        }
+        // Atribuição de cadastro (first-touch): no máximo 1 RPC por usuário por carregamento
+        // de página e nenhuma para contas com mais de ~24h (dedupe interno, nunca rejeita).
+        void recordSignupAttribution(supabase, session?.user);
       }
     );
 
@@ -339,13 +335,7 @@ const MainAppContent = () => {
 
       syncNativeAuth(session);
 
-      // Registrar atribuição de cadastro (first-touch) quando a sessão for estabelecida
-      if (session?.user) {
-        const signupMethod = session.user.app_metadata?.provider === 'google' ? 'google' : 'email';
-        recordSignupAttribution(supabase, signupMethod).catch(() => {
-          // Falha silenciosa, não bloqueia o fluxo
-        });
-      }
+      void recordSignupAttribution(supabase, session?.user);
     });
 
     return () => {

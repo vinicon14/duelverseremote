@@ -1,44 +1,60 @@
+// @vitest-environment happy-dom
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   captureAttribution,
   getAttribution,
   clearAttribution,
+  recordSignupAttribution,
+  __resetAttributionStateForTests,
   type AttributionData,
 } from '../../src/utils/attribution';
 
+const DAY = 24 * 60 * 60 * 1000;
+const w = window as unknown as Window & { gtag?: ReturnType<typeof vi.fn> };
+
+function setUrl(pathAndQuery: string) {
+  window.history.replaceState({}, '', pathAndQuery);
+}
+
+function setReferrer(value: string) {
+  Object.defineProperty(document, 'referrer', { value, writable: true, configurable: true });
+}
+
+function mockClient(...results: Array<{ data: unknown; error: unknown }>) {
+  const rpc = vi.fn();
+  for (const r of results) rpc.mockResolvedValueOnce(r);
+  rpc.mockResolvedValue(results[results.length - 1] ?? { data: false, error: null });
+  return { rpc };
+}
+
+const newUser = (overrides: Record<string, unknown> = {}) => ({
+  id: 'u1',
+  created_at: new Date(Date.now() - 60_000).toISOString(),
+  app_metadata: { provider: 'email' },
+  ...overrides,
+});
+
 describe('Attribution Utils', () => {
   beforeEach(() => {
-    // Limpar localStorage
     localStorage.clear();
-    
-    // Mock de window.location
-    delete (window as any).location;
-    (window as any).location = {
-      hostname: 'duelverse.com',
-      pathname: '/comece',
-      search: '',
-    };
-    
-    // Mock de document.referrer
-    Object.defineProperty(document, 'referrer', {
-      writable: true,
-      configurable: true,
-      value: '',
-    });
+    setUrl('/comece');
+    setReferrer('');
+    __resetAttributionStateForTests();
+    w.gtag = vi.fn();
   });
 
   afterEach(() => {
     clearAttribution();
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+    delete w.gtag;
   });
 
   describe('captureAttribution', () => {
-    it('deve capturar UTM parameters da URL', () => {
-      (window as any).location.search = '?utm_source=google&utm_medium=cpc&utm_campaign=summer2026&utm_content=ad1';
-      
+    it('captura UTM da URL', () => {
+      setUrl('/comece?utm_source=google&utm_medium=cpc&utm_campaign=summer2026&utm_content=ad1');
       captureAttribution();
-      
       const attr = getAttribution();
-      expect(attr).toBeTruthy();
       expect(attr?.utm_source).toBe('google');
       expect(attr?.utm_medium).toBe('cpc');
       expect(attr?.utm_campaign).toBe('summer2026');
@@ -47,241 +63,232 @@ describe('Attribution Utils', () => {
       expect(attr?.ts).toBeGreaterThan(0);
     });
 
-    it('deve capturar parâmetro ref', () => {
-      (window as any).location.search = '?ref=influencer123';
-      
+    it('captura ref', () => {
+      setUrl('/?ref=influencer123');
       captureAttribution();
-      
+      expect(getAttribution()?.ref).toBe('influencer123');
+    });
+
+    it('guarda só o host do referrer externo (sem caminho/query)', () => {
+      setReferrer('https://www.reddit.com/r/yugioh?secret=1');
+      captureAttribution();
       const attr = getAttribution();
-      expect(attr).toBeTruthy();
-      expect(attr?.ref).toBe('influencer123');
+      expect(attr?.utm_source).toBeUndefined();
+      expect(attr?.referrer).toBe('reddit.com');
     });
 
-    it('deve capturar referrer externo', () => {
-      Object.defineProperty(document, 'referrer', {
-        value: 'https://google.com/search',
-        writable: true,
-        configurable: true,
-      });
-      
+    it('ignora referrer interno', () => {
+      setReferrer(`${window.location.origin}/landing`);
       captureAttribution();
-      
+      expect(getAttribution()).toBeNull();
+    });
+
+    it.each([
+      'https://accounts.google.com/',
+      'https://abcdxyz.supabase.co/auth/v1/callback',
+      'https://duelverse.site/en/',
+      'https://www.duelverse.site/',
+      'https://duelverse.lovable.app/',
+    ])('ignora referrer do fluxo de login / próprio site: %s', (ref) => {
+      setReferrer(ref);
+      captureAttribution();
+      expect(getAttribution()).toBeNull();
+    });
+
+    it('first-touch: não sobrescreve atribuição existente', () => {
+      setUrl('/?utm_source=facebook');
+      captureAttribution();
+      setUrl('/?utm_source=google');
+      captureAttribution();
+      expect(getAttribution()?.utm_source).toBe('facebook');
+    });
+
+    it('retorno do Google OAuth não sobrescreve a origem original', () => {
+      setUrl('/?utm_source=tiktok');
+      captureAttribution();
+      setUrl('/');
+      setReferrer('https://accounts.google.com/');
+      captureAttribution();
+      expect(getAttribution()?.utm_source).toBe('tiktok');
+      expect(getAttribution()?.referrer).toBeUndefined();
+    });
+
+    it('sanitiza: trim e limite de 100', () => {
+      setUrl(`/?utm_source=${encodeURIComponent('  ' + 'a'.repeat(200) + '  ')}&utm_medium=${encodeURIComponent(' email ')}`);
+      captureAttribution();
       const attr = getAttribution();
-      expect(attr).toBeTruthy();
-      expect(attr?.referrer).toBe('https://google.com/search');
+      expect(attr?.utm_source).toBe('a'.repeat(100));
+      expect(attr?.utm_medium).toBe('email');
     });
 
-    it('NÃO deve capturar referrer interno', () => {
-      Object.defineProperty(document, 'referrer', {
-        value: 'https://duelverse.com/landing',
-        writable: true,
-        configurable: true,
-      });
-      
+    it('remove caracteres não imprimíveis', () => {
+      setUrl(`/?utm_source=${encodeURIComponent('test\x00\x01\x1Fvalue')}&utm_medium=${encodeURIComponent('em\x7Fail')}`);
       captureAttribution();
-      
-      const attr = getAttribution();
-      expect(attr).toBeNull(); // Sem UTM e referrer interno = nada capturado
-    });
-
-    it('NÃO deve sobrescrever atribuição existente (first-touch)', () => {
-      // Primeira captura
-      (window as any).location.search = '?utm_source=facebook';
-      captureAttribution();
-      
-      const first = getAttribution();
-      expect(first?.utm_source).toBe('facebook');
-      
-      // Tentar capturar novamente com outra fonte
-      (window as any).location.search = '?utm_source=google';
-      captureAttribution();
-      
-      const second = getAttribution();
-      expect(second?.utm_source).toBe('facebook'); // Mantém o primeiro
-    });
-
-    it('deve sanitizar campos: trim e limitar tamanho', () => {
-      const longString = 'a'.repeat(200);
-      (window as any).location.search = `?utm_source=  ${longString}  &utm_medium=email`;
-      
-      captureAttribution();
-      
-      const attr = getAttribution();
-      expect(attr?.utm_source).toBe('a'.repeat(100)); // Máximo 100 chars
-      expect(attr?.utm_medium).toBe('email'); // Trim aplicado
-    });
-
-    it('deve remover caracteres não-imprimíveis', () => {
-      (window as any).location.search = '?utm_source=test\x00\x01\x1Fvalue&utm_medium=em\x7Fail';
-      
-      captureAttribution();
-      
       const attr = getAttribution();
       expect(attr?.utm_source).toBe('testvalue');
       expect(attr?.utm_medium).toBe('email');
     });
 
-    it('deve ignorar campos vazios ou só com espaços', () => {
-      (window as any).location.search = '?utm_source=  &utm_medium=cpc';
-      
+    it('ignora campos vazios', () => {
+      setUrl('/?utm_source=%20%20&utm_medium=cpc');
       captureAttribution();
-      
-      const attr = getAttribution();
-      expect(attr?.utm_source).toBeUndefined();
-      expect(attr?.utm_medium).toBe('cpc');
+      expect(getAttribution()?.utm_source).toBeUndefined();
+      expect(getAttribution()?.utm_medium).toBe('cpc');
     });
 
-    it('NÃO deve salvar nada se não houver UTM, ref ou referrer externo', () => {
-      (window as any).location.search = '';
-      Object.defineProperty(document, 'referrer', { value: '', writable: true, configurable: true });
-      
+    it('não salva nada sem UTM, ref ou referrer externo', () => {
       captureAttribution();
-      
-      const attr = getAttribution();
-      expect(attr).toBeNull();
+      expect(getAttribution()).toBeNull();
+    });
+
+    it('não lança se localStorage.setItem falhar', () => {
+      vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+        throw new Error('QuotaExceededError');
+      });
+      setUrl('/?utm_source=google');
+      expect(() => captureAttribution()).not.toThrow();
+    });
+
+    it('não lança se localStorage.getItem falhar', () => {
+      vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+        throw new Error('SecurityError');
+      });
+      expect(() => getAttribution()).not.toThrow();
+      expect(getAttribution()).toBeNull();
     });
   });
 
   describe('getAttribution', () => {
-    it('deve retornar null se não houver atribuição salva', () => {
-      const attr = getAttribution();
-      expect(attr).toBeNull();
+    it('null sem atribuição', () => {
+      expect(getAttribution()).toBeNull();
     });
 
-    it('deve retornar null se a atribuição expirou (> 30 dias)', () => {
-      const expiredTs = Date.now() - (31 * 24 * 60 * 60 * 1000); // 31 dias atrás
-      const expiredData: AttributionData = {
-        utm_source: 'google',
-        ts: expiredTs,
-      };
-      localStorage.setItem('dv_attribution', JSON.stringify(expiredData));
-      
-      const attr = getAttribution();
-      expect(attr).toBeNull();
-      
-      // Deve limpar o localStorage
+    it('expira após 30 dias e limpa o storage', () => {
+      const expired: AttributionData = { utm_source: 'google', ts: Date.now() - 31 * DAY };
+      localStorage.setItem('dv_attribution', JSON.stringify(expired));
+      expect(getAttribution()).toBeNull();
       expect(localStorage.getItem('dv_attribution')).toBeNull();
     });
 
-    it('deve retornar dados válidos se não expirou (< 30 dias)', () => {
-      const validTs = Date.now() - (15 * 24 * 60 * 60 * 1000); // 15 dias atrás
-      const validData: AttributionData = {
-        utm_source: 'google',
-        utm_medium: 'cpc',
-        ts: validTs,
-      };
-      localStorage.setItem('dv_attribution', JSON.stringify(validData));
-      
-      const attr = getAttribution();
-      expect(attr).toBeTruthy();
-      expect(attr?.utm_source).toBe('google');
-      expect(attr?.utm_medium).toBe('cpc');
+    it('válida antes de 30 dias', () => {
+      localStorage.setItem('dv_attribution', JSON.stringify({ utm_source: 'google', ts: Date.now() - 15 * DAY }));
+      expect(getAttribution()?.utm_source).toBe('google');
     });
 
-    it('deve retornar null se o JSON salvo for inválido', () => {
+    it('null para JSON inválido ou formato inesperado', () => {
       localStorage.setItem('dv_attribution', 'invalid json');
-      
-      const attr = getAttribution();
-      expect(attr).toBeNull();
-    });
-  });
-
-  describe('clearAttribution', () => {
-    it('deve limpar a atribuição salva', () => {
-      (window as any).location.search = '?utm_source=google';
-      captureAttribution();
-      
-      expect(getAttribution()).toBeTruthy();
-      
-      clearAttribution();
-      
+      expect(getAttribution()).toBeNull();
+      localStorage.setItem('dv_attribution', '"str"');
       expect(getAttribution()).toBeNull();
     });
+
+    it('permite nova captura após expiração', () => {
+      localStorage.setItem('dv_attribution', JSON.stringify({ utm_source: 'facebook', ts: Date.now() - 31 * DAY }));
+      setUrl('/?utm_source=google');
+      captureAttribution();
+      expect(getAttribution()?.utm_source).toBe('google');
+    });
   });
 
-  describe('First-touch com 30 dias de validade', () => {
-    it('deve manter first-touch enquanto não expirar', () => {
-      // Primeira visita
-      (window as any).location.search = '?utm_source=facebook';
+  describe('recordSignupAttribution', () => {
+    it('envia a atribuição, dispara gtag sign_up só com true e limpa o storage', async () => {
+      setUrl('/comece?utm_source=tiktok&utm_medium=social&utm_campaign=c1&utm_content=v1&ref=abc');
       captureAttribution();
-      
-      // Simular 20 dias depois
-      const attr = getAttribution();
-      if (attr) {
-        attr.ts = Date.now() - (20 * 24 * 60 * 60 * 1000);
-        localStorage.setItem('dv_attribution', JSON.stringify(attr));
-      }
-      
-      // Segunda visita com outra fonte (não deve sobrescrever)
-      (window as any).location.search = '?utm_source=google';
-      captureAttribution();
-      
-      const final = getAttribution();
-      expect(final?.utm_source).toBe('facebook');
-    });
+      const client = mockClient({ data: true, error: null });
 
-    it('deve permitir nova captura após expiração', () => {
-      // Primeira visita
-      (window as any).location.search = '?utm_source=facebook';
-      captureAttribution();
-      
-      // Simular expiração (31 dias)
-      const attr = getAttribution();
-      if (attr) {
-        attr.ts = Date.now() - (31 * 24 * 60 * 60 * 1000);
-        localStorage.setItem('dv_attribution', JSON.stringify(attr));
-      }
-      
-      // getAttribution deve retornar null e limpar
+      await expect(recordSignupAttribution(client, newUser({ app_metadata: { provider: 'google' } }))).resolves.toBe(true);
+
+      expect(client.rpc).toHaveBeenCalledTimes(1);
+      expect(client.rpc).toHaveBeenCalledWith('record_signup_attribution', {
+        p_source: 'tiktok', p_medium: 'social', p_campaign: 'c1', p_content: 'v1',
+        p_ref: 'abc', p_referrer: null, p_landing: '/comece',
+      });
+      expect(w.gtag).toHaveBeenCalledTimes(1);
+      expect(w.gtag).toHaveBeenCalledWith('event', 'sign_up', expect.objectContaining({
+        method: 'google', source: 'tiktok', medium: 'social', campaign: 'c1', content: 'v1', ref: 'abc',
+      }));
       expect(getAttribution()).toBeNull();
-      
-      // Nova visita deve ser capturada
-      (window as any).location.search = '?utm_source=google';
+    });
+
+    it('não dispara gtag quando a RPC retorna false', async () => {
+      const client = mockClient({ data: false, error: null });
+      await expect(recordSignupAttribution(client, newUser())).resolves.toBe(false);
+      expect(w.gtag).not.toHaveBeenCalled();
+    });
+
+    it('não dispara gtag e não rejeita em erro da RPC', async () => {
+      vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const client = mockClient({ data: null, error: { message: 'boom' } });
+      await expect(recordSignupAttribution(client, newUser())).resolves.toBe(false);
+      expect(w.gtag).not.toHaveBeenCalled();
+    });
+
+    it('não rejeita se o client lançar', async () => {
+      vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const client = { rpc: vi.fn().mockRejectedValue(new Error('network')) };
+      await expect(recordSignupAttribution(client, newUser())).resolves.toBe(false);
+    });
+
+    it('uma RPC por usuário por carregamento (TOKEN_REFRESHED, getSession duplicado...)', async () => {
+      const client = mockClient({ data: false, error: null });
+      const user = newUser();
+      await Promise.all([
+        recordSignupAttribution(client, user),
+        recordSignupAttribution(client, user),
+      ]);
+      await recordSignupAttribution(client, user);
+      expect(client.rpc).toHaveBeenCalledTimes(1);
+    });
+
+    it('não chama a RPC para contas antigas (> ~24h) nem sem usuário', async () => {
+      const client = mockClient({ data: true, error: null });
+      await expect(recordSignupAttribution(client, newUser({ created_at: new Date(Date.now() - 3 * DAY).toISOString() }))).resolves.toBe(false);
+      await expect(recordSignupAttribution(client, null)).resolves.toBe(false);
+      expect(client.rpc).not.toHaveBeenCalled();
+    });
+
+    it('tenta de novo quando o perfil ainda não existe (RPC retorna null)', async () => {
+      vi.useFakeTimers();
+      const client = mockClient(
+        { data: null, error: null },
+        { data: true, error: null },
+      );
+      const p = recordSignupAttribution(client, newUser());
+      await vi.runAllTimersAsync();
+      await expect(p).resolves.toBe(true);
+      expect(client.rpc).toHaveBeenCalledTimes(2);
+      expect(w.gtag).toHaveBeenCalledTimes(1);
+    });
+
+    it('desiste após as tentativas se o perfil nunca aparecer', async () => {
+      vi.useFakeTimers();
+      const client = mockClient({ data: null, error: null });
+      const p = recordSignupAttribution(client, newUser());
+      await vi.runAllTimersAsync();
+      await expect(p).resolves.toBe(false);
+      expect(client.rpc).toHaveBeenCalledTimes(3);
+      expect(w.gtag).not.toHaveBeenCalled();
+    });
+
+    it('origem por referrer: source = host, medium = referral', async () => {
+      setReferrer('https://www.youtube.com/watch?v=x');
       captureAttribution();
-      
-      const final = getAttribution();
-      expect(final?.utm_source).toBe('google');
-    });
-  });
-
-  describe('Fallback de referrer para cadastros diretos', () => {
-    it('deve capturar apenas referrer externo quando não houver UTM', () => {
-      (window as any).location.search = '';
-      Object.defineProperty(document, 'referrer', {
-        value: 'https://reddit.com/r/yugioh',
-        writable: true,
-        configurable: true,
-      });
-      
-      captureAttribution();
-      
-      const attr = getAttribution();
-      expect(attr).toBeTruthy();
-      expect(attr?.utm_source).toBeUndefined();
-      expect(attr?.referrer).toBe('https://reddit.com/r/yugioh');
-    });
-  });
-
-  describe('Proteção contra localStorage desabilitado (modo privado)', () => {
-    it('deve falhar silenciosamente se localStorage.setItem lançar exceção', () => {
-      vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
-        throw new Error('QuotaExceededError');
-      });
-      
-      (window as any).location.search = '?utm_source=google';
-      
-      // Não deve lançar exceção
-      expect(() => captureAttribution()).not.toThrow();
+      const client = mockClient({ data: true, error: null });
+      await recordSignupAttribution(client, newUser());
+      expect(client.rpc).toHaveBeenCalledWith('record_signup_attribution', expect.objectContaining({ p_referrer: 'youtube.com', p_source: null }));
+      expect(w.gtag).toHaveBeenCalledWith('event', 'sign_up', expect.objectContaining({ source: 'youtube.com', medium: 'referral', method: 'email' }));
     });
 
-    it('deve falhar silenciosamente se localStorage.getItem lançar exceção', () => {
-      vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
-        throw new Error('SecurityError');
-      });
-      
-      // Não deve lançar exceção
-      expect(() => getAttribution()).not.toThrow();
-      expect(getAttribution()).toBeNull();
+    it('sem atribuição: gtag com source direct', async () => {
+      const client = mockClient({ data: true, error: null });
+      await recordSignupAttribution(client, newUser());
+      expect(w.gtag).toHaveBeenCalledWith('event', 'sign_up', expect.objectContaining({ source: 'direct' }));
+    });
+
+    it('funciona sem gtag carregado (adblock)', async () => {
+      delete w.gtag;
+      const client = mockClient({ data: true, error: null });
+      await expect(recordSignupAttribution(client, newUser())).resolves.toBe(true);
     });
   });
 });
