@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { insertDiscordChatMessage } from "../_shared/discord-chat.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -136,41 +137,32 @@ serve(async (req) => {
         return jsonResponse({ ok: true, skipped: "empty_content" });
       }
 
-      // Try linked DuelVerse account first, but still allow pure Discord-origin messages
-      const { data: linkedUser, error: linkedUserError } = await supabase.rpc(
-        "get_user_by_discord_id",
-        { p_discord_id: String(discordUserId) },
-      );
-
-      if (linkedUserError) {
-        console.error("[discord-bridge] lookup error:", linkedUserError);
-        return jsonResponse({ error: linkedUserError.message }, 500);
-      }
-
-      const hasLinkedUser = Boolean(linkedUser && linkedUser.length > 0);
-      const userIdToUse = hasLinkedUser ? linkedUser[0].user_id : null;
-      const usernameLabel = hasLinkedUser ? linkedUser[0].username : null;
-
       const tcgType = typeof body?.tcg_type === "string" ? body.tcg_type : "yugioh";
       const languageCode = typeof body?.language_code === "string" ? body.language_code : "en";
+      // Optional Discord message id: makes the insert idempotent and lets this path
+      // coexist with the discord-chat-sync cron without duplicating messages.
+      const rawMessageId = body?.discord_message_id ?? body?.message?.id ?? body?.message_id ?? null;
+      const discordMessageId =
+        rawMessageId != null && /^\d{5,25}$/.test(String(rawMessageId)) ? String(rawMessageId) : null;
 
-      const { error } = await supabase.from("global_chat_messages").insert({
-        user_id: userIdToUse,
-        message: normalizedContent,
-        tcg_type: tcgType,
-        language_code: languageCode,
-        source_type: "discord",
-        source_username: discordUsername,
-        source_avatar_url: discordAvatar,
-        discord_user_id: String(discordUserId),
+      // Try linked DuelVerse account first, but still allow pure Discord-origin messages
+      const insertResult = await insertDiscordChatMessage(supabase, {
+        discordUserId: String(discordUserId),
+        username: discordUsername,
+        avatarUrl: discordAvatar,
+        content: normalizedContent,
+        tcgType,
+        languageCode,
+        discordMessageId,
       });
 
-      if (error) {
-        console.error("[discord-bridge] insert error:", error);
-        return jsonResponse({ error: error.message }, 500);
+      if (!insertResult.ok) {
+        console.error(`[discord-bridge] ${insertResult.stage} error:`, insertResult.error);
+        return jsonResponse({ error: insertResult.error }, 500);
       }
+      const usernameLabel = insertResult.linkedUsername;
 
-      console.log(hasLinkedUser
+      console.log(usernameLabel
         ? `[discord-bridge] posted message from Discord user ${discordUsername} linked to DuelVerse user ${usernameLabel}`
         : `[discord-bridge] posted message from unlinked Discord user ${discordUsername} directly into global chat`);
 
@@ -525,6 +517,20 @@ serve(async (req) => {
       let finalAvatar = avatarUrl;
 
       if (userId) {
+        // Basic rate limit: at most one bridged app message per user every 2s.
+        // The client inserts its own global_chat_messages row (source_type 'app', the
+        // column default) right BEFORE calling chat_to_discord, so that row is counted:
+        // allow 1 row in the window (the message being bridged), reject when there are more.
+        const { count: recentAppMessages } = await supabase
+          .from("global_chat_messages")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", userId)
+          .eq("source_type", "app")
+          .gte("created_at", new Date(Date.now() - 2000).toISOString());
+        if ((recentAppMessages ?? 0) > 1) {
+          return jsonResponse({ error: "Rate limit: wait 2 seconds between messages" }, 429);
+        }
+
         const { data: discordLink } = await supabase.rpc("get_discord_link_for_user", {
           p_user_id: userId,
         });
