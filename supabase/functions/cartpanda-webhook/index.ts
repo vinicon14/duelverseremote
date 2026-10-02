@@ -10,34 +10,21 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // DEPRECATED: Owner no longer uses CartPanda
+  // Webhook disabled permanently - always return 410 Gone
+  console.log('[CartPanda Webhook] DISABLED: Owner no longer uses CartPanda service');
+  return new Response(JSON.stringify({ 
+    error: 'CartPanda webhook is no longer supported. Owner has migrated to other payment providers.' 
+  }), {
+    status: 410,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+
+  // Dead code below preserved for reference (never executed)
+  /* 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const webhookSecret = Deno.env.get('CARTPANDA_WEBHOOK_SECRET');
-    
-    // SECURITY: Verificar assinatura/secret do webhook
-    // CartPanda não tem documentação clara de assinatura, então por segurança,
-    // desabilitamos este webhook até que verificação adequada seja implementada.
-    // Se o owner configurar CARTPANDA_WEBHOOK_SECRET, validamos como header.
-    if (webhookSecret) {
-      const receivedSecret = req.headers.get('X-CartPanda-Secret') || req.headers.get('Authorization');
-      if (receivedSecret !== webhookSecret && receivedSecret !== `Bearer ${webhookSecret}`) {
-        console.error('[CartPanda Webhook] Secret inválido ou ausente');
-        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-          status: 403,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-    } else {
-      // SECURITY: Webhook desabilitado até que secret seja configurado
-      console.error('[CartPanda Webhook] DESABILITADO: Configure CARTPANDA_WEBHOOK_SECRET para habilitar');
-      return new Response(JSON.stringify({ 
-        error: 'Webhook desabilitado por segurança. Configure CARTPANDA_WEBHOOK_SECRET no Supabase.' 
-      }), {
-        status: 410,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -148,4 +135,5 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
+  */
 });

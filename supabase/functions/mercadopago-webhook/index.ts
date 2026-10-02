@@ -128,6 +128,9 @@ Deno.serve(async (req) => {
     let order = null;
     let orderError = null;
 
+    // UUID regex for validation before querying (prevents 22P02 errors)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
     // Try to find by external_order_id (PIX direct payment ID or Checkout Pro preference ID)
     const res1 = await supabase
       .from('duelcoins_orders')
@@ -135,55 +138,62 @@ Deno.serve(async (req) => {
       .eq('external_order_id', String(paymentId))
       .maybeSingle();
 
-    if (res1.data && res1.data.status === 'pending') {
+    // Only use the order if it's not yet paid (allows crediting)
+    if (res1.data && res1.data.status !== 'paid') {
       order = res1.data;
     }
     orderError = res1.error;
 
     // If not found and external_reference exists, try matching by it
-    // external_reference format: "user_id|package_id" (legacy) or order UUID
     if (!order && payment.external_reference) {
       const externalRef = payment.external_reference;
       
       // First, try if external_reference is an order UUID
-      const res2 = await supabase
-        .from('duelcoins_orders')
-        .select('*')
-        .eq('id', externalRef)
-        .eq('status', 'pending')
-        .maybeSingle();
-      
-      if (res2.data) {
-        order = res2.data;
+      if (uuidRegex.test(externalRef)) {
+        const res2 = await supabase
+          .from('duelcoins_orders')
+          .select('*')
+          .eq('id', externalRef)
+          .maybeSingle();
+        
+        // Only use if not yet paid
+        if (res2.data && res2.data.status !== 'paid') {
+          order = res2.data;
+        }
       } else {
         // Legacy format: "user_id|package_id"
         const parts = externalRef.split('|');
         if (parts.length === 2) {
           const [userId, packageId] = parts;
-          const res3 = await supabase
-            .from('duelcoins_orders')
-            .select('*')
-            .eq('user_id', userId)
-            .eq('package_id', packageId)
-            .eq('status', 'pending')
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-          
-          order = res3.data || null;
+          // Validate both are UUIDs
+          if (uuidRegex.test(userId) && uuidRegex.test(packageId)) {
+            const res3 = await supabase
+              .from('duelcoins_orders')
+              .select('*')
+              .eq('user_id', userId)
+              .eq('package_id', packageId)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            
+            // Only use if not yet paid
+            if (res3.data && res3.data.status !== 'paid') {
+              order = res3.data;
+            }
+          }
         }
       }
     }
 
     if (!isPaid) {
-      // Update order status if found
-      if (order) {
-        await supabase
-          .from('duelcoins_orders')
-          .update({ status: payment.status || 'unknown', external_payment_id: String(paymentId) })
-          .eq('id', order.id);
-      }
-      return new Response(JSON.stringify({ message: 'Status updated', status: payment.status }), {
+      // Log the payment status but keep order findable (don't overwrite to rejected/in_process)
+      // A later approval can still credit the order by its ID
+      console.log('[MercadoPago Webhook] Payment not approved yet:', {
+        payment_id: paymentId,
+        status: payment.status,
+        order_id: order?.id,
+      });
+      return new Response(JSON.stringify({ message: 'Payment not approved', status: payment.status }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -212,19 +222,36 @@ Deno.serve(async (req) => {
 
     // Permitir pequena diferença de arredondamento (0.01)
     if (currency !== 'BRL' || Math.abs(paidAmount - orderAmount) > 0.01) {
-      console.error('[MercadoPago Webhook] Amount mismatch:', {
+      // Nित: Return 200 (not 400) to prevent MP from retrying forever
+      // Flag the order for manual review
+      console.error('[MercadoPago Webhook] AMOUNT MISMATCH - MANUAL REVIEW REQUIRED:', {
         order_id: order.id,
-        expected: orderAmount,
+        user_id: order.user_id,
+        expected_brl: orderAmount,
         received: paidAmount,
         currency: currency,
+        payment_id: paymentId,
       });
+      
+      // Try to flag the order (may fail if constraint doesn't allow the status)
+      try {
+        await supabase
+          .from('duelcoins_orders')
+          .update({ 
+            status: 'amount_mismatch',
+            external_payment_id: String(paymentId),
+          })
+          .eq('id', order.id);
+      } catch (e) {
+        console.error('[MercadoPago Webhook] Could not update order status to amount_mismatch:', e);
+      }
+      
       return new Response(JSON.stringify({ 
-        error: 'Amount mismatch',
-        expected: orderAmount,
-        received: paidAmount,
-        currency: currency
+        received: true,
+        flagged: 'amount_mismatch',
+        message: 'Order flagged for manual review'
       }), {
-        status: 400,
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }

@@ -8,95 +8,86 @@ Estas correções de segurança resolvem duas vulnerabilidades HIGH identificada
 
 ## 📋 Pré-requisitos
 
-1. Backup completo do banco de dados de produção
+1. ⚠️ **BACKUP COMPLETO** do banco de dados de produção
 2. Acesso ao Supabase Dashboard (para configurar env vars)
 3. Acesso ao repositório para redeploy das edge functions
 4. Tempo de manutenção agendado (estimado: 15-30 minutos)
 
-## 🔧 Passos de Implantação
+## 🔧 Passos de Implantação (via Lovable)
 
-### 1. Configurar Variáveis de Ambiente
+### ⚠️ NOTA CRÍTICA: Lovable Auto-Deploy
 
-No Supabase Dashboard → Settings → Edge Functions, adicione/verifique:
+**Ao fazer merge para `main`, o Lovable irá automaticamente:**
+1. ✅ Aplicar a migração SQL (`supabase/migrations/20261002084339_...sql`)
+2. ✅ Redeploy das edge functions modificadas
+
+**NÃO execute a migração manualmente** - o Lovable fará isso automaticamente.
+
+### 1. Configurar Variáveis de Ambiente (ANTES DO MERGE)
+
+No Supabase Dashboard → Settings → Edge Functions, configure:
 
 ```bash
-# Obrigatórias (já devem existir):
-SUPABASE_URL=https://seu-projeto.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=eyJ...
+# ✅ OBRIGATÓRIAS - Verifique que existem:
 MERCADOPAGO_ACCESS_TOKEN=APP_USR-...
-
-# Nova variável (opcional, mas RECOMENDADO para CartPanda):
-CARTPANDA_WEBHOOK_SECRET=seu-secret-aqui
-
-# Se usar Stripe:
-STRIPE_SECRET_KEY=sk_...
 STRIPE_WEBHOOK_SECRET=whsec_...
+
+# Opcional (Stripe internacional):
+STRIPE_SECRET_KEY=sk_...
 ```
 
-**NOTA IMPORTANTE sobre CartPanda:**
-- Se `CARTPANDA_WEBHOOK_SECRET` NÃO for configurado, o webhook CartPanda será DESABILITADO (retorna 410)
-- Configure este secret no painel da CartPanda se suportado, ou use um UUID aleatório e configure em ambos os lados
-- O webhook valida o secret via header `X-CartPanda-Secret` ou `Authorization`
+**NOTA sobre CartPanda:**
+- ⚠️ Owner não usa mais CartPanda
+- Webhook desabilitado permanentemente (sempre retorna 410)
+- Não é necessário configurar `CARTPANDA_WEBHOOK_SECRET`
 
-### 2. Aplicar Migração SQL
+### 2. Migração SQL (Auto-Aplicada pelo Lovable)
 
-Execute a migração no banco de produção:
+**O Lovable aplicará automaticamente** a migração quando o PR for mergeado.
+A migração é idempotente e pode ser aplicada múltiplas vezes sem problemas.
 
-```bash
-# Via Supabase CLI
-supabase db push
-
-# OU manualmente via SQL Editor no Dashboard
-# Copie o conteúdo de: supabase/migrations/20261002084339_security_fix_rls_duelcoins_and_matches.sql
-```
-
-**O que esta migração faz:**
+**O que a migração faz:**
 1. ✅ Remove política RLS que permite INSERT direto em `duelcoins_orders`
-2. ✅ Cria RPC `create_duelcoins_order` (para edge functions criarem pedidos com validação)
-3. ✅ Cria RPC `service_credit_duelcoins` (restrito a service_role, idempotente)
-4. ✅ Remove política permissiva em `tournament_matches` (FOR ALL USING true)
-5. ✅ Cria políticas restritas para tournament_matches (SELECT, INSERT, UPDATE, DELETE)
+2. ✅ Adiciona 'purchase' ao constraint de `transaction_type`
+3. ✅ Cria RPC `service_credit_duelcoins` (restrito a service_role, idempotente, concurrency-safe)
+4. ✅ Remove políticas permissivas em `tournament_matches`:
+   - Drop "System can manage tournament matches" (FOR ALL USING true)
+   - Drop "Players can update own match result" (permitia UPDATE de winner_id)
+5. ✅ Cria políticas restritas (apenas criadores/admins podem UPDATE)
 
-### 3. Redeploy das Edge Functions
+### 3. Edge Functions (Auto-Deployed pelo Lovable)
 
-As seguintes functions foram atualizadas e DEVEM ser redeployadas:
-
-```bash
-# Todas de uma vez:
-supabase functions deploy cartpanda-webhook
-supabase functions deploy mercadopago-webhook
-supabase functions deploy mercadopago-create-pix
-supabase functions deploy mercadopago-create-checkout
-supabase functions deploy stripe-webhook
-supabase functions deploy stripe-create-checkout
-
-# OU individualmente conforme necessário
-```
+**Lovable redeploy automático** das seguintes functions modificadas:
 
 **Alterações por função:**
 
 - **cartpanda-webhook**: 
-  - ✅ Adiciona verificação de secret (header X-CartPanda-Secret)
-  - ✅ Usa `service_credit_duelcoins` em vez de `admin_manage_duelcoins`
-  - ✅ Retorna 410 se secret não configurado (desabilitado por segurança)
+  - ✅ DESABILITADO permanentemente (retorna 410)
+  - ✅ Owner não usa mais CartPanda
 
 - **mercadopago-webhook**:
-  - ✅ Valida payment do API do Mercado Pago (já estava fazendo)
-  - ✅ Match estrito por external_reference (nosso order ID)
-  - ✅ Valida que amount pago = amount do pedido (margem 0.01)
+  - ✅ Valida payment via API do Mercado Pago
+  - ✅ Match estrito por external_reference (UUID do order)
+  - ✅ Valida amount pago = amount do pedido (margem 0.01)
   - ✅ Valida currency = BRL
-  - ✅ Usa `service_credit_duelcoins` (idempotente)
+  - ✅ Usa `service_credit_duelcoins` (concurrency-safe, idempotente)
+  - ✅ Retorna 200 em amount mismatch (não 400) para evitar retry infinito
 
 - **mercadopago-create-pix** & **mercadopago-create-checkout**:
-  - ✅ Usa `create_duelcoins_order` RPC em vez de INSERT direto
-  - ✅ Valida package do lado do servidor
+  - ✅ INSERT direto com service_role (cliente bloqueado por RLS)
+  - ✅ Preço e cupom computados server-side
+  - ✅ external_reference = order.id (UUID) para match estrito
 
 - **stripe-webhook**:
-  - ✅ Busca order antes de creditar
+  - ✅ Requer `STRIPE_WEBHOOK_SECRET` (falha se não configurado)
+  - ✅ Verifica assinatura com `constructEventAsync` (Deno-compatível)
+  - ✅ Valida `payment_status === 'paid'` antes de creditar
   - ✅ Usa `service_credit_duelcoins` (idempotente)
+  - ✅ Suporta `checkout.session.async_payment_succeeded`
 
 - **stripe-create-checkout**:
-  - ✅ Usa `create_duelcoins_order` RPC em vez de INSERT direto
+  - ✅ INSERT direto com service_role (cliente bloqueado por RLS)
+  - ✅ Preço computado server-side
 
 ### 4. Verificar Funcionamento
 
@@ -119,23 +110,27 @@ Após o deploy, teste:
    - Criadores de torneio devem conseguir gerenciar partidas
    - Usuários NÃO devem conseguir UPDATE direto do winner_id sem permissão
 
-### 5. Reconciliação de Pedidos Passados
+### 4. Reconciliação de Pedidos Passados (CRÍTICO)
 
-Execute as queries em `RECONCILIATION_QUERIES.sql` para identificar:
-- Pedidos pagos mas não creditados
-- Discrepâncias entre saldos e transações
-- Pedidos pendentes há mais de 24h
+⚠️ **Execute APÓS o merge e deploy automático**
 
-**Para creditar manualmente pedidos não processados:**
+Consulte `docs/security/RECONCILIATION_QUERIES.sql` para queries detalhadas.
+
+**Query #1 - Identificar pedidos pagos sem transação:**
+Mostra pedidos marcados 'paid' mas sem transação registrada.
+Antes da migração: webhooks falhavam ao creditar (is_admin false para service_role).
+
+**Para creditar manualmente pedidos não creditados:**
 
 ```sql
--- Exemplo: creditar pedido que foi pago mas não creditado
-SELECT service_credit_duelcoins(
-  'order-uuid-aqui'::uuid,
-  'payment-id-externo',  -- opcional
-  'mercadopago'          -- opcional
-);
+-- Use a função admin_credit_paid_order (criada no arquivo RECONCILIATION_QUERIES.sql)
+-- Esta função está no arquivo docs/security/RECONCILIATION_QUERIES.sql
+SELECT admin_credit_paid_order('order-uuid-aqui'::uuid);
 ```
+
+⚠️ **NUNCA use `service_credit_duelcoins` em pedidos já 'paid'**
+- Ele retorna `already_paid=true` e NÃO credita
+- Use `admin_credit_paid_order` (no RECONCILIATION_QUERIES.sql) para reconciliação manual
 
 ## ⚠️ Comportamento Modificado
 

@@ -7,25 +7,47 @@ serve(async (req) => {
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) throw new Error("STRIPE_SECRET_KEY not configured");
 
+    const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
+    if (!webhookSecret) {
+      console.error("STRIPE_WEBHOOK_SECRET not configured");
+      return new Response(JSON.stringify({ error: "Webhook secret not configured" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
 
     const body = await req.text();
     const signature = req.headers.get("stripe-signature");
 
-    // If webhook secret is set, verify signature; otherwise parse directly
-    const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
-    let event: Stripe.Event;
-
-    if (webhookSecret && signature) {
-      event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
-    } else {
-      event = JSON.parse(body) as Stripe.Event;
+    if (!signature) {
+      console.error("Missing stripe-signature header");
+      return new Response(JSON.stringify({ error: "Missing signature" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
-    if (event.type === "checkout.session.completed") {
+    // SECURITY: Verify signature using async method (sync fails on Deno)
+    const event = await stripe.webhooks.constructEventAsync(
+      body,
+      signature,
+      webhookSecret,
+      undefined,
+      Stripe.createSubtleCryptoProvider()
+    );
+
+    if (event.type === "checkout.session.completed" || event.type === "checkout.session.async_payment_succeeded") {
       const session = event.data.object as Stripe.Checkout.Session;
+      
+      // SECURITY: Only credit if payment is actually paid
+      if (session.payment_status !== "paid") {
+        console.log("Payment not completed yet, status:", session.payment_status);
+        return new Response(JSON.stringify({ received: true }), { status: 200 });
+      }
+
       const userId = session.metadata?.supabase_user_id;
-      const packageId = session.metadata?.package_id;
       const duelcoinsAmount = parseInt(session.metadata?.duelcoins_amount || "0");
 
       if (!userId || !duelcoinsAmount) {
