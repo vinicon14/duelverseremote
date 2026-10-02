@@ -1,7 +1,7 @@
 // Returns the ICE server list (STUN + TURN) used by the duel room WebRTC calls.
 // TURN credentials are minted server-side so they can be rotated without a deploy.
 // SECURITY: Requires authenticated user to prevent credential leakage.
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -137,7 +137,12 @@ function checkRateLimit(userId: string): boolean {
   return true;
 }
 
-Deno.serve(async (req) => {
+interface Dependencies {
+  getUser: (authHeader: string) => Promise<{ user: unknown; error: unknown }>;
+  getEnv: (key: string) => string | undefined;
+}
+
+export async function handler(req: Request, deps: Dependencies): Promise<Response> {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   // SECURITY: Validate authenticated user to prevent credential leakage
@@ -150,25 +155,21 @@ Deno.serve(async (req) => {
     );
   }
 
-  const supabaseClient = createClient(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-    { global: { headers: { Authorization: authHeader } } }
-  );
-
-  const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+  const { user, error: authError } = await deps.getUser(authHeader);
   
   if (authError || !user) {
-    console.log("[ice] Authentication failed:", authError?.message);
+    console.log("[ice] Authentication failed:", authError);
     return new Response(
       JSON.stringify({ error: "Invalid or expired token" }), 
       { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 
+  const userId = (user as { id: string }).id;
+
   // Rate limit check
-  if (!checkRateLimit(user.id)) {
-    console.log("[ice] Rate limit exceeded for user:", user.id);
+  if (!checkRateLimit(userId)) {
+    console.log("[ice] Rate limit exceeded for user:", userId);
     return new Response(
       JSON.stringify({ error: "Rate limit exceeded. Please try again later." }), 
       { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -191,8 +192,25 @@ Deno.serve(async (req) => {
   const servers = [...STUN_SERVERS, ...turn];
   cache = { at: Date.now(), servers, hasTurn };
 
-  console.log("[ice] Returning ICE servers for authenticated user:", user.id);
   return new Response(JSON.stringify({ iceServers: servers, hasTurn }), {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
-});
+}
+
+// Only start the server if this is the main module (not being imported for tests)
+if (import.meta.main) {
+  Deno.serve((req: Request) => 
+    handler(req, {
+      getUser: async (authHeader: string) => {
+        const supabaseClient = createClient(
+          Deno.env.get("SUPABASE_URL") ?? "",
+          Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+          { global: { headers: { Authorization: authHeader } } }
+        );
+        const { data: { user }, error } = await supabaseClient.auth.getUser();
+        return { user, error };
+      },
+      getEnv: Deno.env.get,
+    })
+  );
+}

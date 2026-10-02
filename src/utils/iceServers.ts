@@ -3,6 +3,7 @@
  * Cache renovável; uma indisponibilidade não fica memorizada pela sessão inteira.
  */
 import { supabase } from "@/integrations/supabase/client";
+import type { FunctionsHttpError } from "@supabase/supabase-js";
 
 const STUN_SERVERS: RTCIceServer[] = [
   { urls: "stun:stun.l.google.com:19302" },
@@ -49,8 +50,24 @@ const hasTurn = (servers: RTCIceServer[]) =>
 export const getIceServers = (): RTCIceServer[] => runtimeIceServers;
 export const hasVerifiedTurn = () => verifiedTurn && Date.now() < expiresAt;
 
+// Invalidate cache when auth state changes to force a new fetch
+supabase.auth.onAuthStateChange((event) => {
+  if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+    // Clear expiration to force refresh on next call
+    expiresAt = 0;
+    failures = 0;
+  }
+});
+
 const refresh = (): Promise<RTCIceServer[]> => {
   if (promise) return promise;
+  
+  // Skip function call if no session - use STUN + fallback directly
+  const skipFetch = async (): Promise<RTCIceServer[]> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    return !session;
+  };
+  
   // Abort the request itself, not just its caller's wait. An obsolete response
   // must never overwrite credentials obtained by a later attempt.
   const controller = new AbortController();
@@ -63,6 +80,15 @@ const refresh = (): Promise<RTCIceServer[]> => {
   });
   promise = (async () => {
     try {
+      // If no session, skip the function call and use public servers
+      if (await skipFetch()) {
+        verifiedTurn = false;
+        runtimeIceServers = [...STUN_SERVERS, ...FALLBACK_TURN];
+        expiresAt = Date.now() + RETRY_MS;
+        loadedOnce = true;
+        return runtimeIceServers;
+      }
+      
       const { data, error } = await Promise.race([
         supabase.functions.invoke("get-ice-servers", { signal: controller.signal }),
         timeout,
@@ -93,20 +119,8 @@ const refresh = (): Promise<RTCIceServer[]> => {
         throw error ?? new Error("Empty ICE configuration");
       }
     } catch (error) {
-      // Check if this is an authentication error (401) - if so, don't retry aggressively
-      const errorMsg = error && typeof error === 'object' && 'message' in error 
-        ? String(error.message) 
-        : String(error);
-      const isAuthError = errorMsg.includes('401') || 
-                         errorMsg.includes('Authentication required') ||
-                         errorMsg.includes('Invalid or expired token') ||
-                         errorMsg.includes('Unauthorized');
-      
       failures += 1;
-      // For auth errors, use a very long backoff since retrying won't help without re-authentication
-      const backoff = isAuthError 
-        ? LAST_VERIFIED_MAX_AGE_MS // 6 hours - effectively stops retrying
-        : Math.min(RETRY_MS * 2 ** (failures - 1), MAX_RETRY_MS);
+      const backoff = Math.min(RETRY_MS * 2 ** (failures - 1), MAX_RETRY_MS);
       
       if (lastVerified && Date.now() - lastVerified.at < LAST_VERIFIED_MAX_AGE_MS) {
         runtimeIceServers = lastVerified.servers;
@@ -116,12 +130,7 @@ const refresh = (): Promise<RTCIceServer[]> => {
         runtimeIceServers = [...STUN_SERVERS, ...FALLBACK_TURN];
       }
       expiresAt = Date.now() + backoff;
-      
-      if (isAuthError) {
-        console.warn("[WebRTC] Authentication required for ICE credentials; falling back to STUN only", error);
-      } else {
-        console.warn("[WebRTC] ICE configuration unavailable; retry scheduled", error);
-      }
+      console.warn("[WebRTC] ICE configuration unavailable; retry scheduled", error);
     } finally {
       clearTimeout(timer!);
       promise = null;
