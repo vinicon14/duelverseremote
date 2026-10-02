@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-bot-secret",
 };
 
 const DISCORD_API = "https://discord.com/api/v10";
@@ -23,6 +23,25 @@ const parseJsonBody = async (req: Request) => {
   } catch {
     return null;
   }
+};
+
+const timingSafeEqual = (a: string, b: string): boolean => {
+  if (a.length !== b.length) return false;
+  const aBytes = new TextEncoder().encode(a);
+  const bBytes = new TextEncoder().encode(b);
+  let result = 0;
+  for (let i = 0; i < aBytes.length; i++) {
+    result |= aBytes[i] ^ bBytes[i];
+  }
+  return result === 0;
+};
+
+const verifyBotSecret = (req: Request): boolean => {
+  const expectedSecret = Deno.env.get("DISCORD_BOT_BRIDGE_SECRET");
+  if (!expectedSecret) return false;
+  const providedSecret = req.headers.get("x-bot-secret");
+  if (!providedSecret) return false;
+  return timingSafeEqual(expectedSecret, providedSecret);
 };
 
 async function discordFetch(path: string, init: RequestInit = {}) {
@@ -119,6 +138,12 @@ serve(async (req) => {
     // Discord -> DuelVerse: incoming chat message from the Java bot
     // ============================================================
     if (isDiscordWebhook && content && !requestType) {
+      // Require bot secret for all bot-originated messages
+      if (!verifyBotSecret(req)) {
+        console.warn(`[discord-bridge] unauthorized webhook attempt from ${discordUserId ?? "unknown"}`);
+        return jsonResponse({ error: "Unauthorized" }, 401);
+      }
+
       // Loop protection: only skip explicit bots
       const isBot = body?.author?.bot === true || body?.message?.author?.bot === true;
       if (isBot) {
@@ -191,6 +216,15 @@ serve(async (req) => {
     // List guilds the bot is in (with their text channels)
     // ============================================================
     if (requestType === "list_guilds") {
+      // Require JWT + admin
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader) return jsonResponse({ error: "No auth header" }, 401);
+      const token = authHeader.replace("Bearer ", "");
+      const { data: userData, error: userError } = await supabase.auth.getUser(token);
+      if (userError || !userData.user) return jsonResponse({ error: "Invalid user token" }, 401);
+      const { data: isAdmin } = await supabase.rpc("is_admin", { _user_id: userData.user.id });
+      if (!isAdmin) return jsonResponse({ error: "Admin access required" }, 403);
+
       const guildsRes = await discordFetch("/users/@me/guilds");
       if (!guildsRes.ok) {
         return jsonResponse(
@@ -234,6 +268,15 @@ serve(async (req) => {
     // Auto-setup a server: webhook + invite + persist to settings
     // ============================================================
     if (requestType === "auto_setup_server") {
+      // Require JWT + admin
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader) return jsonResponse({ error: "No auth header" }, 401);
+      const token = authHeader.replace("Bearer ", "");
+      const { data: userData, error: userError } = await supabase.auth.getUser(token);
+      if (userError || !userData.user) return jsonResponse({ error: "Invalid user token" }, 401);
+      const { data: isAdmin } = await supabase.rpc("is_admin", { _user_id: userData.user.id });
+      if (!isAdmin) return jsonResponse({ error: "Admin access required" }, 403);
+
       const guildId = body?.guildId;
       const channelId = body?.channelId;
       const voiceChannelIds: string[] = Array.isArray(body?.voiceChannelIds)
@@ -411,6 +454,15 @@ serve(async (req) => {
     // Update an existing server's metadata (description, voice channels, icon)
     // ============================================================
     if (requestType === "update_server") {
+      // Require JWT + admin
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader) return jsonResponse({ error: "No auth header" }, 401);
+      const token = authHeader.replace("Bearer ", "");
+      const { data: userData, error: userError } = await supabase.auth.getUser(token);
+      if (userError || !userData.user) return jsonResponse({ error: "Invalid user token" }, 401);
+      const { data: isAdmin } = await supabase.rpc("is_admin", { _user_id: userData.user.id });
+      if (!isAdmin) return jsonResponse({ error: "Admin access required" }, 403);
+
       const guildId = body?.guildId;
       if (!guildId) {
         return jsonResponse({ error: "Missing guildId" }, 400);
@@ -454,11 +506,21 @@ serve(async (req) => {
     // Legacy create_webhook (kept for backwards compatibility)
     // ============================================================
     if (requestType === "create_webhook") {
-      const { channelId, botToken } = body;
+      // Require JWT + admin
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader) return jsonResponse({ error: "No auth header" }, 401);
+      const token = authHeader.replace("Bearer ", "");
+      const { data: userData, error: userError } = await supabase.auth.getUser(token);
+      if (userError || !userData.user) return jsonResponse({ error: "Invalid user token" }, 401);
+      const { data: isAdmin } = await supabase.rpc("is_admin", { _user_id: userData.user.id });
+      if (!isAdmin) return jsonResponse({ error: "Admin access required" }, 403);
+
+      const { channelId } = body;
       if (!channelId) {
         return jsonResponse({ error: "Missing channelId" }, 400);
       }
-      const tokenToUse = botToken || Deno.env.get("DISCORD_BOT_TOKEN");
+      // Ignore any client-supplied botToken, use only env (security)
+      const tokenToUse = Deno.env.get("DISCORD_BOT_TOKEN");
       if (!tokenToUse) {
         return jsonResponse({ error: "No bot token available" }, 400);
       }
@@ -501,9 +563,43 @@ serve(async (req) => {
     // DuelVerse -> Discord
     // ============================================================
     if (requestType === "chat_to_discord") {
-      const { username, avatarUrl, userId } = body;
+      // Require JWT auth (or bot secret for server-side calls)
+      let userId: string;
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader) {
+        // Check for bot secret (server-side edge functions calling this)
+        if (!verifyBotSecret(req)) {
+          return jsonResponse({ error: "Unauthorized" }, 401);
+        }
+        // Bot secret path: trust userId from body if provided
+        userId = body?.userId;
+        if (!userId) return jsonResponse({ error: "Missing userId for bot auth" }, 400);
+      } else {
+        // JWT path: derive userId from token
+        const token = authHeader.replace("Bearer ", "");
+        const { data: userData, error: userError } = await supabase.auth.getUser(token);
+        if (userError || !userData.user) return jsonResponse({ error: "Invalid user token" }, 401);
+        userId = userData.user.id;
+      }
+
+      // Basic rate limit: reject if user posted to bridge < 2s ago
+      const { data: recentMsg } = await supabase
+        .from("global_chat_messages")
+        .select("created_at")
+        .eq("user_id", userId)
+        .eq("source_type", "duelverse")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (recentMsg?.created_at) {
+        const lastPostMs = new Date(recentMsg.created_at).getTime();
+        const nowMs = Date.now();
+        if (nowMs - lastPostMs < 2000) {
+          return jsonResponse({ error: "Rate limit: wait 2 seconds between messages" }, 429);
+        }
+      }
+
       const hasLink = containsLink(body?.content);
-      // Mensagens com links são apagadas automaticamente após 3 minutos
       const linkAutoDeleteMs = 3 * 60 * 1000;
       const ephemeral = body?.ephemeral === true || hasLink;
       const captureMessageIds = body?.captureMessageIds === true;
@@ -521,17 +617,23 @@ serve(async (req) => {
         return jsonResponse({ error: "No active Discord server configured" }, 400);
       }
 
-      let finalUsername = username;
-      let finalAvatar = avatarUrl;
+      // Load username and avatar from profiles (ignore body fields)
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("username, avatar_url")
+        .eq("user_id", userId)
+        .maybeSingle();
 
-      if (userId) {
-        const { data: discordLink } = await supabase.rpc("get_discord_link_for_user", {
-          p_user_id: userId,
-        });
-        if (discordLink && discordLink.length > 0) {
-          finalUsername = discordLink[0].discord_username || username;
-          finalAvatar = discordLink[0].discord_avatar_url || avatarUrl;
-        }
+      let finalUsername = profile?.username || "DuelVerse Player";
+      let finalAvatar = profile?.avatar_url || null;
+
+      // Check Discord link for display name override
+      const { data: discordLink } = await supabase.rpc("get_discord_link_for_user", {
+        p_user_id: userId,
+      });
+      if (discordLink && discordLink.length > 0) {
+        finalUsername = discordLink[0].discord_username || finalUsername;
+        finalAvatar = discordLink[0].discord_avatar_url || finalAvatar;
       }
 
       const webhookPayload = {
@@ -573,14 +675,34 @@ serve(async (req) => {
     // Cleanup: delete Discord announcement messages for a closed duel room
     // ============================================================
     if (requestType === "cleanup_duel_messages") {
+      // Require JWT auth for cleanup actions
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader) return jsonResponse({ error: "No auth header" }, 401);
+      const token = authHeader.replace("Bearer ", "");
+      const { data: userData, error: userError } = await supabase.auth.getUser(token);
+      if (userError || !userData.user) return jsonResponse({ error: "Invalid user token" }, 401);
+
       const duelId = typeof body?.duelId === "string" ? body.duelId : null;
       if (!duelId) return jsonResponse({ error: "Missing duelId" }, 400);
 
       const { data: duel } = await supabase
         .from("live_duels")
-        .select("discord_messages")
+        .select("discord_messages, creator_id, opponent_id")
         .eq("id", duelId)
         .maybeSingle();
+
+      // No-op if duel doesn't exist
+      if (!duel) {
+        return jsonResponse({ success: true, deleted: 0, skipped: "duel_not_found" });
+      }
+
+      // Verify authorization: allow creator, opponent, or admin
+      const isCreator = duel.creator_id === userData.user.id;
+      const isOpponent = duel.opponent_id === userData.user.id;
+      const { data: isAdmin } = await supabase.rpc("is_admin", { _user_id: userData.user.id });
+      if (!isCreator && !isOpponent && !isAdmin) {
+        return jsonResponse({ error: "Not authorized to cleanup this duel" }, 403);
+      }
 
       const messages = Array.isArray((duel as any)?.discord_messages)
         ? (duel as any).discord_messages
@@ -699,7 +821,8 @@ serve(async (req) => {
       const activeServers = servers.filter((server: any) => server.enabled && server.webhookUrl);
       if (activeServers.length === 0) return jsonResponse({ error: "No active Discord server configured" }, 400);
 
-      const username = String(body.username || profile?.username || "Duelista");
+      // Use only profile username (ignore body.username)
+      const username = String(profile?.username || "Duelista");
       const mode = matchType === "ranked" ? "rankeada" : "casual";
       const link = `https://duelverse.site/m/${invite.id}`;
       const webhookPayload = {
@@ -763,7 +886,8 @@ serve(async (req) => {
       if (activeServers.length === 0)
         return jsonResponse({ error: "No active Discord server configured" }, 400);
 
-      const username = String(body.username || profile?.username || "Duelista");
+      // Use only profile username (ignore body.username)
+      const username = String(profile?.username || "Duelista");
       const link = `https://duelverse.site/join/${duelId}`;
       const content = `/dv @everyone 📺 **${username}** está transmitindo um duelo ao vivo no DuelVerse! Entre como espectador: ${link}`;
 
@@ -799,6 +923,7 @@ serve(async (req) => {
         inviteLink = serverWithLink ? serverWithLink.inviteLink : inviteLink;
       }
       const bridgeEnabled = servers.some((server: any) => server.enabled && server.webhookUrl);
+      // Never leak webhook URLs or secrets - only return public invite link and enabled status
       return jsonResponse({ inviteLink, bridgeEnabled });
     }
 

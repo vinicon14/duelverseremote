@@ -305,18 +305,14 @@ export const GlobalChat = () => {
 
       if (bridgeEnabled) {
         try {
-          const bridgeResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/discord-bridge`, {
-            method: "POST",
-            body: JSON.stringify({
+          const { error: bridgeError } = await supabase.functions.invoke("discord-bridge", {
+            body: {
               type: "chat_to_discord",
               content: content,
-              username: currentUser.username,
-              avatarUrl: currentUser.avatar_url,
-              userId: currentUser.id,
-            }),
+            },
           });
-          if (!bridgeResponse.ok) {
-            console.warn("Discord bridge returned an error:", await bridgeResponse.text());
+          if (bridgeError) {
+            console.warn("Discord bridge returned an error:", bridgeError);
           }
         } catch (bridgeError) {
           console.error("Erro ao enviar para o Discord bridge:", bridgeError);

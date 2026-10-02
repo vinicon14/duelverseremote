@@ -19,9 +19,11 @@ public class DiscordMessageHandler {
 
     private final DuelverseClient duelverseClient;
     private final HttpClient httpClient;
+    private final String botSecret;
 
-    public DiscordMessageHandler(DuelverseClient duelverseClient) {
+    public DiscordMessageHandler(DuelverseClient duelverseClient, String botSecret) {
         this.duelverseClient = duelverseClient;
+        this.botSecret = botSecret;
         this.httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(10))
             .build();
@@ -57,16 +59,27 @@ public class DiscordMessageHandler {
         }
 
         try {
-            HttpRequest request = HttpRequest.newBuilder()
+            HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                 .uri(URI.create(BRIDGE_WEBHOOK_URL))
                 .header("Content-Type", "application/json")
-                .timeout(Duration.ofSeconds(10))
+                .timeout(Duration.ofSeconds(10));
+
+            // Add bot secret header if configured
+            if (botSecret != null && !botSecret.isEmpty()) {
+                requestBuilder.header("x-bot-secret", botSecret);
+            }
+
+            HttpRequest request = requestBuilder
                 .POST(HttpRequest.BodyPublishers.ofString(payload.toString()))
                 .build();
 
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            logger.info("Bridge POST [{}] author={} username={}: {}",
-                response.statusCode(), authorId, username, response.body());
+            if (response.statusCode() == 401) {
+                logger.error("Bridge authentication failed — check DUELVERSE_BOT_BRIDGE_SECRET");
+            } else {
+                logger.info("Bridge POST [{}] author={} username={}: {}",
+                    response.statusCode(), authorId, username, response.body());
+            }
         } catch (Exception e) {
             logger.error("Erro ao enviar mensagem para a bridge DuelVerse", e);
         }
