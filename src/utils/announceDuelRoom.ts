@@ -62,22 +62,22 @@ export async function announceDuelRoom({
 
     // 2. Discord — mensagem persistente, capturando IDs para cleanup posterior
     try {
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/discord-bridge`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            type: "chat_to_discord",
-            content: `@everyone remote — ${username} criou uma nova sala${roomLabel}! Entre agora: ${joinLink}`,
-            username,
-            avatarUrl,
-            userId,
-            captureMessageIds: true,
-          }),
+      const { data: json, error: bridgeError } = await supabase.functions.invoke("discord-bridge", {
+        body: {
+          type: "chat_to_discord",
+          content: `@everyone remote — ${username} criou uma nova sala${roomLabel}! Entre agora: ${joinLink}`,
+          username,
+          avatarUrl,
+          userId,
+          captureMessageIds: true,
         },
-      );
-      const json = await res.json().catch(() => null);
+      });
+
+      if (bridgeError) {
+        console.warn("[announceDuelRoom] discord bridge error:", bridgeError);
+        return;
+      }
+
       const posted: Array<{ webhookUrl: string; messageId: string }> = Array.isArray(json?.results)
         ? json.results
             .filter((r: any) => r?.ok && r?.messageId && r?.url)
@@ -104,14 +104,9 @@ export async function announceDuelRoom({
  */
 export async function cleanupDuelDiscordMessages(duelId: string): Promise<void> {
   try {
-    await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/discord-bridge`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "cleanup_duel_messages", duelId }),
-      },
-    );
+    await supabase.functions.invoke("discord-bridge", {
+      body: { type: "cleanup_duel_messages", duelId },
+    });
   } catch (err) {
     console.warn("[cleanupDuelDiscordMessages] failed:", err);
   }
