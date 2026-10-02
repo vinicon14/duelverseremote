@@ -7,28 +7,57 @@ serve(async (req) => {
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) throw new Error("STRIPE_SECRET_KEY not configured");
 
+    const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
+    if (!webhookSecret) {
+      console.error("STRIPE_WEBHOOK_SECRET not configured");
+      return new Response(JSON.stringify({ error: "Webhook secret not configured" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
 
     const body = await req.text();
     const signature = req.headers.get("stripe-signature");
 
-    // If webhook secret is set, verify signature; otherwise parse directly
-    const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
-    let event: Stripe.Event;
-
-    if (webhookSecret && signature) {
-      event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
-    } else {
-      event = JSON.parse(body) as Stripe.Event;
+    if (!signature) {
+      console.error("Missing stripe-signature header");
+      return new Response(JSON.stringify({ error: "Missing signature" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
-    if (event.type === "checkout.session.completed") {
-      const session = event.data.object as Stripe.Checkout.Session;
-      const userId = session.metadata?.supabase_user_id;
-      const packageId = session.metadata?.package_id;
-      const duelcoinsAmount = parseInt(session.metadata?.duelcoins_amount || "0");
+    // SECURITY: Verify signature using async method (sync fails on Deno)
+    let event: Stripe.Event;
+    try {
+      event = await stripe.webhooks.constructEventAsync(
+        body,
+        signature,
+        webhookSecret,
+        undefined,
+        Stripe.createSubtleCryptoProvider()
+      );
+    } catch (err) {
+      console.error("Invalid Stripe signature:", err instanceof Error ? err.message : err);
+      return new Response(JSON.stringify({ error: "Invalid signature" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
 
-      if (!userId || !duelcoinsAmount) {
+    if (event.type === "checkout.session.completed" || event.type === "checkout.session.async_payment_succeeded") {
+      const session = event.data.object as Stripe.Checkout.Session;
+
+      // Only process if payment is completed
+      if (session.payment_status !== "paid") {
+        console.log("Session not paid yet:", session.id, "status:", session.payment_status);
+        return new Response(JSON.stringify({ received: true }), { status: 200 });
+      }
+
+      const userId = session.metadata?.supabase_user_id;
+      if (!userId) {
         console.error("Missing metadata in session:", session.id);
         return new Response(JSON.stringify({ received: true }), { status: 200 });
       }
@@ -37,25 +66,65 @@ serve(async (req) => {
       const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
       const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-      // Update order status
-      await supabase
-        .from("duelcoins_orders")
-        .update({
-          status: "paid",
-          paid_at: new Date().toISOString(),
-          external_payment_id: session.payment_intent as string,
-        })
-        .eq("external_order_id", session.id);
+      // Localiza o pedido: primeiro pelo order_id gravado no metadata (UUID criado no servidor),
+      // depois pelo session.id salvo em external_order_id (pedidos antigos).
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const metadataOrderId = session.metadata?.order_id;
+      let order: { id: string; user_id: string; duelcoins_amount: number } | null = null;
 
-      // Credit DuelCoins to user
-      await supabase.rpc("admin_manage_duelcoins", {
-        p_user_id: userId,
-        p_amount: duelcoinsAmount,
-        p_operation: "add",
-        p_reason: `Compra via Stripe - ${duelcoinsAmount} DuelCoins`,
+      if (metadataOrderId && uuidRegex.test(metadataOrderId)) {
+        const { data, error } = await supabase
+          .from("duelcoins_orders")
+          .select("id, user_id, duelcoins_amount")
+          .eq("id", metadataOrderId)
+          .maybeSingle();
+        if (error) throw error;
+        order = data;
+      }
+
+      if (!order) {
+        const { data, error } = await supabase
+          .from("duelcoins_orders")
+          .select("id, user_id, duelcoins_amount")
+          .eq("external_order_id", session.id)
+          .maybeSingle();
+        if (error) throw error;
+        order = data;
+      }
+
+      if (!order) {
+        console.error("Order not found for session:", session.id);
+        return new Response(JSON.stringify({ received: true }), { status: 200 });
+      }
+
+      if (order.user_id !== userId) {
+        console.error("Order user mismatch for session:", session.id, { order_user: order.user_id, metadata_user: userId });
+        return new Response(JSON.stringify({ received: true, flagged: "user_mismatch" }), { status: 200 });
+      }
+
+      // SECURITY: Use service_role restricted RPC to credit (idempotent)
+      const { data: creditResult, error: creditError } = await supabase.rpc("service_credit_duelcoins", {
+        p_order_id: order.id,
+        p_external_payment_id: String(session.payment_intent || session.id),
+        p_payment_method: "stripe",
       });
 
-      console.log(`✅ Credited ${duelcoinsAmount} DuelCoins to user ${userId}`);
+      if (creditError) {
+        console.error("Credit RPC error:", creditError);
+        throw creditError;
+      }
+
+      const result = creditResult as { success?: boolean; already_paid?: boolean; message?: string } | null;
+      if (!result?.success) {
+        // 500 faz o Stripe reenviar o evento mais tarde
+        console.error("Credit failed:", result?.message);
+        return new Response(JSON.stringify({ error: result?.message || "Failed to credit" }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      console.log(`✅ Credited ${order.duelcoins_amount} DuelCoins to user ${userId}`,
+                  result.already_paid ? "(already paid)" : "");
     }
 
     return new Response(JSON.stringify({ received: true }), {
@@ -66,7 +135,7 @@ serve(async (req) => {
     console.error("Webhook error:", error);
     const errorMessage = error instanceof Error ? error.message : String(error);
     return new Response(JSON.stringify({ error: errorMessage }), {
-      status: 400,
+      status: 500,
       headers: { "Content-Type": "application/json" },
     });
   }
