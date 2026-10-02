@@ -49,8 +49,24 @@ const hasTurn = (servers: RTCIceServer[]) =>
 export const getIceServers = (): RTCIceServer[] => runtimeIceServers;
 export const hasVerifiedTurn = () => verifiedTurn && Date.now() < expiresAt;
 
+// Invalidate cache when auth state changes to force a new fetch
+supabase.auth.onAuthStateChange((event) => {
+  if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+    // Clear expiration to force refresh on next call
+    expiresAt = 0;
+    failures = 0;
+  }
+});
+
 const refresh = (): Promise<RTCIceServer[]> => {
   if (promise) return promise;
+  
+  // Skip function call if no session - use STUN + fallback directly
+  const skipFetch = async (): Promise<boolean> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    return !session;
+  };
+  
   // Abort the request itself, not just its caller's wait. An obsolete response
   // must never overwrite credentials obtained by a later attempt.
   const controller = new AbortController();
@@ -63,6 +79,15 @@ const refresh = (): Promise<RTCIceServer[]> => {
   });
   promise = (async () => {
     try {
+      // If no session, skip the function call and use public servers
+      if (await skipFetch()) {
+        verifiedTurn = false;
+        runtimeIceServers = [...STUN_SERVERS, ...FALLBACK_TURN];
+        expiresAt = Date.now() + RETRY_MS;
+        loadedOnce = true;
+        return runtimeIceServers;
+      }
+      
       const { data, error } = await Promise.race([
         supabase.functions.invoke("get-ice-servers", { signal: controller.signal }),
         timeout,
@@ -95,6 +120,7 @@ const refresh = (): Promise<RTCIceServer[]> => {
     } catch (error) {
       failures += 1;
       const backoff = Math.min(RETRY_MS * 2 ** (failures - 1), MAX_RETRY_MS);
+      
       if (lastVerified && Date.now() - lastVerified.at < LAST_VERIFIED_MAX_AGE_MS) {
         runtimeIceServers = lastVerified.servers;
         verifiedTurn = true;

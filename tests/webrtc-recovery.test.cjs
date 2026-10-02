@@ -52,7 +52,7 @@ function environment() {
 
 test('ICE fetch retries after a transient error instead of caching the failure forever', async () => {
   let now = 0, calls = 0;
-  const ice = load('src/utils/iceServers.ts', { '@/integrations/supabase/client': { supabase: { functions: { invoke: async () => { calls++; return calls === 1 ? { error: new Error('offline') } : { data: { hasTurn: true, iceServers: [{ urls: 'turn:managed.example', username: 'u', credential: 'p' }] } }; } } } } }, { Date: { now: () => now } });
+  const ice = load('src/utils/iceServers.ts', { '@/integrations/supabase/client': { supabase: { functions: { invoke: async () => { calls++; return calls === 1 ? { error: new Error('offline') } : { data: { hasTurn: true, iceServers: [{ urls: 'turn:managed.example', username: 'u', credential: 'p' }] } }; } }, auth: { onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }), getSession: async () => ({ data: { session: { user: { id: 'test-user' } } } }) } } } }, { Date: { now: () => now } });
   await ice.ensureIceServers(); now = 60000; await ice.ensureIceServers();
   assert.equal(calls, 2);
   assert.equal(ice.getIceServers()[0].urls, 'turn:managed.example');
@@ -108,13 +108,13 @@ test('Duel camera button reacquires media when initial capture is absent', async
 });
 
 test('Recovery keeps direct candidates available without configured TURN', () => {
-  const ice = load('src/utils/iceServers.ts');
+  const ice = load('src/utils/iceServers.ts', { '@/integrations/supabase/client': { supabase: { auth: { onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }), getSession: async () => ({ data: { session: null } }) } } } });
   assert.equal(ice.buildPcConfig().iceTransportPolicy, 'all');
 });
 
 test('Successful TURN configuration expires and concurrent callers share one request', async () => {
   let now = 0, calls = 0;
-  const ice = load('src/utils/iceServers.ts', { '@/integrations/supabase/client': { supabase: { functions: { invoke: async () => { calls++; return { data: { hasTurn: true, iceServers: [{ urls: 'turn:managed.example', username: 'u', credential: 'p' }] } }; } } } } }, { Date: { now: () => now } });
+  const ice = load('src/utils/iceServers.ts', { '@/integrations/supabase/client': { supabase: { functions: { invoke: async () => { calls++; return { data: { hasTurn: true, iceServers: [{ urls: 'turn:managed.example', username: 'u', credential: 'p' }] } }; } }, auth: { onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }), getSession: async () => ({ data: { session: { user: { id: 'test-user' } } } }) } } } }, { Date: { now: () => now } });
   await Promise.all([ice.ensureIceServers(), ice.ensureIceServers()]); assert.equal(calls, 1);
   now = 1000; await ice.ensureIceServers(); assert.equal(calls, 1);
   now = 360000; await ice.ensureIceServers(); assert.equal(calls, 2);
@@ -125,7 +125,7 @@ test('A timed-out ICE fetch cannot overwrite a subsequent successful fetch', asy
   const ice = load('src/utils/iceServers.ts', { '@/integrations/supabase/client': { supabase: { functions: { invoke: async () => {
     calls++; if (calls === 1) return new Promise(resolve => { finishOld = resolve; });
     return { data: { hasTurn: true, iceServers: [{ urls: 'turn:fresh.example' }] } };
-  } } } } }, { Date: { now: () => now }, setTimeout: f => { timeout = f; return 1; }, clearTimeout() {} });
+  } }, auth: { onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }), getSession: async () => ({ data: { session: { user: { id: 'test-user' } } } }) } } } }, { Date: { now: () => now }, setTimeout: f => { timeout = f; return 1; }, clearTimeout() {} });
   const first = ice.ensureIceServers(); timeout(); await first;
   now = 60000; await ice.ensureIceServers();
   finishOld({ data: { hasTurn: true, iceServers: [{ urls: 'turn:obsolete.example' }] } }); await flush();
