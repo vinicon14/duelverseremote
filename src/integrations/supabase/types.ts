@@ -1024,7 +1024,6 @@ export type Database = {
       global_chat_messages: {
         Row: {
           created_at: string
-          discord_message_id: string | null
           discord_user_id: string | null
           id: string
           language_code: string
@@ -1037,7 +1036,6 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          discord_message_id?: string | null
           discord_user_id?: string | null
           id?: string
           language_code?: string
@@ -1050,7 +1048,6 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          discord_message_id?: string | null
           discord_user_id?: string | null
           id?: string
           language_code?: string
