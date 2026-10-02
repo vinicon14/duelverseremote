@@ -1,7 +1,7 @@
 // Returns the ICE server list (STUN + TURN) used by the duel room WebRTC calls.
 // TURN credentials are minted server-side so they can be rotated without a deploy.
 // SECURITY: Requires authenticated user to prevent credential leakage.
-import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -38,13 +38,13 @@ function normalizeHost(raw: string | undefined): string | null {
   return host;
 }
 
-async function meteredServers(): Promise<unknown[]> {
-  const apiKey = Deno.env.get("METERED_API_KEY");
+async function meteredServers(getEnv: (key: string) => string | undefined): Promise<unknown[]> {
+  const apiKey = getEnv("METERED_API_KEY");
   if (!apiKey) {
     console.log("[ice] METERED_API_KEY missing");
     return [];
   }
-  const domain = normalizeHost(Deno.env.get("METERED_DOMAIN"));
+  const domain = normalizeHost(getEnv("METERED_DOMAIN"));
   const hosts = [
     ...(domain ? [domain] : []),
     "duelverse.metered.live",
@@ -106,10 +106,10 @@ const FALLBACK_TURN = [
   },
 ];
 
-function staticTurn(): unknown[] {
-  const urls = Deno.env.get("TURN_URLS");
-  const username = Deno.env.get("TURN_USERNAME");
-  const credential = Deno.env.get("TURN_CREDENTIAL");
+function staticTurn(getEnv: (key: string) => string | undefined): unknown[] {
+  const urls = getEnv("TURN_URLS");
+  const username = getEnv("TURN_USERNAME");
+  const credential = getEnv("TURN_CREDENTIAL");
   if (!urls || !username || !credential) return [];
   return [{ urls: urls.split(",").map((u) => u.trim()).filter(Boolean), username, credential }];
 }
@@ -186,7 +186,7 @@ export async function handler(req: Request, deps: Dependencies): Promise<Respons
     });
   }
 
-  let turn = [...staticTurn(), ...(await meteredServers())];
+  let turn = [...staticTurn(deps.getEnv), ...(await meteredServers(deps.getEnv))];
   const hasTurn = turn.length > 0;
   if (!hasTurn) turn = [...FALLBACK_TURN];
   const servers = [...STUN_SERVERS, ...turn];
@@ -210,7 +210,7 @@ if (import.meta.main) {
         const { data: { user }, error } = await supabaseClient.auth.getUser();
         return { user, error };
       },
-      getEnv: Deno.env.get,
+      getEnv: (key: string) => Deno.env.get(key),
     })
   );
 }

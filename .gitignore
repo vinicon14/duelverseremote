@@ -26,3 +26,4 @@ release-builds2/
 *.sln
 *.sw?
 .vercel
+deno.lock

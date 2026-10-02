@@ -3,7 +3,6 @@
  * Cache renovável; uma indisponibilidade não fica memorizada pela sessão inteira.
  */
 import { supabase } from "@/integrations/supabase/client";
-import type { FunctionsHttpError } from "@supabase/supabase-js";
 
 const STUN_SERVERS: RTCIceServer[] = [
   { urls: "stun:stun.l.google.com:19302" },
@@ -63,7 +62,7 @@ const refresh = (): Promise<RTCIceServer[]> => {
   if (promise) return promise;
   
   // Skip function call if no session - use STUN + fallback directly
-  const skipFetch = async (): Promise<RTCIceServer[]> => {
+  const skipFetch = async (): Promise<boolean> => {
     const { data: { session } } = await supabase.auth.getSession();
     return !session;
   };
