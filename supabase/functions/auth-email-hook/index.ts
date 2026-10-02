@@ -5,6 +5,8 @@
  * Intercepta os e-mails de autenticação e renderiza templates próprios
  * com a identidade visual do DuelVerse. A entrega é feita pela fila SMTP
  * interna do projeto, sem provedores transacionais externos.
+ * 
+ * Security: Validates webhook signatures, builds safe redirect URLs server-side
  */
 import * as React from 'npm:react@18.3.1'
 import { renderAsync } from 'npm:@react-email/components@0.0.22'
@@ -19,7 +21,64 @@ import { ReauthenticationEmail } from '../_shared/email-templates/reauthenticati
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers':
-    'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+    'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version, webhook-id, webhook-timestamp, webhook-signature',
+}
+
+async function verifyWebhookSignature(
+  req: Request,
+  body: string,
+  secret: string
+): Promise<boolean> {
+  const webhookId = req.headers.get('webhook-id')
+  const webhookTimestamp = req.headers.get('webhook-timestamp')
+  const webhookSignature = req.headers.get('webhook-signature')
+
+  if (!webhookId || !webhookTimestamp || !webhookSignature) {
+    console.error('Missing webhook headers')
+    return false
+  }
+
+  const timestampMs = parseInt(webhookTimestamp) * 1000
+  const now = Date.now()
+  const tolerance = 5 * 60 * 1000
+
+  if (Math.abs(now - timestampMs) > tolerance) {
+    console.error('Webhook timestamp too old or in future')
+    return false
+  }
+
+  let signingSecret = secret
+  if (secret.startsWith('whsec_')) {
+    signingSecret = secret
+  } else if (secret.startsWith('v1,whsec_')) {
+    signingSecret = secret.substring(3)
+  }
+
+  const encoder = new TextEncoder()
+  const signedContent = `${webhookId}.${webhookTimestamp}.${body}`
+  
+  const keyData = encoder.encode(signingSecret)
+  const key = await crypto.subtle.importKey(
+    'raw',
+    keyData,
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  )
+
+  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(signedContent))
+  const expectedSignature = btoa(String.fromCharCode(...new Uint8Array(signature)))
+
+  const signatures = webhookSignature.split(' ')
+  for (const sig of signatures) {
+    const [version, hash] = sig.split(',')
+    if (version === 'v1' && hash === expectedSignature) {
+      return true
+    }
+  }
+
+  console.error('Signature verification failed')
+  return false
 }
 
 const EMAIL_SUBJECTS: Record<string, string> = {
@@ -52,19 +111,30 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const payload = await req.json()
+    const bodyText = await req.text()
     
-    console.log('Auth hook raw payload:', JSON.stringify(payload))
+    const webhookSecret = Deno.env.get('SEND_EMAIL_HOOK_SECRET')
+    if (webhookSecret) {
+      const isValid = await verifyWebhookSignature(req, bodyText, webhookSecret)
+      if (!isValid) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid webhook signature' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+    } else {
+      console.warn('SEND_EMAIL_HOOK_SECRET not configured - webhook signature not verified')
+    }
+
+    const payload = JSON.parse(bodyText)
     
-    // Supabase Auth Hook format varies by version
     const emailType = payload.type || payload.email_data?.email_action_type || payload.email_data?.type || payload.data?.action_type
     const recipientEmail = payload.user?.email || payload.email || payload.email_data?.email || payload.data?.email
     const tokenHash = payload.email_data?.token_hash || payload.token_hash
-    const redirectTo = payload.email_data?.redirect_to || payload.redirect_to || `https://${ROOT_DOMAIN}`
     const token = payload.email_data?.token || payload.token || payload.data?.token
 
     if (!emailType || !recipientEmail) {
-      console.error('Missing email type or recipient', { emailType, recipientEmail, keys: Object.keys(payload) })
+      console.error('Missing email type or recipient', { emailType, recipientEmail })
       return new Response(
         JSON.stringify({ error: 'Missing email type or recipient' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -82,13 +152,20 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Build confirmation URL using Supabase auth verify endpoint
-    let confirmationUrl = redirectTo
+    const allowedRedirects = [
+      `https://${ROOT_DOMAIN}`,
+      `https://${ROOT_DOMAIN}/`,
+      `https://${ROOT_DOMAIN}/auth`,
+    ]
+    
+    const requestedRedirect = payload.email_data?.redirect_to || payload.redirect_to
+    const safeRedirect = allowedRedirects.includes(requestedRedirect) 
+      ? requestedRedirect 
+      : `https://${ROOT_DOMAIN}`
+
+    let confirmationUrl = safeRedirect
     if (tokenHash) {
-      confirmationUrl = `${SUPABASE_URL}/auth/v1/verify?token=${tokenHash}&type=${emailType}&redirect_to=https://${ROOT_DOMAIN}`
-    }
-    if (payload.data?.url) {
-      confirmationUrl = payload.data.url
+      confirmationUrl = `${SUPABASE_URL}/auth/v1/verify?token=${tokenHash}&type=${emailType}&redirect_to=${encodeURIComponent(safeRedirect)}`
     }
 
     const templateProps = {
@@ -96,7 +173,7 @@ Deno.serve(async (req) => {
       siteUrl: `https://${ROOT_DOMAIN}`,
       recipient: recipientEmail,
       confirmationUrl,
-      token: token,
+      token: emailType === 'reauthentication' ? token : undefined,
       email: recipientEmail,
       newEmail: payload.new_email || payload.data?.new_email,
     }

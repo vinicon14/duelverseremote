@@ -7,6 +7,39 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
+const RATE_LIMIT_PER_HOUR = 50;
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
+
+interface NotificationTemplate {
+  title: string;
+  body: string;
+  getRecipients: (userId: string, context: any, supabase: any) => Promise<string[]>;
+}
+
+const NOTIFICATION_TYPES: Record<string, NotificationTemplate> = {
+  duel_invite: {
+    title: '⚔️ Desafio de Duelo!',
+    body: 'Você foi desafiado para um duelo!',
+    getRecipients: async (userId: string, context: any, supabase: any) => {
+      if (!context.targetUserId || !context.duelId) {
+        throw new Error('Missing targetUserId or duelId for duel_invite');
+      }
+      
+      const { data: duel } = await supabase
+        .from('duels')
+        .select('creator_id, opponent_id')
+        .eq('id', context.duelId)
+        .single();
+      
+      if (!duel || (duel.creator_id !== userId && duel.opponent_id !== userId)) {
+        throw new Error('User not authorized for this duel');
+      }
+      
+      return [context.targetUserId];
+    }
+  }
+};
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -22,20 +55,69 @@ Deno.serve(async (req) => {
       throw new Error('VAPID keys not configured');
     }
 
-    const { user_ids, title, body, data, exclude_user_id } = await req.json();
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Missing authorization header' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     const supabaseAdmin = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!, {
       auth: { autoRefreshToken: false, persistSession: false }
     });
 
-    // Build query for subscriptions
-    let query = supabaseAdmin.from('push_subscriptions').select('*');
+    const supabaseUser = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!, {
+      auth: { autoRefreshToken: false, persistSession: false },
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    const { data: { user }, error: authError } = await supabaseUser.auth.getUser();
     
-    if (user_ids && user_ids.length > 0) {
-      query = query.in('user_id', user_ids);
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    const { data: subscriptions, error } = await query;
+    const { notification_type, context } = await req.json();
+
+    if (!notification_type || !NOTIFICATION_TYPES[notification_type]) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid notification type' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const cutoffTime = new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString();
+    const { data: recentRequests, error: rateLimitError } = await supabaseAdmin
+      .from('push_notification_rate_limit')
+      .select('id')
+      .eq('user_id', user.id)
+      .gte('created_at', cutoffTime);
+
+    if (rateLimitError) {
+      console.error('Rate limit check error:', rateLimitError);
+    } else if (recentRequests && recentRequests.length >= RATE_LIMIT_PER_HOUR) {
+      return new Response(
+        JSON.stringify({ error: 'Rate limit exceeded' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    await supabaseAdmin.from('push_notification_rate_limit').insert({
+      user_id: user.id,
+      notification_type,
+    });
+
+    const template = NOTIFICATION_TYPES[notification_type];
+    const recipientIds = await template.getRecipients(user.id, context, supabaseAdmin);
+
+    const { data: subscriptions, error } = await supabaseAdmin
+      .from('push_subscriptions')
+      .select('*')
+      .in('user_id', recipientIds);
 
     if (error) {
       console.error('Error fetching subscriptions:', error);
@@ -49,17 +131,12 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Filter out excluded user
-    const filteredSubs = exclude_user_id 
-      ? subscriptions.filter((s: any) => s.user_id !== exclude_user_id)
-      : subscriptions;
-
     const payload = JSON.stringify({
-      title: title || 'Duelverse',
-      body: body || 'Nova notificação',
+      title: template.title,
+      body: template.body,
       icon: '/favicon.png',
       badge: '/favicon.png',
-      data: data || {},
+      data: { type: notification_type, ...context },
     });
 
     // Create VAPID application server
@@ -75,7 +152,7 @@ Deno.serve(async (req) => {
     let failed = 0;
     const expiredEndpoints: string[] = [];
 
-    for (const sub of filteredSubs) {
+    for (const sub of subscriptions) {
       try {
         // Create a PushSubscription object
         const pushSub = webpush.PushSubscription.fromJSON({
@@ -123,7 +200,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, sent, failed, total: filteredSubs.length }),
+      JSON.stringify({ success: true, sent, failed, total: subscriptions.length }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {

@@ -262,28 +262,25 @@ const Friends = () => {
       // Enviar push notification para oponente offline
       try {
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-        const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-
-        // Buscar username do desafiante
-        const { data: myProfile } = await supabase
-          .from('profiles')
-          .select('username')
-          .eq('user_id', currentUser.id)
-          .single();
-
-        await fetch(`${supabaseUrl}/functions/v1/send-push-notification`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${anonKey}`,
-          },
-          body: JSON.stringify({
-            userId: friendUserId,
-            title: t('friends.duelInviteTitle'),
-            body: t('friends.duelInviteBody', { name: myProfile?.username || t('friends.someone') }),
-            data: { type: 'duel_invite', duelId: duelData.id, inviteId: inviteData?.id, url: '/friends' },
-          }),
-        });
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session?.access_token) {
+          await fetch(`${supabaseUrl}/functions/v1/send-push-notification`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({
+              notification_type: 'duel_invite',
+              context: {
+                targetUserId: friendUserId,
+                duelId: duelData.id,
+                inviteId: inviteData?.id,
+              },
+            }),
+          });
+        }
       } catch (pushErr) {
         console.error('Erro ao enviar push:', pushErr);
       }
