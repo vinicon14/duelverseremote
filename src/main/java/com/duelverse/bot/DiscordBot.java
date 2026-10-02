@@ -35,17 +35,23 @@ public class DiscordBot extends ListenerAdapter {
     private final Map<String, TextChannel> serverChannels;
     private JDA jda;
     private DiscordServerManager serverManager;
+    private final String botSecret;
 
     public void setDuelverseClient(DuelverseClient client) {
         this.duelverseClient = client;
-        this.messageHandler = new DiscordMessageHandler(client);
+        this.messageHandler = new DiscordMessageHandler(client, botSecret);
     }
 
     public DiscordBot(BotConfig config, DuelverseClient duelverseClient) {
         this.config = config;
         this.duelverseClient = duelverseClient;
-        this.messageHandler = new DiscordMessageHandler(duelverseClient);
+        this.botSecret = System.getenv("DUELVERSE_BOT_BRIDGE_SECRET");
+        this.messageHandler = new DiscordMessageHandler(duelverseClient, botSecret);
         this.serverChannels = new ConcurrentHashMap<>();
+        
+        if (botSecret == null || botSecret.isEmpty()) {
+            logger.warn("DUELVERSE_BOT_BRIDGE_SECRET not set — Discord bridge will reject messages");
+        }
     }
 
     public void start() throws LoginException, InterruptedException {

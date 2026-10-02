@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-bot-secret",
 };
 
 const DISCORD_API = "https://discord.com/api/v10";
@@ -23,6 +23,25 @@ const parseJsonBody = async (req: Request) => {
   } catch {
     return null;
   }
+};
+
+const timingSafeEqual = (a: string, b: string): boolean => {
+  if (a.length !== b.length) return false;
+  const aBytes = new TextEncoder().encode(a);
+  const bBytes = new TextEncoder().encode(b);
+  let result = 0;
+  for (let i = 0; i < aBytes.length; i++) {
+    result |= aBytes[i] ^ bBytes[i];
+  }
+  return result === 0;
+};
+
+const verifyBotSecret = (req: Request): boolean => {
+  const expectedSecret = Deno.env.get("DISCORD_BOT_BRIDGE_SECRET");
+  if (!expectedSecret) return false;
+  const providedSecret = req.headers.get("x-bot-secret");
+  if (!providedSecret) return false;
+  return timingSafeEqual(expectedSecret, providedSecret);
 };
 
 async function discordFetch(path: string, init: RequestInit = {}) {
@@ -119,6 +138,12 @@ serve(async (req) => {
     // Discord -> DuelVerse: incoming chat message from the Java bot
     // ============================================================
     if (isDiscordWebhook && content && !requestType) {
+      // Require bot secret for all bot-originated messages
+      if (!verifyBotSecret(req)) {
+        console.warn(`[discord-bridge] unauthorized webhook attempt from ${discordUserId ?? "unknown"}`);
+        return jsonResponse({ error: "Unauthorized" }, 401);
+      }
+
       // Loop protection: only skip explicit bots
       const isBot = body?.author?.bot === true || body?.message?.author?.bot === true;
       if (isBot) {
@@ -573,14 +598,26 @@ serve(async (req) => {
     // Cleanup: delete Discord announcement messages for a closed duel room
     // ============================================================
     if (requestType === "cleanup_duel_messages") {
+      // Require JWT auth for cleanup actions
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader) return jsonResponse({ error: "No auth header" }, 401);
+      const token = authHeader.replace("Bearer ", "");
+      const { data: userData, error: userError } = await supabase.auth.getUser(token);
+      if (userError || !userData.user) return jsonResponse({ error: "Invalid user token" }, 401);
+
       const duelId = typeof body?.duelId === "string" ? body.duelId : null;
       if (!duelId) return jsonResponse({ error: "Missing duelId" }, 400);
 
       const { data: duel } = await supabase
         .from("live_duels")
-        .select("discord_messages")
+        .select("discord_messages, creator_id")
         .eq("id", duelId)
         .maybeSingle();
+
+      // Verify ownership: only the creator can cleanup their duel messages
+      if (duel && duel.creator_id !== userData.user.id) {
+        return jsonResponse({ error: "Not authorized to cleanup this duel" }, 403);
+      }
 
       const messages = Array.isArray((duel as any)?.discord_messages)
         ? (duel as any).discord_messages

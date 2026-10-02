@@ -104,14 +104,9 @@ export async function announceDuelRoom({
  */
 export async function cleanupDuelDiscordMessages(duelId: string): Promise<void> {
   try {
-    await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/discord-bridge`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "cleanup_duel_messages", duelId }),
-      },
-    );
+    await supabase.functions.invoke("discord-bridge", {
+      body: { type: "cleanup_duel_messages", duelId },
+    });
   } catch (err) {
     console.warn("[cleanupDuelDiscordMessages] failed:", err);
   }
