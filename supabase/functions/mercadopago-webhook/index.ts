@@ -14,6 +14,14 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const mpAccessToken = Deno.env.get('MERCADOPAGO_ACCESS_TOKEN');
+    if (!mpAccessToken) {
+      // Sem token não dá para confirmar o pagamento na API do MP; 500 faz o MP reenviar depois
+      console.error('[MercadoPago Webhook] MERCADOPAGO_ACCESS_TOKEN not configured');
+      return new Response(JSON.stringify({ error: 'MercadoPago access token not configured' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const body = await req.json();
@@ -222,7 +230,7 @@ Deno.serve(async (req) => {
 
     // Permitir pequena diferença de arredondamento (0.01)
     if (currency !== 'BRL' || Math.abs(paidAmount - orderAmount) > 0.01) {
-      // Nित: Return 200 (not 400) to prevent MP from retrying forever
+      // Responde 200 (não 400) para o MP não reenviar indefinidamente
       // Flag the order for manual review
       console.error('[MercadoPago Webhook] AMOUNT MISMATCH - MANUAL REVIEW REQUIRED:', {
         order_id: order.id,
@@ -233,17 +241,16 @@ Deno.serve(async (req) => {
         payment_id: paymentId,
       });
       
-      // Try to flag the order (may fail if constraint doesn't allow the status)
-      try {
-        await supabase
-          .from('duelcoins_orders')
-          .update({ 
-            status: 'amount_mismatch',
-            external_payment_id: String(paymentId),
-          })
-          .eq('id', order.id);
-      } catch (e) {
-        console.error('[MercadoPago Webhook] Could not update order status to amount_mismatch:', e);
+      // Marca o pedido para revisão manual (status é texto livre, sem CHECK)
+      const { error: flagError } = await supabase
+        .from('duelcoins_orders')
+        .update({
+          status: 'amount_mismatch',
+          external_payment_id: String(paymentId),
+        })
+        .eq('id', order.id);
+      if (flagError) {
+        console.error('[MercadoPago Webhook] Could not update order status to amount_mismatch:', flagError);
       }
       
       return new Response(JSON.stringify({ 
@@ -272,7 +279,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const result = creditResult as any;
+    const result = creditResult as { success?: boolean; already_paid?: boolean; message?: string } | null;
     if (!result?.success) {
       console.error('[MercadoPago Webhook] Credit failed:', result?.message);
       return new Response(JSON.stringify({ error: result?.message || 'Failed to credit' }), {
