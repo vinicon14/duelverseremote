@@ -10,7 +10,7 @@ function load(file, mocks = {}, globals = {}) {
   const code = ts.transpileModule(fs.readFileSync(file, 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, jsx: ts.JsxEmit.ReactJSX },
   }).outputText;
-  vm.runInNewContext(code, { exports, require: id => mocks[id] || (id === '@/utils/webrtcCandidates' ? load('src/utils/webrtcCandidates.ts') : {}), console, crypto, AbortController, setTimeout, clearTimeout, ...globals });
+  vm.runInNewContext(code, { exports, require: id => mocks[id] || (id === '@/utils/webrtcCandidates' ? load('src/utils/webrtcCandidates.ts') : id === '@/utils/webrtcSession' ? load('src/utils/webrtcSession.ts', {}, globals) : {}), console, crypto, AbortController, setTimeout, clearTimeout, ...globals });
   return exports;
 }
 const flush = () => new Promise(resolve => setImmediate(resolve));
@@ -204,4 +204,129 @@ test('Camera acquired after leaving the room is stopped instead of leaked', asyn
   const acquiring = find(tree).props.onClick(); cleanup();
   const fresh = videoTrack(); finishCapture(new Stream([fresh])); await acquiring;
   assert.equal(fresh.readyState, 'ended');
+});
+
+// ---- Duel signalling v2: session ids, queued renegotiation, ICE restart ----
+async function duel(userId, extra = {}) {
+  const e = environment();
+  e.mocks['@/utils/remoteAudioRegistry'] = { registerRemoteStream() {}, unregisterRemoteStream() {}, clearRemoteStreams() {} };
+  load('src/components/duel/WebRTCVideoCall.tsx', e.mocks, e.globals).WebRTCVideoCall({ duelId: 'd', userId, isCreator: true, ...extra }, null);
+  e.effects.find(f => f.toString().includes('const init ='))(); await flush(); await flush();
+  const ch = e.channels[0];
+  const signal = async (senderId, payload) => { await ch.handlers['broadcast:webrtc-signal']({ payload: { senderId, targetId: payload.broadcast ? undefined : userId, ...payload } }); await flush(); await flush(); };
+  const sent = type => ch.sent.filter(p => p.type === type);
+  return { e, ch, signal, sent };
+}
+
+test('Duel offerer rebuilds immediately when the opponent reloads, and ignores healthy heartbeats', async () => {
+  const { e, signal, sent } = await duel('a');
+  await signal('b', { type: 'ready', broadcast: true, v: 2, inst: 'tab1' });
+  assert.equal(e.pcs.length, 1); assert.equal(sent('offer').length, 1);
+  const offer = sent('offer')[0]; assert.ok(offer.pcId); assert.equal(offer.v, 2); assert.ok(offer.inst);
+  await signal('b', { type: 'answer', sdp: { type: 'answer', sdp: 'a=ice-ufrag:fresh\r\n' }, v: 2, inst: 'tab1', pcId: 'pb1', toPc: offer.pcId });
+  e.pcs[0].connectionState = 'connected';
+  const readyReplies = sent('ready').length;
+  await signal('b', { type: 'ready', broadcast: true, v: 2, inst: 'tab1' });
+  assert.equal(sent('offer').length, 1, 'healthy heartbeat must not renegotiate');
+  assert.equal(sent('ready').length, readyReplies, 'healthy heartbeat must not be answered');
+  await signal('b', { type: 'ready', broadcast: true, v: 2, inst: 'tab2' });
+  assert.equal(e.pcs.length, 2); assert.equal(e.pcs[0].connectionState, 'closed');
+  assert.equal(sent('offer').length, 2); assert.notEqual(sent('offer')[1].pcId, offer.pcId);
+});
+
+test('Legacy heartbeat (no inst) keeps the previous re-offer behaviour', async () => {
+  const { e, signal, sent } = await duel('a');
+  await signal('b', { type: 'ready', broadcast: true });
+  await signal('b', { type: 'answer', sdp: { type: 'answer', sdp: 'x' } });
+  e.pcs[0].connectionState = 'connected';
+  await signal('b', { type: 'ready', broadcast: true });
+  assert.equal(sent('offer').length, 2);
+});
+
+test('Non-offerer rebuilds its connection for an offer from a new remote PeerConnection', async () => {
+  const { e, signal, sent } = await duel('z');
+  await signal('a', { type: 'offer', sdp: { type: 'offer', sdp: 'a=ice-ufrag:fresh\r\n' }, v: 2, inst: 't1', pcId: 'pa1' });
+  assert.equal(sent('answer').length, 1); assert.equal(sent('answer')[0].toPc, 'pa1');
+  await signal('a', { type: 'offer', sdp: { type: 'offer', sdp: 'a=ice-ufrag:fresh\r\n' }, v: 2, inst: 't1', pcId: 'pa1' });
+  assert.equal(e.pcs.length, 1, 'renegotiation of the same PC reuses it');
+  await signal('a', { type: 'offer', sdp: { type: 'offer', sdp: 'a=ice-ufrag:fresh\r\n' }, v: 2, inst: 't1', pcId: 'pa2' });
+  assert.equal(e.pcs.length, 2); assert.equal(e.pcs[0].connectionState, 'closed');
+  assert.equal(sent('answer')[2].toPc, 'pa2');
+});
+
+test('Legacy offer rejected by a stale connection is retried on a fresh one', async () => {
+  const { e, signal, sent } = await duel('z');
+  await signal('a', { type: 'offer', sdp: { type: 'offer', sdp: 'a=ice-ufrag:fresh\r\n' } });
+  e.pcs[0].setRemoteDescription = async () => { throw new Error('Failed to set SSL role'); };
+  await signal('a', { type: 'offer', sdp: { type: 'offer', sdp: 'a=ice-ufrag:fresh\r\n' } });
+  assert.equal(e.pcs.length, 2); assert.equal(sent('answer').length, 2);
+});
+
+test('Answer addressed to a discarded PeerConnection is ignored', async () => {
+  const { e, signal } = await duel('a');
+  await signal('b', { type: 'ready', broadcast: true, v: 2, inst: 'tab1' });
+  await signal('b', { type: 'answer', sdp: { type: 'answer', sdp: 'x' }, v: 2, inst: 'tab1', toPc: 'old-pc' });
+  assert.equal(e.pcs[0].remoteDescription, null);
+});
+
+test('Renegotiation requested while an offer is in flight is replayed after the answer', async () => {
+  const { signal, sent } = await duel('a');
+  await signal('b', { type: 'ready', broadcast: true, v: 2, inst: 'tab1' });
+  await signal('b', { type: 'request-offer', v: 2, inst: 'tab1' });
+  assert.equal(sent('offer').length, 1, 'no second offer while waiting for the answer');
+  await signal('b', { type: 'answer', sdp: { type: 'answer', sdp: 'x' }, v: 2, inst: 'tab1', toPc: sent('offer')[0].pcId });
+  await flush();
+  assert.equal(sent('offer').length, 2);
+});
+
+test('ICE candidates are batched for v2 peers and sent one by one to legacy peers', async () => {
+  const { e, signal, sent } = await duel('a');
+  await signal('b', { type: 'ready', broadcast: true, v: 2, inst: 'tab1' });
+  await signal('c', { type: 'ready', broadcast: true });
+  const cand = c => ({ candidate: { toJSON: () => ({ candidate: c }) } });
+  ['1', '2', '3'].forEach(c => e.pcs[0].onicecandidate(cand(c)));
+  ['1', '2', '3'].forEach(c => e.pcs[1].onicecandidate(cand(c)));
+  e.pcs[0].onicecandidate({ candidate: null });
+  const toB = sent('ice-candidate').filter(p => p.targetId === 'b');
+  const toC = sent('ice-candidate').filter(p => p.targetId === 'c');
+  assert.equal(toB.length, 1); assert.equal(toB[0].candidates.length, 3);
+  assert.equal(toC.length, 3); assert.ok(toC.every(p => p.candidate && !p.candidates));
+});
+
+test('Receiver accepts a batch of candidates and drops candidates for another local PC', async () => {
+  const { e, signal } = await duel('z');
+  await signal('a', { type: 'offer', sdp: { type: 'offer', sdp: 'a=ice-ufrag:fresh\r\n' }, v: 2, inst: 't1', pcId: 'pa1' });
+  const local = e.channels[0].sent.find(p => p.type === 'answer').pcId;
+  await signal('a', { type: 'ice-candidate', v: 2, inst: 't1', pcId: 'pa1', toPc: local, candidates: [{ candidate: 'c1', usernameFragment: 'fresh' }, { candidate: 'c2', usernameFragment: 'fresh' }] });
+  await signal('a', { type: 'ice-candidate', v: 2, inst: 't1', pcId: 'pa1', toPc: 'old', candidate: { candidate: 'c3', usernameFragment: 'fresh' } });
+  assert.deepEqual(e.pcs[0].accepted.map(c => c.candidate), ['c1', 'c2']);
+});
+
+test('Non-offerer asks the offerer for an ICE restart when ICE fails', async () => {
+  const { e, signal, sent } = await duel('z');
+  await signal('a', { type: 'offer', sdp: { type: 'offer', sdp: 'a=ice-ufrag:fresh\r\n' }, v: 2, inst: 't1', pcId: 'pa1' });
+  e.pcs[0].iceConnectionState = 'failed'; e.pcs[0].oniceconnectionstatechange();
+  const req = sent('request-offer').find(p => p.targetId === 'a');
+  assert.ok(req); assert.equal(req.iceRestart, true);
+  assert.notEqual(e.pcs[0].connectionState, 'closed', 'connection is kept while restarting');
+});
+
+test('Offerer answers an ICE restart request with an iceRestart offer on the same connection', async () => {
+  const { e, signal, sent } = await duel('a');
+  await signal('b', { type: 'ready', broadcast: true, v: 2, inst: 'tab1' });
+  await signal('b', { type: 'answer', sdp: { type: 'answer', sdp: 'x' }, v: 2, inst: 'tab1', toPc: sent('offer')[0].pcId });
+  const args = []; const orig = e.pcs[0].createOffer.bind(e.pcs[0]);
+  e.pcs[0].createOffer = async o => { args.push(o); return orig(o); };
+  await signal('b', { type: 'request-offer', v: 2, inst: 'tab1', iceRestart: true });
+  assert.equal(e.pcs.length, 1); assert.equal(args.length, 1); assert.equal(args[0].iceRestart, true);
+  assert.equal(sent('offer').length, 2);
+});
+
+test('A late leave from the previous tab does not drop the new connection', async () => {
+  const { e, signal } = await duel('a');
+  await signal('b', { type: 'ready', broadcast: true, v: 2, inst: 'tab2' });
+  await signal('b', { type: 'leave', broadcast: true, v: 2, inst: 'tab1' });
+  assert.notEqual(e.pcs[0].connectionState, 'closed');
+  await signal('b', { type: 'leave', broadcast: true, v: 2, inst: 'tab2' });
+  assert.equal(e.pcs[0].connectionState, 'closed');
 });

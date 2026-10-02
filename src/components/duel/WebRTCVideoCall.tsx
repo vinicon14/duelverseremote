@@ -2,6 +2,26 @@ import { useEffect, useRef, useState, useCallback, useImperativeHandle, forwardR
 import { supabase } from "@/integrations/supabase/client";
 import { ensureIceServers, buildPcConfig, getIceServers } from "@/utils/iceServers";
 import { queueRemoteCandidate, flushRemoteCandidates } from "@/utils/webrtcCandidates";
+import {
+  SIGNAL_PROTOCOL_VERSION,
+  newSignalId,
+  decideOffer,
+  decideAnswer,
+  decideCandidate,
+  remoteInstanceChanged,
+  pushDeferred,
+  takeDeferredFor,
+  createCandidateBatcher,
+  createIceRecovery,
+  sampleInbound,
+  assessMediaHealth,
+  applyVideoBitrateCap,
+  OPPONENT_VIDEO_MAX_BITRATE,
+  SPECTATOR_VIDEO_MAX_BITRATE,
+  type DeferredCandidate,
+  type InboundSample,
+  type MediaHealth,
+} from "@/utils/webrtcSession";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Mic, MicOff, Video, VideoOff, Loader2, LayoutGrid, PictureInPicture2, ZoomIn, ZoomOut, Settings, Smartphone, Volume2 } from "lucide-react";
@@ -83,6 +103,18 @@ interface DuelSignal {
   rebuild?: boolean;
   sdp?: RTCSessionDescriptionInit;
   candidate?: RTCIceCandidateInit;
+  /** v2: several candidates batched in a single broadcast. */
+  candidates?: RTCIceCandidateInit[];
+  /** v2: ask the offerer for an ICE restart instead of a full rebuild. */
+  iceRestart?: boolean;
+  /** Signalling protocol version of the sender (absent = legacy client). */
+  v?: number;
+  /** Sender's mount id (changes on reload / re-entry). */
+  inst?: string;
+  /** Sender's RTCPeerConnection id for this pair. */
+  pcId?: string;
+  /** Receiver's RTCPeerConnection id the message is meant for. */
+  toPc?: string;
 }
 
 interface PeerState {
@@ -93,6 +125,23 @@ interface PeerState {
   createdAt: number;
   lastVideoTrackAt: number | null;
   pendingCandidates: RTCIceCandidateInit[];
+  /** Ids that tie offers/answers/candidates to one PC generation on each side. */
+  localPcId: string;
+  remotePcId: string | null;
+  remoteInst: string | null;
+  /** Candidates of a remote PC whose description has not arrived yet. */
+  deferred: DeferredCandidate[];
+  /** A negotiation was requested while another was in flight. */
+  pendingNegotiation: boolean;
+  pendingIceRestart: boolean;
+  offerSentAt: number;
+  recovery: ReturnType<typeof createIceRecovery>;
+  batcher: ReturnType<typeof createCandidateBatcher> | null;
+  restartIce: () => void;
+  lastSample: InboundSample | null;
+  health: MediaHealth;
+  transportStalls: number;
+  audioRequests: number;
 }
 
 export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCallProps>(({
@@ -128,6 +177,18 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   const peersRef = useRef<Map<string, PeerState>>(new Map());
   const localStreamRef = useRef<MediaStream | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  // Identifies this mount. A reload/re-entry gets a new id, which lets the other
+  // side discard its stale RTCPeerConnection instead of negotiating against it.
+  const instanceIdRef = useRef<string>(newSignalId());
+  // Remote peers' signalling protocol version (absent = legacy client).
+  const peerProtocolRef = useRef<Map<string, number>>(new Map());
+  const sendSignal = useCallback((payload: Omit<DuelSignal, "senderId" | "v" | "inst">) => {
+    return channelRef.current?.send({
+      type: "broadcast",
+      event: "webrtc-signal",
+      payload: { ...payload, senderId: userId, v: SIGNAL_PROTOCOL_VERSION, inst: instanceIdRef.current },
+    });
+  }, [userId]);
 
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
@@ -344,8 +405,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       if (iAmOfferer) {
         void sendOfferRef.current(peerId);
       } else {
-        channelRef.current?.send({ type: "broadcast", event: "webrtc-signal",
-          payload: { type: "request-offer", senderId: userId, targetId: peerId } });
+        void sendSignal({ type: "request-offer", targetId: peerId });
       }
     })).catch(error => {
       console.warn("[WebRTC] Track publication failed", error);
@@ -357,7 +417,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       localVideoRef.current.srcObject = outboundStream;
       localVideoRef.current.play?.().catch(() => {});
     }
-  }, [getActiveOutboundStream, userId]);
+  }, [getActiveOutboundStream, userId, sendSignal]);
   republishRef.current = republishOutbound;
 
   useEffect(() => {
@@ -548,6 +608,8 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   const removePeer = useCallback((peerId: string) => {
     const peer = peersRef.current.get(peerId);
     if (peer) {
+      peer.recovery.dispose();
+      peer.batcher?.cancel();
       peer.pc.onicecandidate = null;
       peer.pc.oniceconnectionstatechange = null;
       peer.pc.onconnectionstatechange = null;
@@ -581,9 +643,70 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     return userId < remotePeerId;
   }, [isSpectator, userId]);
 
-  const createPeerConnection = useCallback((remotePeerId: string) => {
+  /** Apply the uplink cap for this pair (spectators get a lower one). */
+  const capPeerBitrate = useCallback((remotePeerId: string, peer: PeerState) => {
+    void applyVideoBitrateCap(
+      peer.pc,
+      spectatorPeersRef.current.has(remotePeerId) ? SPECTATOR_VIDEO_MAX_BITRATE : OPPONENT_VIDEO_MAX_BITRATE,
+    );
+  }, []);
+
+  // Single entry point for creating offers (initial, renegotiation, ICE restart).
+  // A request that arrives while another offer is in flight is remembered and
+  // replayed once the answer lands, instead of being silently dropped (that
+  // left the opponent on a black panel after a camera change).
+  const negotiate = useCallback(async (
+    remotePeerId: string,
+    peer: PeerState,
+    opts: { iceRestart?: boolean; fromBrowser?: boolean } = {},
+  ) => {
+    if (peersRef.current.get(remotePeerId) !== peer) return;
+    const { pc } = peer;
+    if (pc.signalingState === "closed") return;
+    if (peer.makingOffer || pc.signalingState !== "stable") {
+      // The browser re-fires negotiationneeded by itself once signalling is
+      // stable again (if still needed); only explicit requests are queued.
+      if (opts.fromBrowser && !opts.iceRestart) return;
+      peer.pendingNegotiation = true;
+      if (opts.iceRestart) peer.pendingIceRestart = true;
+      return;
+    }
+    const iceRestart = !!opts.iceRestart || peer.pendingIceRestart;
+    peer.pendingNegotiation = false;
+    peer.pendingIceRestart = false;
+    try {
+      peer.makingOffer = true;
+      pc.setConfiguration({ ...pc.getConfiguration(), iceServers: getIceServers(), iceTransportPolicy: "all" });
+      const offer = await pc.createOffer(iceRestart ? { iceRestart: true } : undefined);
+      if (peersRef.current.get(remotePeerId) !== peer) return;
+      await pc.setLocalDescription(offer);
+      peer.offerSentAt = Date.now();
+      await sendSignal({
+        type: "offer",
+        sdp: pc.localDescription ?? undefined,
+        targetId: remotePeerId,
+        isSpectator,
+        pcId: peer.localPcId,
+        toPc: peer.remotePcId ?? undefined,
+      });
+      console.log(`[WebRTC] Offer sent to: ${remotePeerId}${iceRestart ? " (ICE restart)" : ""}`);
+    } catch (err) {
+      console.warn("[WebRTC] Offer failed:", remotePeerId, err);
+    } finally {
+      peer.makingOffer = false;
+    }
+  }, [isSpectator, sendSignal]);
+
+  // Full rebuild of one pair. The offerer rebuilds and offers; the other side
+  // asks the offerer to do it, and keeps its current connection (and the last
+  // frame) until the new offer arrives instead of tearing everything down.
+  const rebuildPeerRef = useRef<(remotePeerId: string) => void>(() => {});
+
+  const createPeerConnection = useCallback((remotePeerId: string, opts: { inst?: string | null } = {}) => {
     const existing = peersRef.current.get(remotePeerId);
     if (existing) {
+      existing.recovery.dispose();
+      existing.batcher?.cancel();
       // Detach callbacks before closing. Otherwise the old connection's delayed
       // "closed" event can remove the brand-new replacement from the map.
       existing.pc.oniceconnectionstatechange = null;
@@ -605,6 +728,19 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
 
     const pc = new RTCPeerConnection(buildPcConfig());
 
+    const restartIce = () => {
+      const current = peersRef.current.get(remotePeerId);
+      if (!current || current.pc !== pc) return;
+      if (canInitiateOffer(remotePeerId)) {
+        console.warn("[WebRTC] ICE restart (offerer) for:", remotePeerId);
+        void ensureIceServers({ background: true }).then(() => negotiate(remotePeerId, current, { iceRestart: true }));
+      } else {
+        // Only the elected offerer may create offers (no glare). Ask it.
+        console.warn("[WebRTC] Asking offerer for ICE restart:", remotePeerId);
+        void sendSignal({ type: "request-offer", targetId: remotePeerId, isSpectator, iceRestart: true });
+      }
+    };
+
     const peerState: PeerState = {
       pc,
       stream: null,
@@ -613,7 +749,41 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       createdAt: Date.now(),
       lastVideoTrackAt: null,
       pendingCandidates: [],
+      localPcId: newSignalId(),
+      remotePcId: null,
+      remoteInst: opts.inst ?? existing?.remoteInst ?? null,
+      deferred: existing?.deferred ?? [],
+      pendingNegotiation: false,
+      pendingIceRestart: false,
+      offerSentAt: 0,
+      recovery: createIceRecovery({
+        restart: () => restartIce(),
+        rebuild: () => {
+          if (peersRef.current.get(remotePeerId)?.pc === pc) rebuildPeerRef.current(remotePeerId);
+        },
+        remove: () => {
+          if (peersRef.current.get(remotePeerId)?.pc === pc) {
+            console.warn("[WebRTC] Peer lost after recovery attempts:", remotePeerId);
+            removePeer(remotePeerId);
+          }
+        },
+      }),
+      batcher: null,
+      restartIce,
+      lastSample: null,
+      health: "unknown",
+      transportStalls: 0,
+      audioRequests: 0,
     };
+    peerState.batcher = createCandidateBatcher((candidates) => {
+      void sendSignal({
+        type: "ice-candidate",
+        candidates,
+        targetId: remotePeerId,
+        pcId: peerState.localPcId,
+        toPc: peerState.remotePcId ?? undefined,
+      });
+    });
     peersRef.current.set(remotePeerId, peerState);
 
     // Add local tracks (or recvonly transceivers for spectators)
@@ -644,81 +814,38 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     }
 
     pc.onicecandidate = (event) => {
-      if (event.candidate && channelRef.current) {
-        channelRef.current.send({
-          type: "broadcast",
-          event: "webrtc-signal",
-          payload: {
-            type: "ice-candidate",
-            candidate: event.candidate.toJSON(),
-            senderId: userId,
-            targetId: remotePeerId,
-          },
-        });
+      if (!event.candidate) {
+        // End of gathering: send whatever is still buffered right away.
+        peerState.batcher?.flushNow();
+        return;
       }
+      if (!channelRef.current) return;
+      const candidate = event.candidate.toJSON();
+      // Batch only toward clients that understand it; legacy clients (old PWA
+      // cache) still get one candidate per message.
+      if ((peerProtocolRef.current.get(remotePeerId) ?? 0) >= 2 && peerState.batcher) {
+        peerState.batcher.push(candidate);
+        return;
+      }
+      void sendSignal({
+        type: "ice-candidate",
+        candidate,
+        targetId: remotePeerId,
+        pcId: peerState.localPcId,
+        toPc: peerState.remotePcId ?? undefined,
+      });
     };
 
-    // Monitor ICE connection and auto-recover or remove disconnected peer
-    const attemptIceRestart = () => {
-      if (!canInitiateOffer(remotePeerId) || peerState.makingOffer) return;
-      try {
-        pc.setConfiguration({ ...pc.getConfiguration(), iceServers: getIceServers(), iceTransportPolicy: "all" });
-        pc.restartIce();
-        if (pc.signalingState === "stable") {
-          peerState.makingOffer = true;
-          pc.createOffer({ iceRestart: true })
-            .then((offer) => pc.setLocalDescription(offer))
-            .then(() => {
-              channelRef.current?.send({
-                type: "broadcast",
-                event: "webrtc-signal",
-                payload: {
-                  type: "offer",
-                  sdp: pc.localDescription,
-                  senderId: userId,
-                  targetId: remotePeerId,
-                },
-              });
-            })
-            .catch((err) => console.warn("[WebRTC] ICE restart offer failed:", err))
-            .finally(() => {
-              peerState.makingOffer = false;
-            });
-        }
-      } catch (err) {
-        peerState.makingOffer = false;
-        console.warn("[WebRTC] restartIce failed:", err);
-      }
-    };
-
+    // ICE recovery: grace period for short drops, then ICE restart (requested
+    // from the offerer when we are not it), then a full rebuild, then removal.
     pc.oniceconnectionstatechange = () => {
       const state = pc.iceConnectionState;
       console.log(`[WebRTC] ICE state ${remotePeerId}: ${state}`);
-
-      if (state === 'failed' || state === 'disconnected') {
-        // Opera/Brave and VPN setups often fail the first ICE pass; always try a
-        // restart (relay candidates included) before dropping the peer.
-        console.warn(`[WebRTC] ICE ${state}, attempting restart for:`, remotePeerId);
-        void ensureIceServers().then(() => {
-          if (peersRef.current.get(remotePeerId) === peerState) attemptIceRestart();
-        });
-        setTimeout(() => {
-          if (peersRef.current.get(remotePeerId) === peerState && pc.iceConnectionState === 'failed') {
-            console.warn("[WebRTC] Second restart attempt for:", remotePeerId);
-            attemptIceRestart();
-          }
-        }, 5000);
-        setTimeout(() => {
-          if (peersRef.current.get(remotePeerId) === peerState && (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed')) {
-            // Rebuild with fresh ICE servers while preserving direct candidates.
-            console.warn("[WebRTC] Peer lost after restart attempts:", remotePeerId);
-            removePeer(remotePeerId);
-          }
-        }, 15000);
-      } else if (state === 'connected' || state === 'completed') {
-        // Connectivity restored; no permanent transport restriction is applied.
-      } else if (state === 'closed') {
-
+      if (peersRef.current.get(remotePeerId) !== peerState) return;
+      peerState.recovery.onStateChange(state);
+      if (state === "connected" || state === "completed") {
+        capPeerBitrate(remotePeerId, peerState);
+      } else if (state === "closed") {
         removePeer(remotePeerId);
       }
     };
@@ -774,31 +901,13 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     };
 
 
-    pc.onnegotiationneeded = async () => {
+    pc.onnegotiationneeded = () => {
       if (!canInitiateOffer(remotePeerId)) return;
-      try {
-        peerState.makingOffer = true;
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-        channelRef.current?.send({
-          type: "broadcast",
-          event: "webrtc-signal",
-          payload: {
-            type: "offer",
-            sdp: pc.localDescription,
-            senderId: userId,
-            targetId: remotePeerId,
-          },
-        });
-      } catch (err) {
-        console.error("[WebRTC] negotiation error:", err);
-      } finally {
-        peerState.makingOffer = false;
-      }
+      void negotiate(remotePeerId, peerState, { fromBrowser: true });
     };
 
     return pc;
-  }, [userId, isSpectator, audioBroadcastOnly, getActiveOutboundStream, canInitiateOffer, removePeer]);
+  }, [isSpectator, audioBroadcastOnly, getActiveOutboundStream, canInitiateOffer, removePeer, negotiate, sendSignal, capPeerBitrate]);
 
   // Player-side: build/refresh a connection toward a peer and send an offer.
   // Only peers that actually have media (the duelists) create offers — this
@@ -809,11 +918,18 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
 
     const channel = channelRef.current;
     if (!channel) return;
-    await ensureIceServers();
+    await ensureIceServers({ background: true });
     if (channelRef.current !== channel) return;
     let peer = peersRef.current.get(remotePeerId);
+    // "disconnected" is usually transient (Wi-Fi/4G handover) and ICE recovers
+    // by itself or via ICE restart. Only treat it as dead after a while;
+    // rebuilding on every heartbeat during a blip turned short drops into
+    // multi-second black screens.
+    const troubleFor = peer?.recovery.troubleFor() ?? 0;
     const isDead =
-      !!peer && ["failed", "closed", "disconnected"].includes(peer.pc.connectionState);
+      !!peer &&
+      (["failed", "closed"].includes(peer.pc.connectionState) ||
+        (peer.pc.connectionState === "disconnected" && troubleFor > 8000));
     const isStuck =
       !!peer &&
       peer.pc.signalingState !== "stable" &&
@@ -824,32 +940,34 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       createPeerConnection(remotePeerId);
       peer = peersRef.current.get(remotePeerId);
     }
-    if (!peer || peer.makingOffer || peer.pc.signalingState !== "stable") return;
-
-    try {
-      peer.makingOffer = true;
-      peer.pc.setConfiguration({ ...peer.pc.getConfiguration(), iceServers: getIceServers(), iceTransportPolicy: "all" });
-      const offer = await peer.pc.createOffer();
-      await peer.pc.setLocalDescription(offer);
-      await channelRef.current?.send({
-        type: "broadcast",
-        event: "webrtc-signal",
-        payload: {
-          type: "offer",
-          sdp: peer.pc.localDescription,
-          senderId: userId,
-          targetId: remotePeerId,
-          isSpectator,
-        },
-      });
-      console.log("[WebRTC] Offer sent to:", remotePeerId);
-    } catch (err) {
-      console.warn("[WebRTC] Offer failed:", remotePeerId, err);
-    } finally {
-      peer.makingOffer = false;
+    if (!peer) return;
+    // An answer that never arrived (lost message) must not block every future
+    // renegotiation of a connection that is otherwise healthy.
+    if (
+      peer.pc.signalingState === "have-local-offer" &&
+      !peer.makingOffer &&
+      peer.offerSentAt > 0 &&
+      Date.now() - peer.offerSentAt > 10000
+    ) {
+      try {
+        await peer.pc.setLocalDescription({ type: "rollback" } as RTCSessionDescriptionInit);
+      } catch (err) {
+        console.warn("[WebRTC] rollback of unanswered offer failed:", err);
+      }
     }
-  }, [userId, isSpectator, createPeerConnection, canInitiateOffer]);
+    await negotiate(remotePeerId, peer);
+  }, [userId, createPeerConnection, canInitiateOffer, negotiate]);
   sendOfferRef.current = (peerId: string) => sendOfferTo(peerId);
+
+  rebuildPeerRef.current = (remotePeerId: string) => {
+    if (canInitiateOffer(remotePeerId)) {
+      console.warn("[WebRTC] Rebuilding peer:", remotePeerId);
+      void sendOfferTo(remotePeerId, true);
+    } else {
+      console.warn("[WebRTC] Asking offerer to rebuild peer:", remotePeerId);
+      void sendSignal({ type: "request-offer", targetId: remotePeerId, isSpectator, rebuild: true });
+    }
+  };
 
   // Spectator-side: never offer (receive-only). Ask the player to (re)offer until
   // BOTH audio and video are flowing, so spectators always see AND hear everyone.
@@ -867,6 +985,9 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       ["new", "connecting"].includes(peer.pc.connectionState) &&
       Date.now() - peer.createdAt < 20000;
     if (handshaking) return;
+    // ICE recovery (restart/rebuild) is already running for this peer.
+    const recovering = (peer.recovery.troubleFor() ?? Infinity) < 20000;
+    if (recovering) return;
     const videoTracks = peer?.stream?.getVideoTracks() ?? [];
     const liveVideo = videoTracks.some((t) => t.readyState === "live");
     const connected = peer?.pc.connectionState === "connected";
@@ -874,8 +995,11 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     // A track can stay "live" while the browser reports it as muted (sender
     // suspended, network stall). The panel freezes with no state change, which is
     // exactly the "spectator stopped working out of nowhere" symptom. Track how
-    // long it has been muted and rebuild after a grace period.
-    const frozen = liveVideo && videoTracks.every((t) => t.muted);
+    // long it has been muted and rebuild after a grace period — unless stats show
+    // the network path is alive (audio/RTCP still arriving): then the player's
+    // camera is the one stalled and rebuilding only interrupts the audio too.
+    const frozen =
+      liveVideo && videoTracks.every((t) => t.muted) && peer.health !== "video-stalled";
     const now = Date.now();
     if (frozen) {
       if (!frozenVideoSinceRef.current.has(playerId)) {
@@ -889,20 +1013,18 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
 
     // Audio can be missing while video is perfectly fine (the player published
     // the mic later, or the first offer had no audio m-line). In that case ask
-    // for a fresh offer WITHOUT tearing down the working video connection.
+    // for a fresh offer WITHOUT tearing down the working video connection — but
+    // only a few times: a player without a microphone used to receive a
+    // renegotiation request from every spectator every 6 s, forever.
     const liveAudio = (peer?.stream?.getAudioTracks() ?? []).some((t) => t.readyState === "live");
     if (connected && liveVideo && !frozenTooLong) {
-      if (!liveAudio) {
-        channelRef.current?.send({
-          type: "broadcast",
-          event: "webrtc-signal",
-          payload: {
-            type: "request-offer",
-            senderId: userId,
-            targetId: playerId,
-            isSpectator: true,
-            rebuild: false,
-          },
+      if (!liveAudio && peer.audioRequests < 3) {
+        peer.audioRequests += 1;
+        void sendSignal({
+          type: "request-offer",
+          targetId: playerId,
+          isSpectator: true,
+          rebuild: false,
         });
       }
       return;
@@ -922,22 +1044,17 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     }
 
 
-    channelRef.current?.send({
-      type: "broadcast",
-      event: "webrtc-signal",
-      payload: {
-        type: "request-offer",
-        senderId: userId,
-        targetId: playerId,
-        isSpectator: true,
-        // A returning spectator has the same user id, so the player's previous
-        // PeerConnection may still look connected for several seconds after the
-        // old tab/route was closed. Force a fresh player-side connection whenever
-        // this mount has no peer yet instead of negotiating against that stale PC.
-        rebuild: !peer || stalled,
-      },
+    void sendSignal({
+      type: "request-offer",
+      targetId: playerId,
+      isSpectator: true,
+      // A returning spectator has the same user id, so the player's previous
+      // PeerConnection may still look connected for several seconds after the
+      // old tab/route was closed. Force a fresh player-side connection whenever
+      // this mount has no peer yet instead of negotiating against that stale PC.
+      rebuild: !peer || stalled,
     });
-  }, [isSpectator, userId, removePeer]);
+  }, [isSpectator, userId, removePeer, sendSignal]);
 
 
   const handleSignal = useCallback(
@@ -949,10 +1066,13 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
 
       const remotePeerId = payload.senderId;
       if (typeof remotePeerId !== "string") return;
+      if (typeof payload.v === "number") peerProtocolRef.current.set(remotePeerId, payload.v);
       if (["ready", "offer", "request-offer"].includes(payload.type)) {
         const channel = channelRef.current;
         if (!channel) return;
-        await ensureIceServers();
+        // Never make a signal wait for the edge function once ICE servers were
+        // loaded at startup; a refresh happens in the background.
+        await ensureIceServers({ background: true });
         if (channelRef.current !== channel) return;
       }
 
@@ -964,17 +1084,32 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         setSpectatorPeerIds((prev) => (prev.includes(remotePeerId) ? prev : [...prev, remotePeerId]));
       }
 
-      // A spectator asked us (a player) to (re)send our offer.
+      // A peer (spectator, or the non-offering duelist) asked us to (re)send our offer.
       if (payload.type === "request-offer") {
         if (isSpectator && !audioBroadcastOnly) return;
         const current = peersRef.current.get(remotePeerId);
+        const instChanged = remoteInstanceChanged(current, payload);
+        // ICE restart keeps the connection (and the picture) while new network
+        // paths are probed — much cheaper than a rebuild.
+        if (
+          payload.iceRestart &&
+          !payload.rebuild &&
+          !instChanged &&
+          current &&
+          current.pc.remoteDescription &&
+          canInitiateOffer(remotePeerId)
+        ) {
+          await negotiate(remotePeerId, current, { iceRestart: true });
+          return;
+        }
         // Ignore rebuild requests for a connection that was just created and is
         // still negotiating; rebuilding it again only restarts the handshake.
         const fresh =
           !!current &&
+          !instChanged &&
           Date.now() - current.createdAt < 8000 &&
           !["failed", "closed"].includes(current.pc.connectionState);
-        await sendOfferTo(remotePeerId, !!payload.rebuild && !fresh);
+        await sendOfferTo(remotePeerId, (!!payload.rebuild || instChanged) && !fresh);
         return;
       }
 
@@ -982,6 +1117,8 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       // the spectator's old PeerConnection alive and reuse it when the same user
       // returns, preventing the fresh receive-only connection from negotiating.
       if (payload.type === "leave") {
+        // A late "leave" from a previous tab must not kill the new tab's connection.
+        if (remoteInstanceChanged(peersRef.current.get(remotePeerId), payload)) return;
         removePeer(remotePeerId);
         return;
       }
@@ -1015,17 +1152,42 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
           !!existingPeer &&
           Date.now() - existingPeer.createdAt > 30000 &&
           !hasLiveVideo;
+        const troubleFor = existingPeer?.recovery.troubleFor() ?? 0;
         const isDead =
           !!existingPeer &&
-          ["failed", "closed", "disconnected"].includes(existingPeer.pc.connectionState);
-        if (!existingPeer || isDead || spectatorMissingVideo) {
+          (["failed", "closed"].includes(existingPeer.pc.connectionState) ||
+            (existingPeer.pc.connectionState === "disconnected" && troubleFor > 8000));
+        // The other side reloaded/re-entered: its old PC is gone even if ours
+        // still looks "connected". Start over right away instead of waiting
+        // ~30 s for consent-freshness to fail.
+        const instChanged = remoteInstanceChanged(existingPeer, payload);
+        let rebuilt = false;
+        if (!existingPeer || isDead || spectatorMissingVideo || instChanged) {
           if (spectatorMissingVideo) {
             console.warn("[WebRTC] Spectator is missing player video; rebuilding peer:", remotePeerId);
           }
-          createPeerConnection(remotePeerId);
+          if (instChanged) {
+            console.warn("[WebRTC] Peer re-entered the room; rebuilding connection:", remotePeerId);
+          }
+          createPeerConnection(remotePeerId, { inst: payload.inst ?? null });
+          rebuilt = true;
+        } else if (!existingPeer.remoteInst && payload.inst) {
+          existingPeer.remoteInst = payload.inst;
         }
         const peer = peersRef.current.get(remotePeerId);
         if (!peer) return;
+
+        // A v2 peer that re-announces itself while our connection to it is
+        // healthy is only heartbeating for someone else's stream. Re-offering /
+        // replying to it every 4 s (×N spectators, broadcast to everyone in the
+        // room) burned the project's Realtime message quota and triggered
+        // "Too many messages per second" disconnects. Legacy peers keep the old
+        // behaviour because they cannot tell us they reloaded.
+        const healthy =
+          !rebuilt &&
+          !!payload.inst &&
+          peer.pc.connectionState === "connected" &&
+          !!peer.pc.remoteDescription;
 
         // Player side: proactively offer to whoever announced itself, so a
         // spectator never waits on a negotiationneeded event that may not fire.
@@ -1036,7 +1198,10 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
           !!peer.pc.remoteDescription &&
           ["new", "connecting"].includes(peer.pc.connectionState) &&
           Date.now() - peer.createdAt < 15000;
-        if ((!isSpectator || audioBroadcastOnly) && !stillHandshaking) {
+        // Even for a healthy pair, allow one self-healing renegotiation every
+        // 30 s while the remote keeps heartbeating (it is missing some stream).
+        const recentlyOffered = Date.now() - peer.offerSentAt < 30000;
+        if ((!isSpectator || audioBroadcastOnly) && !stillHandshaking && !(healthy && recentlyOffered)) {
           void sendOfferTo(remotePeerId);
         }
 
@@ -1047,16 +1212,11 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         // other peer's initial broadcast ready and never negotiates, so audio/video
         // never arrive. Targeted replies do NOT trigger further replies (guarded by
         // payload.targetId below), avoiding an infinite ping-pong loop.
-        if (!payload.targetId) {
-          channelRef.current?.send({
-            type: "broadcast",
-            event: "webrtc-signal",
-            payload: {
-              type: "ready",
-              senderId: userId,
-              targetId: remotePeerId,
-              isSpectator,
-            },
+        if (!payload.targetId && !healthy) {
+          void sendSignal({
+            type: "ready",
+            targetId: remotePeerId,
+            isSpectator,
           });
         }
 
@@ -1064,19 +1224,41 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       }
 
 
-      // Ensure peer connection exists
-      if (!peersRef.current.has(remotePeerId)) {
-        createPeerConnection(remotePeerId);
+      // Ensure peer connection exists — and that it belongs to the same remote
+      // session as this message. An offer from a brand-new remote PC (reload,
+      // remote rebuild) cannot be applied to our old one: ICE credentials and
+      // the DTLS fingerprint differ and setRemoteDescription fails.
+      let peer = peersRef.current.get(remotePeerId);
+      if (payload.type === "offer" && peer && decideOffer(peer, payload) === "rebuild") {
+        console.warn("[WebRTC] Offer from a new remote session; rebuilding peer:", remotePeerId);
+        createPeerConnection(remotePeerId, { inst: payload.inst ?? null });
+        peer = peersRef.current.get(remotePeerId);
       }
-      const peer = peersRef.current.get(remotePeerId);
+      if (!peer) {
+        if (payload.type !== "offer" && payload.type !== "ice-candidate") return;
+        createPeerConnection(remotePeerId, { inst: payload.inst ?? null });
+        peer = peersRef.current.get(remotePeerId);
+      }
       if (!peer) return;
-      const pc = peer.pc;
+      if (!peer.remoteInst && payload.inst) peer.remoteInst = payload.inst;
+      let pc = peer.pc;
       // Receive-only spectators must always accept the player's authoritative
       // offer instead of deciding politeness from arbitrary UUID ordering.
       const polite = isSpectator || userId < remotePeerId;
 
       try {
         if (payload.type === "offer" || payload.type === "answer") {
+          if (!payload.sdp) return;
+          if (payload.type === "answer") {
+            const decision = decideAnswer(peer, payload);
+            if (decision === "drop") return;
+            if (decision === "rebuild") {
+              // The other side re-entered and answered an offer made for its
+              // previous tab. Start a clean negotiation.
+              if (canInitiateOffer(remotePeerId)) await sendOfferTo(remotePeerId, true);
+              return;
+            }
+          }
           const description = new RTCSessionDescription(payload.sdp);
           const offerCollision =
             payload.type === "offer" &&
@@ -1104,44 +1286,74 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
           }
 
           pc.setConfiguration({ ...pc.getConfiguration(), iceServers: getIceServers(), iceTransportPolicy: "all" });
-          await pc.setRemoteDescription(description);
+          try {
+            await pc.setRemoteDescription(description);
+          } catch (err) {
+            // Legacy remotes do not send session ids. If their offer cannot be
+            // applied to our current connection it almost always comes from a
+            // fresh remote PC: rebuild once and retry instead of staying stuck.
+            if (payload.type !== "offer") throw err;
+            console.warn("[WebRTC] Offer rejected by current connection; rebuilding and retrying:", err);
+            createPeerConnection(remotePeerId, { inst: payload.inst ?? peer.remoteInst });
+            const replacement = peersRef.current.get(remotePeerId);
+            if (!replacement) return;
+            peer = replacement;
+            pc = replacement.pc;
+            await pc.setRemoteDescription(description);
+          }
+          if (payload.pcId) peer.remotePcId = payload.pcId;
 
           if (peer.pendingCandidates.length > 0) {
             const queuedCandidates = peer.pendingCandidates.splice(0);
             await flushRemoteCandidates(pc, queuedCandidates);
+          }
+          for (const candidate of takeDeferredFor(peer.deferred, peer.remotePcId)) {
+            await queueRemoteCandidate(pc, candidate, peer.pendingCandidates);
           }
 
           if (peersRef.current.get(remotePeerId) !== peer) return;
           if (payload.type === "offer") {
             const answer = await pc.createAnswer();
             await pc.setLocalDescription(answer);
-            channelRef.current?.send({
-              type: "broadcast",
-              event: "webrtc-signal",
-              payload: {
-                type: "answer",
-                sdp: pc.localDescription,
-                senderId: userId,
-                targetId: remotePeerId,
-              },
+            void sendSignal({
+              type: "answer",
+              sdp: pc.localDescription ?? undefined,
+              targetId: remotePeerId,
+              pcId: peer.localPcId,
+              toPc: peer.remotePcId ?? undefined,
             });
           }
+          capPeerBitrate(remotePeerId, peer);
+          // Replay a negotiation requested while this one was in flight.
+          if (payload.type === "answer" && peer.pendingNegotiation && canInitiateOffer(remotePeerId)) {
+            void negotiate(remotePeerId, peer);
+          }
         } else if (payload.type === "ice-candidate") {
-          if (!peer.ignoreOffer && payload.candidate) {
-            await queueRemoteCandidate(pc, payload.candidate, peer.pendingCandidates);
+          const candidates = payload.candidates ?? (payload.candidate ? [payload.candidate] : []);
+          if (peer.ignoreOffer || candidates.length === 0) return;
+          const decision = decideCandidate(peer, payload);
+          if (decision === "drop") return;
+          for (const candidate of candidates) {
+            if (decision === "defer") {
+              pushDeferred(peer.deferred, { pcId: payload.pcId, inst: payload.inst, candidate });
+            } else {
+              await queueRemoteCandidate(pc, candidate, peer.pendingCandidates);
+            }
           }
         }
       } catch (err) {
         console.error("[WebRTC] signal handling error:", err);
       }
     },
-    [userId, createPeerConnection, isSpectator, audioBroadcastOnly, sendOfferTo, removePeer]
+    [userId, createPeerConnection, isSpectator, audioBroadcastOnly, sendOfferTo, removePeer, negotiate, sendSignal, canInitiateOffer, capPeerBitrate]
   );
 
   useEffect(() => {
     let disposed = false;
     let ownedChannel: ReturnType<typeof supabase.channel> | null = null;
     let cancelRetry: (() => void) | null = null;
+    let removePageHide: (() => void) | null = null;
+    const instanceId = instanceIdRef.current;
     const peerMap = peersRef.current;
 
     const spectatorPeerSet = spectatorPeersRef.current;
@@ -1322,7 +1534,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
               channel.send({
                 type: "broadcast",
                 event: "webrtc-signal",
-                payload: { type: "ready", senderId: userId, isSpectator },
+                payload: { type: "ready", senderId: userId, isSpectator, v: SIGNAL_PROTOCOL_VERSION, inst: instanceId },
               });
             } else if (
               status === "CHANNEL_ERROR" ||
@@ -1335,6 +1547,24 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       };
 
       openChannel();
+
+      // A reload/tab close does not run React cleanups. Tell the others right
+      // away so they drop our connection instead of keeping a frozen picture.
+      const onPageHide = () => {
+        void channelRef.current?.send({
+          type: "broadcast",
+          event: "webrtc-signal",
+          payload: { type: "leave", senderId: userId, v: SIGNAL_PROTOCOL_VERSION, inst: instanceId },
+        });
+      };
+      if (typeof window.addEventListener === "function") {
+        window.addEventListener("pagehide", onPageHide);
+      }
+      removePageHide = () => {
+        if (typeof window.removeEventListener === "function") {
+          window.removeEventListener("pagehide", onPageHide);
+        }
+      };
 
       cancelRetry = () => {
         if (retryTimer) {
@@ -1352,6 +1582,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       captureGenerationRef.current += 1;
       captureBusyRef.current = false;
       cancelRetry?.();
+      removePageHide?.();
 
       localStreamRef.current?.getTracks().forEach((t) => t.stop());
       localStreamRef.current = null;
@@ -1359,6 +1590,8 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       // event from the previous visit can call removePeer after re-entry and
       // delete the newly-created connection for the same player id.
       peerMap.forEach((peer) => {
+        peer.recovery.dispose();
+        peer.batcher?.cancel();
         peer.pc.onicecandidate = null;
         peer.pc.oniceconnectionstatechange = null;
         peer.pc.onconnectionstatechange = null;
@@ -1395,7 +1628,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         void channelToRemove.send({
           type: "broadcast",
           event: "webrtc-signal",
-          payload: { type: "leave", senderId: userId },
+          payload: { type: "leave", senderId: userId, v: SIGNAL_PROTOCOL_VERSION, inst: instanceId },
         }).finally(() => {
           void supabase.removeChannel(channelToRemove);
         });
@@ -1409,46 +1642,58 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   // spectators seeing only one of the two players.
   useEffect(() => {
     const expectedPlayers = isSpectator ? maxPlayers : maxPlayers - 1;
-    const announceReady = () => {
+    let tick = 0;
+    const hasLiveVideoFrom = (peerId: string) =>
+      peersRef.current.get(peerId)?.stream?.getVideoTracks().some((t) => t.readyState === "live") ?? false;
+
+    const announceReady = (force = false) => {
       const channel = channelRef.current;
       if (!channel) return;
+      const payloadBase = { senderId: userId, isSpectator, v: SIGNAL_PROTOCOL_VERSION, inst: instanceIdRef.current };
 
-      channel.send({
-        type: "broadcast",
-        event: "webrtc-signal",
-        payload: { type: "ready", senderId: userId, isSpectator },
-      });
+      // Every broadcast is delivered to everybody in the room and counts toward
+      // the project-wide Realtime quota. Spectators that already know the
+      // official players only broadcast every third tick; the targeted requests
+      // below go only to players whose video is still missing.
+      const knownPlayers = Array.from(playerIdsRef.current).filter((id) => id !== userId);
+      if (force || !isSpectator || knownPlayers.length === 0 || tick % 3 === 0) {
+        channel.send({
+          type: "broadcast",
+          event: "webrtc-signal",
+          payload: { type: "ready", ...payloadBase },
+        });
+      }
 
       // A spectator must request each official player directly. Relying only on
       // one room-wide broadcast is fragile when a player's tab is throttled or
       // reconnecting and could leave both reserved panels without streams.
       if (isSpectator) {
-        playerIdsRef.current.forEach((playerId) => {
-          if (playerId === userId) return;
+        knownPlayers.forEach((playerId) => {
+          if (!force && hasLiveVideoFrom(playerId)) return;
           channel.send({
             type: "broadcast",
             event: "webrtc-signal",
-            payload: {
-              type: "ready",
-              senderId: userId,
-              targetId: playerId,
-              isSpectator: true,
-            },
+            payload: { type: "ready", targetId: playerId, ...payloadBase, isSpectator: true },
           });
-          void createSpectatorOffer(playerId);
         });
       }
     };
 
     const interval = setInterval(() => {
+      tick += 1;
       // Player side: an opponent feed that stays "muted" (no frames) for a long
-      // time turns black while the connection still looks healthy. Rebuild it.
+      // time turns black while the connection still looks healthy. Rebuild it —
+      // unless stats show the network path is alive (the opponent's camera is
+      // what stalled, e.g. app in background); rebuilding would only cut audio.
       if (!isSpectator) {
         const now = Date.now();
         peersRef.current.forEach((peer, peerId) => {
           if (spectatorPeersRef.current.has(peerId)) return;
           const vids = peer.stream?.getVideoTracks() ?? [];
-          const frozen = vids.length > 0 && vids.every((t) => t.readyState === "live" && t.muted);
+          const frozen =
+            vids.length > 0 &&
+            vids.every((t) => t.readyState === "live" && t.muted) &&
+            peer.health !== "video-stalled";
           const key = `p:${peerId}`;
           if (!frozen) { frozenVideoSinceRef.current.delete(key); return; }
           const since = frozenVideoSinceRef.current.get(key);
@@ -1456,18 +1701,16 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
           if (now - since > 12000 && now - peer.createdAt > 20000) {
             console.warn("[WebRTC] Opponent video frozen, rebuilding peer:", peerId);
             frozenVideoSinceRef.current.delete(key);
-            removePeer(peerId);
+            rebuildPeerRef.current(peerId);
           }
         });
       }
       const connectedPlayerVideos = Array.from(peersRef.current.entries()).filter(([peerId, peer]) => {
         if (spectatorPeersRef.current.has(peerId)) return false;
         if (isSpectator && playerIdsRef.current.size > 0 && !playerIdsRef.current.has(peerId)) return false;
-        const liveVideo = peer.stream?.getVideoTracks().some((t) => t.readyState === "live") ?? false;
-        if (!isSpectator) return liveVideo;
         // Video is the authoritative signal that this player is watchable. A
         // missing microphone must not keep forcing SDP renegotiations forever.
-        return liveVideo;
+        return peer.stream?.getVideoTracks().some((t) => t.readyState === "live") ?? false;
       }).length;
 
       if (connectedPlayerVideos >= expectedPlayers) return;
@@ -1475,12 +1718,53 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
     }, 4000);
 
     // Do not wait four seconds on mount/player-roster updates.
-    const initialAnnouncement = window.setTimeout(announceReady, 250);
+    const initialAnnouncement = window.setTimeout(() => announceReady(true), 250);
     return () => {
       clearInterval(interval);
       window.clearTimeout(initialAnnouncement);
     };
-  }, [userId, isSpectator, maxPlayers, remotePeerIds, createSpectatorOffer, removePeer]);
+  }, [userId, isSpectator, maxPlayers, remotePeerIds]);
+
+  // Media health sampling (getStats). Distinguishes "the network path is dead"
+  // (→ ICE restart) from "the remote camera stopped sending" (→ do nothing; a
+  // rebuild cannot fix the other side's camera and would interrupt audio).
+  useEffect(() => {
+    let running = false;
+    const interval = window.setInterval(async () => {
+      if (running) return;
+      running = true;
+      try {
+        await Promise.all(Array.from(peersRef.current.entries()).map(async ([peerId, peer]) => {
+          if (typeof peer.pc.getStats !== "function") return;
+          if (peer.pc.connectionState !== "connected") {
+            peer.lastSample = null;
+            peer.health = "unknown";
+            peer.transportStalls = 0;
+            return;
+          }
+          try {
+            const report = await peer.pc.getStats();
+            if (peersRef.current.get(peerId) !== peer) return;
+            const sample = sampleInbound(report);
+            peer.health = assessMediaHealth(peer.lastSample, sample);
+            peer.lastSample = sample;
+            peer.transportStalls = peer.health === "transport-stalled" ? peer.transportStalls + 1 : 0;
+            // ~12 s with nothing at all arriving while ICE still says "connected".
+            if (peer.transportStalls >= 3) {
+              peer.transportStalls = 0;
+              console.warn("[WebRTC] Transport stalled while connected; ICE restart:", peerId);
+              peer.restartIce();
+            }
+          } catch {
+            // getStats can fail during teardown; ignore.
+          }
+        }));
+      } finally {
+        running = false;
+      }
+    }, 4000);
+    return () => window.clearInterval(interval);
+  }, []);
 
   // A live MediaStreamTrack may end after a successful handshake without moving
   // RTCPeerConnection to "failed" (camera replacement, mobile backgrounding,
