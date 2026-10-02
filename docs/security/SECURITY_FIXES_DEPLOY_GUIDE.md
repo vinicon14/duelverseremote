@@ -9,7 +9,7 @@
   - o EXECUTE é só da `service_role` (revogado de PUBLIC, anon e authenticated);
   - é idempotente e seguro sob concorrência: `UPDATE ... WHERE status <> 'paid' RETURNING` e o crédito acontecem na mesma transação;
   - grava uma transação `purchase` com a descrição `Compra - Pedido #<uuid>`.
-- A constraint `transaction_type` passa a aceitar `purchase`. A migration `20261002100000` acrescenta os valores legados `tournament_refund`, `tournament_surplus` e `tournament_entry_fee` (superconjunto da anterior).
+- A constraint `transaction_type` passa a aceitar `purchase`. A migration `20261002130000` acrescenta os valores legados `tournament_refund`, `tournament_surplus` e `tournament_entry_fee` (superconjunto da anterior).
 
 **Webhooks**
 - `mercadopago-webhook` consulta `GET /v1/payments/:id` com `MERCADOPAGO_ACCESS_TOKEN` e não confia no body. Só credita se `status = approved`, a moeda for BRL e o valor bater com o pedido (tolerância de 0,01). Quando o valor diverge, responde 200 e marca o pedido como `amount_mismatch` para revisão manual. O pedido é localizado pelo id do pagamento (PIX) ou por `external_reference = order.id` (Checkout Pro).
