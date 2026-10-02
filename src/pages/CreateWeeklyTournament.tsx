@@ -98,81 +98,8 @@ const CreateWeeklyTournament = () => {
       console.log('RPC response:', { data, error });
 
       if (error || !data?.success) {
-        console.log('RPC failed or returned error, using fallback...');
-        // If RPC fails, use direct insert with balance deduction
-        
-        // Check balance first
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('duelcoins_balance')
-          .eq('user_id', user.id)
-          .single();
-        
-        console.log('Profile balance:', profile?.duelcoins_balance);
-        
-        if (profileError || (profile?.duelcoins_balance || 0) < prizePool) {
-          throw new Error('Saldo insuficiente para criar este torneio');
-        }
-        
-        // Deduct prize from balance
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({ duelcoins_balance: profile.duelcoins_balance - prizePool })
-          .eq('user_id', user.id);
-        
-        console.log('Balance update result:', { updateError });
-        if (updateError) throw updateError;
-        
-        // Record transaction
-        await supabase.from('duelcoins_transactions').insert({
-          sender_id: user.id,
-          amount: prizePool,
-          transaction_type: 'tournament_prize',
-          description: 'Pagamento antecipado de premio - Torneio Semanal: ' + name
-        });
-        
-        // Create tournament
-        const startDate = new Date().toISOString();
-        const endDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-        
-        const { data: tournament, error: insertError } = await supabase
-          .from('tournaments')
-          .insert({
-            name: name,
-            description: description,
-            start_date: startDate,
-            end_date: endDate,
-            max_participants: 32,
-            prize_pool: prizePool,
-            entry_fee: entryFee,
-            created_by: user.id,
-            status: 'upcoming',
-            is_weekly: true,
-            requires_decklist: true,
-            tournament_type: 'single_elimination',
-            total_rounds: 5
-          })
-          .select()
-          .single();
-
-        console.log('Tournament created:', { tournament, insertError });
-        if (insertError) throw insertError;
-
-        toast({
-          title: "Torneio Semanal criado com sucesso!",
-          description: (
-            <div className="space-y-2">
-              <p>O seu Torneio Semanal está pronto!</p>
-              <p className="text-sm text-muted-foreground">
-                🏆 Prêmio: {prizePool.toLocaleString()} DC | Taxa: {entryFee.toLocaleString()} DC
-              </p>
-            </div>
-          ),
-        });
-        // Refresh balance to show deducted amount
-        await fetchUserBalance();
-        navigate(`/tournament/${tournament.id}`);
-        return;
+        const errorMessage = error?.message || data?.message || 'Erro desconhecido ao criar torneio';
+        throw new Error(errorMessage);
       }
 
       console.log('RPC success, tournament_id:', data.tournament_id);
