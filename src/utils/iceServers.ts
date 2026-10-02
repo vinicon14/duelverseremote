@@ -93,8 +93,21 @@ const refresh = (): Promise<RTCIceServer[]> => {
         throw error ?? new Error("Empty ICE configuration");
       }
     } catch (error) {
+      // Check if this is an authentication error (401) - if so, don't retry aggressively
+      const errorMsg = error && typeof error === 'object' && 'message' in error 
+        ? String(error.message) 
+        : String(error);
+      const isAuthError = errorMsg.includes('401') || 
+                         errorMsg.includes('Authentication required') ||
+                         errorMsg.includes('Invalid or expired token') ||
+                         errorMsg.includes('Unauthorized');
+      
       failures += 1;
-      const backoff = Math.min(RETRY_MS * 2 ** (failures - 1), MAX_RETRY_MS);
+      // For auth errors, use a very long backoff since retrying won't help without re-authentication
+      const backoff = isAuthError 
+        ? LAST_VERIFIED_MAX_AGE_MS // 6 hours - effectively stops retrying
+        : Math.min(RETRY_MS * 2 ** (failures - 1), MAX_RETRY_MS);
+      
       if (lastVerified && Date.now() - lastVerified.at < LAST_VERIFIED_MAX_AGE_MS) {
         runtimeIceServers = lastVerified.servers;
         verifiedTurn = true;
@@ -103,7 +116,12 @@ const refresh = (): Promise<RTCIceServer[]> => {
         runtimeIceServers = [...STUN_SERVERS, ...FALLBACK_TURN];
       }
       expiresAt = Date.now() + backoff;
-      console.warn("[WebRTC] ICE configuration unavailable; retry scheduled", error);
+      
+      if (isAuthError) {
+        console.warn("[WebRTC] Authentication required for ICE credentials; falling back to STUN only", error);
+      } else {
+        console.warn("[WebRTC] ICE configuration unavailable; retry scheduled", error);
+      }
     } finally {
       clearTimeout(timer!);
       promise = null;
