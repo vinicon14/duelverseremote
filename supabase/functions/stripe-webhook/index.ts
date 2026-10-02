@@ -37,25 +37,33 @@ serve(async (req) => {
       const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
       const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-      // Update order status
-      await supabase
+      // Find order by external_order_id (Stripe session ID)
+      const { data: order } = await supabase
         .from("duelcoins_orders")
-        .update({
-          status: "paid",
-          paid_at: new Date().toISOString(),
-          external_payment_id: session.payment_intent as string,
-        })
-        .eq("external_order_id", session.id);
+        .select("*")
+        .eq("external_order_id", session.id)
+        .maybeSingle();
 
-      // Credit DuelCoins to user
-      await supabase.rpc("admin_manage_duelcoins", {
-        p_user_id: userId,
-        p_amount: duelcoinsAmount,
-        p_operation: "add",
-        p_reason: `Compra via Stripe - ${duelcoinsAmount} DuelCoins`,
+      if (!order) {
+        console.error("Order not found for session:", session.id);
+        return new Response(JSON.stringify({ received: true }), { status: 200 });
+      }
+
+      // SECURITY: Use service_role restricted RPC to credit (idempotent)
+      const { data: creditResult, error: creditError } = await supabase.rpc("service_credit_duelcoins", {
+        p_order_id: order.id,
+        p_external_payment_id: session.payment_intent as string,
+        p_payment_method: "stripe",
       });
 
-      console.log(`✅ Credited ${duelcoinsAmount} DuelCoins to user ${userId}`);
+      if (creditError) {
+        console.error("Error crediting DuelCoins:", creditError);
+        throw creditError;
+      }
+
+      const result = creditResult as any;
+      console.log(`✅ Credited ${duelcoinsAmount} DuelCoins to user ${userId}`, 
+                  result?.already_paid ? "(already paid)" : "");
     }
 
     return new Response(JSON.stringify({ received: true }), {

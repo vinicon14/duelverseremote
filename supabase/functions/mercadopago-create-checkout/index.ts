@@ -123,20 +123,32 @@ Deno.serve(async (req) => {
     const mpData = await mpResponse.json();
     console.log('[MercadoPago Checkout] Preference created:', mpData.id);
 
-    // Create pending order
-    await supabase
-      .from('duelcoins_orders')
-      .insert({
-        user_id: user.id,
-        package_id: pkg.id,
-        amount_brl: finalPrice,
-        duelcoins_amount: pkg.duelcoins_amount,
-        status: 'pending',
-        external_order_id: mpData.id,
-        payment_method: 'card',
-        coupon_code: appliedCoupon,
-        discount_percent: discountPercent,
+    // SECURITY: Create pending order via RPC (server-side validation)
+    const { data: orderResult, error: orderError } = await supabase.rpc('create_duelcoins_order', {
+      p_package_id: pkg.id,
+      p_external_order_id: mpData.id,
+      p_payment_method: 'card',
+      p_amount_brl: finalPrice,
+      p_coupon_code: appliedCoupon,
+      p_discount_percent: discountPercent,
+    });
+
+    if (orderError) {
+      console.error('[MercadoPago Checkout] Error creating order:', orderError);
+      return new Response(JSON.stringify({ error: 'Failed to create order' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
+
+    const orderData = orderResult as any;
+    if (!orderData?.success) {
+      console.error('[MercadoPago Checkout] Order creation failed:', orderData?.message);
+      return new Response(JSON.stringify({ error: orderData?.message || 'Failed to create order' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     return new Response(JSON.stringify({
       success: true,

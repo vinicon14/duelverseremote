@@ -124,16 +124,27 @@ serve(async (req) => {
       },
     });
 
-    // Create order record
-    await supabaseAdmin.from("duelcoins_orders").insert({
-      user_id: user.id,
-      package_id: pkg.id,
-      amount_brl: pkg.price_brl,
-      duelcoins_amount: pkg.duelcoins_amount,
-      status: "pending",
-      external_order_id: session.id,
-      payment_method: "stripe",
+    // SECURITY: Create order via RPC (server-side validation)
+    // Note: we need to use the user's auth context for create_duelcoins_order
+    const { data: orderResult, error: orderError } = await supabaseClient.rpc("create_duelcoins_order", {
+      p_package_id: pkg.id,
+      p_external_order_id: session.id,
+      p_payment_method: "stripe",
+      p_amount_brl: pkg.price_brl,
+      p_coupon_code: null,
+      p_discount_percent: 0,
     });
+
+    if (orderError) {
+      console.error("Error creating order:", orderError);
+      throw new Error("Failed to create order: " + orderError.message);
+    }
+
+    const orderData = orderResult as any;
+    if (!orderData?.success) {
+      console.error("Order creation failed:", orderData?.message);
+      throw new Error(orderData?.message || "Failed to create order");
+    }
 
     return new Response(JSON.stringify({ url: session.url }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
