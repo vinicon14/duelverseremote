@@ -10,9 +10,22 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // DEPRECATED: Owner no longer uses CartPanda
+  // Webhook disabled permanently - always return 410 Gone
+  console.log('[CartPanda Webhook] DISABLED: Owner no longer uses CartPanda service');
+  return new Response(JSON.stringify({ 
+    error: 'CartPanda webhook is no longer supported. Owner has migrated to other payment providers.' 
+  }), {
+    status: 410,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+
+  // Dead code below preserved for reference (never executed)
+  /* 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const body = await req.json();
@@ -72,18 +85,11 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Creditar DuelCoins ao usuário
-    const { error: balanceError } = await supabase
-      .from('profiles')
-      .update({ duelcoins_balance: supabase.rpc ? undefined : undefined })
-      .eq('user_id', order.user_id);
-
-    // Usar RPC para adicionar DuelCoins de forma segura
-    const { data: result, error: rpcError } = await supabase.rpc('admin_manage_duelcoins', {
-      p_user_id: order.user_id,
-      p_amount: order.duelcoins_amount,
-      p_operation: 'add',
-      p_reason: `Compra via CartPanda - Pedido #${orderId}`,
+    // SECURITY: Usar RPC restrito ao service_role para creditar
+    const { data: creditResult, error: rpcError } = await supabase.rpc('service_credit_duelcoins', {
+      p_order_id: order.id,
+      p_external_payment_id: body.payment_id || body.transaction_id || null,
+      p_payment_method: 'cartpanda',
     });
 
     if (rpcError) {
@@ -94,15 +100,14 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Marcar pedido como pago
-    await supabase
-      .from('duelcoins_orders')
-      .update({
-        status: 'paid',
-        paid_at: new Date().toISOString(),
-        external_payment_id: body.payment_id || body.transaction_id || null,
-      })
-      .eq('id', order.id);
+    const result = creditResult as any;
+    if (!result?.success) {
+      console.error('[CartPanda Webhook] Credit failed:', result?.message);
+      return new Response(JSON.stringify({ error: result?.message || 'Failed to credit' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     // Criar notificação para o usuário
     await supabase.rpc('create_notification', {
@@ -115,7 +120,11 @@ Deno.serve(async (req) => {
 
     console.log('[CartPanda Webhook] Successfully credited', order.duelcoins_amount, 'DuelCoins to user', order.user_id);
 
-    return new Response(JSON.stringify({ success: true, message: 'DuelCoins credited' }), {
+    return new Response(JSON.stringify({ 
+      success: true, 
+      message: 'DuelCoins credited',
+      already_paid: result.already_paid || false
+    }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -126,4 +135,5 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
+  */
 });

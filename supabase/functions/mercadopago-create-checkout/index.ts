@@ -76,7 +76,34 @@ Deno.serve(async (req) => {
       finalPrice = Math.max(0.01, Number((finalPrice * (1 - discountPercent / 100)).toFixed(2)));
     }
 
+    // SECURITY: Create pending order FIRST with service role (client INSERT blocked by RLS)
+    // Price and coupon computed server-side above
+    const { data: order, error: orderError } = await supabase
+      .from('duelcoins_orders')
+      .insert({
+        user_id: user.id,
+        package_id: pkg.id,
+        amount_brl: finalPrice,
+        duelcoins_amount: pkg.duelcoins_amount,
+        status: 'pending',
+        external_order_id: null, // Will be set after MP preference creation
+        payment_method: 'card',
+        coupon_code: appliedCoupon,
+        discount_percent: discountPercent,
+      })
+      .select()
+      .single();
+
+    if (orderError) {
+      console.error('[MercadoPago Checkout] Error creating order:', orderError);
+      return new Response(JSON.stringify({ error: 'Failed to create order' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // Create MercadoPago Preference (Checkout Pro) - supports card + PIX + boleto
+    // Use order.id as external_reference for strict matching in webhook
     const mpResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
       method: 'POST',
       headers: {
@@ -103,7 +130,7 @@ Deno.serve(async (req) => {
         },
         auto_return: 'approved',
         notification_url: `${supabaseUrl}/functions/v1/mercadopago-webhook`,
-        external_reference: `${user.id}|${pkg.id}`,
+        external_reference: order.id, // Order UUID for strict matching
         payment_methods: {
           excluded_payment_types: [],
           installments: 12,
@@ -114,6 +141,8 @@ Deno.serve(async (req) => {
     if (!mpResponse.ok) {
       const errorText = await mpResponse.text();
       console.error('[MercadoPago Checkout] Error:', errorText);
+      // Delete the orphaned order
+      await supabase.from('duelcoins_orders').delete().eq('id', order.id);
       return new Response(JSON.stringify({ error: 'Failed to create checkout' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -123,20 +152,11 @@ Deno.serve(async (req) => {
     const mpData = await mpResponse.json();
     console.log('[MercadoPago Checkout] Preference created:', mpData.id);
 
-    // Create pending order
+    // Update order with preference ID
     await supabase
       .from('duelcoins_orders')
-      .insert({
-        user_id: user.id,
-        package_id: pkg.id,
-        amount_brl: finalPrice,
-        duelcoins_amount: pkg.duelcoins_amount,
-        status: 'pending',
-        external_order_id: mpData.id,
-        payment_method: 'card',
-        coupon_code: appliedCoupon,
-        discount_percent: discountPercent,
-      });
+      .update({ external_order_id: mpData.id })
+      .eq('id', order.id);
 
     return new Response(JSON.stringify({
       success: true,

@@ -119,8 +119,9 @@ Deno.serve(async (req) => {
     const qrCodeBase64 = pixInfo?.qr_code_base64;
     const ticketUrl = pixInfo?.ticket_url;
 
-    // Create pending order
-    const { error: orderError } = await supabase
+    // SECURITY: Create pending order with service role (client INSERT blocked by RLS)
+    // Price and coupon computed server-side above
+    const { data: order, error: orderError } = await supabase
       .from('duelcoins_orders')
       .insert({
         user_id: user.id,
@@ -132,7 +133,9 @@ Deno.serve(async (req) => {
         payment_method: 'pix',
         coupon_code: appliedCoupon,
         discount_percent: discountPercent,
-      });
+      })
+      .select()
+      .single();
 
     if (orderError) {
       console.error('[MercadoPago] Error creating order:', orderError);

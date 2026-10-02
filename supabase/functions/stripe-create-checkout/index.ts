@@ -96,7 +96,27 @@ serve(async (req) => {
     // Get origin for redirect URLs
     const origin = req.headers.get("origin") || "https://duelverse.site";
 
-    // Create checkout session
+    // SECURITY: Create order with service role FIRST (client INSERT blocked by RLS)
+    const { data: order, error: orderError } = await supabaseAdmin
+      .from("duelcoins_orders")
+      .insert({
+        user_id: user.id,
+        package_id: pkg.id,
+        amount_brl: pkg.price_brl,
+        duelcoins_amount: pkg.duelcoins_amount,
+        status: "pending",
+        external_order_id: null, // Will be set after Stripe session creation
+        payment_method: "stripe",
+      })
+      .select()
+      .single();
+
+    if (orderError) {
+      console.error("Error creating order:", orderError);
+      throw new Error("Failed to create order: " + orderError.message);
+    }
+
+    // Create checkout session with order.id in metadata
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       line_items: [
@@ -121,19 +141,15 @@ serve(async (req) => {
         duelcoins_amount: String(pkg.duelcoins_amount),
         currency,
         charged_amount: String(chargeAmount),
+        order_id: order.id, // For matching in webhook
       },
     });
 
-    // Create order record
-    await supabaseAdmin.from("duelcoins_orders").insert({
-      user_id: user.id,
-      package_id: pkg.id,
-      amount_brl: pkg.price_brl,
-      duelcoins_amount: pkg.duelcoins_amount,
-      status: "pending",
-      external_order_id: session.id,
-      payment_method: "stripe",
-    });
+    // Update order with session ID
+    await supabaseAdmin
+      .from("duelcoins_orders")
+      .update({ external_order_id: session.id })
+      .eq("id", order.id);
 
     return new Response(JSON.stringify({ url: session.url }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

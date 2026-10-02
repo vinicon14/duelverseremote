@@ -121,49 +121,79 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Try to find order by external_order_id (PIX direct) or by external_reference (Checkout Pro)
+    // SECURITY: Match order strictly by our order ID in external_reference
+    // Format: For duelcoins, external_reference should be the order.id (UUID)
+    // PIX flow: external_order_id = payment ID
+    // Checkout Pro flow: external_order_id = preference ID
     let order = null;
     let orderError = null;
 
-    // First try: PIX flow (external_order_id = payment ID)
+    // UUID regex for validation before querying (prevents 22P02 errors)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+    // Try to find by external_order_id (PIX direct payment ID or Checkout Pro preference ID)
     const res1 = await supabase
       .from('duelcoins_orders')
       .select('*')
       .eq('external_order_id', String(paymentId))
-      .eq('status', 'pending')
       .maybeSingle();
 
-    order = res1.data;
+    // Only use the order if it's not yet paid (allows crediting)
+    if (res1.data && res1.data.status !== 'paid') {
+      order = res1.data;
+    }
     orderError = res1.error;
 
-    // Second try: Checkout Pro flow (external_reference = "user_id|package_id", order has preference_id as external_order_id)
+    // If not found and external_reference exists, try matching by it
     if (!order && payment.external_reference) {
-      const [userId, packageId] = payment.external_reference.split('|');
-      if (userId && packageId) {
+      const externalRef = payment.external_reference;
+      
+      // First, try if external_reference is an order UUID
+      if (uuidRegex.test(externalRef)) {
         const res2 = await supabase
           .from('duelcoins_orders')
           .select('*')
-          .eq('user_id', userId)
-          .eq('package_id', packageId)
-          .eq('status', 'pending')
-          .order('created_at', { ascending: false })
-          .limit(1)
+          .eq('id', externalRef)
           .maybeSingle();
         
-        order = res2.data;
-        orderError = res2.error;
+        // Only use if not yet paid
+        if (res2.data && res2.data.status !== 'paid') {
+          order = res2.data;
+        }
+      } else {
+        // Legacy format: "user_id|package_id"
+        const parts = externalRef.split('|');
+        if (parts.length === 2) {
+          const [userId, packageId] = parts;
+          // Validate both are UUIDs
+          if (uuidRegex.test(userId) && uuidRegex.test(packageId)) {
+            const res3 = await supabase
+              .from('duelcoins_orders')
+              .select('*')
+              .eq('user_id', userId)
+              .eq('package_id', packageId)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            
+            // Only use if not yet paid
+            if (res3.data && res3.data.status !== 'paid') {
+              order = res3.data;
+            }
+          }
+        }
       }
     }
 
     if (!isPaid) {
-      // Update order status if found
-      if (order) {
-        await supabase
-          .from('duelcoins_orders')
-          .update({ status: payment.status || 'unknown', external_payment_id: String(paymentId) })
-          .eq('id', order.id);
-      }
-      return new Response(JSON.stringify({ message: 'Status updated', status: payment.status }), {
+      // Log the payment status but keep order findable (don't overwrite to rejected/in_process)
+      // A later approval can still credit the order by its ID
+      console.log('[MercadoPago Webhook] Payment not approved yet:', {
+        payment_id: paymentId,
+        status: payment.status,
+        order_id: order?.id,
+      });
+      return new Response(JSON.stringify({ message: 'Payment not approved', status: payment.status }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -185,13 +215,53 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Credit DuelCoins
+    // SECURITY: Validar que o valor pago corresponde ao valor do pedido
+    const orderAmount = Number(order.amount_brl);
+    const paidAmount = Number(payment.transaction_amount);
+    const currency = payment.currency_id;
+
+    // Permitir pequena diferença de arredondamento (0.01)
+    if (currency !== 'BRL' || Math.abs(paidAmount - orderAmount) > 0.01) {
+      // Nित: Return 200 (not 400) to prevent MP from retrying forever
+      // Flag the order for manual review
+      console.error('[MercadoPago Webhook] AMOUNT MISMATCH - MANUAL REVIEW REQUIRED:', {
+        order_id: order.id,
+        user_id: order.user_id,
+        expected_brl: orderAmount,
+        received: paidAmount,
+        currency: currency,
+        payment_id: paymentId,
+      });
+      
+      // Try to flag the order (may fail if constraint doesn't allow the status)
+      try {
+        await supabase
+          .from('duelcoins_orders')
+          .update({ 
+            status: 'amount_mismatch',
+            external_payment_id: String(paymentId),
+          })
+          .eq('id', order.id);
+      } catch (e) {
+        console.error('[MercadoPago Webhook] Could not update order status to amount_mismatch:', e);
+      }
+      
+      return new Response(JSON.stringify({ 
+        received: true,
+        flagged: 'amount_mismatch',
+        message: 'Order flagged for manual review'
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // SECURITY: Usar RPC restrito ao service_role para creditar (idempotente)
     const paymentMethodLabel = payment.payment_method_id || 'mercadopago';
-    const { error: rpcError } = await supabase.rpc('admin_manage_duelcoins', {
-      p_user_id: order.user_id,
-      p_amount: order.duelcoins_amount,
-      p_operation: 'add',
-      p_reason: `Compra via MercadoPago (${paymentMethodLabel}) - Pagamento #${paymentId}`,
+    const { data: creditResult, error: rpcError } = await supabase.rpc('service_credit_duelcoins', {
+      p_order_id: order.id,
+      p_external_payment_id: String(paymentId),
+      p_payment_method: paymentMethodLabel,
     });
 
     if (rpcError) {
@@ -202,35 +272,39 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Mark order as paid
-    await supabase
-      .from('duelcoins_orders')
-      .update({
-        status: 'paid',
-        paid_at: new Date().toISOString(),
-        external_payment_id: String(paymentId),
-        payment_method: payment.payment_method_id || order.payment_method,
-      })
-      .eq('id', order.id);
+    const result = creditResult as any;
+    if (!result?.success) {
+      console.error('[MercadoPago Webhook] Credit failed:', result?.message);
+      return new Response(JSON.stringify({ error: result?.message || 'Failed to credit' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     // Consume coupon now that payment is confirmed (no-op if none)
-    if (order.coupon_code) {
+    if (order.coupon_code && !result.already_paid) {
       const { error: cErr } = await supabase.rpc('consume_coupon', { p_code: order.coupon_code });
       if (cErr) console.error('[MercadoPago Webhook] consume_coupon error:', cErr);
     }
 
-    // Create notification
-    await supabase.rpc('create_notification', {
-      p_user_id: order.user_id,
-      p_type: 'purchase',
-      p_title: '💰 DuelCoins Creditados!',
-      p_message: `Sua compra de ${order.duelcoins_amount} DuelCoins foi confirmada!`,
-      p_data: { order_id: order.id, amount: order.duelcoins_amount },
-    });
+    // Create notification (skip if already paid to avoid duplicate notifications)
+    if (!result.already_paid) {
+      await supabase.rpc('create_notification', {
+        p_user_id: order.user_id,
+        p_type: 'purchase',
+        p_title: '💰 DuelCoins Creditados!',
+        p_message: `Sua compra de ${order.duelcoins_amount} DuelCoins foi confirmada!`,
+        p_data: { order_id: order.id, amount: order.duelcoins_amount },
+      });
+    }
 
-    console.log('[MercadoPago Webhook] Successfully credited', order.duelcoins_amount, 'DuelCoins to user', order.user_id);
+    console.log('[MercadoPago Webhook] Successfully credited', order.duelcoins_amount, 'DuelCoins to user', order.user_id, 
+                result.already_paid ? '(already paid)' : '');
 
-    return new Response(JSON.stringify({ success: true }), {
+    return new Response(JSON.stringify({ 
+      success: true,
+      already_paid: result.already_paid || false
+    }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
