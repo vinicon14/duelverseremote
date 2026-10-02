@@ -146,7 +146,16 @@ serve(async (req) => {
         .update({ prize_pool: tournament.prize_pool + tournament.entry_fee })
         .eq("id", tournament_id);
 
-      await supabaseClient
+      // O INSERT em duelcoins_transactions é bloqueado para authenticated
+      // (policy "Only through functions"); com o JWT do usuário o lançamento
+      // falhava calado e a inscrição paga não podia ser reembolsada
+      // (tournament_refund_participant só devolve o que foi lançado).
+      const serviceClient = createClient(
+        Deno.env.get("SUPABASE_URL") ?? "",
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+        { auth: { persistSession: false, autoRefreshToken: false } },
+      );
+      const { error: ledgerError } = await serviceClient
         .from("duelcoins_transactions")
         .insert({
           sender_id: user.id,
@@ -156,6 +165,9 @@ serve(async (req) => {
           tournament_id: tournament_id,
           description: `Inscrição no torneio: ${tournament.name}`,
         });
+      if (ledgerError) {
+        console.error("Falha ao registrar lançamento da inscrição:", ledgerError);
+      }
     }
 
     const { error: participantError } = await supabaseClient
