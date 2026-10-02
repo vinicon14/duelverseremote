@@ -27,6 +27,21 @@ build publicado.
 
 ## Para replicar mensagens reais do servidor Discord no Chat Global
 
+> **Novo (serverless):** a Edge Function `discord-chat-sync`, chamada pelo `pg_cron`
+> a cada 1 minuto, substitui o bot Java na direção **Discord → app**. Ela lê, via API
+> REST do Discord, os canais configurados no Admin (os mesmos servidores habilitados
+> que recebem o `chat_to_discord`) e insere as mensagens no Chat Global no mesmo
+> formato da bridge. Não precisa de processo rodando 24h.
+>
+> Requisitos: secret `DISCORD_BOT_TOKEN` nas Edge Functions, **Message Content Intent**
+> ativado (passo 1 abaixo — vale também para leitura via REST), e o bot com
+> **View Channel** + **Read Message History** no canal. O segredo do cron
+> (`discord_chat_sync_secret`) é gerado automaticamente no Vault pela migration
+> `20261002090000_discord_chat_sync.sql`. Mensagens de bots/webhooks (incluindo as que
+> o próprio app posta) são ignoradas, e a deduplicação por `discord_message_id`
+> permite que o bot Java e o sync coexistam. O bot Java abaixo continua opcional.
+
+
 O webhook do Discord só envia mensagens do DuelVerse para o Discord. Para o caminho inverso — mensagens digitadas por qualquer usuário no app do Discord aparecerem no Chat Global — o bot Java precisa estar online e escutando o canal configurado.
 
 ### 1. Ative a permissão no Discord Developer Portal
