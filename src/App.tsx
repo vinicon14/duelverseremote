@@ -36,6 +36,7 @@ import { useSubscriptionExpirationCheck } from "@/hooks/useSubscriptionExpiratio
 import { useDiscordPresence } from "@/hooks/useDiscordPresence";
 import { isRunningInsideDiscord } from "@/hooks/useDiscordActivity";
 import { TcgProvider, normalizeTcgType, useTcg } from "./contexts/TcgContext";
+import { recordSignupAttribution } from "./utils/attribution";
 const Home = lazy(() => import("./pages/Home"));
 const Landing = lazy(() => import("./pages/Landing"));
 const GetStarted = lazy(() => import("./pages/GetStarted"));
@@ -318,6 +319,10 @@ const MainAppContent = () => {
         }
 
         syncNativeAuth(session);
+
+        // Atribuição de cadastro (first-touch): no máximo 1 RPC por usuário por carregamento
+        // de página e nenhuma para contas com mais de ~24h (dedupe interno, nunca rejeita).
+        void recordSignupAttribution(supabase, session?.user);
       }
     );
 
@@ -329,6 +334,8 @@ const MainAppContent = () => {
       }
 
       syncNativeAuth(session);
+
+      void recordSignupAttribution(supabase, session?.user);
     });
 
     return () => {
