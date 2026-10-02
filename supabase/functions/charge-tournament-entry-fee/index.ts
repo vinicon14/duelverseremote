@@ -134,12 +134,30 @@ serve(async (req) => {
     }
 
     if (tournament.entry_fee > 0) {
-      await supabaseClient
+      // Este cliente usa o JWT do usuário: o UPDATE passa pelos guards de
+      // profiles (o dono só pode REDUZIR o próprio saldo). Se o débito falhar,
+      // não inscreve (antes o erro era ignorado e a inscrição saía de graça).
+      const { data: charged, error: chargeError } = await supabaseClient
         .from("profiles")
         .update({
           duelcoins_balance: profile.duelcoins_balance - tournament.entry_fee,
         })
-        .eq("user_id", user.id);
+        .eq("user_id", user.id)
+        .select("user_id");
+
+      if (chargeError || !charged || charged.length === 0) {
+        console.error("Falha ao debitar inscrição:", chargeError);
+        return new Response(
+          JSON.stringify({
+            success: false,
+            message: "Não foi possível debitar a taxa de inscrição",
+          }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
 
       await supabaseClient
         .from("tournaments")
