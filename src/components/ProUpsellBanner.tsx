@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next";
 import { useAccountType } from "@/hooks/useAccountType";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { trackEvent } from "@/utils/analytics";
 
 const KEY = "dv_pro_upsell_dismissed_at";
 const INTERVAL = 3 * 24 * 60 * 60 * 1000;
@@ -23,10 +24,18 @@ export function ProUpsellBanner() {
     const at = Number(localStorage.getItem(KEY) || 0);
     return Date.now() - at < INTERVAL;
   });
+  const [shown, setShown] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setLogged(!!data.session));
   }, []);
+
+  useEffect(() => {
+    if (!loading && !isPro && logged && !dismissed && SHOW_ON.some((p) => pathname.startsWith(p)) && !shown) {
+      setShown(true);
+      trackEvent('pro_upsell_shown', { placement: 'toast_route' });
+    }
+  }, [loading, isPro, logged, dismissed, pathname, shown]);
 
   if (loading || isPro || !logged || dismissed) return null;
   if (!SHOW_ON.some((p) => pathname.startsWith(p))) return null;
@@ -34,6 +43,12 @@ export function ProUpsellBanner() {
   const close = () => {
     localStorage.setItem(KEY, String(Date.now()));
     setDismissed(true);
+    trackEvent('pro_upsell_dismissed', { placement: 'toast_route' });
+  };
+
+  const handleClick = () => {
+    trackEvent('pro_upsell_clicked', { placement: 'toast_route' });
+    close();
   };
 
   return (
@@ -43,8 +58,8 @@ export function ProUpsellBanner() {
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold">{t("pro.upsellTitle", "Jogue sem anúncios com o PRO")}</p>
           <p className="text-xs text-muted-foreground">{t("pro.upsellText", "Veja os planos e ative na hora.")}</p>
-          <Button asChild size="sm" className="mt-2 h-8" onClick={close}>
-            <Link to="/go-pro">{t("pro.upsellCta", "Ver planos PRO")}</Link>
+          <Button asChild size="sm" className="mt-2 h-8" onClick={handleClick}>
+            <Link to="/go-pro?src=toast_route">{t("pro.upsellCta", "Ver planos PRO")}</Link>
           </Button>
         </div>
         <button onClick={close} aria-label={t("common.close", "Fechar")} className="text-muted-foreground hover:text-foreground">

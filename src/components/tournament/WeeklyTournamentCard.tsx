@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Trophy, Users, Clock, Calendar, Coins, Share2 } from "lucide-react";
 import { WeeklyTournamentWithCount } from "@/types/weeklyTournament";
+import { trackEvent } from "@/utils/analytics";
 
 interface WeeklyTournamentCardProps {
   tournament: WeeklyTournamentWithCount;
@@ -53,6 +54,13 @@ export const WeeklyTournamentCard = ({
       });
 
       if (!error && data?.success) {
+        // Disparar tournament_join
+        trackEvent('tournament_join', {
+          entry_fee_dc: tournament.entry_fee,
+          is_weekly: true,
+          free: tournament.entry_fee === 0,
+        });
+        
         toast({
           title: "Inscrição realizada!",
           description: `Você se inscreveu no ${tournament.name}`,
@@ -111,6 +119,13 @@ export const WeeklyTournamentCard = ({
         });
         return;
       }
+
+      // Disparar tournament_join (fallback path)
+      trackEvent('tournament_join', {
+        entry_fee_dc: tournament.entry_fee,
+        is_weekly: true,
+        free: tournament.entry_fee === 0,
+      });
 
       toast({
         title: "Inscrição realizada!",

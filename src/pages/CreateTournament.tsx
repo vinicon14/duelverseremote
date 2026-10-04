@@ -17,6 +17,7 @@ import { Navbar } from "@/components/Navbar";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { trackEvent } from "@/utils/analytics";
 
 // Swiss tournament rounds calculation
 const getSwissRounds = (playerCount: number): number => {
@@ -77,6 +78,13 @@ const CreateTournament = () => {
       if (!data?.success) {
         throw new Error(data?.message || "Erro ao criar torneio");
       }
+
+      // Disparar tournament_create
+      trackEvent('tournament_create', {
+        is_weekly: false,
+        prize_pool_dc: prizePool,
+        entry_fee_dc: entryFee,
+      });
 
       toast({
         title: "Torneio criado com sucesso!",

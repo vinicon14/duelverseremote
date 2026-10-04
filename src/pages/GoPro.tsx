@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Crown, Coins, Check, Loader2, Share2, Clock, ShieldCheck } from "lucide-react";
+import { trackEvent } from "@/utils/analytics";
 
 interface Plan {
   id: string;
@@ -90,6 +91,17 @@ export default function GoPro() {
     load();
   }, [load]);
 
+  // Evento view_pro ao montar a página
+  useEffect(() => {
+    if (!loading) {
+      trackEvent('view_pro', {
+        src: params.get('src') || undefined,
+        logged_in: !!userId,
+        has_enough_dc: selected ? balance >= selected.price_duelcoins : false,
+      });
+    }
+  }, [loading, userId, balance, selected, params]);
+
   const selected = plans.find((p) => p.id === selectedId) || null;
   const missing = selected ? Math.max(0, selected.price_duelcoins - balance) : 0;
 
@@ -121,6 +133,14 @@ export default function GoPro() {
       });
       if (error) throw error;
       if (data && data.success === false) throw new Error(data.message);
+      
+      // Evento pro_activated
+      trackEvent('pro_activated', {
+        plan_id: selected.id,
+        price_dc: selected.price_duelcoins,
+        src: params.get('src') || undefined,
+      });
+      
       toast({
         title: "Você agora é PRO!",
         description: `${selected.price_duelcoins} DuelCoins deduzidos. Plano ${selected.name} ativo.`,

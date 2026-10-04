@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { useBanCheck } from "@/hooks/useBanCheck";
 import { convertFromBRL, currencyForLanguage, formatCurrency } from "@/utils/currency";
+import { trackEvent } from "@/utils/analytics";
 
 interface DuelCoinsPackage {
   id: string;
@@ -73,11 +74,45 @@ export default function BuyDuelCoins() {
 
   useEffect(() => {
     if (searchParams.get("success") === "true") {
-      toast({ title: t('buyCoins.paymentDone'), description: t('buyCoins.paymentDoneDesc') });
+      // Verificar se o pedido está paid antes de disparar purchase
+      handleSuccessReturn();
     } else if (searchParams.get("canceled") === "true") {
       toast({ title: t('buyCoins.paymentCanceled'), variant: "destructive" });
     }
   }, [searchParams]);
+
+  const handleSuccessReturn = async () => {
+    if (!userId) return;
+    
+    try {
+      // Buscar o pedido mais recente do usuário que está paid
+      const { data: orders } = await supabase
+        .from('duelcoins_orders')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('status', 'paid')
+        .order('paid_at', { ascending: false })
+        .limit(1);
+
+      if (orders && orders.length > 0) {
+        const order = orders[0];
+        // Disparar purchase
+        trackEvent('purchase', {
+          transaction_id: order.id,
+          value: Number(order.amount_brl),
+          currency: 'BRL',
+          method: order.payment_method || 'card',
+          package_dc: order.duelcoins_amount,
+          coupon: order.coupon_code || undefined,
+        });
+      }
+      
+      toast({ title: t('buyCoins.paymentDone'), description: t('buyCoins.paymentDoneDesc') });
+    } catch (err) {
+      console.error('Error handling success return:', err);
+      toast({ title: t('buyCoins.paymentDone'), description: t('buyCoins.paymentDoneDesc') });
+    }
+  };
 
   useEffect(() => {
     if (!pixData || !pixDialogOpen) {
@@ -88,12 +123,23 @@ export default function BuyDuelCoins() {
     pollInterval.current = setInterval(async () => {
       const { data: order } = await supabase
         .from('duelcoins_orders')
-        .select('status')
+        .select('*')
         .eq('external_order_id', String(pixData.payment_id))
         .single();
 
       if (order?.status === 'paid') {
         clearInterval(pollInterval.current!);
+        
+        // Disparar purchase
+        trackEvent('purchase', {
+          transaction_id: order.id,
+          value: Number(order.amount_brl),
+          currency: 'BRL',
+          method: 'pix',
+          package_dc: order.duelcoins_amount,
+          coupon: order.coupon_code || undefined,
+        });
+        
         setPixDialogOpen(false);
         setPixData(null);
         toast({ title: "✅ " + t('buyCoins.paymentDone'), description: t('buyCoins.paymentDoneDesc') });
@@ -166,6 +212,16 @@ export default function BuyDuelCoins() {
       if (error) throw error;
 
       if (data?.success) {
+        // Disparar begin_checkout
+        trackEvent('begin_checkout', {
+          method: 'pix',
+          package_dc: data.duelcoins_amount || pkg.duelcoins_amount,
+          value: data.amount_brl,
+          currency: 'BRL',
+          coupon: appliedCoupon?.code || undefined,
+          intent: 'dc',
+        });
+        
         setPixData({
           qr_code: data.qr_code,
           qr_code_base64: data.qr_code_base64,
@@ -198,6 +254,14 @@ export default function BuyDuelCoins() {
           { body: { package_id: pkg.id, language: i18n.language } }
         );
         if (!intlError && intl?.url) {
+          // Disparar begin_checkout para Stripe
+          trackEvent('begin_checkout', {
+            method: 'stripe',
+            package_dc: pkg.duelcoins_amount,
+            value: Number(pkg.price_brl),
+            currency: 'BRL',
+            intent: 'dc',
+          });
           window.location.href = intl.url;
           return;
         }
@@ -211,6 +275,15 @@ export default function BuyDuelCoins() {
       if (error) throw error;
 
       if (data?.success && data?.checkout_url) {
+        // Disparar begin_checkout para cartão
+        trackEvent('begin_checkout', {
+          method: 'card',
+          package_dc: pkg.duelcoins_amount,
+          value: computePrice(Number(pkg.price_brl)),
+          currency: 'BRL',
+          coupon: appliedCoupon?.code || undefined,
+          intent: 'dc',
+        });
         window.location.href = data.checkout_url;
       } else {
         toast({ title: t('buyCoins.checkoutError'), description: data?.error, variant: "destructive" });

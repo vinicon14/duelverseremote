@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Store as StoreIcon, Crown, Loader2, Coins, Check, Clock, ShoppingBag } from "lucide-react";
 import { VerificationCard } from "@/components/VerificationCard";
+import { trackEvent } from "@/utils/analytics";
 
 interface SubscriptionPlan {
   id: string;
@@ -53,6 +54,16 @@ export default function Store() {
     fetchPlans();
     checkUser();
   }, []);
+
+  // Evento view_pro ao carregar a aba PRO
+  useEffect(() => {
+    if (!loadingPlans && user) {
+      trackEvent('view_pro', {
+        logged_in: true,
+        has_enough_dc: plans.length > 0 && profile ? (profile.duelcoins_balance ?? 0) >= Math.min(...plans.map(p => p.price_duelcoins)) : false,
+      });
+    }
+  }, [loadingPlans, user, plans, profile]);
 
   // Update countdown every minute
   useEffect(() => {
@@ -172,6 +183,12 @@ export default function Store() {
       if (subscriptionData && !subscriptionData.success) {
         throw new Error(subscriptionData.message);
       }
+
+      // Evento pro_activated
+      trackEvent('pro_activated', {
+        plan_id: plan.id,
+        price_dc: plan.price_duelcoins,
+      });
 
       await fetchProfile(user.id);
       await fetchActiveSubscription(user.id);
