@@ -14,6 +14,7 @@ import { SiteAdSlot } from "@/components/ads/SiteAdSlot";
 import { SessionAdPopup } from "@/components/AdPopup";
 import { TournamentCard } from "@/components/TournamentCard";
 import { supabase } from "@/integrations/supabase/client";
+import { trackEvent } from "@/utils/analytics";
 import { useToast } from "@/hooks/use-toast";
 import { Trophy, Plus, Crown, Users, Settings } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -170,6 +171,14 @@ const Tournaments = () => {
         }
         return;
       }
+
+      const joined = tournaments.find((x) => x.id === tournamentId);
+      const fee = Number(joined?.entry_fee ?? 0);
+      trackEvent('tournament_join', {
+        entry_fee_dc: fee,
+        is_weekly: !!joined?.is_weekly,
+        free: fee === 0,
+      });
 
       toast({
         title: t('tournaments.joinSuccess'),

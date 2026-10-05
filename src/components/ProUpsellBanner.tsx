@@ -2,7 +2,7 @@
  * DuelVerse - Convite discreto para virar PRO
  * Aparece para contas FREE logadas, no máximo a cada 3 dias.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Crown, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -24,18 +24,21 @@ export function ProUpsellBanner() {
     const at = Number(localStorage.getItem(KEY) || 0);
     return Date.now() - at < INTERVAL;
   });
-  const [shown, setShown] = useState(false);
+  const shownTracked = useRef(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setLogged(!!data.session));
   }, []);
 
+  const visible = !loading && !isPro && logged && !dismissed && SHOW_ON.some((p) => pathname.startsWith(p));
+
+  // pro_upsell_shown: 1x por montagem, na primeira vez que o banner aparece
   useEffect(() => {
-    if (!loading && !isPro && logged && !dismissed && SHOW_ON.some((p) => pathname.startsWith(p)) && !shown) {
-      setShown(true);
+    if (visible && !shownTracked.current) {
+      shownTracked.current = true;
       trackEvent('pro_upsell_shown', { placement: 'toast_route' });
     }
-  }, [loading, isPro, logged, dismissed, pathname, shown]);
+  }, [visible]);
 
   if (loading || isPro || !logged || dismissed) return null;
   if (!SHOW_ON.some((p) => pathname.startsWith(p))) return null;
@@ -43,9 +46,14 @@ export function ProUpsellBanner() {
   const close = () => {
     localStorage.setItem(KEY, String(Date.now()));
     setDismissed(true);
-    trackEvent('pro_upsell_dismissed', { placement: 'toast_route' });
   };
 
+  const handleDismiss = () => {
+    trackEvent('pro_upsell_dismissed', { placement: 'toast_route' });
+    close();
+  };
+
+  // O CTA também esconde o banner (como antes), mas conta só como clicked, não como dismissed
   const handleClick = () => {
     trackEvent('pro_upsell_clicked', { placement: 'toast_route' });
     close();
@@ -62,7 +70,7 @@ export function ProUpsellBanner() {
             <Link to="/go-pro?src=toast_route">{t("pro.upsellCta", "Ver planos PRO")}</Link>
           </Button>
         </div>
-        <button onClick={close} aria-label={t("common.close", "Fechar")} className="text-muted-foreground hover:text-foreground">
+        <button onClick={handleDismiss} aria-label={t("common.close", "Fechar")} className="text-muted-foreground hover:text-foreground">
           <X className="h-4 w-4" />
         </button>
       </div>

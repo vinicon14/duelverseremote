@@ -7,6 +7,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { trackEvent } from "@/utils/analytics";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -103,6 +104,11 @@ const CreateWeeklyTournament = () => {
       }
 
       console.log('RPC success, tournament_id:', data.tournament_id);
+      trackEvent('tournament_create', {
+        is_weekly: true,
+        prize_pool_dc: prizePool,
+        entry_fee_dc: entryFee,
+      });
       toast({
         title: "Torneio Semanal criado com sucesso!",
         description: (

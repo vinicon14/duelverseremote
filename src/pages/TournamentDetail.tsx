@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/Navbar";
 import { supabase } from "@/integrations/supabase/client";
+import { trackEvent } from "@/utils/analytics";
 import { getDefaultLifePoints } from "@/utils/tcgRules";
 import { useToast } from "@/components/ui/use-toast";
 import { Trophy, Users, Calendar, Coins, ArrowLeft, Swords, AlertTriangle, CheckCircle, Clock, FileWarning, ChevronDown } from "lucide-react";
@@ -726,6 +727,13 @@ const TournamentDetail = () => {
                             setLoading(false);
                             return;
                           }
+
+                          const fee = Number(tournament.entry_fee ?? 0);
+                          trackEvent('tournament_join', {
+                            entry_fee_dc: fee,
+                            is_weekly: !!tournament.is_weekly,
+                            free: fee === 0,
+                          });
 
                           toast({
                             title: "Sucesso!",
