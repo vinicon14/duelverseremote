@@ -93,6 +93,7 @@ export type Database = {
           is_active: boolean
           metric: string
           reward_duelcoins: number
+          rewards_reduced_10x: boolean
           scope: string
           season_id: string
           sort_order: number
@@ -106,6 +107,7 @@ export type Database = {
           is_active?: boolean
           metric: string
           reward_duelcoins?: number
+          rewards_reduced_10x?: boolean
           scope: string
           season_id: string
           sort_order?: number
@@ -119,6 +121,7 @@ export type Database = {
           is_active?: boolean
           metric?: string
           reward_duelcoins?: number
+          rewards_reduced_10x?: boolean
           scope?: string
           season_id?: string
           sort_order?: number
@@ -216,6 +219,7 @@ export type Database = {
           level: number
           metadata: Json
           reward_type: string
+          rewards_reduced_10x: boolean
           season_id: string
           title: string
           track: string
@@ -230,6 +234,7 @@ export type Database = {
           level: number
           metadata?: Json
           reward_type?: string
+          rewards_reduced_10x?: boolean
           season_id: string
           title: string
           track: string
@@ -244,6 +249,7 @@ export type Database = {
           level?: number
           metadata?: Json
           reward_type?: string
+          rewards_reduced_10x?: boolean
           season_id?: string
           title?: string
           track?: string
