@@ -7,8 +7,9 @@ Migration: `supabase/migrations/20261005103000_reduce_duelcoins_rewards_10x.sql`
 Dividir por 10 as recompensas em DuelCoins (DC) das missões e das trilhas do Battle Pass.
 Missões diárias passam a pagar **8 DC/dia** (antes 80), então o plano PRO de 20 DC sai em ~2,5 dias de diárias.
 
-**Não muda:** preço do PRO (`subscription_plans`), preço do Battle Pass PRO
-(`battle_pass_seasons.pro_price_duelcoins` = 1000 DC), metas/métricas das missões,
+**Também reduzido**: preço do Battle Pass PRO de **1000 DC → 200 DC** (custo para desbloquear a trilha PRO na temporada).
+
+**Não muda**: preço do PRO mensal (`subscription_plans` = 20 DC), metas/métricas das missões,
 `wins_required` dos níveis, recompensas cosméticas (para elas `amount` é quantidade de item).
 
 ## Fórmula
@@ -39,6 +40,14 @@ de 3, 5 e 7 são título/moldura/efeito/playmat (não DC). Esses ficam intactos.
 | PRO | 23 | 9290 | 929 | nv1 160→16, nv2 170→17, nv4 190→19, nv47 620→62 |
 
 Títulos no formato `"N DuelCoins"` são reescritos a partir do novo `amount`, no mesmo UPDATE.
+
+## Preço do Battle Pass PRO (`battle_pass_seasons.pro_price_duelcoins`)
+
+| Item | Antes | Depois |
+|---|---|---|
+| Custo para desbloquear trilha PRO da temporada | 1000 DC | 200 DC |
+
+**Não confundir com**: PRO mensal (`subscription_plans`) = 20 DC (inalterado).
 
 ## Idempotência
 

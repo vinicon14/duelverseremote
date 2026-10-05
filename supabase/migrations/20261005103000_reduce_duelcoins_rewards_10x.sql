@@ -7,7 +7,8 @@
 --   * battle_pass_missions.reward_duelcoins  (daily / weekly / season, active or not)
 --   * battle_pass_rewards.amount where reward_type = 'duelcoins' (free + pro tracks)
 --   * titles in the "<N> DuelCoins" format are rewritten from the NEW amount
--- Untouched: battle_pass_seasons.pro_price_duelcoins (1000), subscription_plans,
+--   * battle_pass_seasons.pro_price_duelcoins reduced from 1000 to 200 DC
+-- Untouched: subscription_plans (PRO monthly at 20 DC),
 --   goals/metrics, wins_required, cosmetic rewards (their amount is a quantity).
 --
 -- Formula: v > 0 -> GREATEST(1, ROUND(v / 10.0)); v = 0 stays 0.
@@ -57,6 +58,14 @@ WHERE rewards_reduced_10x = false;
 ALTER TABLE public.battle_pass_missions ALTER COLUMN rewards_reduced_10x SET DEFAULT true;
 ALTER TABLE public.battle_pass_rewards  ALTER COLUMN rewards_reduced_10x SET DEFAULT true;
 
+-- Reduce Battle Pass PRO purchase price from 1000 to 200 DC (does not affect
+-- subscription_plans PRO monthly at 20 DC).
+UPDATE public.battle_pass_seasons
+SET pro_price_duelcoins = 200
+WHERE pro_price_duelcoins = 1000;
+
+COMMENT ON COLUMN public.battle_pass_seasons.pro_price_duelcoins IS
+  'Cost in DuelCoins to unlock the PRO track for this season (reduced to 200 DC in migration 20261005103000)';
 COMMENT ON COLUMN public.battle_pass_missions.rewards_reduced_10x IS
   'true = reward_duelcoins already on the post-20261005103000 scale (divided by 10 or created afterwards)';
 COMMENT ON COLUMN public.battle_pass_rewards.rewards_reduced_10x IS
