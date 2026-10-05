@@ -5,7 +5,7 @@
  * Loja de assinaturas Pro e planos de assinatura.
  * Usuários podem comprar Premium com DuelCoins.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Navbar } from "@/components/Navbar";
@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Store as StoreIcon, Crown, Loader2, Coins, Check, Clock, ShoppingBag } from "lucide-react";
 import { VerificationCard } from "@/components/VerificationCard";
+import { trackEvent } from "@/utils/analytics";
 
 interface SubscriptionPlan {
   id: string;
@@ -46,6 +47,7 @@ export default function Store() {
   const [profile, setProfile] = useState<any>(null);
   const [activeSubscription, setActiveSubscription] = useState<ActiveSubscription | null>(null);
   const [timeLeft, setTimeLeft] = useState("");
+  const [authChecked, setAuthChecked] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -53,6 +55,21 @@ export default function Store() {
     fetchPlans();
     checkUser();
   }, []);
+
+  // view_pro: 1x por montagem, quando planos, sessão e saldo já carregaram
+  // (o fetchProfile pós-ativação não dispara de novo)
+  const viewProTracked = useRef(false);
+  useEffect(() => {
+    if (viewProTracked.current || loadingPlans || !authChecked) return;
+    if (user && !profile) return; // espera o saldo
+    viewProTracked.current = true;
+    const cheapest = plans.length > 0 ? Math.min(...plans.map((p) => p.price_duelcoins)) : null;
+    trackEvent('view_pro', {
+      src: 'store',
+      logged_in: !!user,
+      has_enough_dc: !!profile && cheapest !== null && (profile.duelcoins_balance ?? 0) >= cheapest,
+    });
+  }, [loadingPlans, authChecked, user, plans, profile]);
 
   // Update countdown every minute
   useEffect(() => {
@@ -78,6 +95,7 @@ export default function Store() {
   const checkUser = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     setUser(session?.user ?? null);
+    setAuthChecked(true);
     if (session?.user) {
       fetchProfile(session.user.id);
       fetchActiveSubscription(session.user.id);
@@ -172,6 +190,12 @@ export default function Store() {
       if (subscriptionData && !subscriptionData.success) {
         throw new Error(subscriptionData.message);
       }
+
+      trackEvent('pro_activated', {
+        plan_id: plan.id,
+        price_dc: plan.price_duelcoins,
+        src: 'store',
+      });
 
       await fetchProfile(user.id);
       await fetchActiveSubscription(user.id);

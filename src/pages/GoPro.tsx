@@ -3,7 +3,7 @@
  * Link direto: /go-pro (opcional ?plan=<id>)
  * Compra com DuelCoins: os coins são deduzidos e o plano fica ativo na hora.
  */
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Crown, Coins, Check, Loader2, Share2, Clock, ShieldCheck } from "lucide-react";
+import { sanitizeSrc, trackEvent } from "@/utils/analytics";
 
 interface Plan {
   id: string;
@@ -92,6 +93,20 @@ export default function GoPro() {
 
   const selected = plans.find((p) => p.id === selectedId) || null;
   const missing = selected ? Math.max(0, selected.price_duelcoins - balance) : 0;
+  const src = sanitizeSrc(params.get("src"));
+
+  // view_pro: 1x por montagem, depois do primeiro carregamento (o load() pós-ativação,
+  // a troca de plano ou a mudança de saldo não disparam de novo)
+  const viewProTracked = useRef(false);
+  useEffect(() => {
+    if (loading || viewProTracked.current) return;
+    viewProTracked.current = true;
+    trackEvent("view_pro", {
+      src,
+      logged_in: !!userId,
+      has_enough_dc: selected ? balance >= selected.price_duelcoins : false,
+    });
+  }, [loading, userId, balance, selected, src]);
 
   const handleShare = async () => {
     const url = `${window.location.origin}/go-pro${selected ? `?plan=${selected.id}` : ""}`;
@@ -121,6 +136,11 @@ export default function GoPro() {
       });
       if (error) throw error;
       if (data && data.success === false) throw new Error(data.message);
+      trackEvent("pro_activated", {
+        plan_id: selected.id,
+        price_dc: selected.price_duelcoins,
+        src,
+      });
       toast({
         title: "Você agora é PRO!",
         description: `${selected.price_duelcoins} DuelCoins deduzidos. Plano ${selected.name} ativo.`,

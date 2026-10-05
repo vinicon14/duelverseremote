@@ -14,6 +14,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { useBanCheck } from "@/hooks/useBanCheck";
 import { convertFromBRL, currencyForLanguage, formatCurrency } from "@/utils/currency";
+import {
+  ORDER_TRACKING_COLUMNS,
+  extractStripeSessionId,
+  reconcilePendingPurchases,
+  rememberPendingCheckout,
+  trackEvent,
+  trackPurchaseForOrder,
+} from "@/utils/analytics";
 
 interface DuelCoinsPackage {
   id: string;
@@ -79,6 +87,20 @@ export default function BuyDuelCoins() {
     }
   }, [searchParams]);
 
+  // GA4 purchase: só para checkouts iniciados neste navegador e só quando o pedido está `paid`
+  // no banco. No retorno do checkout (?success=true) espera o webhook por até ~1 min.
+  useEffect(() => {
+    if (!userId) return;
+    const ctrl = new AbortController();
+    const returning = searchParams.get("success") === "true";
+    void reconcilePendingPurchases(supabase, userId, {
+      attempts: returning ? 12 : 1,
+      intervalMs: 5000,
+      signal: ctrl.signal,
+    });
+    return () => ctrl.abort();
+  }, [userId, searchParams]);
+
   useEffect(() => {
     if (!pixData || !pixDialogOpen) {
       if (pollInterval.current) clearInterval(pollInterval.current);
@@ -88,12 +110,13 @@ export default function BuyDuelCoins() {
     pollInterval.current = setInterval(async () => {
       const { data: order } = await supabase
         .from('duelcoins_orders')
-        .select('status')
+        .select(ORDER_TRACKING_COLUMNS)
         .eq('external_order_id', String(pixData.payment_id))
         .single();
 
       if (order?.status === 'paid') {
         clearInterval(pollInterval.current!);
+        trackPurchaseForOrder(order, 'pix');
         setPixDialogOpen(false);
         setPixData(null);
         toast({ title: "✅ " + t('buyCoins.paymentDone'), description: t('buyCoins.paymentDoneDesc') });
@@ -166,6 +189,16 @@ export default function BuyDuelCoins() {
       if (error) throw error;
 
       if (data?.success) {
+        rememberPendingCheckout(data.payment_id, 'pix');
+        trackEvent('begin_checkout', {
+          method: 'pix',
+          package_dc: Number(data.duelcoins_amount ?? pkg.duelcoins_amount),
+          value: Number(data.amount_brl),
+          currency: 'BRL',
+          coupon: appliedCoupon?.code || undefined,
+          intent: 'dc',
+        });
+
         setPixData({
           qr_code: data.qr_code,
           qr_code_base64: data.qr_code_base64,
@@ -198,6 +231,14 @@ export default function BuyDuelCoins() {
           { body: { package_id: pkg.id, language: i18n.language } }
         );
         if (!intlError && intl?.url) {
+          rememberPendingCheckout(extractStripeSessionId(intl.url), 'stripe');
+          trackEvent('begin_checkout', {
+            method: 'stripe',
+            package_dc: pkg.duelcoins_amount,
+            value: Number(pkg.price_brl),
+            currency: 'BRL',
+            intent: 'dc',
+          });
           window.location.href = intl.url;
           return;
         }
@@ -211,6 +252,16 @@ export default function BuyDuelCoins() {
       if (error) throw error;
 
       if (data?.success && data?.checkout_url) {
+        rememberPendingCheckout(data.preference_id, 'card');
+        // O mercadopago-create-checkout não devolve o valor; computePrice espelha o cálculo do servidor
+        trackEvent('begin_checkout', {
+          method: 'card',
+          package_dc: pkg.duelcoins_amount,
+          value: computePrice(Number(pkg.price_brl)),
+          currency: 'BRL',
+          coupon: appliedCoupon?.code || undefined,
+          intent: 'dc',
+        });
         window.location.href = data.checkout_url;
       } else {
         toast({ title: t('buyCoins.checkoutError'), description: data?.error, variant: "destructive" });
