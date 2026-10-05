@@ -3373,6 +3373,10 @@ export type Database = {
         Returns: Json
       }
       sync_storage_recordings: { Args: never; Returns: undefined }
+      tournament_finalize_winner: {
+        Args: { p_tournament_id: string; p_winner_id: string }
+        Returns: Json
+      }
       tournament_pay_winner: {
         Args: { p_amount: number; p_tournament_id: string; p_winner_id: string }
         Returns: Json
