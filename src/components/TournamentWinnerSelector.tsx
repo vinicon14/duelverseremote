@@ -40,45 +40,23 @@ export const TournamentWinnerSelector = ({
     setLoading(true);
 
     try {
-      // Pagamento atômico via RPC SECURITY DEFINER: valida que o caller é o
-      // criador do torneio, credita o vencedor e registra a transação.
+      // RPC única: valida criador/admin, paga prêmio (se houver), marca vencedor e finaliza.
       const { data: rpcData, error: payError } = await (supabase.rpc as any)(
-        'tournament_pay_winner',
-        {
-          p_tournament_id: tournamentId,
-          p_winner_id: selectedWinnerId,
-          p_amount: prizePool,
-        }
+        'tournament_finalize_winner',
+        { p_tournament_id: tournamentId, p_winner_id: selectedWinnerId }
       );
 
       if (payError) throw payError;
       const payResult = rpcData as { success?: boolean; message?: string } | null;
       if (!payResult?.success) {
-        throw new Error(payResult?.message || 'Falha ao pagar prêmio');
+        throw new Error(payResult?.message || 'Falha ao finalizar torneio');
       }
 
-      // Buscar nome do vencedor apenas para feedback no toast.
       const { data: winnerProfile } = await supabase
         .from('profiles')
         .select('username')
         .eq('user_id', selectedWinnerId)
-        .single();
-      const transactionError = null;
-
-      // Marcar participante como vencedor
-      await supabase
-        .from('tournament_participants')
-        .update({ status: 'winner' })
-        .eq('tournament_id', tournamentId)
-        .eq('user_id', selectedWinnerId);
-
-      // Finalizar torneo
-      const { error: tournamentError } = await supabase
-        .from('tournaments')
-        .update({ status: 'completed', end_date: new Date().toISOString() })
-        .eq('id', tournamentId);
-
-      if (tournamentError) throw tournamentError;
+        .maybeSingle();
 
       const winner = participants.find(p => p.user_id === selectedWinnerId);
 
