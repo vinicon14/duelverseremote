@@ -158,21 +158,21 @@ export const AdminDuelCoinsPackages = () => {
     if (!confirm(`Aprovar pedido de ${order.duelcoins_amount} DuelCoins para ${order.username}?`)) return;
     
     try {
-      const { error: rpcError } = await supabase.rpc('admin_manage_duelcoins', {
-        p_user_id: order.user_id,
-        p_amount: order.duelcoins_amount,
-        p_operation: 'add',
-        p_reason: `Compra aprovada manualmente - Pedido #${order.id.slice(0, 8)}`,
+      const { data, error: rpcError } = await supabase.rpc('admin_approve_duelcoins_order', {
+        p_order_id: order.id
       });
+      
       if (rpcError) throw rpcError;
+      
+      if (!data?.success) {
+        throw new Error(data?.message || 'Falha ao aprovar pedido');
+      }
 
-      const { error } = await supabase
-        .from('duelcoins_orders')
-        .update({ status: 'paid', paid_at: new Date().toISOString() } as any)
-        .eq('id', order.id);
-      if (error) throw error;
-
-      toast({ title: "Pedido aprovado e DuelCoins creditados!" });
+      const message = data.already_paid 
+        ? "Pedido já havia sido aprovado anteriormente" 
+        : "Pedido aprovado e DuelCoins creditados!";
+      
+      toast({ title: message });
       fetchOrders();
     } catch (error: any) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
