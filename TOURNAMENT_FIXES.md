@@ -5,7 +5,8 @@ Antes do torneio pago de sábado 10/10/2026 (inscrição 5 DC, prêmio R$ 10 Pix
 
 ## Base do Código
 - **Branch base**: `origin/main` (commit `fc1b422`)
-- **Commit "Corrigiu seleção de ganhador"** (fc1b422) já havia parcialmente resolvido o Problema 2
+- **Commit "Corrigiu seleção de ganhador"** (fc1b422) JÁ RESOLVEU o Problema 2
+- **Prêmio do sábado**: R$ 10 Pix OU 1 mês PRO (manual), não prize_pool em DC
 
 ## Problemas Identificados e Soluções
 
@@ -180,8 +181,14 @@ SELECT account_type FROM profiles WHERE user_id = 'user-id';
 ## Gaps Identificados (Não Bloqueantes para Sábado)
 
 ### ⚠️ 1. Decklist não está sendo validado/travado
+**Status Atual**: 
+- ✅ `TournamentDecklistViewer` existe e exibe decklists enviadas
+- ✅ Tabela `tournament_decklists` existe (migration 20260413163656)
+- ⚠️ Não há validação se todos participantes enviaram (se `requires_decklist=true`)
+- ⚠️ Não há "trava" impedindo edição após envio
+
 **Impacto**: Baixo (torneio de sábado pode não exigir decklist)
-**Recomendação**: Validar `TournamentDecklistViewer` antes de torneios que exigem decklist
+**Recomendação**: Se torneio exigir decklist, validar manualmente antes de iniciar
 
 ### ⚠️ 2. Conflitos de resultado não têm resolução automática
 **Impacto**: Baixo (criador pode definir manualmente)

@@ -1,22 +1,22 @@
 -- =====================================================
--- Garantia: tournament_finalize_winner está disponível
+-- Garantia: tournament_finalize_winner em supabase/migrations
 -- Data: 2026-10-05 10:44:00
 -- =====================================================
 --
--- PROBLEMA 2: TournamentWinnerSelector chama tournament_finalize_winner,
--- que pode falhar por RLS ao atualizar tournaments.status = 'completed'.
+-- CONTEXTO: O commit fc1b422 "Corrigiu seleção de ganhador" introduziu
+-- tournament_finalize_winner em drizzle/migrations/0000_tournament_finalize_winner.sql.
 --
--- ANÁLISE: O commit fc1b422 "Corrigiu seleção de ganhador" já introduziu
--- tournament_finalize_winner (drizzle/migrations/0000_tournament_finalize_winner.sql)
--- que é SECURITY DEFINER, valida criador/admin, chama tournament_pay_winner
--- e atualiza o status do torneio.
+-- PROBLEMA: Lovable Cloud pode usar apenas supabase/migrations/ para produção,
+-- não drizzle/migrations/. Esta migration garante que tournament_finalize_winner
+-- está disponível em supabase/migrations também (cópia do drizzle).
 --
--- Esta migration garante que tournament_finalize_winner está no schema
--- supabase/migrations (além de drizzle) e verifica se as policies de
--- tournaments permitem UPDATE do status via SECURITY DEFINER.
+-- VALIDAÇÃO prize_pool=0: A função CORRETAMENTE trata torneios com prêmio
+-- manual (R$ 10 Pix ou PRO). Se prize_pool = 0, apenas marca vencedor e
+-- finaliza (status = 'completed'), sem tentar pagar DuelCoins.
 -- =====================================================
 
--- Recria tournament_finalize_winner (idempotente, mesmo conteúdo do drizzle)
+-- Copia tournament_finalize_winner do drizzle para supabase/migrations
+-- (idempotente via CREATE OR REPLACE)
 CREATE OR REPLACE FUNCTION public.tournament_finalize_winner(
   p_tournament_id UUID, 
   p_winner_id UUID
@@ -67,26 +67,24 @@ BEGIN
     RETURN json_build_object('success', false, 'message', 'Vencedor não é participante do torneio');
   END IF;
 
-  -- Paga prêmio se houver (e ainda não foi pago)
-  IF COALESCE(v_t.prize_pool, 0) > 0 THEN
-    -- Verifica se já foi pago
-    IF NOT EXISTS (
-      SELECT 1 
-      FROM duelcoins_transactions
-      WHERE tournament_id = p_tournament_id 
-        AND transaction_type = 'tournament_prize' 
-        AND receiver_id = p_winner_id
-    ) THEN
-      -- Chama tournament_pay_winner para pagar
-      v_pay := public.tournament_pay_winner(p_tournament_id, p_winner_id, v_t.prize_pool);
-      
-      -- Se pagamento falhar, retorna erro
-      IF NOT COALESCE((v_pay->>'success')::BOOLEAN, false) THEN
-        RETURN v_pay;
-      END IF;
-      
-      v_paid := v_t.prize_pool;
+  -- Paga prêmio SE houver prize_pool > 0 E ainda não foi pago
+  -- IMPORTANTE: Se prize_pool = 0, pula pagamento (prêmio é manual: Pix/PRO)
+  IF COALESCE(v_t.prize_pool, 0) > 0 AND NOT EXISTS (
+    SELECT 1 
+    FROM duelcoins_transactions
+    WHERE tournament_id = p_tournament_id 
+      AND transaction_type = 'tournament_prize' 
+      AND receiver_id = p_winner_id
+  ) THEN
+    -- Chama tournament_pay_winner para pagar em DuelCoins
+    v_pay := public.tournament_pay_winner(p_tournament_id, p_winner_id, v_t.prize_pool);
+    
+    -- Se pagamento falhar, retorna erro
+    IF NOT COALESCE((v_pay->>'success')::BOOLEAN, false) THEN
+      RETURN v_pay;
     END IF;
+    
+    v_paid := v_t.prize_pool;
   END IF;
 
   -- Marca vencedor
@@ -112,47 +110,4 @@ GRANT EXECUTE ON FUNCTION public.tournament_finalize_winner(UUID, UUID) TO authe
 
 -- Documenta
 COMMENT ON FUNCTION public.tournament_finalize_winner(UUID, UUID) IS 
-  'Finaliza torneio: valida criador/admin, paga prêmio (se houver e ainda não pago), marca vencedor e define status=completed. Chamado por TournamentWinnerSelector.';
-
--- Verifica/cria policy de UPDATE em tournaments para SECURITY DEFINER
--- (SECURITY DEFINER bypassa RLS, mas é bom ter policy explícita)
-DO $$
-BEGIN
-  -- Se não existir policy de UPDATE para criadores/admins, cria
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies 
-    WHERE schemaname = 'public' 
-      AND tablename = 'tournaments' 
-      AND policyname = 'Creators and admins can update tournaments'
-  ) THEN
-    CREATE POLICY "Creators and admins can update tournaments"
-      ON public.tournaments
-      FOR UPDATE
-      TO authenticated
-      USING (
-        created_by = auth.uid() 
-        OR public.is_admin(auth.uid())
-      )
-      WITH CHECK (
-        created_by = auth.uid() 
-        OR public.is_admin(auth.uid())
-      );
-  END IF;
-END $$;
-
--- Garante que a policy de SELECT em tournaments existe
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies 
-    WHERE schemaname = 'public' 
-      AND tablename = 'tournaments' 
-      AND policyname = 'Anyone can view tournaments'
-  ) THEN
-    CREATE POLICY "Anyone can view tournaments"
-      ON public.tournaments
-      FOR SELECT
-      TO public
-      USING (true);
-  END IF;
-END $$;
+  'Finaliza torneio: valida criador/admin, paga prêmio SE prize_pool > 0 (senão prêmio é manual: Pix/PRO), marca vencedor e define status=completed. Chamado por TournamentWinnerSelector. Cópia de drizzle/migrations/0000_tournament_finalize_winner.sql para garantir disponibilidade em produção Lovable.';
