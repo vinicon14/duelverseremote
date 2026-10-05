@@ -142,7 +142,7 @@ export const AdminBattlePass = () => {
 
   const addReward = async (level: number, track: string) => {
     const { error } = await supabase.from("battle_pass_rewards").insert({
-      season_id: seasonId, level, track, reward_type: "duelcoins", title: "Nova recompensa", amount: 100,
+      season_id: seasonId, level, track, reward_type: "duelcoins", title: "Nova recompensa", amount: 10,
     });
     notify(error, "Recompensa criada");
     void loadSeasonData(seasonId);
@@ -161,7 +161,7 @@ export const AdminBattlePass = () => {
 
   const addMission = async () => {
     const { error } = await supabase.from("battle_pass_missions").insert({
-      season_id: seasonId, scope: "daily", metric: "wins", title: "Nova missão", goal: 1, reward_duelcoins: 50,
+      season_id: seasonId, scope: "daily", metric: "wins", title: "Nova missão", goal: 1, reward_duelcoins: 5,
     });
     notify(error, "Missão criada");
     void loadSeasonData(seasonId);
