@@ -259,11 +259,14 @@ export interface InboundSample {
   audioBytes: number;
   /** bytes + respostas STUN (consent) no par de candidatos selecionado */
   transportActivity: number;
+  /** true when the selected path goes through a TURN relay (counts toward its quota) */
+  relayed: boolean;
 }
 
 export function sampleInbound(report: RTCStatsReport): InboundSample {
-  const sample: InboundSample = { videoFrames: 0, videoBytes: 0, audioBytes: 0, transportActivity: 0 };
+  const sample: InboundSample = { videoFrames: 0, videoBytes: 0, audioBytes: 0, transportActivity: 0, relayed: false };
   const pairs: Record<string, unknown>[] = [];
+  const candidateTypes = new Map<string, string>();
   let selectedPairId: string | undefined;
   report.forEach((raw) => {
     const s = raw as Record<string, unknown> & { type: string };
@@ -279,12 +282,19 @@ export function sampleInbound(report: RTCStatsReport): InboundSample {
       selectedPairId = s.selectedCandidatePairId;
     } else if (s.type === "candidate-pair") {
       pairs.push(s);
+    } else if ((s.type === "local-candidate" || s.type === "remote-candidate") && typeof s.id === "string") {
+      candidateTypes.set(s.id, String(s.candidateType ?? ""));
     }
   });
   const pair =
     pairs.find((p) => p.id === selectedPairId) ??
     pairs.find((p) => p.selected === true || (p.nominated === true && p.state === "succeeded"));
-  if (pair) sample.transportActivity = Number(pair.bytesReceived ?? 0) + Number(pair.responsesReceived ?? 0);
+  if (pair) {
+    sample.transportActivity = Number(pair.bytesReceived ?? 0) + Number(pair.responsesReceived ?? 0);
+    sample.relayed =
+      candidateTypes.get(String(pair.localCandidateId)) === "relay" ||
+      candidateTypes.get(String(pair.remoteCandidateId)) === "relay";
+  }
   return sample;
 }
 
@@ -310,6 +320,11 @@ export function assessMediaHealth(prev: InboundSample | null | undefined, next: 
 /** Limites de envio de vídeo: protegem o uplink do jogador (malha 1:N). */
 export const OPPONENT_VIDEO_MAX_BITRATE = 1_800_000;
 export const SPECTATOR_VIDEO_MAX_BITRATE = 800_000;
+/** Teto quando o caminho passa por um relay TURN: poupa a cota mensal do relay. */
+export const RELAYED_VIDEO_MAX_BITRATE = 900_000;
+
+export const bitrateCapFor = (base: number, relayed: boolean) =>
+  relayed ? Math.min(base, RELAYED_VIDEO_MAX_BITRATE) : base;
 
 /** Aplica teto de bitrate no(s) sender(s) de vídeo. Idempotente; nunca lança. */
 export async function applyVideoBitrateCap(pc: RTCPeerConnection, maxBitrate: number) {

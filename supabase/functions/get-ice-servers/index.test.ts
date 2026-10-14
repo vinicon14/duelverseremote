@@ -2,7 +2,7 @@
  * Testes de autorização da edge function get-ice-servers
  */
 import { assertEquals } from "https://deno.land/std@0.192.0/testing/asserts.ts";
-import { handler } from "./index.ts";
+import { handler, cloudflareServers, bearerToken } from "./index.ts";
 
 Deno.test("sem Authorization header retorna 401", async () => {
   const req = new Request("http://localhost/get-ice-servers", {
@@ -118,4 +118,30 @@ Deno.test("OPTIONS retorna 200 sem auth", async () => {
   const res = await handler(req, mockDeps);
   
   assertEquals(res.status, 200);
+});
+
+Deno.test("Cloudflare TURN: usa credenciais geradas e descarta porta 53", async () => {
+  const env: Record<string, string> = { CLOUDFLARE_TURN_KEY_ID: "k", CLOUDFLARE_TURN_API_TOKEN: "t" };
+  const fakeFetch = (async () =>
+    new Response(JSON.stringify({
+      iceServers: [
+        { urls: ["stun:stun.cloudflare.com:3478"] },
+        { urls: ["turn:turn.cloudflare.com:3478?transport=udp", "turn:turn.cloudflare.com:53?transport=udp", "turns:turn.cloudflare.com:443?transport=tcp"], username: "u", credential: "c" },
+      ],
+    }), { status: 200 })) as typeof fetch;
+  const list = await cloudflareServers((k) => env[k], fakeFetch) as { urls: string[] }[];
+  assertEquals(list.length, 1);
+  assertEquals(list[0].urls, ["turn:turn.cloudflare.com:3478?transport=udp", "turns:turn.cloudflare.com:443?transport=tcp"]);
+});
+
+Deno.test("Cloudflare TURN: sem chaves não chama nada", async () => {
+  let called = false;
+  const list = await cloudflareServers(() => undefined, (async () => { called = true; return new Response("{}"); }) as typeof fetch);
+  assertEquals(list.length, 0);
+  assertEquals(called, false);
+});
+
+Deno.test("bearerToken extrai o JWT do header (getUser precisa dele explícito)", () => {
+  assertEquals(bearerToken("Bearer abc.def.ghi"), "abc.def.ghi");
+  assertEquals(bearerToken("bearer   xyz"), "xyz");
 });

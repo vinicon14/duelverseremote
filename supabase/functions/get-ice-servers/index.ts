@@ -114,6 +114,47 @@ function staticTurn(getEnv: (key: string) => string | undefined): unknown[] {
   return [{ urls: urls.split(",").map((u) => u.trim()).filter(Boolean), username, credential }];
 }
 
+// Cloudflare Realtime TURN (optional). Large monthly quota, so a relayed duel
+// cannot silently exhaust it like a small TURN plan does. Port 53 URLs are
+// dropped: browsers block them.
+export async function cloudflareServers(
+  getEnv: (key: string) => string | undefined,
+  fetcher: typeof fetch = fetch,
+): Promise<unknown[]> {
+  const keyId = getEnv("CLOUDFLARE_TURN_KEY_ID")?.trim();
+  const token = getEnv("CLOUDFLARE_TURN_API_TOKEN")?.trim();
+  if (!keyId || !token) return [];
+  try {
+    const res = await fetcher(
+      `https://rtc.live.cloudflare.com/v1/turn/keys/${encodeURIComponent(keyId)}/credentials/generate-ice-servers`,
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ ttl: 86400 }),
+        signal: AbortSignal.timeout(4000),
+      },
+    );
+    if (!res.ok) {
+      console.log("[ice] cloudflare status", res.status);
+      return [];
+    }
+    const body = await res.json();
+    const raw = Array.isArray(body?.iceServers) ? body.iceServers : body?.iceServers ? [body.iceServers] : [];
+    const list = raw
+      .map((s: { urls?: string | string[]; username?: string; credential?: string }) => {
+        const urls = (Array.isArray(s.urls) ? s.urls : [s.urls ?? ""])
+          .filter((u) => typeof u === "string" && u.startsWith("turn") && !/:53(\?|$)/.test(u));
+        return urls.length ? { urls, username: s.username, credential: s.credential } : null;
+      })
+      .filter(Boolean);
+    console.log("[ice] cloudflare ok, servers", list.length);
+    return list;
+  } catch (e) {
+    console.log("[ice] cloudflare fetch failed", String(e));
+    return [];
+  }
+}
+
 function checkRateLimit(userId: string): boolean {
   const now = Date.now();
   const record = rateLimitMap.get(userId);
@@ -186,7 +227,13 @@ export async function handler(req: Request, deps: Dependencies): Promise<Respons
     });
   }
 
-  let turn = [...staticTurn(deps.getEnv), ...(await meteredServers(deps.getEnv))];
+  // Several independent relays: if one runs out of quota or goes down, ICE
+  // still finds a working path through another one.
+  const [cloudflare, metered] = await Promise.all([
+    cloudflareServers(deps.getEnv),
+    meteredServers(deps.getEnv),
+  ]);
+  let turn = [...staticTurn(deps.getEnv), ...cloudflare, ...metered];
   const hasTurn = turn.length > 0;
   if (!hasTurn) turn = [...FALLBACK_TURN];
   const servers = [...STUN_SERVERS, ...turn];
@@ -198,6 +245,8 @@ export async function handler(req: Request, deps: Dependencies): Promise<Respons
 }
 
 // Only start the server if this is the main module (not being imported for tests)
+export const bearerToken = (authHeader: string) => authHeader.replace(/^Bearer\s+/i, "").trim();
+
 if (import.meta.main) {
   Deno.serve((req: Request) => 
     handler(req, {
@@ -205,9 +254,13 @@ if (import.meta.main) {
         const supabaseClient = createClient(
           Deno.env.get("SUPABASE_URL") ?? "",
           Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-          { global: { headers: { Authorization: authHeader } } }
+          { auth: { persistSession: false, autoRefreshToken: false } },
         );
-        const { data: { user }, error } = await supabaseClient.auth.getUser();
+        // Pass the JWT explicitly. Newer auth client builds ignore the global
+        // Authorization header in getUser() ("Auth session missing"), which made
+        // this function reject every player: nobody received the managed TURN
+        // relay, so players on different networks never saw each other.
+        const { data: { user }, error } = await supabaseClient.auth.getUser(bearerToken(authHeader));
         return { user, error };
       },
       getEnv: (key: string) => Deno.env.get(key),
