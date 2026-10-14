@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback, useImperativeHandle, forwardRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ensureIceServers, buildPcConfig, getIceServers } from "@/utils/iceServers";
+import { ensureIceServers, buildPcConfig, getIceServers, reportTurnFailure } from "@/utils/iceServers";
 import { queueRemoteCandidate, flushRemoteCandidates } from "@/utils/webrtcCandidates";
 import {
   SIGNAL_PROTOCOL_VERSION,
@@ -17,6 +17,7 @@ import {
   assessMediaHealth,
   applyVideoBitrateCap,
   OPPONENT_VIDEO_MAX_BITRATE,
+  bitrateCapFor,
   SPECTATOR_VIDEO_MAX_BITRATE,
   type DeferredCandidate,
   type InboundSample,
@@ -611,6 +612,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       peer.recovery.dispose();
       peer.batcher?.cancel();
       peer.pc.onicecandidate = null;
+      peer.pc.onicecandidateerror = null;
       peer.pc.oniceconnectionstatechange = null;
       peer.pc.onconnectionstatechange = null;
       peer.pc.ontrack = null;
@@ -719,6 +721,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       // Also stop the old connection from emitting candidates: they would be
       // sent to the peer and applied to the NEW connection, breaking ICE.
       existing.pc.onicecandidate = null;
+      existing.pc.onicecandidateerror = null;
       existing.pc.close();
       unregisterRemoteStream(remotePeerId);
       setRemoteStreams((prev) => {
@@ -1610,6 +1613,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         peer.recovery.dispose();
         peer.batcher?.cancel();
         peer.pc.onicecandidate = null;
+        peer.pc.onicecandidateerror = null;
         peer.pc.oniceconnectionstatechange = null;
         peer.pc.onconnectionstatechange = null;
         peer.pc.ontrack = null;
