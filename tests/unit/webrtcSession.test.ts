@@ -13,6 +13,7 @@ import {
   applyVideoBitrateCap,
   type SessionView,
 } from "@/utils/webrtcSession";
+import { sampleInbound as sampleInboundRelay, bitrateCapFor, RELAYED_VIDEO_MAX_BITRATE } from "@/utils/webrtcSession";
 
 const view = (over: Partial<SessionView> = {}): SessionView => ({
   localPcId: "local-1",
@@ -199,5 +200,26 @@ describe("video bitrate cap", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     await expect(applyVideoBitrateCap({ getSenders: () => [sender] } as unknown as RTCPeerConnection, 1)).resolves.toBeUndefined();
     warn.mockRestore();
+  });
+});
+
+describe("relayed path", () => {
+  const report = (localType: string) => new Map<string, unknown>([
+    ["t", { type: "transport", selectedCandidatePairId: "p" }],
+    ["p", { id: "p", type: "candidate-pair", localCandidateId: "l", remoteCandidateId: "r", bytesReceived: 10 }],
+    ["l", { id: "l", type: "local-candidate", candidateType: localType }],
+    ["r", { id: "r", type: "remote-candidate", candidateType: "srflx" }],
+  ]) as unknown as RTCStatsReport;
+
+  it("detects a TURN-relayed selected pair", () => {
+    expect(sampleInboundRelay(report("relay")).relayed).toBe(true);
+    expect(sampleInboundRelay(report("host")).relayed).toBe(false);
+  });
+
+  it("caps relayed video at 900 kbps and leaves direct paths alone", () => {
+    expect(RELAYED_VIDEO_MAX_BITRATE).toBe(900_000);
+    expect(bitrateCapFor(1_800_000, true)).toBe(900_000);
+    expect(bitrateCapFor(1_800_000, false)).toBe(1_800_000);
+    expect(bitrateCapFor(800_000, true)).toBe(800_000);
   });
 });
