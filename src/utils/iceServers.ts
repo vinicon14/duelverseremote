@@ -32,6 +32,10 @@ let verifiedTurn = false;
 let lastVerified: { servers: RTCIceServer[]; at: number } | null = null;
 let loadedOnce = false;
 let failures = 0;
+// Set when a browser reports that a TURN relay refused an allocation (quota
+// exhausted, expired credentials). The next refresh bypasses the server cache.
+let forceNext = false;
+let lastTurnFailureAt = -Infinity;
 const CACHE_MS = 5 * 60 * 1000;
 const RETRY_MS = 5000;
 const MAX_RETRY_MS = 60 * 1000;
@@ -89,7 +93,7 @@ const refresh = (): Promise<RTCIceServer[]> => {
       }
       
       const { data, error } = await Promise.race([
-        supabase.functions.invoke("get-ice-servers", { signal: controller.signal }),
+        supabase.functions.invoke(forceNext ? "get-ice-servers?refresh=1" : "get-ice-servers", { signal: controller.signal }),
         timeout,
       ]);
       const servers = data?.iceServers;
@@ -97,6 +101,7 @@ const refresh = (): Promise<RTCIceServer[]> => {
         const list = servers as RTCIceServer[];
         const verified = data.hasTurn === true && hasTurn(list);
         failures = 0;
+        forceNext = false;
         if (verified) {
           runtimeIceServers = list;
           verifiedTurn = true;
@@ -138,6 +143,27 @@ const refresh = (): Promise<RTCIceServer[]> => {
     return runtimeIceServers;
   })();
   return promise;
+};
+
+/** TURN error codes that mean "this relay will not serve us" (auth/quota/capacity). */
+export const TURN_REFUSAL_CODES = [401, 403, 437, 441, 486, 508];
+
+/**
+ * Called when a TURN server refuses an allocation. Drops the cached list and
+ * fetches fresh credentials (bypassing the server cache) at most once a minute.
+ * Returns true when a refresh was scheduled.
+ */
+export const reportTurnFailure = (errorCode: number): boolean => {
+  if (!TURN_REFUSAL_CODES.includes(errorCode)) return false;
+  const now = Date.now();
+  if (now - lastTurnFailureAt < 60 * 1000) return false;
+  lastTurnFailureAt = now;
+  forceNext = true;
+  expiresAt = 0;
+  lastVerified = null;
+  console.warn("[WebRTC] TURN relay refused allocation (code", errorCode, "); refreshing credentials");
+  void refresh();
+  return true;
 };
 
 /**
