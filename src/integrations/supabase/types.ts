@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "13.0.5"
   }
   public: {
     Tables: {
@@ -93,7 +93,6 @@ export type Database = {
           is_active: boolean
           metric: string
           reward_duelcoins: number
-          rewards_reduced_10x: boolean
           scope: string
           season_id: string
           sort_order: number
@@ -107,7 +106,6 @@ export type Database = {
           is_active?: boolean
           metric: string
           reward_duelcoins?: number
-          rewards_reduced_10x?: boolean
           scope: string
           season_id: string
           sort_order?: number
@@ -121,7 +119,6 @@ export type Database = {
           is_active?: boolean
           metric?: string
           reward_duelcoins?: number
-          rewards_reduced_10x?: boolean
           scope?: string
           season_id?: string
           sort_order?: number
@@ -219,7 +216,6 @@ export type Database = {
           level: number
           metadata: Json
           reward_type: string
-          rewards_reduced_10x: boolean
           season_id: string
           title: string
           track: string
@@ -234,7 +230,6 @@ export type Database = {
           level: number
           metadata?: Json
           reward_type?: string
-          rewards_reduced_10x?: boolean
           season_id: string
           title: string
           track: string
@@ -249,7 +244,6 @@ export type Database = {
           level?: number
           metadata?: Json
           reward_type?: string
-          rewards_reduced_10x?: boolean
           season_id?: string
           title?: string
           track?: string
