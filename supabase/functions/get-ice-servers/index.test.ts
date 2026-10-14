@@ -2,7 +2,7 @@
  * Testes de autorização da edge function get-ice-servers
  */
 import { assertEquals } from "https://deno.land/std@0.192.0/testing/asserts.ts";
-import { handler, cloudflareServers } from "./index.ts";
+import { handler, cloudflareServers, bearerToken } from "./index.ts";
 
 Deno.test("sem Authorization header retorna 401", async () => {
   const req = new Request("http://localhost/get-ice-servers", {
@@ -139,4 +139,9 @@ Deno.test("Cloudflare TURN: sem chaves não chama nada", async () => {
   const list = await cloudflareServers(() => undefined, (async () => { called = true; return new Response("{}"); }) as typeof fetch);
   assertEquals(list.length, 0);
   assertEquals(called, false);
+});
+
+Deno.test("bearerToken extrai o JWT do header (getUser precisa dele explícito)", () => {
+  assertEquals(bearerToken("Bearer abc.def.ghi"), "abc.def.ghi");
+  assertEquals(bearerToken("bearer   xyz"), "xyz");
 });
