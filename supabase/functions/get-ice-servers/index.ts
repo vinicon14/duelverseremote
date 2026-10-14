@@ -227,7 +227,13 @@ export async function handler(req: Request, deps: Dependencies): Promise<Respons
     });
   }
 
-  let turn = [...staticTurn(deps.getEnv), ...(await meteredServers(deps.getEnv))];
+  // Several independent relays: if one runs out of quota or goes down, ICE
+  // still finds a working path through another one.
+  const [cloudflare, metered] = await Promise.all([
+    cloudflareServers(deps.getEnv),
+    meteredServers(deps.getEnv),
+  ]);
+  let turn = [...staticTurn(deps.getEnv), ...cloudflare, ...metered];
   const hasTurn = turn.length > 0;
   if (!hasTurn) turn = [...FALLBACK_TURN];
   const servers = [...STUN_SERVERS, ...turn];
