@@ -245,6 +245,8 @@ export async function handler(req: Request, deps: Dependencies): Promise<Respons
 }
 
 // Only start the server if this is the main module (not being imported for tests)
+export const bearerToken = (authHeader: string) => authHeader.replace(/^Bearer\s+/i, "").trim();
+
 if (import.meta.main) {
   Deno.serve((req: Request) => 
     handler(req, {
@@ -252,9 +254,13 @@ if (import.meta.main) {
         const supabaseClient = createClient(
           Deno.env.get("SUPABASE_URL") ?? "",
           Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-          { global: { headers: { Authorization: authHeader } } }
+          { auth: { persistSession: false, autoRefreshToken: false } },
         );
-        const { data: { user }, error } = await supabaseClient.auth.getUser();
+        // Pass the JWT explicitly. Newer auth client builds ignore the global
+        // Authorization header in getUser() ("Auth session missing"), which made
+        // this function reject every player: nobody received the managed TURN
+        // relay, so players on different networks never saw each other.
+        const { data: { user }, error } = await supabaseClient.auth.getUser(bearerToken(authHeader));
         return { user, error };
       },
       getEnv: (key: string) => Deno.env.get(key),
