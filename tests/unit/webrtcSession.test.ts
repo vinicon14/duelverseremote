@@ -169,7 +169,7 @@ describe("media health from getStats", () => {
       { id: "p0", type: "candidate-pair", bytesReceived: 999999, responsesReceived: 1 },
       { id: "p1", type: "candidate-pair", bytesReceived: 5000, responsesReceived: 7 },
     ]));
-    expect(s).toEqual({ videoFrames: 30, videoBytes: 1000, audioBytes: 200, transportActivity: 5007 });
+    expect(s).toEqual({ videoFrames: 30, videoBytes: 1000, audioBytes: 200, transportActivity: 5007, relayed: false });
   });
 
   it("classifies flowing / video-stalled / transport-stalled", () => {
