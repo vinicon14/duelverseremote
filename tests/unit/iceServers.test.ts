@@ -180,4 +180,21 @@ describe("ICE server cache", () => {
     expect(ice.getIceServers().some((s) => s.urls.includes("stun:"))).toBe(true);
     expect(ice.hasVerifiedTurn()).toBe(false);
   });
+
+  it("a TURN refusal (quota/auth) fetches fresh credentials bypassing the server cache, once a minute", async () => {
+    let now = 0;
+    vi.spyOn(Date, "now").mockImplementation(() => now);
+    const ice = await freshModule();
+    invoke.mockResolvedValue({ data: managed });
+    await ice.ensureIceServers();
+    expect(ice.reportTurnFailure(701)).toBe(false); // DNS error is not a refusal
+    now = 1000;
+    expect(ice.reportTurnFailure(486)).toBe(true);
+    await new Promise((r) => setTimeout(r, 10));
+    expect(invoke).toHaveBeenLastCalledWith("get-ice-servers?refresh=1", expect.anything());
+    now = 30000;
+    expect(ice.reportTurnFailure(401)).toBe(false); // throttled
+    now = 62000;
+    expect(ice.reportTurnFailure(401)).toBe(true);
+  });
 });
