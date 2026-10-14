@@ -647,7 +647,10 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
   const capPeerBitrate = useCallback((remotePeerId: string, peer: PeerState) => {
     void applyVideoBitrateCap(
       peer.pc,
-      spectatorPeersRef.current.has(remotePeerId) ? SPECTATOR_VIDEO_MAX_BITRATE : OPPONENT_VIDEO_MAX_BITRATE,
+      bitrateCapFor(
+        spectatorPeersRef.current.has(remotePeerId) ? SPECTATOR_VIDEO_MAX_BITRATE : OPPONENT_VIDEO_MAX_BITRATE,
+        !!peer.lastSample?.relayed,
+      ),
     );
   }, []);
 
@@ -812,6 +815,20 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
         console.error("[WebRTC] Failed to add recvonly transceivers:", err);
       }
     }
+
+    // A relay that refuses us (quota exhausted, expired credentials) is the
+    // classic "players stopped seeing each other" with no code change: fetch
+    // fresh credentials and, if this pair is not connected, retry ICE with them.
+    pc.onicecandidateerror = (event) => {
+      const e = event as RTCPeerConnectionIceErrorEvent;
+      if (typeof e.url !== "string" || !e.url.startsWith("turn")) return;
+      if (!reportTurnFailure(e.errorCode)) return;
+      window.setTimeout(() => {
+        const current = peersRef.current.get(remotePeerId);
+        if (!current || current.pc !== pc) return;
+        if (!["connected", "completed"].includes(pc.iceConnectionState)) current.restartIce();
+      }, 3000);
+    };
 
     pc.onicecandidate = (event) => {
       if (!event.candidate) {
@@ -1747,7 +1764,9 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
             if (peersRef.current.get(peerId) !== peer) return;
             const sample = sampleInbound(report);
             peer.health = assessMediaHealth(peer.lastSample, sample);
+            const relayChanged = !!peer.lastSample && peer.lastSample.relayed !== sample.relayed;
             peer.lastSample = sample;
+            if (relayChanged || (sample.relayed && peer.health === "unknown")) capPeerBitrate(peerId, peer);
             peer.transportStalls = peer.health === "transport-stalled" ? peer.transportStalls + 1 : 0;
             // ~12 s with nothing at all arriving while ICE still says "connected".
             if (peer.transportStalls >= 3) {
@@ -1764,7 +1783,7 @@ export const WebRTCVideoCall = forwardRef<WebRTCVideoCallHandle, WebRTCVideoCall
       }
     }, 4000);
     return () => window.clearInterval(interval);
-  }, []);
+  }, [capPeerBitrate]);
 
   // A live MediaStreamTrack may end after a successful handshake without moving
   // RTCPeerConnection to "failed" (camera replacement, mobile backgrounding,
