@@ -84,6 +84,11 @@ class FakeChannel {
 export const supabase = {
   channel: (topic: string) => new FakeChannel(topic),
   removeChannel: async (ch: FakeChannel) => { ch.teardown(); return "ok"; },
+  auth: {
+    onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+    getSession: async () => ({ data: { session: { user: { id: "e2e" } } } }),
+    getUser: async () => ({ data: { user: { id: "e2e" } }, error: null }),
+  },
   functions: {
     // A closed local port as "managed TURN": no public relays in the test.
     invoke: async () => ({
