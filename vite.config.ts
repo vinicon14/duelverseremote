@@ -1,11 +1,38 @@
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv, type Plugin } from "vite";
+import fs from "fs";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
-import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
+/**
+ * public/push-sw.js é copiado como arquivo estático; este plugin troca a URL e a
+ * chave pública do Supabase pelos valores de VITE_SUPABASE_URL /
+ * VITE_SUPABASE_PUBLISHABLE_KEY do ambiente do build (Vercel), para o service
+ * worker de push sempre apontar para o mesmo projeto do app.
+ */
+function pushSwEnvPlugin(env: Record<string, string>): Plugin {
+  return {
+    name: "duelverse-push-sw-env",
+    apply: "build",
+    closeBundle() {
+      const file = path.resolve(__dirname, "dist/push-sw.js");
+      if (!fs.existsSync(file)) return;
+      const url = env.VITE_SUPABASE_URL;
+      const key = env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      if (!url || !key) return;
+      let src = fs.readFileSync(file, "utf8");
+      src = src
+        .replace(/const SUPABASE_URL = '[^']*';/, `const SUPABASE_URL = ${JSON.stringify(url)};`)
+        .replace(/const SUPABASE_ANON_KEY = '[^']*';/, `const SUPABASE_ANON_KEY = ${JSON.stringify(key)};`);
+      fs.writeFileSync(file, src);
+    },
+  };
+}
+
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), "VITE_");
+  return {
   server: {
     host: "::",
     port: 8080,
@@ -17,7 +44,7 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     react(),
-    mode === "development" && componentTagger(),
+    pushSwEnvPlugin(env),
     VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["favicon.png", "robots.txt"],
@@ -27,6 +54,7 @@ export default defineConfig(({ mode }) => ({
       workbox: {
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+        globIgnores: ["**/push-sw.js"],
         navigateFallback: "/index.html",
         navigateFallbackDenylist: [/^\/~oauth/],
         importScripts: ['/push-sw.js'],
@@ -94,4 +122,5 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-}));
+};
+});

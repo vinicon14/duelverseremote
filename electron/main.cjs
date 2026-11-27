@@ -7,8 +7,8 @@ const APP_USER_MODEL_ID = 'com.duelverse.desktop';
 app.setAppUserModelId(APP_USER_MODEL_ID);
 
 const REMOTE_URL = 'https://duelverse.site';
-const BACKEND_URL = 'https://xxttwzewtqxvpgefggah.supabase.co';
-const BACKEND_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4dHR3emV3dHF4dnBnZWZnZ2FoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk4NjY5NzQsImV4cCI6MjA3NTQ0Mjk3NH0.jhVKEu8tyid1gMnAxXZJdfrYt0a55eNpJT17hSdqtPQ';
+const BACKEND_URL = process.env.DUELVERSE_SUPABASE_URL || 'https://xxttwzewtqxvpgefggah.supabase.co'; // TODO(migração): trocar pelo novo projeto Supabase
+const BACKEND_ANON_KEY = process.env.DUELVERSE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4dHR3emV3dHF4dnBnZWZnZ2FoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk4NjY5NzQsImV4cCI6MjA3NTQ0Mjk3NH0.jhVKEu8tyid1gMnAxXZJdfrYt0a55eNpJT17hSdqtPQ';
 const NOTIFICATION_POLL_INTERVAL_MS = 15000;
 const MAX_TRACKED_NOTIFICATIONS = 200;
 let mainWindow;

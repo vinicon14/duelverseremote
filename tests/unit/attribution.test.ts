@@ -88,7 +88,7 @@ describe('Attribution Utils', () => {
       'https://abcdxyz.supabase.co/auth/v1/callback',
       'https://duelverse.site/en/',
       'https://www.duelverse.site/',
-      'https://duelverse.lovable.app/',
+      'https://duelverse.vercel.app/',
     ])('ignora referrer do fluxo de login / próprio site: %s', (ref) => {
       setReferrer(ref);
       captureAttribution();
