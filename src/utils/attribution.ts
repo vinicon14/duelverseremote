@@ -27,8 +27,7 @@ const RETRY_DELAYS_MS = [1500, 4000];
  */
 const IGNORED_REFERRER_HOSTS = [
   'duelverse.site',
-  'lovable.app',
-  'lovableproject.com',
+  'vercel.app',
   'accounts.google.com',
   'accounts.youtube.com',
   'supabase.co',

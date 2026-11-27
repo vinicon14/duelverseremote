@@ -47,7 +47,7 @@ const SITE_NAME = "DuelVerse"
 const SENDER_DOMAIN = "notify.duelverse.site"
 const ROOT_DOMAIN = "duelverse.site"
 const FROM_DOMAIN = "duelverse.site"
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || 'https://xxttwzewtqxvpgefggah.supabase.co'
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 
 // Whitelist of allowed redirects (prevent open redirect)
 const ALLOWED_REDIRECT_HOSTS = ['duelverse.site', 'www.duelverse.site'];

@@ -807,7 +807,7 @@ export function AdminDiscord() {
             <div className="bg-muted p-3 rounded-lg">
               <p className="font-medium mb-1">Endpoint de Interactions (configure no Discord Developer Portal):</p>
               <code className="block text-xs break-all bg-background p-2 rounded">
-                https://xxttwzewtqxvpgefggah.supabase.co/functions/v1/discord-interactions
+                {`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/discord-interactions`}
               </code>
               <p className="text-xs text-muted-foreground mt-2">
                 Cole essa URL em <strong>Application → General Information → Interactions Endpoint URL</strong>.
